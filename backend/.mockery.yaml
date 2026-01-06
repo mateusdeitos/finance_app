@@ -1,0 +1,10 @@
+with-expecter: true
+dir: "mocks"
+packages:
+  github.com/finance_app/backend/internal/repository:
+    config:
+      all: true
+  github.com/finance_app/backend/internal/service:
+    config:
+      all: true
+outpkg: "mocks"

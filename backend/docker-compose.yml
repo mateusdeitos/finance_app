@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: finance_app_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: finance_app
+    ports:
+      - "5442:5442"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    container_name: finance_app_backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5442
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: finance_app
+      DB_SSLMODE: disable
+      SERVER_PORT: 8090
+      SERVER_HOST: 0.0.0.0
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRATION_HOURS: 24
+      ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: go run cmd/server/main.go
+    develop:
+      watch:
+        - action: sync
+          path: ./
+          target: /app
+        - action: rebuild
+          path: ./
+          target: /app
+        - action: restart
+          path: ./
+volumes:
+  postgres_data:
