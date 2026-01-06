@@ -1,4 +1,4 @@
-.PHONY: help build run test test-unit test-integration migrate-up migrate-down docker-up docker-down docker-build
+.PHONY: help build run test test-unit test-integration migrate-up migrate-down migrate-create docker-up docker-down docker-build
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -36,6 +36,9 @@ migrate-down: ## Run database migrations down
 		exit 1; \
 	fi
 	goose -dir migrations postgres "$(DB_DSN)" down
+
+migrate-create: ## Create a new database migration as .sql
+	goose -dir migrations create $(NAME) sql
 
 docker-up: ## Start docker containers
 	docker-compose up -d

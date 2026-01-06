@@ -46,8 +46,6 @@ build/
 *.sqlite
 *.sqlite3
 
-# Migrations (if using goose)
-migrations/*.sql
 
 # Temporary files
 tmp/
