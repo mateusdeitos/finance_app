@@ -84,11 +84,11 @@ func main() {
 	auth.GET("/:provider/callback", authHandler.OAuthCallback)
 
 	// Protected routes
-	// api := e.Group("/api")
-	// api.Use(middleware.NewAuthMiddleware(services).RequireAuth)
+	api := e.Group("/api")
+	api.Use(middleware.NewAuthMiddleware(services).RequireAuth)
 
 	// Auth
-	// api.GET("/auth/me", authHandler.Me)
+	api.GET("/auth/me", authHandler.Me)
 
 	// Accounts
 	// accounts := api.Group("/accounts")
