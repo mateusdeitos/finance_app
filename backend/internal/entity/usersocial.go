@@ -16,6 +16,10 @@ type UserSocial struct {
 	User       User
 }
 
+func (us *UserSocial) TableName() string {
+	return "users_social"
+}
+
 func (us *UserSocial) ToDomain() *domain.UserSocial {
 	return &domain.UserSocial{
 		UserID:     us.UserID,

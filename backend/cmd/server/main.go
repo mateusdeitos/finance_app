@@ -10,7 +10,11 @@ import (
 	"time"
 
 	"github.com/finance_app/backend/internal/config"
+	"github.com/finance_app/backend/internal/handler"
 	"github.com/finance_app/backend/internal/middleware"
+	"github.com/finance_app/backend/internal/repository"
+	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/database"
 	"github.com/finance_app/backend/pkg/oauth"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
@@ -24,42 +28,37 @@ func main() {
 	}
 
 	// Connect to database
-	// db, err := database.NewPostgresDB(cfg.Database.DSN())
-	// if err != nil {
-	// 	log.Fatalf("Failed to connect to database: %v", err)
-	// }
-
-	// Run migrations (using GORM AutoMigrate for now, but can use Goose)
-	// if err := runMigrations(db); err != nil {
-	// 	log.Fatalf("Failed to run migrations: %v", err)
-	// }
+	db, err := database.NewPostgresDB(cfg.Database.DSN())
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 
 	// Setup OAuth providers
 	oauth.SetupProviders(cfg)
 
 	// Initialize repositories
-	// repos := &repository.Repositories{
-	// 	User:                  repository.NewUserRepository(db),
-	// 	UserSocial:            repository.NewUserSocialRepository(db),
-	// 	Account:               repository.NewAccountRepository(db),
-	// 	Category:              repository.NewCategoryRepository(db),
-	// 	Tag:                   repository.NewTagRepository(db),
-	// 	Transaction:           repository.NewTransactionRepository(db),
-	// 	TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
-	// 	UserSettings:          repository.NewUserSettingsRepository(db),
-	// }
+	repos := &repository.Repositories{
+		User:       repository.NewUserRepository(db),
+		UserSocial: repository.NewUserSocialRepository(db),
+		// 	Account:               repository.NewAccountRepository(db),
+		// 	Category:              repository.NewCategoryRepository(db),
+		// 	Tag:                   repository.NewTagRepository(db),
+		// 	Transaction:           repository.NewTransactionRepository(db),
+		// 	TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
+		// 	UserSettings:          repository.NewUserSettingsRepository(db),
+	}
 
 	// Initialize services
-	// services := &service.Services{
-	// 	Auth:        service.NewAuthService(repos, cfg),
-	// 	Account:     service.NewAccountService(repos),
-	// 	Category:    service.NewCategoryService(repos),
-	// 	Tag:         service.NewTagService(repos),
-	// 	Transaction: service.NewTransactionService(repos),
-	// }
+	services := &service.Services{
+		Auth: service.NewAuthService(repos, cfg),
+		// 	Account:     service.NewAccountService(repos),
+		// 	Category:    service.NewCategoryService(repos),
+		// 	Tag:         service.NewTagService(repos),
+		// 	Transaction: service.NewTransactionService(repos),
+	}
 
 	// Initialize handlers
-	// authHandler := handler.NewAuthHandler(services)
+	authHandler := handler.NewAuthHandler(services)
 	// accountHandler := handler.NewAccountHandler(services)
 	// categoryHandler := handler.NewCategoryHandler(services)
 	// tagHandler := handler.NewTagHandler(services)
@@ -80,13 +79,9 @@ func main() {
 	})
 
 	// Auth routes (public)
-	// auth := e.Group("/auth")
-	// auth.POST("/register", authHandler.Register)
-	// auth.POST("/login", authHandler.Login)
-	// auth.GET("/:provider", authHandler.OAuthStart)
-	// auth.GET("/:provider/callback", authHandler.OAuthCallback)
-	// auth.POST("/reset-password", authHandler.RequestPasswordReset)
-	// auth.POST("/reset-password/confirm", authHandler.ResetPassword)
+	auth := e.Group("/auth")
+	auth.GET("/:provider", authHandler.OAuthStart)
+	auth.GET("/:provider/callback", authHandler.OAuthCallback)
 
 	// Protected routes
 	// api := e.Group("/api")

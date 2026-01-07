@@ -1,5 +1,7 @@
 .PHONY: help build run test test-unit test-integration migrate-up migrate-down migrate-create docker-up docker-down docker-build
 
+include .env
+
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
