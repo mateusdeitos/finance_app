@@ -39,7 +39,6 @@ CREATE TABLE accounts (
     description TEXT,
     shared_with_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     default_split_percentage SMALLINT CHECK (default_split_percentage >= 0 AND default_split_percentage <= 100),
-    default_grouping_day SMALLINT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,7 +80,6 @@ CREATE TABLE transactions (
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     amount BIGINT NOT NULL CHECK (amount > 0),
     date DATE NOT NULL,
-    grouping_date DATE,
     description VARCHAR(255) NOT NULL,
     destination_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
     split_percentage SMALLINT CHECK (split_percentage >= 0 AND split_percentage <= 100),
@@ -92,7 +90,6 @@ CREATE TABLE transactions (
 CREATE INDEX idx_transactions_user_account ON transactions(user_id, account_id);
 CREATE INDEX idx_transactions_description ON transactions(description);
 CREATE INDEX idx_transactions_date ON transactions(date);
-CREATE INDEX idx_transactions_grouping_date ON transactions(grouping_date);
 CREATE INDEX idx_transactions_category_id ON transactions(category_id);
 CREATE INDEX idx_transactions_destination_account_id ON transactions(destination_account_id);
 
