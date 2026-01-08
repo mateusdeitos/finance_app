@@ -6,6 +6,12 @@ import (
 	"github.com/finance_app/backend/internal/domain"
 )
 
+type DBTransaction interface {
+	Begin(ctx context.Context) (context.Context, error)
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
 type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 	GetByID(ctx context.Context, id int) (*domain.User, error)
@@ -73,13 +79,13 @@ type UserSettingsRepository interface {
 
 // Repositories contains all repository interfaces
 type Repositories struct {
-	User                UserRepository
-	UserSocial          UserSocialRepository
-	Account             AccountRepository
-	Category            CategoryRepository
-	Tag                 TagRepository
-	Transaction         TransactionRepository
+	DBTransaction         DBTransaction
+	User                  UserRepository
+	UserSocial            UserSocialRepository
+	Account               AccountRepository
+	Category              CategoryRepository
+	Tag                   TagRepository
+	Transaction           TransactionRepository
 	TransactionRecurrence TransactionRecurrenceRepository
-	UserSettings        UserSettingsRepository
+	UserSettings          UserSettingsRepository
 }
-

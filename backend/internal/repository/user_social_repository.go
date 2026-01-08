@@ -19,12 +19,12 @@ func NewUserSocialRepository(db *gorm.DB) UserSocialRepository {
 
 func (r *userSocialRepository) Create(ctx context.Context, userSocial *domain.UserSocial) error {
 	ent := entity.UserSocialFromDomain(userSocial)
-	return r.db.WithContext(ctx).Create(ent).Error
+	return GetTxFromContext(ctx, r.db).Create(ent).Error
 }
 
 func (r *userSocialRepository) GetByProviderID(ctx context.Context, provider domain.ProviderType, providerID string) (*domain.UserSocial, error) {
 	var ent entity.UserSocial
-	if err := r.db.WithContext(ctx).Where("provider = ? AND provider_id = ?", provider, providerID).First(&ent).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Where("provider = ? AND provider_id = ?", provider, providerID).First(&ent).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -35,7 +35,7 @@ func (r *userSocialRepository) GetByProviderID(ctx context.Context, provider dom
 
 func (r *userSocialRepository) GetByUserID(ctx context.Context, userID int) ([]*domain.UserSocial, error) {
 	var ents []entity.UserSocial
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&ents).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Where("user_id = ?", userID).Find(&ents).Error; err != nil {
 		return nil, err
 	}
 
@@ -47,6 +47,5 @@ func (r *userSocialRepository) GetByUserID(ctx context.Context, userID int) ([]*
 }
 
 func (r *userSocialRepository) Delete(ctx context.Context, userID int, provider domain.ProviderType) error {
-	return r.db.WithContext(ctx).Where("user_id = ? AND provider = ?", userID, provider).Delete(&entity.UserSocial{}).Error
+	return GetTxFromContext(ctx, r.db).Where("user_id = ? AND provider = ?", userID, provider).Delete(&entity.UserSocial{}).Error
 }
-

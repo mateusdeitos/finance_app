@@ -27,6 +27,12 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	loc, err := time.LoadLocation("UTC")
+	if err != nil {
+		log.Fatalf("Failed to load UTC location: %v", err)
+	}
+	time.Local = loc
+
 	// Connect to database
 	db, err := database.NewPostgresDB(cfg.Database.DSN())
 	if err != nil {
@@ -38,9 +44,10 @@ func main() {
 
 	// Initialize repositories
 	repos := &repository.Repositories{
-		User:       repository.NewUserRepository(db),
-		UserSocial: repository.NewUserSocialRepository(db),
-		// 	Account:               repository.NewAccountRepository(db),
+		User:          repository.NewUserRepository(db),
+		DBTransaction: repository.NewDBTransaction(db),
+		UserSocial:    repository.NewUserSocialRepository(db),
+		Account:       repository.NewAccountRepository(db),
 		// 	Category:              repository.NewCategoryRepository(db),
 		// 	Tag:                   repository.NewTagRepository(db),
 		// 	Transaction:           repository.NewTransactionRepository(db),
@@ -50,8 +57,8 @@ func main() {
 
 	// Initialize services
 	services := &service.Services{
-		Auth: service.NewAuthService(repos, cfg),
-		// 	Account:     service.NewAccountService(repos),
+		Auth:    service.NewAuthService(repos, cfg),
+		Account: service.NewAccountService(repos),
 		// 	Category:    service.NewCategoryService(repos),
 		// 	Tag:         service.NewTagService(repos),
 		// 	Transaction: service.NewTransactionService(repos),
@@ -59,7 +66,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services)
-	// accountHandler := handler.NewAccountHandler(services)
+	accountHandler := handler.NewAccountHandler(services)
 	// categoryHandler := handler.NewCategoryHandler(services)
 	// tagHandler := handler.NewTagHandler(services)
 	// transactionHandler := handler.NewTransactionHandler(services)
@@ -91,9 +98,10 @@ func main() {
 	api.GET("/auth/me", authHandler.Me)
 
 	// Accounts
-	// accounts := api.Group("/accounts")
-	// accounts.GET("", accountHandler.List)
-	// accounts.POST("", accountHandler.Create)
+	accounts := api.Group("/accounts")
+	accounts.GET("", accountHandler.List)
+	accounts.POST("", accountHandler.Create)
+	accounts.PUT("/:id/accept-share-account", accountHandler.AcceptSharedAccount)
 	// accounts.GET("/:id", accountHandler.GetByID)
 	// accounts.PUT("/:id", accountHandler.Update)
 	// accounts.DELETE("/:id", accountHandler.Delete)

@@ -14,7 +14,7 @@ type Account struct {
 	Description            *string
 	SharedWithUserID       *int
 	DefaultSplitPercentage *int
-	DefaultGroupingDay     *int
+	SharedAllowed          bool
 	CreatedAt              *time.Time
 	UpdatedAt              *time.Time
 	User                   User
@@ -28,8 +28,8 @@ func (a *Account) ToDomain() *domain.Account {
 		Name:                   a.Name,
 		Description:            a.Description,
 		SharedWithUserID:       a.SharedWithUserID,
+		SharedAllowed:          a.SharedAllowed,
 		DefaultSplitPercentage: a.DefaultSplitPercentage,
-		DefaultGroupingDay:     a.DefaultGroupingDay,
 		CreatedAt:              a.CreatedAt,
 		UpdatedAt:              a.UpdatedAt,
 	}
@@ -42,8 +42,8 @@ func AccountFromDomain(d *domain.Account) *Account {
 		Name:                   d.Name,
 		Description:            d.Description,
 		SharedWithUserID:       d.SharedWithUserID,
+		SharedAllowed:          d.SharedAllowed,
 		DefaultSplitPercentage: d.DefaultSplitPercentage,
-		DefaultGroupingDay:     d.DefaultGroupingDay,
 		CreatedAt:              d.CreatedAt,
 		UpdatedAt:              d.UpdatedAt,
 	}

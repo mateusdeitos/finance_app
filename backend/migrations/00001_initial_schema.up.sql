@@ -38,6 +38,7 @@ CREATE TABLE accounts (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     shared_with_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+	shared_allowed BOOLEAN NOT NULL DEFAULT FALSE,
     default_split_percentage SMALLINT CHECK (default_split_percentage >= 0 AND default_split_percentage <= 100),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -30,8 +30,8 @@ type AccountService interface {
 	GetByID(ctx context.Context, userID, id int) (*domain.Account, error)
 	List(ctx context.Context, userID int) ([]*domain.Account, error)
 	Update(ctx context.Context, userID int, account *domain.Account) error
+	AcceptSharedAccount(ctx context.Context, userID, id int) error
 	Delete(ctx context.Context, userID, id int) error
-	Share(ctx context.Context, userID, accountID int, sharedWithUserID int, splitPercentage *int) error
 }
 
 type CategoryService interface {

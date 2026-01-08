@@ -8,8 +8,8 @@ type Account struct {
 	Name                   string     `json:"name"`
 	Description            *string    `json:"description,omitempty"`
 	SharedWithUserID       *int       `json:"shared_with_user_id,omitempty"`
+	SharedAllowed          bool       `json:"shared_allowed"`
 	DefaultSplitPercentage *int       `json:"default_split_percentage,omitempty"`
-	DefaultGroupingDay     *int       `json:"default_grouping_day,omitempty"`
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 }

@@ -19,7 +19,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) Create(ctx context.Context, user *domain.User) (*domain.User, error) {
 	ent := entity.UserFromDomain(user)
-	if err := r.db.WithContext(ctx).Create(ent).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
 		return nil, err
 	}
 	return ent.ToDomain(), nil
@@ -27,7 +27,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) (*domain
 
 func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, error) {
 	var ent entity.User
-	if err := r.db.WithContext(ctx).First(&ent, id).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).First(&ent, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -38,7 +38,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, err
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var ent entity.User
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&ent).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Where("email = ?", email).First(&ent).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -49,9 +49,9 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	ent := entity.UserFromDomain(user)
-	return r.db.WithContext(ctx).Save(ent).Error
+	return GetTxFromContext(ctx, r.db).Save(ent).Error
 }
 
 func (r *userRepository) Delete(ctx context.Context, id int) error {
-	return r.db.WithContext(ctx).Delete(&entity.User{}, id).Error
+	return GetTxFromContext(ctx, r.db).Delete(&entity.User{}, id).Error
 }
