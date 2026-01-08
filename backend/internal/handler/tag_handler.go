@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/appcontext"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,7 +21,7 @@ func NewTagHandler(services *service.Services) *TagHandler {
 }
 
 func (h *TagHandler) Create(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	var tag domain.Tag
 	if err := c.Bind(&tag); err != nil {
@@ -37,7 +37,7 @@ func (h *TagHandler) Create(c echo.Context) error {
 }
 
 func (h *TagHandler) GetByID(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -53,7 +53,7 @@ func (h *TagHandler) GetByID(c echo.Context) error {
 }
 
 func (h *TagHandler) List(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	tags, err := h.tagService.List(c.Request().Context(), userID)
 	if err != nil {
@@ -64,7 +64,7 @@ func (h *TagHandler) List(c echo.Context) error {
 }
 
 func (h *TagHandler) Update(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -85,7 +85,7 @@ func (h *TagHandler) Update(c echo.Context) error {
 }
 
 func (h *TagHandler) Delete(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -98,4 +98,3 @@ func (h *TagHandler) Delete(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "tag deleted"})
 }
-

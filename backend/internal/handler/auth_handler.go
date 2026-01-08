@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/appcontext"
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
@@ -75,7 +75,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 }
 
 func (h *AuthHandler) Me(c echo.Context) error {
-	user := middleware.GetUserFromContext(c)
+	user := appcontext.GetUserFromContext(c.Request().Context())
 	if user == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
 	}

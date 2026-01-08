@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/appcontext"
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,7 +22,7 @@ func NewTransactionHandler(services *service.Services) *TransactionHandler {
 }
 
 func (h *TransactionHandler) Create(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	var transaction domain.Transaction
 	if err := c.Bind(&transaction); err != nil {
@@ -38,7 +38,7 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 }
 
 func (h *TransactionHandler) GetByID(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -54,7 +54,7 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 }
 
 func (h *TransactionHandler) List(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	// Parse query parameters
 	filter := domain.TransactionFilter{}
@@ -130,7 +130,7 @@ func (h *TransactionHandler) List(c echo.Context) error {
 }
 
 func (h *TransactionHandler) Update(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 }
 
 func (h *TransactionHandler) BulkUpdate(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	var updates domain.BulkUpdateTransaction
 	if err := c.Bind(&updates); err != nil {
@@ -166,7 +166,7 @@ func (h *TransactionHandler) BulkUpdate(c echo.Context) error {
 }
 
 func (h *TransactionHandler) Delete(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -181,7 +181,7 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 }
 
 func (h *TransactionHandler) ImportCSV(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -206,7 +206,7 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 }
 
 func (h *TransactionHandler) SuggestCategory(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	description := c.QueryParam("description")
 	if description == "" {
@@ -226,7 +226,7 @@ func (h *TransactionHandler) SuggestCategory(c echo.Context) error {
 }
 
 func (h *TransactionHandler) CreateRecurring(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	var req struct {
 		Transaction domain.Transaction                 `json:"transaction"`

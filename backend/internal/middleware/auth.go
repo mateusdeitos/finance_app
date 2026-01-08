@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/appcontext"
 	apperrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/labstack/echo/v4"
 )
@@ -39,26 +39,10 @@ func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.NewHTTPError(statusCode, message)
 		}
 
-		// Store user in context
-		c.Set("user", user)
-		c.Set("user_id", user.ID)
+		ctx := appcontext.WithUser(c.Request().Context(), user)
+		ctx = appcontext.WithUserID(ctx, user.ID)
 
+		c.SetRequest(c.Request().WithContext(ctx))
 		return next(c)
 	}
-}
-
-func GetUserFromContext(c echo.Context) *domain.User {
-	user, ok := c.Get("user").(*domain.User)
-	if !ok {
-		return nil
-	}
-	return user
-}
-
-func GetUserIDFromContext(c echo.Context) int {
-	userID, ok := c.Get("user_id").(int)
-	if !ok {
-		return 0
-	}
-	return userID
 }

@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg/appcontext"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,7 +21,7 @@ func NewAccountHandler(services *service.Services) *AccountHandler {
 }
 
 func (h *AccountHandler) Create(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	var account domain.Account
 	if err := c.Bind(&account); err != nil {
@@ -37,7 +37,7 @@ func (h *AccountHandler) Create(c echo.Context) error {
 }
 
 func (h *AccountHandler) GetByID(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -53,7 +53,7 @@ func (h *AccountHandler) GetByID(c echo.Context) error {
 }
 
 func (h *AccountHandler) List(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	accounts, err := h.accountService.List(c.Request().Context(), userID)
 	if err != nil {
@@ -64,7 +64,7 @@ func (h *AccountHandler) List(c echo.Context) error {
 }
 
 func (h *AccountHandler) Update(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -85,7 +85,7 @@ func (h *AccountHandler) Update(c echo.Context) error {
 }
 
 func (h *AccountHandler) Delete(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -100,7 +100,7 @@ func (h *AccountHandler) Delete(c echo.Context) error {
 }
 
 func (h *AccountHandler) AcceptSharedAccount(c echo.Context) error {
-	userID := middleware.GetUserIDFromContext(c)
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
