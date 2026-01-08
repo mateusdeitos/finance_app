@@ -13,3 +13,9 @@ type Account struct {
 	CreatedAt              *time.Time `json:"created_at"`
 	UpdatedAt              *time.Time `json:"updated_at"`
 }
+
+type AccountSearchOptions struct {
+	UserIDs           []int `json:"user_ids"`
+	SharedWithUserIDs []int `json:"shared_with_user_ids"`
+	SharedAllowed     bool  `json:"shared_allowed"`
+}

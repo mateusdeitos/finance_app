@@ -34,6 +34,7 @@ type AccountRepository interface {
 	GetSharedAccounts(ctx context.Context, userID int) ([]*domain.Account, error)
 	Update(ctx context.Context, account *domain.Account) error
 	Delete(ctx context.Context, id int) error
+	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
 }
 
 type CategoryRepository interface {

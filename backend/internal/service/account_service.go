@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 
+	"github.com/finance_app/backend/pkg/appcontext"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 
@@ -47,7 +48,34 @@ func (s *accountService) Create(ctx context.Context, userID int, account *domain
 			return nil, pkgErrors.NotFound("shared user")
 		}
 
-		account.SharedAllowed = false
+		accounts, err := s.accountRepo.Search(ctx, domain.AccountSearchOptions{
+			UserIDs:           []int{userID, *account.SharedWithUserID},
+			SharedWithUserIDs: []int{*account.SharedWithUserID},
+			SharedAllowed:     false,
+		})
+		if err != nil {
+			return nil, pkgErrors.Internal("failed to search accounts", err)
+		}
+		if len(accounts) > 0 {
+			return nil, pkgErrors.AlreadyExists("shared account with this user")
+		}
+
+		user := appcontext.GetUserFromContext(ctx)
+		if user == nil {
+			return nil, pkgErrors.Unauthorized("user not found")
+		}
+
+		_, err = s.accountRepo.Create(ctx, &domain.Account{
+			UserID:                 *account.SharedWithUserID,
+			Name:                   user.Name,
+			Description:            nil,
+			SharedWithUserID:       &userID,
+			SharedAllowed:          false,
+			DefaultSplitPercentage: account.DefaultSplitPercentage,
+		})
+
+		account.SharedAllowed = true
+		account.Name = sharedUser.Name
 	}
 
 	createdAccount, err := s.accountRepo.Create(ctx, account)
@@ -143,7 +171,6 @@ func (s *accountService) AcceptSharedAccount(ctx context.Context, userID, id int
 	}
 
 	account.SharedAllowed = true
-	account.SharedWithUserID = &userID
 	return s.accountRepo.Update(ctx, account)
 }
 
