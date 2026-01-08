@@ -200,8 +200,9 @@ func (s *accountService) RejectSharedAccount(ctx context.Context, userID, id int
 		SharedAllowed:     true,
 	})
 
+	// se não encontrou a conta, commit e retorna
 	if len(searchResult) == 0 {
-		return pkgErrors.NotFound("original account")
+		return s.dbTransaction.Commit(ctx)
 	}
 
 	originalAccount := searchResult[0]
