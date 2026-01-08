@@ -102,6 +102,7 @@ func main() {
 	accounts.GET("", accountHandler.List)
 	accounts.POST("", accountHandler.Create)
 	accounts.PUT("/:id/accept-share-account", accountHandler.AcceptSharedAccount)
+	accounts.PUT("/:id/reject-share-account", accountHandler.RejectSharedAccount)
 	// accounts.GET("/:id", accountHandler.GetByID)
 	// accounts.PUT("/:id", accountHandler.Update)
 	// accounts.DELETE("/:id", accountHandler.Delete)
