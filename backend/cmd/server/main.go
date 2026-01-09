@@ -49,7 +49,7 @@ func main() {
 		UserSocial:     repository.NewUserSocialRepository(db),
 		Account:        repository.NewAccountRepository(db),
 		UserConnection: repository.NewUserConnectionRepository(db),
-		// 	Category:              repository.NewCategoryRepository(db),
+		Category:       repository.NewCategoryRepository(db),
 		// 	Tag:                   repository.NewTagRepository(db),
 		// 	Transaction:           repository.NewTransactionRepository(db),
 		// 	TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
@@ -58,9 +58,9 @@ func main() {
 
 	// Initialize services
 	services := &service.Services{
-		Auth:    service.NewAuthService(repos, cfg),
-		Account: service.NewAccountService(repos),
-		// 	Category:    service.NewCategoryService(repos),
+		Auth:     service.NewAuthService(repos, cfg),
+		Account:  service.NewAccountService(repos),
+		Category: service.NewCategoryService(repos),
 		// 	Tag:         service.NewTagService(repos),
 		// 	Transaction: service.NewTransactionService(repos),
 	}
@@ -70,7 +70,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services)
 	accountHandler := handler.NewAccountHandler(services)
-	// categoryHandler := handler.NewCategoryHandler(services)
+	categoryHandler := handler.NewCategoryHandler(services)
 	// tagHandler := handler.NewTagHandler(services)
 	// transactionHandler := handler.NewTransactionHandler(services)
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
@@ -115,12 +115,11 @@ func main() {
 	userConnections.GET("", userConnectionHandler.Search)
 
 	// Categories
-	// categories := api.Group("/categories")
-	// categories.GET("", categoryHandler.List)
-	// categories.POST("", categoryHandler.Create)
-	// categories.GET("/:id", categoryHandler.GetByID)
-	// categories.PUT("/:id", categoryHandler.Update)
-	// categories.DELETE("/:id", categoryHandler.Delete)
+	categories := api.Group("/categories")
+	categories.GET("", categoryHandler.Search)
+	categories.POST("", categoryHandler.Create)
+	categories.PUT("/:id", categoryHandler.Update)
+	categories.DELETE("/:id", categoryHandler.Delete)
 
 	// Tags
 	// tags := api.Group("/tags")

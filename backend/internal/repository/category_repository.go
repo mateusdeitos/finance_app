@@ -19,39 +19,33 @@ func NewCategoryRepository(db *gorm.DB) CategoryRepository {
 
 func (r *categoryRepository) Create(ctx context.Context, category *domain.Category) (*domain.Category, error) {
 	ent := entity.CategoryFromDomain(category)
-	if err := r.db.WithContext(ctx).Create(ent).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
 		return nil, err
 	}
 	return ent.ToDomain(), nil
 }
 
-func (r *categoryRepository) GetByID(ctx context.Context, id int) (*domain.Category, error) {
-	var ent entity.Category
-	if err := r.db.WithContext(ctx).Preload("Parent").Preload("Children").First(&ent, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+func (r *categoryRepository) Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
+	var ents []entity.Category
+	query := GetTxFromContext(ctx, r.db)
+
+	if len(options.UserIDs) == 0 {
+		return nil, errors.New("user IDs are required")
+	}
+
+	query = query.Where("user_id IN ?", options.UserIDs)
+
+	if len(options.IDs) > 0 {
+		query = query.Where("id IN ?", options.IDs)
+	} else {
+		if options.ParentID != nil {
+			query = query.Where("parent_id = ?", options.ParentID)
 		}
-		return nil, err
-	}
-	return ent.ToDomain(), nil
-}
-
-func (r *categoryRepository) GetByUserID(ctx context.Context, userID int) ([]*domain.Category, error) {
-	var ents []entity.Category
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&ents).Error; err != nil {
-		return nil, err
 	}
 
-	result := make([]*domain.Category, len(ents))
-	for i, ent := range ents {
-		result[i] = ent.ToDomain()
-	}
-	return result, nil
-}
+	query = query.Order("parent_id desc, name ASC")
 
-func (r *categoryRepository) GetByUserIDWithChildren(ctx context.Context, userID int) ([]*domain.Category, error) {
-	var ents []entity.Category
-	if err := r.db.WithContext(ctx).Where("user_id = ? AND parent_id IS NULL", userID).Preload("Children").Find(&ents).Error; err != nil {
+	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
 	}
 
@@ -64,9 +58,9 @@ func (r *categoryRepository) GetByUserIDWithChildren(ctx context.Context, userID
 
 func (r *categoryRepository) Update(ctx context.Context, category *domain.Category) error {
 	ent := entity.CategoryFromDomain(category)
-	return r.db.WithContext(ctx).Save(ent).Error
+	return GetTxFromContext(ctx, r.db).Save(ent).Error
 }
 
 func (r *categoryRepository) Delete(ctx context.Context, id int) error {
-	return r.db.WithContext(ctx).Delete(&entity.Category{}, id).Error
+	return GetTxFromContext(ctx, r.db).Delete(&entity.Category{}, id).Error
 }

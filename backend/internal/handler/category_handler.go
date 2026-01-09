@@ -36,26 +36,12 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, created)
 }
 
-func (h *CategoryHandler) GetByID(c echo.Context) error {
+func (h *CategoryHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid category ID")
-	}
-
-	category, err := h.categoryService.GetByID(c.Request().Context(), userID, id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, err.Error())
-	}
-
-	return c.JSON(http.StatusOK, category)
-}
-
-func (h *CategoryHandler) List(c echo.Context) error {
-	userID := appcontext.GetUserIDFromContext(c.Request().Context())
-
-	categories, err := h.categoryService.List(c.Request().Context(), userID)
+	categories, err := h.categoryService.Search(c.Request().Context(), domain.CategorySearchOptions{
+		UserIDs: []int{userID},
+	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -81,7 +67,7 @@ func (h *CategoryHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "category updated"})
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *CategoryHandler) Delete(c echo.Context) error {
@@ -96,5 +82,5 @@ func (h *CategoryHandler) Delete(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "category deleted"})
+	return c.NoContent(http.StatusNoContent)
 }

@@ -16,7 +16,6 @@ type Category struct {
 	UpdatedAt *time.Time
 	User      User
 	Parent    *Category
-	Children  []Category
 }
 
 func (c *Category) ToDomain() *domain.Category {
@@ -31,13 +30,6 @@ func (c *Category) ToDomain() *domain.Category {
 
 	if c.Parent != nil {
 		cat.Parent = c.Parent.ToDomain()
-	}
-
-	if len(c.Children) > 0 {
-		cat.Children = make([]domain.Category, len(c.Children))
-		for i, child := range c.Children {
-			cat.Children[i] = *child.ToDomain()
-		}
 	}
 
 	return cat

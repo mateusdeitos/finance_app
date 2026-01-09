@@ -6,9 +6,15 @@ type Category struct {
 	ID        int        `json:"id"`
 	UserID    int        `json:"user_id"`
 	Name      string     `json:"name"`
-	ParentID  *int       `json:"parent_id,omitempty"`
+	ParentID  *int       `json:"parent_id"`
 	Parent    *Category  `json:"parent,omitempty"`
 	Children  []Category `json:"children,omitempty"`
 	CreatedAt *time.Time `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+type CategorySearchOptions struct {
+	IDs      []int `json:"ids"`
+	UserIDs  []int `json:"user_ids"`
+	ParentID *int  `json:"parent_id,omitempty"`
 }

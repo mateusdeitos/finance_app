@@ -19,15 +19,17 @@ type transactionService struct {
 	accountRepo          repository.AccountRepository
 	categoryRepo         repository.CategoryRepository
 	tagRepo              repository.TagRepository
+	services             *Services
 }
 
-func NewTransactionService(repos *repository.Repositories) TransactionService {
+func NewTransactionService(repos *repository.Repositories, services *Services) TransactionService {
 	return &transactionService{
 		transactionRepo:      repos.Transaction,
 		transactionRecurRepo: repos.TransactionRecurrence,
 		accountRepo:          repos.Account,
 		categoryRepo:         repos.Category,
 		tagRepo:              repos.Tag,
+		services:             services,
 	}
 }
 
@@ -46,15 +48,9 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 
 	// Validate category if provided
 	if transaction.CategoryID != nil {
-		category, err := s.categoryRepo.GetByID(ctx, *transaction.CategoryID)
+		_, err := s.services.Category.GetByID(ctx, userID, *transaction.CategoryID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get category: %w", err)
-		}
-		if category == nil {
-			return nil, errors.New("category not found")
-		}
-		if category.UserID != userID {
-			return nil, errors.New("category does not belong to user")
 		}
 	}
 
@@ -349,14 +345,14 @@ func (s *transactionService) ImportCSV(ctx context.Context, userID int, reader i
 		if categoryIdx != -1 && len(row) > categoryIdx {
 			categoryName := row[categoryIdx]
 			if categoryName != "" {
-				categories, err := s.categoryRepo.GetByUserID(ctx, userID)
-				if err == nil {
-					for _, cat := range categories {
-						if cat.Name == categoryName {
-							transaction.CategoryID = &cat.ID
-							break
-						}
-					}
+				categories, err := s.services.Category.Search(ctx, domain.CategorySearchOptions{
+					UserIDs: []int{userID},
+				})
+				if err != nil {
+					return nil, fmt.Errorf("failed to get categories: %w", err)
+				}
+				if len(categories) > 0 {
+					transaction.CategoryID = &categories[0].ID
 				}
 			}
 		}
@@ -402,12 +398,12 @@ func (s *transactionService) SuggestCategory(ctx context.Context, userID int, de
 		return nil, nil // No suggestion
 	}
 
-	category, err := s.categoryRepo.GetByID(ctx, mostCommonCategoryID)
+	category, err := s.services.Category.GetByID(ctx, userID, mostCommonCategoryID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category: %w", err)
 	}
 
-	return category, nil
+	return &category, nil
 }
 
 func (s *transactionService) CreateRecurring(ctx context.Context, userID int, transaction *domain.Transaction, config domain.TransactionRecurrenceConfig) ([]*domain.Transaction, error) {

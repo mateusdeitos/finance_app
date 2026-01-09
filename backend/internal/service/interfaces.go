@@ -35,8 +35,8 @@ type AccountService interface {
 
 type CategoryService interface {
 	Create(ctx context.Context, userID int, category *domain.Category) (*domain.Category, error)
-	GetByID(ctx context.Context, userID, id int) (*domain.Category, error)
-	List(ctx context.Context, userID int) ([]*domain.Category, error)
+	GetByID(ctx context.Context, userID, id int) (domain.Category, error)
+	Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error)
 	Update(ctx context.Context, userID int, category *domain.Category) error
 	Delete(ctx context.Context, userID, id int) error
 }
