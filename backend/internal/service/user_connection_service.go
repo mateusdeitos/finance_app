@@ -65,7 +65,8 @@ func (s *userConnectionService) Create(ctx context.Context, fromUserID, toUserID
 		return nil, apperrors.Internal("failed to create to account", err)
 	}
 
-	userConnection := &domain.UserConnection{
+	var userConnection *domain.UserConnection
+	if userConnection, err = s.userConnectionRepo.Create(ctx, &domain.UserConnection{
 		FromUserID:                 fromUserID,
 		FromAccountID:              fromAccount.ID,
 		FromDefaultSplitPercentage: fromDefaultSplitPercentage,
@@ -73,9 +74,7 @@ func (s *userConnectionService) Create(ctx context.Context, fromUserID, toUserID
 		ToAccountID:                toAccount.ID,
 		ToDefaultSplitPercentage:   fromDefaultSplitPercentage,
 		ConnectionStatus:           domain.UserConnectionStatusPending,
-	}
-
-	if _, err := s.userConnectionRepo.Create(ctx, userConnection); err != nil {
+	}); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, apperrors.AlreadyExists("user connection")
 		}
