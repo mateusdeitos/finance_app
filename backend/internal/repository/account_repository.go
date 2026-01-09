@@ -78,9 +78,25 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 	var ents []entity.Account
 	query := GetTxFromContext(ctx, r.db)
 
+	if len(options.IDs) > 0 {
+		query = query.Where("accounts.id IN ?", options.IDs)
+	}
+
 	if len(options.UserIDs) > 0 {
 		query = query.Where("user_id IN ?", options.UserIDs)
 	}
+
+	query = query.Or(`
+		EXISTS (
+			SELECT 1
+				FROM user_connections
+				WHERE user_connections.connection_status = ?
+				AND (
+					(user_connections.from_account_id = accounts.id AND user_connections.from_user_id IN ?)
+					OR (user_connections.to_account_id = accounts.id AND user_connections.to_user_id IN ?)
+				)
+		)
+	`, domain.UserConnectionStatusAccepted, options.UserIDs, options.UserIDs)
 
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err

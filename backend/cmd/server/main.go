@@ -44,10 +44,11 @@ func main() {
 
 	// Initialize repositories
 	repos := &repository.Repositories{
-		User:          repository.NewUserRepository(db),
-		DBTransaction: repository.NewDBTransaction(db),
-		UserSocial:    repository.NewUserSocialRepository(db),
-		Account:       repository.NewAccountRepository(db),
+		User:           repository.NewUserRepository(db),
+		DBTransaction:  repository.NewDBTransaction(db),
+		UserSocial:     repository.NewUserSocialRepository(db),
+		Account:        repository.NewAccountRepository(db),
+		UserConnection: repository.NewUserConnectionRepository(db),
 		// 	Category:              repository.NewCategoryRepository(db),
 		// 	Tag:                   repository.NewTagRepository(db),
 		// 	Transaction:           repository.NewTransactionRepository(db),
@@ -64,12 +65,15 @@ func main() {
 		// 	Transaction: service.NewTransactionService(repos),
 	}
 
+	services.UserConnection = service.NewUserConnectionService(repos, services)
+
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services)
 	accountHandler := handler.NewAccountHandler(services)
 	// categoryHandler := handler.NewCategoryHandler(services)
 	// tagHandler := handler.NewTagHandler(services)
 	// transactionHandler := handler.NewTransactionHandler(services)
+	userConnectionHandler := handler.NewUserConnectionHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -99,12 +103,19 @@ func main() {
 
 	// Accounts
 	accounts := api.Group("/accounts")
-	accounts.GET("", accountHandler.List)
+	accounts.GET("", accountHandler.Search)
 	accounts.POST("", accountHandler.Create)
 	// accounts.GET("/:id", accountHandler.GetByID)
 	// accounts.PUT("/:id", accountHandler.Update)
 	// accounts.DELETE("/:id", accountHandler.Delete)
 	// accounts.POST("/:id/share", accountHandler.Share)
+
+	// User connections
+	userConnections := api.Group("/user-connections")
+	userConnections.POST("", userConnectionHandler.Create)
+	userConnections.PATCH("/:id/:status", userConnectionHandler.UpdateStatus)
+	userConnections.DELETE("/:id", userConnectionHandler.Delete)
+	userConnections.GET("", userConnectionHandler.Search)
 
 	// Categories
 	// categories := api.Group("/categories")

@@ -8,14 +8,13 @@ import (
 )
 
 type Account struct {
-	ID             int
-	UserID         int
-	Name           string
-	Description    *string
-	CreatedAt      *time.Time
-	UpdatedAt      *time.Time
-	User           User
-	SharedWithUser *User
+	ID          int
+	UserID      int
+	Name        string
+	Description *string
+	CreatedAt   *time.Time
+	UpdatedAt   *time.Time
+	User        User
 }
 
 func (a *Account) ToDomain() *domain.Account {

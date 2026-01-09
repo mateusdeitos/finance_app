@@ -12,5 +12,6 @@ type Account struct {
 }
 
 type AccountSearchOptions struct {
+	IDs     []int `json:"ids"`
 	UserIDs []int `json:"user_ids"`
 }

@@ -24,6 +24,7 @@ func NewAccountService(repos *repository.Repositories) AccountService {
 }
 
 func (s *accountService) Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error) {
+	account.UserID = userID
 	return s.accountRepo.Create(ctx, account)
 }
 
@@ -39,8 +40,8 @@ func (s *accountService) GetByID(ctx context.Context, userID, id int) (*domain.A
 	return account, nil
 }
 
-func (s *accountService) List(ctx context.Context, userID int) ([]*domain.Account, error) {
-	return s.accountRepo.GetByUserID(ctx, userID)
+func (s *accountService) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
+	return s.accountRepo.Search(ctx, options)
 }
 
 func (s *accountService) Update(ctx context.Context, userID int, account *domain.Account) error {

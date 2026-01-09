@@ -64,6 +64,11 @@ CREATE INDEX idx_user_connections_from_user_id ON user_connections(from_user_id)
 CREATE INDEX idx_user_connections_to_user_id ON user_connections(to_user_id);
 CREATE INDEX idx_user_connections_connection_status ON user_connections(connection_status);
 
+CREATE UNIQUE INDEX idx_user_connections_unique ON user_connections(
+    LEAST(from_user_id, to_user_id), 
+    GREATEST(from_user_id, to_user_id)
+);
+
 -- Create categories table
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,

@@ -96,4 +96,5 @@ type Repositories struct {
 	Transaction           TransactionRepository
 	TransactionRecurrence TransactionRecurrenceRepository
 	UserSettings          UserSettingsRepository
+	UserConnection        UserConnectionRepository
 }

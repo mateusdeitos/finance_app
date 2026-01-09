@@ -28,7 +28,7 @@ type TransactionService interface {
 type AccountService interface {
 	Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error)
 	GetByID(ctx context.Context, userID, id int) (*domain.Account, error)
-	List(ctx context.Context, userID int) ([]*domain.Account, error)
+	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
 	Update(ctx context.Context, userID int, account *domain.Account) error
 	Delete(ctx context.Context, userID, id int) error
 }
@@ -49,11 +49,19 @@ type TagService interface {
 	Delete(ctx context.Context, userID, id int) error
 }
 
+type UserConnectionService interface {
+	Create(ctx context.Context, fromUserID, toUserID, fromDefaultSplitPercentage int) (*domain.UserConnection, error)
+	UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error
+	Delete(ctx context.Context, userID, id int) error
+	Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error)
+}
+
 // Services contains all service interfaces
 type Services struct {
-	Auth        AuthService
-	Account     AccountService
-	Category    CategoryService
-	Tag         TagService
-	Transaction TransactionService
+	Auth           AuthService
+	Account        AccountService
+	Category       CategoryService
+	Tag            TagService
+	Transaction    TransactionService
+	UserConnection UserConnectionService
 }

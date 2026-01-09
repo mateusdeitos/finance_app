@@ -52,10 +52,17 @@ func (h *AccountHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, account)
 }
 
-func (h *AccountHandler) List(c echo.Context) error {
+func (h *AccountHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
-	accounts, err := h.accountService.List(c.Request().Context(), userID)
+	var options domain.AccountSearchOptions
+	if err := c.Bind(&options); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	options.UserIDs = []int{userID}
+
+	accounts, err := h.accountService.Search(c.Request().Context(), options)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

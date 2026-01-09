@@ -10,6 +10,10 @@ const (
 	UserConnectionStatusRejected UserConnectionStatusEnum = "rejected"
 )
 
+func (s UserConnectionStatusEnum) IsValid() bool {
+	return s == UserConnectionStatusPending || s == UserConnectionStatusAccepted || s == UserConnectionStatusRejected
+}
+
 type UserConnection struct {
 	ID                         int                      `json:"id"`
 	FromUserID                 int                      `json:"from_user_id"`
@@ -24,6 +28,7 @@ type UserConnection struct {
 }
 
 type UserConnectionSearchOptions struct {
+	IDs              []int                    `json:"ids"`
 	FromUserIDs      []int                    `json:"from_user_ids"`
 	ToUserIDs        []int                    `json:"to_user_ids"`
 	FromAccountIDs   []int                    `json:"from_account_ids"`
