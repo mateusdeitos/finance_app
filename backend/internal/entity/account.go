@@ -1,24 +1,27 @@
 package entity
 
 import (
+	"database/sql/driver"
+	"encoding/json"
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
 type Account struct {
-	ID          int
-	UserID      int
-	Name        string
-	Description *string
-	CreatedAt   *time.Time
-	UpdatedAt   *time.Time
-	User        User
+	ID             int
+	UserID         int
+	Name           string
+	Description    *string
+	CreatedAt      *time.Time
+	UpdatedAt      *time.Time
+	UserConnection *AccountUserConnection `gorm:"column:user_connection;type:jsonb"`
 }
 
 func (a *Account) ToDomain() *domain.Account {
-	return &domain.Account{
+	acc := &domain.Account{
 		ID:          a.ID,
 		UserID:      a.UserID,
 		Name:        a.Name,
@@ -26,10 +29,16 @@ func (a *Account) ToDomain() *domain.Account {
 		CreatedAt:   a.CreatedAt,
 		UpdatedAt:   a.UpdatedAt,
 	}
+
+	if a.UserConnection != nil {
+		acc.UserConnection = a.UserConnection.ToDomain()
+	}
+
+	return acc
 }
 
 func AccountFromDomain(d *domain.Account) *Account {
-	return &Account{
+	a := &Account{
 		ID:          d.ID,
 		UserID:      d.UserID,
 		Name:        d.Name,
@@ -37,6 +46,14 @@ func AccountFromDomain(d *domain.Account) *Account {
 		CreatedAt:   d.CreatedAt,
 		UpdatedAt:   d.UpdatedAt,
 	}
+
+	if d.UserConnection != nil {
+		a.UserConnection = &AccountUserConnection{
+			UserConnection: lo.FromPtr(UserConnectionFromDomain(d.UserConnection)),
+		}
+	}
+
+	return a
 }
 
 func (Account) BeforeCreate(tx *gorm.DB) error {
@@ -49,4 +66,20 @@ func (Account) BeforeCreate(tx *gorm.DB) error {
 func (a *Account) BeforeUpdate(tx *gorm.DB) error {
 	tx.Statement.SetColumn("updated_at", time.Now())
 	return nil
+}
+
+type AccountUserConnection struct {
+	UserConnection
+}
+
+func (a *AccountUserConnection) Value() (driver.Value, error) {
+	return json.Marshal(a)
+}
+
+func (a *AccountUserConnection) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return nil
+	}
+	return json.Unmarshal(bytes, &a.UserConnection)
 }

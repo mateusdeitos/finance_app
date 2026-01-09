@@ -8,16 +8,16 @@ import (
 )
 
 type UserConnection struct {
-	ID                         int
-	FromUserID                 int
-	FromAccountID              int
-	FromDefaultSplitPercentage int
-	ToUserID                   int
-	ToAccountID                int
-	ToDefaultSplitPercentage   int
-	ConnectionStatus           domain.UserConnectionStatusEnum
-	CreatedAt                  *time.Time
-	UpdatedAt                  *time.Time
+	ID                         int                             `json:"id"`
+	FromUserID                 int                             `json:"from_user_id"`
+	FromAccountID              int                             `json:"from_account_id"`
+	FromDefaultSplitPercentage int                             `json:"from_default_split_percentage"`
+	ToUserID                   int                             `json:"to_user_id"`
+	ToAccountID                int                             `json:"to_account_id"`
+	ToDefaultSplitPercentage   int                             `json:"to_default_split_percentage"`
+	ConnectionStatus           domain.UserConnectionStatusEnum `json:"connection_status"`
+	CreatedAt                  *time.Time                      `json:"created_at"`
+	UpdatedAt                  *time.Time                      `json:"updated_at"`
 }
 
 func (a *UserConnection) ToDomain() *domain.UserConnection {

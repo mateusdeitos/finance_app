@@ -78,25 +78,41 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 	var ents []entity.Account
 	query := GetTxFromContext(ctx, r.db)
 
+	if len(options.UserIDs) == 0 {
+		return nil, errors.New("user IDs are required")
+	}
+
+	query = query.Select(`accounts.*, CASE WHEN user_connections.id IS NOT NULL THEN
+            jsonb_build_object(
+                'id', user_connections.id,
+                'from_user_id', user_connections.from_user_id,
+                'from_account_id', user_connections.from_account_id,
+                'from_default_split_percentage', user_connections.from_default_split_percentage,
+                'to_user_id', user_connections.to_user_id,
+                'to_account_id', user_connections.to_account_id,
+                'to_default_split_percentage', user_connections.to_default_split_percentage,
+                'connection_status', user_connections.connection_status,
+                'created_at', user_connections.created_at,
+                'updated_at', user_connections.updated_at
+            )
+        ELSE NULL
+    END AS user_connection`)
+
+	query = query.Joins(`LEFT JOIN user_connections ON user_connections.connection_status = ?
+		AND (
+			(user_connections.from_account_id = accounts.id AND user_connections.from_user_id IN ?)
+			OR (user_connections.to_account_id = accounts.id AND user_connections.to_user_id IN ?)
+		)`,
+		domain.UserConnectionStatusAccepted,
+		options.UserIDs,
+		options.UserIDs,
+	)
+
 	if len(options.IDs) > 0 {
 		query = query.Where("accounts.id IN ?", options.IDs)
 	}
 
-	if len(options.UserIDs) > 0 {
-		query = query.Where("user_id IN ?", options.UserIDs)
-	}
-
-	query = query.Or(`
-		EXISTS (
-			SELECT 1
-				FROM user_connections
-				WHERE user_connections.connection_status = ?
-				AND (
-					(user_connections.from_account_id = accounts.id AND user_connections.from_user_id IN ?)
-					OR (user_connections.to_account_id = accounts.id AND user_connections.to_user_id IN ?)
-				)
-		)
-	`, domain.UserConnectionStatusAccepted, options.UserIDs, options.UserIDs)
+	query = query.Where("user_id IN ?", options.UserIDs)
 
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
