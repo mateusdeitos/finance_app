@@ -82,14 +82,6 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 		query = query.Where("user_id IN ?", options.UserIDs)
 	}
 
-	if len(options.SharedWithUserIDs) > 0 {
-		query = query.Where("shared_with_user_id IN ?", options.SharedWithUserIDs)
-	}
-
-	if options.SharedAllowed {
-		query = query.Where("shared_allowed = ?", options.SharedAllowed)
-	}
-
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
 	}

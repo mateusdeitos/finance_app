@@ -98,33 +98,3 @@ func (h *AccountHandler) Delete(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
-
-func (h *AccountHandler) AcceptSharedAccount(c echo.Context) error {
-	userID := appcontext.GetUserIDFromContext(c.Request().Context())
-
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid account ID")
-	}
-
-	if err := h.accountService.AcceptSharedAccount(c.Request().Context(), userID, id); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	return c.NoContent(http.StatusNoContent)
-}
-
-func (h *AccountHandler) RejectSharedAccount(c echo.Context) error {
-	userID := appcontext.GetUserIDFromContext(c.Request().Context())
-
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid account ID")
-	}
-
-	if err := h.accountService.RejectSharedAccount(c.Request().Context(), userID, id); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
-	return c.NoContent(http.StatusNoContent)
-}

@@ -8,44 +8,35 @@ import (
 )
 
 type Account struct {
-	ID                     int
-	UserID                 int
-	Name                   string
-	Description            *string
-	SharedWithUserID       *int
-	DefaultSplitPercentage *int
-	SharedAllowed          bool
-	CreatedAt              *time.Time
-	UpdatedAt              *time.Time
-	User                   User
-	SharedWithUser         *User
+	ID             int
+	UserID         int
+	Name           string
+	Description    *string
+	CreatedAt      *time.Time
+	UpdatedAt      *time.Time
+	User           User
+	SharedWithUser *User
 }
 
 func (a *Account) ToDomain() *domain.Account {
 	return &domain.Account{
-		ID:                     a.ID,
-		UserID:                 a.UserID,
-		Name:                   a.Name,
-		Description:            a.Description,
-		SharedWithUserID:       a.SharedWithUserID,
-		SharedAllowed:          a.SharedAllowed,
-		DefaultSplitPercentage: a.DefaultSplitPercentage,
-		CreatedAt:              a.CreatedAt,
-		UpdatedAt:              a.UpdatedAt,
+		ID:          a.ID,
+		UserID:      a.UserID,
+		Name:        a.Name,
+		Description: a.Description,
+		CreatedAt:   a.CreatedAt,
+		UpdatedAt:   a.UpdatedAt,
 	}
 }
 
 func AccountFromDomain(d *domain.Account) *Account {
 	return &Account{
-		ID:                     d.ID,
-		UserID:                 d.UserID,
-		Name:                   d.Name,
-		Description:            d.Description,
-		SharedWithUserID:       d.SharedWithUserID,
-		SharedAllowed:          d.SharedAllowed,
-		DefaultSplitPercentage: d.DefaultSplitPercentage,
-		CreatedAt:              d.CreatedAt,
-		UpdatedAt:              d.UpdatedAt,
+		ID:          d.ID,
+		UserID:      d.UserID,
+		Name:        d.Name,
+		Description: d.Description,
+		CreatedAt:   d.CreatedAt,
+		UpdatedAt:   d.UpdatedAt,
 	}
 }
 

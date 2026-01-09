@@ -27,6 +27,13 @@ type UserSocialRepository interface {
 	Delete(ctx context.Context, userID int, provider domain.ProviderType) error
 }
 
+type UserConnectionRepository interface {
+	Create(ctx context.Context, userConnection *domain.UserConnection) (*domain.UserConnection, error)
+	Update(ctx context.Context, userConnection *domain.UserConnection) error
+	Delete(ctx context.Context, id int) error
+	Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error)
+}
+
 type AccountRepository interface {
 	Create(ctx context.Context, account *domain.Account) (*domain.Account, error)
 	GetByID(ctx context.Context, id int) (*domain.Account, error)

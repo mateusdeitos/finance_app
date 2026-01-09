@@ -37,15 +37,32 @@ CREATE TABLE accounts (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    shared_with_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-	shared_allowed BOOLEAN NOT NULL DEFAULT FALSE,
-    default_split_percentage SMALLINT CHECK (default_split_percentage >= 0 AND default_split_percentage <= 100),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_accounts_user_id ON accounts(user_id);
-CREATE INDEX idx_accounts_shared_with_user_id ON accounts(shared_with_user_id);
+
+-- Create user_connections table
+CREATE TYPE connection_status AS ENUM ('pending', 'accepted', 'rejected');
+CREATE TABLE user_connections (
+    id SERIAL PRIMARY KEY,
+	from_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    from_account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+	from_default_split_percentage SMALLINT CHECK (from_default_split_percentage >= 0 AND from_default_split_percentage <= 100),
+	to_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    to_default_split_percentage SMALLINT CHECK (to_default_split_percentage >= 0 AND to_default_split_percentage <= 100),
+    connection_status connection_status NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_connections_from_account_id ON user_connections(from_account_id);
+CREATE INDEX idx_user_connections_to_account_id ON user_connections(to_account_id);
+CREATE INDEX idx_user_connections_from_user_id ON user_connections(from_user_id);
+CREATE INDEX idx_user_connections_to_user_id ON user_connections(to_user_id);
+CREATE INDEX idx_user_connections_connection_status ON user_connections(connection_status);
 
 -- Create categories table
 CREATE TABLE categories (
@@ -132,6 +149,7 @@ DROP TABLE IF EXISTS transaction_recurrences;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS user_connections;
 DROP TABLE IF EXISTS accounts;
 DROP TABLE IF EXISTS users_social;
 DROP TABLE IF EXISTS users;
@@ -139,6 +157,7 @@ DROP TABLE IF EXISTS users;
 DROP TYPE IF EXISTS transaction_type;
 DROP TYPE IF EXISTS recurrence_type;
 DROP TYPE IF EXISTS provider_type;
+DROP TYPE IF EXISTS connection_status;
 
 -- +goose StatementEnd
 

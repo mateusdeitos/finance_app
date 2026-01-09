@@ -40,7 +40,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 	if account == nil {
 		return nil, errors.New("account not found")
 	}
-	if account.UserID != userID && (account.SharedWithUserID == nil || *account.SharedWithUserID != userID) {
+	if account.UserID != userID {
 		return nil, errors.New("account does not belong to user")
 	}
 
@@ -113,7 +113,7 @@ func (s *transactionService) GetByID(ctx context.Context, userID, id int) (*doma
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
-	if account.UserID != userID && (account.SharedWithUserID == nil || *account.SharedWithUserID != userID) {
+	if account.UserID != userID {
 		return nil, errors.New("transaction does not belong to user")
 	}
 
@@ -204,7 +204,7 @@ func (s *transactionService) Update(ctx context.Context, userID int, transaction
 		if account == nil {
 			return errors.New("account not found")
 		}
-		if account.UserID != userID && (account.SharedWithUserID == nil || *account.SharedWithUserID != userID) {
+		if account.UserID != userID {
 			return errors.New("account does not belong to user")
 		}
 	}

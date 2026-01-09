@@ -3,9 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/finance_app/backend/pkg/appcontext"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
-	"github.com/samber/lo"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
@@ -26,69 +24,7 @@ func NewAccountService(repos *repository.Repositories) AccountService {
 }
 
 func (s *accountService) Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error) {
-	account.UserID = userID
-	account.ID = 0
-
-	ctx, err := s.dbTransaction.Begin(ctx)
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to begin transaction", err)
-	}
-	defer s.dbTransaction.Rollback(ctx)
-
-	if account.SharedWithUserID != nil {
-		if *account.SharedWithUserID == userID {
-			return nil, pkgErrors.BadRequest("cannot share account with yourself")
-		}
-
-		sharedUser, err := s.userRepo.GetByID(ctx, *account.SharedWithUserID)
-		if err != nil {
-			return nil, pkgErrors.Internal("failed to get shared user", err)
-		}
-		if sharedUser == nil {
-			return nil, pkgErrors.NotFound("shared user")
-		}
-
-		accounts, err := s.accountRepo.Search(ctx, domain.AccountSearchOptions{
-			UserIDs:           []int{userID, *account.SharedWithUserID},
-			SharedWithUserIDs: []int{*account.SharedWithUserID},
-			SharedAllowed:     false,
-		})
-		if err != nil {
-			return nil, pkgErrors.Internal("failed to search accounts", err)
-		}
-		if len(accounts) > 0 {
-			return nil, pkgErrors.AlreadyExists("shared account with this user")
-		}
-
-		user := appcontext.GetUserFromContext(ctx)
-		if user == nil {
-			return nil, pkgErrors.Unauthorized("user not found")
-		}
-
-		_, err = s.accountRepo.Create(ctx, &domain.Account{
-			UserID:                 *account.SharedWithUserID,
-			Name:                   user.Name,
-			Description:            nil,
-			SharedWithUserID:       &userID,
-			SharedAllowed:          false,
-			DefaultSplitPercentage: account.DefaultSplitPercentage,
-		})
-
-		account.SharedAllowed = true
-		account.Name = sharedUser.Name
-	}
-
-	createdAccount, err := s.accountRepo.Create(ctx, account)
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to create account", err)
-	}
-
-	err = s.dbTransaction.Commit(ctx)
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to commit transaction", err)
-	}
-
-	return createdAccount, nil
+	return s.accountRepo.Create(ctx, account)
 }
 
 func (s *accountService) GetByID(ctx context.Context, userID, id int) (*domain.Account, error) {
@@ -128,88 +64,10 @@ func (s *accountService) Update(ctx context.Context, userID int, account *domain
 		return pkgErrors.Forbidden("only account owner can update")
 	}
 
-	// Não permite mudar o usuário compartilhado
-	if existing.SharedWithUserID != nil && account.SharedWithUserID != nil && lo.FromPtr(existing.SharedWithUserID) != lo.FromPtr(account.SharedWithUserID) {
-		return pkgErrors.BadRequest("cannot change shared user")
-	}
-
-	// Caso o usuário compartilhe a conta para outro usuário, cria uma nova conta para o usuário compartilhado
-	if account.SharedWithUserID != nil && *account.SharedWithUserID != userID {
-		account.SharedAllowed = false
-		user, err := s.userRepo.GetByID(ctx, *account.SharedWithUserID)
-		if err != nil {
-			return pkgErrors.Internal("failed to get shared user", err)
-		}
-		if user == nil {
-			return pkgErrors.NotFound("shared user")
-		}
-	} else {
-		account.SharedWithUserID = nil
-	}
-
 	account.UserID = existing.UserID
 
 	if err := s.accountRepo.Update(ctx, account); err != nil {
 		return pkgErrors.Internal("failed to update account", err)
-	}
-
-	if err := s.dbTransaction.Commit(ctx); err != nil {
-		return pkgErrors.Internal("failed to commit transaction", err)
-	}
-
-	return nil
-}
-
-func (s *accountService) AcceptSharedAccount(ctx context.Context, userID, id int) error {
-	account, err := s.GetByID(ctx, userID, id)
-	if err != nil {
-		return err
-	}
-
-	if account.UserID != userID {
-		return pkgErrors.Forbidden("only account owner can accept shared account")
-	}
-
-	account.SharedAllowed = true
-	return s.accountRepo.Update(ctx, account)
-}
-
-func (s *accountService) RejectSharedAccount(ctx context.Context, userID, id int) error {
-	ctx, err := s.dbTransaction.Begin(ctx)
-	if err != nil {
-		return pkgErrors.Internal("failed to begin transaction", err)
-	}
-	defer s.dbTransaction.Rollback(ctx)
-
-	account, err := s.GetByID(ctx, userID, id)
-	if err != nil {
-		return err
-	}
-
-	if account.UserID != userID {
-		return pkgErrors.Forbidden("only account owner can reject shared account")
-	}
-
-	if err := s.accountRepo.Delete(ctx, id); err != nil {
-		return pkgErrors.Internal("failed to delete account", err)
-	}
-
-	// busca a conta do usuário que quis compartilhar
-	searchResult, err := s.accountRepo.Search(ctx, domain.AccountSearchOptions{
-		SharedWithUserIDs: []int{userID},
-		SharedAllowed:     true,
-	})
-
-	// se não encontrou a conta, commit e retorna
-	if len(searchResult) == 0 {
-		return s.dbTransaction.Commit(ctx)
-	}
-
-	originalAccount := searchResult[0]
-
-	originalAccount.SharedAllowed = false
-	if err := s.accountRepo.Update(ctx, originalAccount); err != nil {
-		return pkgErrors.Internal("failed to update original account", err)
 	}
 
 	if err := s.dbTransaction.Commit(ctx); err != nil {
