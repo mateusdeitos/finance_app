@@ -50,7 +50,7 @@ func main() {
 		Account:        repository.NewAccountRepository(db),
 		UserConnection: repository.NewUserConnectionRepository(db),
 		Category:       repository.NewCategoryRepository(db),
-		// 	Tag:                   repository.NewTagRepository(db),
+		Tag:            repository.NewTagRepository(db),
 		// 	Transaction:           repository.NewTransactionRepository(db),
 		// 	TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
 		// 	UserSettings:          repository.NewUserSettingsRepository(db),
@@ -61,7 +61,7 @@ func main() {
 		Auth:     service.NewAuthService(repos, cfg),
 		Account:  service.NewAccountService(repos),
 		Category: service.NewCategoryService(repos),
-		// 	Tag:         service.NewTagService(repos),
+		Tag:      service.NewTagService(repos),
 		// 	Transaction: service.NewTransactionService(repos),
 	}
 
@@ -71,7 +71,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(services)
 	accountHandler := handler.NewAccountHandler(services)
 	categoryHandler := handler.NewCategoryHandler(services)
-	// tagHandler := handler.NewTagHandler(services)
+	tagHandler := handler.NewTagHandler(services)
 	// transactionHandler := handler.NewTransactionHandler(services)
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 
@@ -122,12 +122,11 @@ func main() {
 	categories.DELETE("/:id", categoryHandler.Delete)
 
 	// Tags
-	// tags := api.Group("/tags")
-	// tags.GET("", tagHandler.List)
-	// tags.POST("", tagHandler.Create)
-	// tags.GET("/:id", tagHandler.GetByID)
-	// tags.PUT("/:id", tagHandler.Update)
-	// tags.DELETE("/:id", tagHandler.Delete)
+	tags := api.Group("/tags")
+	tags.GET("", tagHandler.Search)
+	tags.POST("", tagHandler.Create)
+	tags.PUT("/:id", tagHandler.Update)
+	tags.DELETE("/:id", tagHandler.Delete)
 
 	// Transactions
 	// transactions := api.Group("/transactions")

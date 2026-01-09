@@ -53,12 +53,9 @@ type CategoryRepository interface {
 
 type TagRepository interface {
 	Create(ctx context.Context, tag *domain.Tag) (*domain.Tag, error)
-	GetByID(ctx context.Context, id int) (*domain.Tag, error)
-	GetByUserID(ctx context.Context, userID int) ([]*domain.Tag, error)
-	GetByIDs(ctx context.Context, ids []int) ([]*domain.Tag, error)
-	GetByName(ctx context.Context, userID int, name string) (*domain.Tag, error)
 	Update(ctx context.Context, tag *domain.Tag) error
 	Delete(ctx context.Context, id int) error
+	Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error)
 }
 
 type TransactionRepository interface {

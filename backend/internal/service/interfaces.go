@@ -43,10 +43,9 @@ type CategoryService interface {
 
 type TagService interface {
 	Create(ctx context.Context, userID int, tag *domain.Tag) (*domain.Tag, error)
-	GetByID(ctx context.Context, userID, id int) (*domain.Tag, error)
-	List(ctx context.Context, userID int) ([]*domain.Tag, error)
 	Update(ctx context.Context, userID int, tag *domain.Tag) error
 	Delete(ctx context.Context, userID, id int) error
+	Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error)
 }
 
 type UserConnectionService interface {

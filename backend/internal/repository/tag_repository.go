@@ -19,59 +19,7 @@ func NewTagRepository(db *gorm.DB) TagRepository {
 
 func (r *tagRepository) Create(ctx context.Context, tag *domain.Tag) (*domain.Tag, error) {
 	ent := entity.TagFromDomain(tag)
-	if err := r.db.WithContext(ctx).Create(ent).Error; err != nil {
-		return nil, err
-	}
-	return ent.ToDomain(), nil
-}
-
-func (r *tagRepository) GetByID(ctx context.Context, id int) (*domain.Tag, error) {
-	var ent entity.Tag
-	if err := r.db.WithContext(ctx).First(&ent, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return ent.ToDomain(), nil
-}
-
-func (r *tagRepository) GetByUserID(ctx context.Context, userID int) ([]*domain.Tag, error) {
-	var ents []entity.Tag
-	if err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&ents).Error; err != nil {
-		return nil, err
-	}
-
-	result := make([]*domain.Tag, len(ents))
-	for i, ent := range ents {
-		result[i] = ent.ToDomain()
-	}
-	return result, nil
-}
-
-func (r *tagRepository) GetByIDs(ctx context.Context, ids []int) ([]*domain.Tag, error) {
-	if len(ids) == 0 {
-		return []*domain.Tag{}, nil
-	}
-
-	var ents []entity.Tag
-	if err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&ents).Error; err != nil {
-		return nil, err
-	}
-
-	result := make([]*domain.Tag, len(ents))
-	for i, ent := range ents {
-		result[i] = ent.ToDomain()
-	}
-	return result, nil
-}
-
-func (r *tagRepository) GetByName(ctx context.Context, userID int, name string) (*domain.Tag, error) {
-	var ent entity.Tag
-	if err := r.db.WithContext(ctx).Where("user_id = ? AND name = ?", userID, name).First(&ent).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
-		}
+	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
 		return nil, err
 	}
 	return ent.ToDomain(), nil
@@ -79,9 +27,44 @@ func (r *tagRepository) GetByName(ctx context.Context, userID int, name string) 
 
 func (r *tagRepository) Update(ctx context.Context, tag *domain.Tag) error {
 	ent := entity.TagFromDomain(tag)
-	return r.db.WithContext(ctx).Save(ent).Error
+	return GetTxFromContext(ctx, r.db).Save(ent).Error
 }
 
 func (r *tagRepository) Delete(ctx context.Context, id int) error {
-	return r.db.WithContext(ctx).Delete(&entity.Tag{}, id).Error
+	return GetTxFromContext(ctx, r.db).Delete(&entity.Tag{}, id).Error
+}
+
+func (r *tagRepository) Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error) {
+	var ents []entity.Tag
+	query := GetTxFromContext(ctx, r.db)
+
+	if len(options.UserIDs) == 0 {
+		return nil, errors.New("user IDs are required")
+	}
+
+	query = query.Where("user_id IN ?", options.UserIDs)
+
+	if len(options.IDs) > 0 {
+		query = query.Where("id IN ?", options.IDs)
+	}
+
+	if len(options.IDsNot) > 0 {
+		query = query.Where("id NOT IN ?", options.IDsNot)
+	}
+
+	if options.Name != "" {
+		query = query.Where("name = ?", options.Name)
+	}
+
+	query = query.Order("name ASC")
+
+	if err := query.Find(&ents).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*domain.Tag, len(ents))
+	for i, ent := range ents {
+		result[i] = ent.ToDomain()
+	}
+	return result, nil
 }

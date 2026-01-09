@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
 )
+
+var tagNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 type tagService struct {
 	tagRepo repository.TagRepository
@@ -20,66 +24,116 @@ func NewTagService(repos *repository.Repositories) TagService {
 }
 
 func (s *tagService) Create(ctx context.Context, userID int, tag *domain.Tag) (*domain.Tag, error) {
-	// Check if tag with same name already exists
-	existing, err := s.tagRepo.GetByName(ctx, userID, tag.Name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check existing tag: %w", err)
+	// Validate and normalize tag name
+	if parsed, err := s.parseTagName(tag.Name); err != nil {
+		return nil, pkgErrors.Internal("failed to parse tag name", err)
+	} else {
+		tag.Name = parsed
 	}
-	if existing != nil {
-		return existing, nil // Return existing tag
+
+	// Check if tag with same name already exists
+	existing, err := s.tagRepo.Search(ctx, domain.TagSearchOptions{
+		UserIDs: []int{userID},
+		Name:    tag.Name,
+	})
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to check existing tag", err)
+	}
+	if len(existing) > 0 {
+		return existing[0], nil // Return existing tag
 	}
 
 	tag.UserID = userID
-	return s.tagRepo.Create(ctx, tag)
-}
-
-func (s *tagService) GetByID(ctx context.Context, userID, id int) (*domain.Tag, error) {
-	tag, err := s.tagRepo.GetByID(ctx, id)
+	created, err := s.tagRepo.Create(ctx, tag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tag: %w", err)
+		return nil, pkgErrors.Internal("failed to create tag", err)
 	}
-	if tag == nil {
-		return nil, errors.New("tag not found")
-	}
-	if tag.UserID != userID {
-		return nil, errors.New("tag does not belong to user")
-	}
-	return tag, nil
-}
-
-func (s *tagService) List(ctx context.Context, userID int) ([]*domain.Tag, error) {
-	return s.tagRepo.GetByUserID(ctx, userID)
+	return created, nil
 }
 
 func (s *tagService) Update(ctx context.Context, userID int, tag *domain.Tag) error {
+	// Validate and normalize tag name
+	if parsed, err := s.parseTagName(tag.Name); err != nil {
+		return pkgErrors.Internal("failed to parse tag name", err)
+	} else {
+		tag.Name = parsed
+	}
+
 	// Verify ownership
-	existing, err := s.GetByID(ctx, userID, tag.ID)
+	existing, err := s.tagRepo.Search(ctx, domain.TagSearchOptions{
+		UserIDs: []int{userID},
+		IDs:     []int{tag.ID},
+	})
 	if err != nil {
-		return err
+		return pkgErrors.Internal("failed to get tag", err)
+	}
+	if len(existing) == 0 {
+		return pkgErrors.NotFound(fmt.Sprintf("tag with ID %d not found", tag.ID))
 	}
 
 	// Check if new name conflicts with another tag
-	if tag.Name != existing.Name {
-		conflicting, err := s.tagRepo.GetByName(ctx, userID, tag.Name)
+	if tag.Name != existing[0].Name {
+		conflicting, err := s.tagRepo.Search(ctx, domain.TagSearchOptions{
+			UserIDs: []int{userID},
+			IDsNot:  []int{tag.ID},
+			Name:    tag.Name,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to check existing tag: %w", err)
+			return pkgErrors.Internal("failed to check existing tag", err)
 		}
-		if conflicting != nil && conflicting.ID != tag.ID {
-			return errors.New("tag with this name already exists")
+		if len(conflicting) > 0 {
+			return pkgErrors.AlreadyExists("tag with this name")
 		}
 	}
 
-	tag.UserID = existing.UserID
-	return s.tagRepo.Update(ctx, tag)
+	existing[0].Name = tag.Name
+	if err := s.tagRepo.Update(ctx, existing[0]); err != nil {
+		return pkgErrors.Internal("failed to update tag", err)
+	}
+	return nil
 }
 
 func (s *tagService) Delete(ctx context.Context, userID, id int) error {
 	// Verify ownership
-	_, err := s.GetByID(ctx, userID, id)
+	existing, err := s.tagRepo.Search(ctx, domain.TagSearchOptions{
+		UserIDs: []int{userID},
+		IDs:     []int{id},
+	})
 	if err != nil {
-		return err
+		return pkgErrors.Internal("failed to get tag", err)
+	}
+	if len(existing) == 0 {
+		return pkgErrors.NotFound("tag")
 	}
 
-	return s.tagRepo.Delete(ctx, id)
+	if err := s.tagRepo.Delete(ctx, id); err != nil {
+		return pkgErrors.Internal("failed to delete tag", err)
+	}
+	return nil
 }
 
+func (s *tagService) Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error) {
+	tags, err := s.tagRepo.Search(ctx, options)
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to search tags", err)
+	}
+	return tags, nil
+}
+
+func (s *tagService) validateTagName(name string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return pkgErrors.Validation("tag name cannot be empty")
+	}
+	if !tagNameRegex.MatchString(trimmed) {
+		return pkgErrors.Validation("tag name can only contain letters, numbers, underscores, and hyphens")
+	}
+	return nil
+}
+
+func (s *tagService) parseTagName(name string) (string, error) {
+	if err := s.validateTagName(name); err != nil {
+		return "", err
+	}
+	return strings.ToLower(strings.TrimSpace(name)), nil
+}

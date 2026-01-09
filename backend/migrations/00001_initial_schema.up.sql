@@ -88,11 +88,11 @@ CREATE TABLE tags (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, name)
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_tags_user_id ON tags(user_id);
+CREATE UNIQUE INDEX idx_tags_unique ON tags(user_id, name);
 
 -- Create transactions table
 CREATE TABLE transactions (

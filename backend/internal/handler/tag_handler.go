@@ -36,26 +36,12 @@ func (h *TagHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, created)
 }
 
-func (h *TagHandler) GetByID(c echo.Context) error {
+func (h *TagHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid tag ID")
-	}
-
-	tag, err := h.tagService.GetByID(c.Request().Context(), userID, id)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound, err.Error())
-	}
-
-	return c.JSON(http.StatusOK, tag)
-}
-
-func (h *TagHandler) List(c echo.Context) error {
-	userID := appcontext.GetUserIDFromContext(c.Request().Context())
-
-	tags, err := h.tagService.List(c.Request().Context(), userID)
+	tags, err := h.tagService.Search(c.Request().Context(), domain.TagSearchOptions{
+		UserIDs: []int{userID},
+	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -81,7 +67,7 @@ func (h *TagHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "tag updated"})
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *TagHandler) Delete(c echo.Context) error {
@@ -96,5 +82,5 @@ func (h *TagHandler) Delete(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"message": "tag deleted"})
+	return c.NoContent(http.StatusNoContent)
 }
