@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"io"
 
 	"github.com/finance_app/backend/internal/domain"
 )
@@ -13,16 +12,7 @@ type AuthService interface {
 }
 
 type TransactionService interface {
-	Create(ctx context.Context, userID int, transaction *domain.Transaction) (*domain.Transaction, error)
-	GetByID(ctx context.Context, userID, id int) (*domain.Transaction, error)
-	List(ctx context.Context, userID int, filter domain.TransactionFilter, orderBy domain.TransactionOrderBy, limit, offset int) ([]*domain.Transaction, int64, error)
-	GetGrouped(ctx context.Context, userID int, filter domain.TransactionFilter, groupBy domain.TransactionGroupBy) (map[string][]*domain.Transaction, error)
-	Update(ctx context.Context, userID int, transaction *domain.Transaction) error
-	BulkUpdate(ctx context.Context, userID int, updates domain.BulkUpdateTransaction) error
-	Delete(ctx context.Context, userID, id int) error
-	ImportCSV(ctx context.Context, userID int, reader io.Reader) ([]*domain.Transaction, error)
-	SuggestCategory(ctx context.Context, userID int, description string) (*domain.Category, error)
-	CreateRecurring(ctx context.Context, userID int, transaction *domain.Transaction, config domain.TransactionRecurrenceConfig) ([]*domain.Transaction, error)
+	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error
 }
 
 type AccountService interface {

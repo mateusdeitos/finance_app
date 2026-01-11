@@ -23,21 +23,33 @@ func (_m *MockTransactionRecurrenceRepository) EXPECT() *MockTransactionRecurren
 }
 
 // Create provides a mock function with given fields: ctx, recurrence
-func (_m *MockTransactionRecurrenceRepository) Create(ctx context.Context, recurrence *domain.TransactionRecurrence) error {
+func (_m *MockTransactionRecurrenceRepository) Create(ctx context.Context, recurrence *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error) {
 	ret := _m.Called(ctx, recurrence)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Create")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *domain.TransactionRecurrence) error); ok {
+	var r0 *domain.TransactionRecurrence
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)); ok {
+		return rf(ctx, recurrence)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.TransactionRecurrence) *domain.TransactionRecurrence); ok {
 		r0 = rf(ctx, recurrence)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.TransactionRecurrence)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, *domain.TransactionRecurrence) error); ok {
+		r1 = rf(ctx, recurrence)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // MockTransactionRecurrenceRepository_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
@@ -59,118 +71,12 @@ func (_c *MockTransactionRecurrenceRepository_Create_Call) Run(run func(ctx cont
 	return _c
 }
 
-func (_c *MockTransactionRecurrenceRepository_Create_Call) Return(_a0 error) *MockTransactionRecurrenceRepository_Create_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockTransactionRecurrenceRepository_Create_Call) RunAndReturn(run func(context.Context, *domain.TransactionRecurrence) error) *MockTransactionRecurrenceRepository_Create_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DeleteByTransactionID provides a mock function with given fields: ctx, transactionID
-func (_m *MockTransactionRecurrenceRepository) DeleteByTransactionID(ctx context.Context, transactionID int) error {
-	ret := _m.Called(ctx, transactionID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteByTransactionID")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
-		r0 = rf(ctx, transactionID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockTransactionRecurrenceRepository_DeleteByTransactionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteByTransactionID'
-type MockTransactionRecurrenceRepository_DeleteByTransactionID_Call struct {
-	*mock.Call
-}
-
-// DeleteByTransactionID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - transactionID int
-func (_e *MockTransactionRecurrenceRepository_Expecter) DeleteByTransactionID(ctx interface{}, transactionID interface{}) *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call {
-	return &MockTransactionRecurrenceRepository_DeleteByTransactionID_Call{Call: _e.mock.On("DeleteByTransactionID", ctx, transactionID)}
-}
-
-func (_c *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call) Run(run func(ctx context.Context, transactionID int)) *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call) Return(_a0 error) *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call) RunAndReturn(run func(context.Context, int) error) *MockTransactionRecurrenceRepository_DeleteByTransactionID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByTransactionID provides a mock function with given fields: ctx, transactionID
-func (_m *MockTransactionRecurrenceRepository) GetByTransactionID(ctx context.Context, transactionID int) ([]*domain.TransactionRecurrence, error) {
-	ret := _m.Called(ctx, transactionID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByTransactionID")
-	}
-
-	var r0 []*domain.TransactionRecurrence
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.TransactionRecurrence, error)); ok {
-		return rf(ctx, transactionID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.TransactionRecurrence); ok {
-		r0 = rf(ctx, transactionID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.TransactionRecurrence)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, transactionID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTransactionRecurrenceRepository_GetByTransactionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByTransactionID'
-type MockTransactionRecurrenceRepository_GetByTransactionID_Call struct {
-	*mock.Call
-}
-
-// GetByTransactionID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - transactionID int
-func (_e *MockTransactionRecurrenceRepository_Expecter) GetByTransactionID(ctx interface{}, transactionID interface{}) *MockTransactionRecurrenceRepository_GetByTransactionID_Call {
-	return &MockTransactionRecurrenceRepository_GetByTransactionID_Call{Call: _e.mock.On("GetByTransactionID", ctx, transactionID)}
-}
-
-func (_c *MockTransactionRecurrenceRepository_GetByTransactionID_Call) Run(run func(ctx context.Context, transactionID int)) *MockTransactionRecurrenceRepository_GetByTransactionID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockTransactionRecurrenceRepository_GetByTransactionID_Call) Return(_a0 []*domain.TransactionRecurrence, _a1 error) *MockTransactionRecurrenceRepository_GetByTransactionID_Call {
+func (_c *MockTransactionRecurrenceRepository_Create_Call) Return(_a0 *domain.TransactionRecurrence, _a1 error) *MockTransactionRecurrenceRepository_Create_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTransactionRecurrenceRepository_GetByTransactionID_Call) RunAndReturn(run func(context.Context, int) ([]*domain.TransactionRecurrence, error)) *MockTransactionRecurrenceRepository_GetByTransactionID_Call {
+func (_c *MockTransactionRecurrenceRepository_Create_Call) RunAndReturn(run func(context.Context, *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)) *MockTransactionRecurrenceRepository_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

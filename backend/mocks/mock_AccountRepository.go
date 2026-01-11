@@ -305,6 +305,65 @@ func (_c *MockAccountRepository_GetSharedAccounts_Call) RunAndReturn(run func(co
 	return _c
 }
 
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockAccountRepository) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
+	ret := _m.Called(ctx, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Search")
+	}
+
+	var r0 []*domain.Account
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.AccountSearchOptions) ([]*domain.Account, error)); ok {
+		return rf(ctx, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.AccountSearchOptions) []*domain.Account); ok {
+		r0 = rf(ctx, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.Account)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.AccountSearchOptions) error); ok {
+		r1 = rf(ctx, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAccountRepository_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockAccountRepository_Search_Call struct {
+	*mock.Call
+}
+
+// Search is a helper method to define mock.On call
+//   - ctx context.Context
+//   - options domain.AccountSearchOptions
+func (_e *MockAccountRepository_Expecter) Search(ctx interface{}, options interface{}) *MockAccountRepository_Search_Call {
+	return &MockAccountRepository_Search_Call{Call: _e.mock.On("Search", ctx, options)}
+}
+
+func (_c *MockAccountRepository_Search_Call) Run(run func(ctx context.Context, options domain.AccountSearchOptions)) *MockAccountRepository_Search_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.AccountSearchOptions))
+	})
+	return _c
+}
+
+func (_c *MockAccountRepository_Search_Call) Return(_a0 []*domain.Account, _a1 error) *MockAccountRepository_Search_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAccountRepository_Search_Call) RunAndReturn(run func(context.Context, domain.AccountSearchOptions) ([]*domain.Account, error)) *MockAccountRepository_Search_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function with given fields: ctx, account
 func (_m *MockAccountRepository) Update(ctx context.Context, account *domain.Account) error {
 	ret := _m.Called(ctx, account)

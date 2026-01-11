@@ -131,24 +131,22 @@ func (_c *MockCategoryService_Delete_Call) RunAndReturn(run func(context.Context
 }
 
 // GetByID provides a mock function with given fields: ctx, userID, id
-func (_m *MockCategoryService) GetByID(ctx context.Context, userID int, id int) (*domain.Category, error) {
+func (_m *MockCategoryService) GetByID(ctx context.Context, userID int, id int) (domain.Category, error) {
 	ret := _m.Called(ctx, userID, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetByID")
 	}
 
-	var r0 *domain.Category
+	var r0 domain.Category
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*domain.Category, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) (domain.Category, error)); ok {
 		return rf(ctx, userID, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) *domain.Category); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) domain.Category); ok {
 		r0 = rf(ctx, userID, id)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Category)
-		}
+		r0 = ret.Get(0).(domain.Category)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
@@ -180,39 +178,39 @@ func (_c *MockCategoryService_GetByID_Call) Run(run func(ctx context.Context, us
 	return _c
 }
 
-func (_c *MockCategoryService_GetByID_Call) Return(_a0 *domain.Category, _a1 error) *MockCategoryService_GetByID_Call {
+func (_c *MockCategoryService_GetByID_Call) Return(_a0 domain.Category, _a1 error) *MockCategoryService_GetByID_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockCategoryService_GetByID_Call) RunAndReturn(run func(context.Context, int, int) (*domain.Category, error)) *MockCategoryService_GetByID_Call {
+func (_c *MockCategoryService_GetByID_Call) RunAndReturn(run func(context.Context, int, int) (domain.Category, error)) *MockCategoryService_GetByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
-// List provides a mock function with given fields: ctx, userID
-func (_m *MockCategoryService) List(ctx context.Context, userID int) ([]*domain.Category, error) {
-	ret := _m.Called(ctx, userID)
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockCategoryService) Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
+	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
-		panic("no return value specified for List")
+		panic("no return value specified for Search")
 	}
 
 	var r0 []*domain.Category
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Category, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)); ok {
+		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Category); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) []*domain.Category); ok {
+		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Category)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.CategorySearchOptions) error); ok {
+		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -220,31 +218,31 @@ func (_m *MockCategoryService) List(ctx context.Context, userID int) ([]*domain.
 	return r0, r1
 }
 
-// MockCategoryService_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type MockCategoryService_List_Call struct {
+// MockCategoryService_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockCategoryService_Search_Call struct {
 	*mock.Call
 }
 
-// List is a helper method to define mock.On call
+// Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - userID int
-func (_e *MockCategoryService_Expecter) List(ctx interface{}, userID interface{}) *MockCategoryService_List_Call {
-	return &MockCategoryService_List_Call{Call: _e.mock.On("List", ctx, userID)}
+//   - options domain.CategorySearchOptions
+func (_e *MockCategoryService_Expecter) Search(ctx interface{}, options interface{}) *MockCategoryService_Search_Call {
+	return &MockCategoryService_Search_Call{Call: _e.mock.On("Search", ctx, options)}
 }
 
-func (_c *MockCategoryService_List_Call) Run(run func(ctx context.Context, userID int)) *MockCategoryService_List_Call {
+func (_c *MockCategoryService_Search_Call) Run(run func(ctx context.Context, options domain.CategorySearchOptions)) *MockCategoryService_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		run(args[0].(context.Context), args[1].(domain.CategorySearchOptions))
 	})
 	return _c
 }
 
-func (_c *MockCategoryService_List_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryService_List_Call {
+func (_c *MockCategoryService_Search_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryService_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockCategoryService_List_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Category, error)) *MockCategoryService_List_Call {
+func (_c *MockCategoryService_Search_Call) RunAndReturn(run func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)) *MockCategoryService_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

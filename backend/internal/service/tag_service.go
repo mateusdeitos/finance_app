@@ -3,15 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 )
-
-var tagNameRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
 type tagService struct {
 	tagRepo repository.TagRepository
@@ -124,9 +121,6 @@ func (s *tagService) validateTagName(name string) error {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
 		return pkgErrors.Validation("tag name cannot be empty")
-	}
-	if !tagNameRegex.MatchString(trimmed) {
-		return pkgErrors.Validation("tag name can only contain letters, numbers, underscores, and hyphens")
 	}
 	return nil
 }

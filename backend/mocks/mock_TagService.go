@@ -130,89 +130,29 @@ func (_c *MockTagService_Delete_Call) RunAndReturn(run func(context.Context, int
 	return _c
 }
 
-// GetByID provides a mock function with given fields: ctx, userID, id
-func (_m *MockTagService) GetByID(ctx context.Context, userID int, id int) (*domain.Tag, error) {
-	ret := _m.Called(ctx, userID, id)
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockTagService) Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error) {
+	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByID")
-	}
-
-	var r0 *domain.Tag
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*domain.Tag, error)); ok {
-		return rf(ctx, userID, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) *domain.Tag); ok {
-		r0 = rf(ctx, userID, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Tag)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
-		r1 = rf(ctx, userID, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTagService_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
-type MockTagService_GetByID_Call struct {
-	*mock.Call
-}
-
-// GetByID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-//   - id int
-func (_e *MockTagService_Expecter) GetByID(ctx interface{}, userID interface{}, id interface{}) *MockTagService_GetByID_Call {
-	return &MockTagService_GetByID_Call{Call: _e.mock.On("GetByID", ctx, userID, id)}
-}
-
-func (_c *MockTagService_GetByID_Call) Run(run func(ctx context.Context, userID int, id int)) *MockTagService_GetByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
-	})
-	return _c
-}
-
-func (_c *MockTagService_GetByID_Call) Return(_a0 *domain.Tag, _a1 error) *MockTagService_GetByID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTagService_GetByID_Call) RunAndReturn(run func(context.Context, int, int) (*domain.Tag, error)) *MockTagService_GetByID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// List provides a mock function with given fields: ctx, userID
-func (_m *MockTagService) List(ctx context.Context, userID int) ([]*domain.Tag, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for List")
+		panic("no return value specified for Search")
 	}
 
 	var r0 []*domain.Tag
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Tag, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TagSearchOptions) ([]*domain.Tag, error)); ok {
+		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Tag); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TagSearchOptions) []*domain.Tag); ok {
+		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Tag)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TagSearchOptions) error); ok {
+		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -220,31 +160,31 @@ func (_m *MockTagService) List(ctx context.Context, userID int) ([]*domain.Tag, 
 	return r0, r1
 }
 
-// MockTagService_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type MockTagService_List_Call struct {
+// MockTagService_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockTagService_Search_Call struct {
 	*mock.Call
 }
 
-// List is a helper method to define mock.On call
+// Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - userID int
-func (_e *MockTagService_Expecter) List(ctx interface{}, userID interface{}) *MockTagService_List_Call {
-	return &MockTagService_List_Call{Call: _e.mock.On("List", ctx, userID)}
+//   - options domain.TagSearchOptions
+func (_e *MockTagService_Expecter) Search(ctx interface{}, options interface{}) *MockTagService_Search_Call {
+	return &MockTagService_Search_Call{Call: _e.mock.On("Search", ctx, options)}
 }
 
-func (_c *MockTagService_List_Call) Run(run func(ctx context.Context, userID int)) *MockTagService_List_Call {
+func (_c *MockTagService_Search_Call) Run(run func(ctx context.Context, options domain.TagSearchOptions)) *MockTagService_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		run(args[0].(context.Context), args[1].(domain.TagSearchOptions))
 	})
 	return _c
 }
 
-func (_c *MockTagService_List_Call) Return(_a0 []*domain.Tag, _a1 error) *MockTagService_List_Call {
+func (_c *MockTagService_Search_Call) Return(_a0 []*domain.Tag, _a1 error) *MockTagService_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTagService_List_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Tag, error)) *MockTagService_List_Call {
+func (_c *MockTagService_Search_Call) RunAndReturn(run func(context.Context, domain.TagSearchOptions) ([]*domain.Tag, error)) *MockTagService_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -128,88 +128,29 @@ func (_c *MockCategoryRepository_Delete_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
-// GetByID provides a mock function with given fields: ctx, id
-func (_m *MockCategoryRepository) GetByID(ctx context.Context, id int) (*domain.Category, error) {
-	ret := _m.Called(ctx, id)
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockCategoryRepository) Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
+	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByID")
-	}
-
-	var r0 *domain.Category
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) (*domain.Category, error)); ok {
-		return rf(ctx, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) *domain.Category); ok {
-		r0 = rf(ctx, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Category)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockCategoryRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
-type MockCategoryRepository_GetByID_Call struct {
-	*mock.Call
-}
-
-// GetByID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id int
-func (_e *MockCategoryRepository_Expecter) GetByID(ctx interface{}, id interface{}) *MockCategoryRepository_GetByID_Call {
-	return &MockCategoryRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, id)}
-}
-
-func (_c *MockCategoryRepository_GetByID_Call) Run(run func(ctx context.Context, id int)) *MockCategoryRepository_GetByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockCategoryRepository_GetByID_Call) Return(_a0 *domain.Category, _a1 error) *MockCategoryRepository_GetByID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockCategoryRepository_GetByID_Call) RunAndReturn(run func(context.Context, int) (*domain.Category, error)) *MockCategoryRepository_GetByID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockCategoryRepository) GetByUserID(ctx context.Context, userID int) ([]*domain.Category, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByUserID")
+		panic("no return value specified for Search")
 	}
 
 	var r0 []*domain.Category
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Category, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)); ok {
+		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Category); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) []*domain.Category); ok {
+		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Category)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.CategorySearchOptions) error); ok {
+		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -217,90 +158,31 @@ func (_m *MockCategoryRepository) GetByUserID(ctx context.Context, userID int) (
 	return r0, r1
 }
 
-// MockCategoryRepository_GetByUserID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByUserID'
-type MockCategoryRepository_GetByUserID_Call struct {
+// MockCategoryRepository_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockCategoryRepository_Search_Call struct {
 	*mock.Call
 }
 
-// GetByUserID is a helper method to define mock.On call
+// Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - userID int
-func (_e *MockCategoryRepository_Expecter) GetByUserID(ctx interface{}, userID interface{}) *MockCategoryRepository_GetByUserID_Call {
-	return &MockCategoryRepository_GetByUserID_Call{Call: _e.mock.On("GetByUserID", ctx, userID)}
+//   - options domain.CategorySearchOptions
+func (_e *MockCategoryRepository_Expecter) Search(ctx interface{}, options interface{}) *MockCategoryRepository_Search_Call {
+	return &MockCategoryRepository_Search_Call{Call: _e.mock.On("Search", ctx, options)}
 }
 
-func (_c *MockCategoryRepository_GetByUserID_Call) Run(run func(ctx context.Context, userID int)) *MockCategoryRepository_GetByUserID_Call {
+func (_c *MockCategoryRepository_Search_Call) Run(run func(ctx context.Context, options domain.CategorySearchOptions)) *MockCategoryRepository_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		run(args[0].(context.Context), args[1].(domain.CategorySearchOptions))
 	})
 	return _c
 }
 
-func (_c *MockCategoryRepository_GetByUserID_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryRepository_GetByUserID_Call {
+func (_c *MockCategoryRepository_Search_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryRepository_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockCategoryRepository_GetByUserID_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Category, error)) *MockCategoryRepository_GetByUserID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByUserIDWithChildren provides a mock function with given fields: ctx, userID
-func (_m *MockCategoryRepository) GetByUserIDWithChildren(ctx context.Context, userID int) ([]*domain.Category, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByUserIDWithChildren")
-	}
-
-	var r0 []*domain.Category
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Category, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Category); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Category)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockCategoryRepository_GetByUserIDWithChildren_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByUserIDWithChildren'
-type MockCategoryRepository_GetByUserIDWithChildren_Call struct {
-	*mock.Call
-}
-
-// GetByUserIDWithChildren is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-func (_e *MockCategoryRepository_Expecter) GetByUserIDWithChildren(ctx interface{}, userID interface{}) *MockCategoryRepository_GetByUserIDWithChildren_Call {
-	return &MockCategoryRepository_GetByUserIDWithChildren_Call{Call: _e.mock.On("GetByUserIDWithChildren", ctx, userID)}
-}
-
-func (_c *MockCategoryRepository_GetByUserIDWithChildren_Call) Run(run func(ctx context.Context, userID int)) *MockCategoryRepository_GetByUserIDWithChildren_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockCategoryRepository_GetByUserIDWithChildren_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryRepository_GetByUserIDWithChildren_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockCategoryRepository_GetByUserIDWithChildren_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Category, error)) *MockCategoryRepository_GetByUserIDWithChildren_Call {
+func (_c *MockCategoryRepository_Search_Call) RunAndReturn(run func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)) *MockCategoryRepository_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

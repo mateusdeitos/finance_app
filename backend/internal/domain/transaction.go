@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 type TransactionType string
 
@@ -9,6 +13,10 @@ const (
 	TransactionTypeIncome   TransactionType = "income"
 	TransactionTypeTransfer TransactionType = "transfer"
 )
+
+func (t TransactionType) IsValid() bool {
+	return t == TransactionTypeExpense || t == TransactionTypeIncome || t == TransactionTypeTransfer
+}
 
 type RecurrenceType string
 
@@ -19,50 +27,69 @@ const (
 	RecurrenceTypeYearly  RecurrenceType = "yearly"
 )
 
+func (t RecurrenceType) IsValid() bool {
+	return t == RecurrenceTypeDaily || t == RecurrenceTypeWeekly || t == RecurrenceTypeMonthly || t == RecurrenceTypeYearly
+}
+
 type Transaction struct {
-	ID                   int             `json:"id"`
-	UserID               int             `json:"user_id"`
-	Type                 TransactionType `json:"type"`
-	AccountID            int             `json:"account_id"`
-	CategoryID           *int            `json:"category_id,omitempty"`
-	Amount               int64           `json:"amount"` // Amount in cents
-	Date                 time.Time       `json:"date"`
-	GroupingDate         *time.Time      `json:"grouping_date,omitempty"`
-	Description          string          `json:"description"`
-	DestinationAccountID *int            `json:"destination_account_id,omitempty"`
-	SplitPercentage      *int            `json:"split_percentage,omitempty"`
-	Tags                 []Tag           `json:"tags,omitempty"`
-	CreatedAt            *time.Time      `json:"created_at"`
-	UpdatedAt            *time.Time      `json:"updated_at"`
+	ID                      int             `json:"id"`
+	ParentID                *int            `json:"parent_id,omitempty"`
+	TransactionRecurrenceID *int            `json:"transaction_recurrence_id,omitempty"`
+	InstallmentNumber       *int            `json:"installment_number,omitempty"`
+	UserID                  int             `json:"user_id"`
+	Type                    TransactionType `json:"type"`
+	AccountID               int             `json:"account_id"`
+	CategoryID              *int            `json:"category_id,omitempty"`
+	Amount                  int64           `json:"amount"` // Amount in cents
+	Date                    time.Time       `json:"date"`
+	Description             string          `json:"description"`
+	DestinationAccountID    *int            `json:"destination_account_id,omitempty"`
+	Tags                    []Tag           `json:"tags,omitempty"`
+	CreatedAt               *time.Time      `json:"created_at"`
+	UpdatedAt               *time.Time      `json:"updated_at"`
+}
+
+type TransactionCreateRequest struct {
+	TransactionType      TransactionType     `json:"transaction_type"`
+	AccountID            int                 `json:"account_id"`
+	CategoryID           int                 `json:"category_id,omitempty"`
+	Amount               int64               `json:"amount"`
+	Date                 time.Time           `json:"date"`
+	Description          string              `json:"description"`
+	DestinationAccountID *int                `json:"destination_account_id,omitempty"`
+	Tags                 []Tag               `json:"tags,omitempty"`
+	RecurrenceSettings   *RecurrenceSettings `json:"recurrence_settings,omitempty"`
+	SplitSettings        []SplitSettings     `json:"split_settings,omitempty"`
 }
 
 type TransactionRecurrence struct {
-	ID            int       `json:"id"`
-	TransactionID int       `json:"transaction_id"`
-	Index         int       `json:"index"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID           int        `json:"id"`
+	UserID       int        `json:"user_id"`
+	Installments int        `json:"installments"`
+	CreatedAt    *time.Time `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
 }
 
-type TransactionRecurrenceConfig struct {
+type RecurrenceSettings struct {
 	Type        RecurrenceType `json:"type"`
 	Repetitions *int           `json:"repetitions,omitempty"` // nil = indefinite
-	StartDate   time.Time      `json:"start_date"`
+	EndDate     *time.Time     `json:"end_date,omitempty"`
+}
+
+type SplitSettings struct {
+	ConnectionID int    `json:"connection_id"`
+	Percentage   *int   `json:"percentage,omitempty"`
+	Amount       *int64 `json:"amount,omitempty"`
 }
 
 type TransactionFilter struct {
-	AccountIDs        []int             `json:"account_ids,omitempty"`
-	CategoryIDs       []int             `json:"category_ids,omitempty"`
-	TagIDs            []int             `json:"tag_ids,omitempty"`
-	StartDate         *time.Time        `json:"start_date,omitempty"`
-	EndDate           *time.Time        `json:"end_date,omitempty"`
-	StartGroupingDate *time.Time        `json:"start_grouping_date,omitempty"`
-	EndGroupingDate   *time.Time        `json:"end_grouping_date,omitempty"`
-	MinAmount         *int64            `json:"min_amount,omitempty"`
-	MaxAmount         *int64            `json:"max_amount,omitempty"`
-	Description       *string           `json:"description,omitempty"`
-	UserID            *int              `json:"user_id,omitempty"`
-	Types             []TransactionType `json:"types,omitempty"`
+	AccountIDs  []int             `query:"account_id[]"`
+	CategoryIDs []int             `query:"category_id[]"`
+	TagIDs      []int             `query:"tag_id[]"`
+	Period      *Period           `query:"period,omitempty"`
+	Description *string           `query:"description,omitempty"`
+	UserID      *int              `query:"user_id,omitempty"`
+	Types       []TransactionType `query:"type[]"`
 }
 
 type TransactionGroupBy string

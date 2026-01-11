@@ -60,19 +60,10 @@ type TagRepository interface {
 
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error)
-	GetByID(ctx context.Context, id int) (*domain.Transaction, error)
-	GetByFilter(ctx context.Context, filter domain.TransactionFilter, orderBy domain.TransactionOrderBy, limit, offset int) ([]*domain.Transaction, int64, error)
-	GetGrouped(ctx context.Context, filter domain.TransactionFilter, groupBy domain.TransactionGroupBy) (map[string][]*domain.Transaction, error)
-	Update(ctx context.Context, transaction *domain.Transaction) error
-	BulkUpdate(ctx context.Context, updates domain.BulkUpdateTransaction) error
-	Delete(ctx context.Context, id int) error
-	GetByDescription(ctx context.Context, userID int, description string, limit int) ([]*domain.Transaction, error)
 }
 
 type TransactionRecurrenceRepository interface {
-	Create(ctx context.Context, recurrence *domain.TransactionRecurrence) error
-	GetByTransactionID(ctx context.Context, transactionID int) ([]*domain.TransactionRecurrence, error)
-	DeleteByTransactionID(ctx context.Context, transactionID int) error
+	Create(ctx context.Context, recurrence *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)
 }
 
 type UserSettingsRepository interface {

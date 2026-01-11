@@ -1,6 +1,9 @@
 -- +goose Up
 -- +goose StatementBegin
 
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Create enums
 CREATE TYPE provider_type AS ENUM ('google', 'microsoft');
 CREATE TYPE recurrence_type AS ENUM ('daily', 'weekly', 'monthly', 'yearly');
@@ -94,39 +97,38 @@ CREATE TABLE tags (
 CREATE INDEX idx_tags_user_id ON tags(user_id);
 CREATE UNIQUE INDEX idx_tags_unique ON tags(user_id, name);
 
+-- Create transaction_recurrences table
+CREATE TABLE transaction_recurrences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    installments SMALLINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create transactions table
 CREATE TABLE transactions (
     id SERIAL PRIMARY KEY,
+	parent_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type transaction_type NOT NULL,
     account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-    amount BIGINT NOT NULL CHECK (amount > 0),
+    amount BIGINT NOT NULL CHECK (amount != 0),
     date DATE NOT NULL,
     description VARCHAR(255) NOT NULL,
     destination_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
-    split_percentage SMALLINT CHECK (split_percentage >= 0 AND split_percentage <= 100),
+	transaction_recurrence_id INTEGER REFERENCES transaction_recurrences(id) ON DELETE SET NULL,
+	installment_number SMALLINT CHECK (installment_number >= 1),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_transactions_user_account ON transactions(user_id, account_id);
-CREATE INDEX idx_transactions_description ON transactions(description);
+CREATE INDEX idx_transactions_description ON transactions USING gin(description gin_trgm_ops);
 CREATE INDEX idx_transactions_date ON transactions(date);
 CREATE INDEX idx_transactions_category_id ON transactions(category_id);
 CREATE INDEX idx_transactions_destination_account_id ON transactions(destination_account_id);
-
--- Create transaction_recurrences table
-CREATE TABLE transaction_recurrences (
-    id SERIAL PRIMARY KEY,
-    transaction_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
-    index SMALLINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(transaction_id, index)
-);
-
-CREATE INDEX idx_transaction_recurrences_transaction_id ON transaction_recurrences(transaction_id);
 
 -- Create transaction_tags table (many-to-many)
 CREATE TABLE transaction_tags (
@@ -150,8 +152,8 @@ CREATE TABLE user_settings (
 
 DROP TABLE IF EXISTS user_settings;
 DROP TABLE IF EXISTS transaction_tags;
-DROP TABLE IF EXISTS transaction_recurrences;
 DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS transaction_recurrences;
 DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS user_connections;
@@ -163,6 +165,8 @@ DROP TYPE IF EXISTS transaction_type;
 DROP TYPE IF EXISTS recurrence_type;
 DROP TYPE IF EXISTS provider_type;
 DROP TYPE IF EXISTS connection_status;
+
+DROP EXTENSION IF EXISTS pg_trgm;
 
 -- +goose StatementEnd
 

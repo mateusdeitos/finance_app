@@ -44,15 +44,15 @@ func main() {
 
 	// Initialize repositories
 	repos := &repository.Repositories{
-		User:           repository.NewUserRepository(db),
-		DBTransaction:  repository.NewDBTransaction(db),
-		UserSocial:     repository.NewUserSocialRepository(db),
-		Account:        repository.NewAccountRepository(db),
-		UserConnection: repository.NewUserConnectionRepository(db),
-		Category:       repository.NewCategoryRepository(db),
-		Tag:            repository.NewTagRepository(db),
-		// 	Transaction:           repository.NewTransactionRepository(db),
-		// 	TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
+		User:                  repository.NewUserRepository(db),
+		DBTransaction:         repository.NewDBTransaction(db),
+		UserSocial:            repository.NewUserSocialRepository(db),
+		Account:               repository.NewAccountRepository(db),
+		UserConnection:        repository.NewUserConnectionRepository(db),
+		Category:              repository.NewCategoryRepository(db),
+		Tag:                   repository.NewTagRepository(db),
+		Transaction:           repository.NewTransactionRepository(db),
+		TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
 		// 	UserSettings:          repository.NewUserSettingsRepository(db),
 	}
 
@@ -62,17 +62,17 @@ func main() {
 		Account:  service.NewAccountService(repos),
 		Category: service.NewCategoryService(repos),
 		Tag:      service.NewTagService(repos),
-		// 	Transaction: service.NewTransactionService(repos),
 	}
 
 	services.UserConnection = service.NewUserConnectionService(repos, services)
+	services.Transaction = service.NewTransactionService(repos, services)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services)
 	accountHandler := handler.NewAccountHandler(services)
 	categoryHandler := handler.NewCategoryHandler(services)
 	tagHandler := handler.NewTagHandler(services)
-	// transactionHandler := handler.NewTransactionHandler(services)
+	transactionHandler := handler.NewTransactionHandler(services)
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 
 	// Setup Echo
@@ -129,9 +129,9 @@ func main() {
 	tags.DELETE("/:id", tagHandler.Delete)
 
 	// Transactions
-	// transactions := api.Group("/transactions")
-	// transactions.GET("", transactionHandler.List)
-	// transactions.POST("", transactionHandler.Create)
+	transactions := api.Group("/transactions")
+	// transactions.GET("", transactionHandler.Search)
+	transactions.POST("", transactionHandler.Create)
 	// transactions.GET("/:id", transactionHandler.GetByID)
 	// transactions.PUT("/:id", transactionHandler.Update)
 	// transactions.DELETE("/:id", transactionHandler.Delete)

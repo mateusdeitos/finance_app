@@ -22,54 +22,6 @@ func (_m *MockAccountService) EXPECT() *MockAccountService_Expecter {
 	return &MockAccountService_Expecter{mock: &_m.Mock}
 }
 
-// AcceptSharedAccount provides a mock function with given fields: ctx, userID, id
-func (_m *MockAccountService) AcceptSharedAccount(ctx context.Context, userID int, id int) error {
-	ret := _m.Called(ctx, userID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AcceptSharedAccount")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
-		r0 = rf(ctx, userID, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockAccountService_AcceptSharedAccount_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AcceptSharedAccount'
-type MockAccountService_AcceptSharedAccount_Call struct {
-	*mock.Call
-}
-
-// AcceptSharedAccount is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-//   - id int
-func (_e *MockAccountService_Expecter) AcceptSharedAccount(ctx interface{}, userID interface{}, id interface{}) *MockAccountService_AcceptSharedAccount_Call {
-	return &MockAccountService_AcceptSharedAccount_Call{Call: _e.mock.On("AcceptSharedAccount", ctx, userID, id)}
-}
-
-func (_c *MockAccountService_AcceptSharedAccount_Call) Run(run func(ctx context.Context, userID int, id int)) *MockAccountService_AcceptSharedAccount_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
-	})
-	return _c
-}
-
-func (_c *MockAccountService_AcceptSharedAccount_Call) Return(_a0 error) *MockAccountService_AcceptSharedAccount_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockAccountService_AcceptSharedAccount_Call) RunAndReturn(run func(context.Context, int, int) error) *MockAccountService_AcceptSharedAccount_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Create provides a mock function with given fields: ctx, userID, account
 func (_m *MockAccountService) Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error) {
 	ret := _m.Called(ctx, userID, account)
@@ -238,29 +190,29 @@ func (_c *MockAccountService_GetByID_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
-// List provides a mock function with given fields: ctx, userID
-func (_m *MockAccountService) List(ctx context.Context, userID int) ([]*domain.Account, error) {
-	ret := _m.Called(ctx, userID)
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockAccountService) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
+	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
-		panic("no return value specified for List")
+		panic("no return value specified for Search")
 	}
 
 	var r0 []*domain.Account
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Account, error)); ok {
-		return rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.AccountSearchOptions) ([]*domain.Account, error)); ok {
+		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Account); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.AccountSearchOptions) []*domain.Account); ok {
+		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Account)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.AccountSearchOptions) error); ok {
+		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -268,31 +220,31 @@ func (_m *MockAccountService) List(ctx context.Context, userID int) ([]*domain.A
 	return r0, r1
 }
 
-// MockAccountService_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
-type MockAccountService_List_Call struct {
+// MockAccountService_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockAccountService_Search_Call struct {
 	*mock.Call
 }
 
-// List is a helper method to define mock.On call
+// Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - userID int
-func (_e *MockAccountService_Expecter) List(ctx interface{}, userID interface{}) *MockAccountService_List_Call {
-	return &MockAccountService_List_Call{Call: _e.mock.On("List", ctx, userID)}
+//   - options domain.AccountSearchOptions
+func (_e *MockAccountService_Expecter) Search(ctx interface{}, options interface{}) *MockAccountService_Search_Call {
+	return &MockAccountService_Search_Call{Call: _e.mock.On("Search", ctx, options)}
 }
 
-func (_c *MockAccountService_List_Call) Run(run func(ctx context.Context, userID int)) *MockAccountService_List_Call {
+func (_c *MockAccountService_Search_Call) Run(run func(ctx context.Context, options domain.AccountSearchOptions)) *MockAccountService_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		run(args[0].(context.Context), args[1].(domain.AccountSearchOptions))
 	})
 	return _c
 }
 
-func (_c *MockAccountService_List_Call) Return(_a0 []*domain.Account, _a1 error) *MockAccountService_List_Call {
+func (_c *MockAccountService_Search_Call) Return(_a0 []*domain.Account, _a1 error) *MockAccountService_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockAccountService_List_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Account, error)) *MockAccountService_List_Call {
+func (_c *MockAccountService_Search_Call) RunAndReturn(run func(context.Context, domain.AccountSearchOptions) ([]*domain.Account, error)) *MockAccountService_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

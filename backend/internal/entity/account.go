@@ -17,7 +17,7 @@ type Account struct {
 	Description    *string
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
-	UserConnection *AccountUserConnection `gorm:"column:user_connection;type:jsonb"`
+	UserConnection *AccountUserConnection `gorm:"<-:false"`
 }
 
 func (a *Account) ToDomain() *domain.Account {

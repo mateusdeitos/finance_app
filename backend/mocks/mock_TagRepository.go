@@ -128,88 +128,29 @@ func (_c *MockTagRepository_Delete_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// GetByID provides a mock function with given fields: ctx, id
-func (_m *MockTagRepository) GetByID(ctx context.Context, id int) (*domain.Tag, error) {
-	ret := _m.Called(ctx, id)
+// Search provides a mock function with given fields: ctx, options
+func (_m *MockTagRepository) Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error) {
+	ret := _m.Called(ctx, options)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetByID")
-	}
-
-	var r0 *domain.Tag
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) (*domain.Tag, error)); ok {
-		return rf(ctx, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) *domain.Tag); ok {
-		r0 = rf(ctx, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Tag)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTagRepository_GetByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByID'
-type MockTagRepository_GetByID_Call struct {
-	*mock.Call
-}
-
-// GetByID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - id int
-func (_e *MockTagRepository_Expecter) GetByID(ctx interface{}, id interface{}) *MockTagRepository_GetByID_Call {
-	return &MockTagRepository_GetByID_Call{Call: _e.mock.On("GetByID", ctx, id)}
-}
-
-func (_c *MockTagRepository_GetByID_Call) Run(run func(ctx context.Context, id int)) *MockTagRepository_GetByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockTagRepository_GetByID_Call) Return(_a0 *domain.Tag, _a1 error) *MockTagRepository_GetByID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTagRepository_GetByID_Call) RunAndReturn(run func(context.Context, int) (*domain.Tag, error)) *MockTagRepository_GetByID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByIDs provides a mock function with given fields: ctx, ids
-func (_m *MockTagRepository) GetByIDs(ctx context.Context, ids []int) ([]*domain.Tag, error) {
-	ret := _m.Called(ctx, ids)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByIDs")
+		panic("no return value specified for Search")
 	}
 
 	var r0 []*domain.Tag
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []int) ([]*domain.Tag, error)); ok {
-		return rf(ctx, ids)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TagSearchOptions) ([]*domain.Tag, error)); ok {
+		return rf(ctx, options)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, []int) []*domain.Tag); ok {
-		r0 = rf(ctx, ids)
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TagSearchOptions) []*domain.Tag); ok {
+		r0 = rf(ctx, options)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]*domain.Tag)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, []int) error); ok {
-		r1 = rf(ctx, ids)
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TagSearchOptions) error); ok {
+		r1 = rf(ctx, options)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -217,150 +158,31 @@ func (_m *MockTagRepository) GetByIDs(ctx context.Context, ids []int) ([]*domain
 	return r0, r1
 }
 
-// MockTagRepository_GetByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByIDs'
-type MockTagRepository_GetByIDs_Call struct {
+// MockTagRepository_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockTagRepository_Search_Call struct {
 	*mock.Call
 }
 
-// GetByIDs is a helper method to define mock.On call
+// Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []int
-func (_e *MockTagRepository_Expecter) GetByIDs(ctx interface{}, ids interface{}) *MockTagRepository_GetByIDs_Call {
-	return &MockTagRepository_GetByIDs_Call{Call: _e.mock.On("GetByIDs", ctx, ids)}
+//   - options domain.TagSearchOptions
+func (_e *MockTagRepository_Expecter) Search(ctx interface{}, options interface{}) *MockTagRepository_Search_Call {
+	return &MockTagRepository_Search_Call{Call: _e.mock.On("Search", ctx, options)}
 }
 
-func (_c *MockTagRepository_GetByIDs_Call) Run(run func(ctx context.Context, ids []int)) *MockTagRepository_GetByIDs_Call {
+func (_c *MockTagRepository_Search_Call) Run(run func(ctx context.Context, options domain.TagSearchOptions)) *MockTagRepository_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]int))
+		run(args[0].(context.Context), args[1].(domain.TagSearchOptions))
 	})
 	return _c
 }
 
-func (_c *MockTagRepository_GetByIDs_Call) Return(_a0 []*domain.Tag, _a1 error) *MockTagRepository_GetByIDs_Call {
+func (_c *MockTagRepository_Search_Call) Return(_a0 []*domain.Tag, _a1 error) *MockTagRepository_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTagRepository_GetByIDs_Call) RunAndReturn(run func(context.Context, []int) ([]*domain.Tag, error)) *MockTagRepository_GetByIDs_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByName provides a mock function with given fields: ctx, userID, name
-func (_m *MockTagRepository) GetByName(ctx context.Context, userID int, name string) (*domain.Tag, error) {
-	ret := _m.Called(ctx, userID, name)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByName")
-	}
-
-	var r0 *domain.Tag
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, string) (*domain.Tag, error)); ok {
-		return rf(ctx, userID, name)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, string) *domain.Tag); ok {
-		r0 = rf(ctx, userID, name)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*domain.Tag)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int, string) error); ok {
-		r1 = rf(ctx, userID, name)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTagRepository_GetByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByName'
-type MockTagRepository_GetByName_Call struct {
-	*mock.Call
-}
-
-// GetByName is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-//   - name string
-func (_e *MockTagRepository_Expecter) GetByName(ctx interface{}, userID interface{}, name interface{}) *MockTagRepository_GetByName_Call {
-	return &MockTagRepository_GetByName_Call{Call: _e.mock.On("GetByName", ctx, userID, name)}
-}
-
-func (_c *MockTagRepository_GetByName_Call) Run(run func(ctx context.Context, userID int, name string)) *MockTagRepository_GetByName_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *MockTagRepository_GetByName_Call) Return(_a0 *domain.Tag, _a1 error) *MockTagRepository_GetByName_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTagRepository_GetByName_Call) RunAndReturn(run func(context.Context, int, string) (*domain.Tag, error)) *MockTagRepository_GetByName_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetByUserID provides a mock function with given fields: ctx, userID
-func (_m *MockTagRepository) GetByUserID(ctx context.Context, userID int) ([]*domain.Tag, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetByUserID")
-	}
-
-	var r0 []*domain.Tag
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.Tag, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.Tag); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Tag)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTagRepository_GetByUserID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetByUserID'
-type MockTagRepository_GetByUserID_Call struct {
-	*mock.Call
-}
-
-// GetByUserID is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-func (_e *MockTagRepository_Expecter) GetByUserID(ctx interface{}, userID interface{}) *MockTagRepository_GetByUserID_Call {
-	return &MockTagRepository_GetByUserID_Call{Call: _e.mock.On("GetByUserID", ctx, userID)}
-}
-
-func (_c *MockTagRepository_GetByUserID_Call) Run(run func(ctx context.Context, userID int)) *MockTagRepository_GetByUserID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockTagRepository_GetByUserID_Call) Return(_a0 []*domain.Tag, _a1 error) *MockTagRepository_GetByUserID_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTagRepository_GetByUserID_Call) RunAndReturn(run func(context.Context, int) ([]*domain.Tag, error)) *MockTagRepository_GetByUserID_Call {
+func (_c *MockTagRepository_Search_Call) RunAndReturn(run func(context.Context, domain.TagSearchOptions) ([]*domain.Tag, error)) *MockTagRepository_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

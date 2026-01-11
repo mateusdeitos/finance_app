@@ -29,15 +29,18 @@ func (s *accountService) Create(ctx context.Context, userID int, account *domain
 }
 
 func (s *accountService) GetByID(ctx context.Context, userID, id int) (*domain.Account, error) {
-	account, err := s.accountRepo.GetByID(ctx, id)
+	accounts, err := s.accountRepo.Search(ctx, domain.AccountSearchOptions{
+		UserIDs: []int{userID},
+		IDs:     []int{id},
+	})
 	if err != nil {
 		return nil, pkgErrors.Internal("failed to get account", err)
 	}
-	if account == nil {
+	if len(accounts) == 0 {
 		return nil, pkgErrors.NotFound("account")
 	}
 
-	return account, nil
+	return accounts[0], nil
 }
 
 func (s *accountService) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
@@ -79,6 +82,8 @@ func (s *accountService) Update(ctx context.Context, userID int, account *domain
 }
 
 func (s *accountService) Delete(ctx context.Context, userID, id int) error {
+	// TODO: block if there are user_connections associated with the account
+
 	// Verify ownership
 	existing, err := s.GetByID(ctx, userID, id)
 	if err != nil {
