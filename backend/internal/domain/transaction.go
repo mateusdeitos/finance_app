@@ -3,6 +3,8 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"slices"
 	"time"
 )
 
@@ -84,18 +86,103 @@ type SplitSettings struct {
 }
 
 type TransactionFilter struct {
-	AccountIDs  []int             `query:"account_id[]"`
-	CategoryIDs []int             `query:"category_id[]"`
-	TagIDs      []int             `query:"tag_id[]"`
-	Description *TextSearch       `query:"description,omitempty"`
-	UserID      *int              `query:"user_id,omitempty"`
-	Types       []TransactionType `query:"type[]"`
+	IDs               []int                        `query:"id[]"`
+	ParentIDs         []int                        `query:"parent_id[]"`
+	RecurrenceIDs     []int                        `query:"recurrence_id[]"`
+	AccountIDs        []int                        `query:"account_id[]"`
+	CategoryIDs       []int                        `query:"category_id[]"`
+	TagIDs            []int                        `query:"tag_id[]"`
+	Description       *TextSearch                  `query:"description,omitempty"`
+	UserID            *int                         `query:"user_id,omitempty"`
+	Types             []TransactionType            `query:"type[]"`
+	InstallmentNumber *ComparableSearch[int]       `query:"installment_number,omitempty"`
+	StartDate         *ComparableSearch[time.Time] `query:"start_date,omitempty"`
+	EndDate           *ComparableSearch[time.Time] `query:"end_date,omitempty"`
 }
 
 type TextSearch struct {
 	Query string `query:"query"`
 	Exact bool   `query:"exact"`
 }
+
+type ComparableSearch[R comparable] struct {
+	GreaterThan        *R
+	LessThan           *R
+	GreaterThanOrEqual *R
+	LessThanOrEqual    *R
+	Equal              *R
+	NotEqual           *R
+}
+
+func (c *ComparableSearch[R]) IsValid() bool {
+	return c.GreaterThan != nil || c.LessThan != nil || c.GreaterThanOrEqual != nil || c.LessThanOrEqual != nil || c.Equal != nil || c.NotEqual != nil
+}
+
+func (c *ComparableSearch[R]) ToSQL(field string) string {
+	var getString = func(value *R, op string) string {
+		valueR := *value
+		kind := reflect.TypeOf(valueR).Kind()
+
+		isTime := kind == reflect.Struct && reflect.TypeOf(valueR).String() == "time.Time"
+		if isTime {
+			v := reflect.ValueOf(valueR).Interface().(time.Time)
+			return fmt.Sprintf("%s %s '%s'", field, op, v.Format(time.RFC3339))
+		}
+
+		if kind == reflect.String {
+			v := reflect.ValueOf(valueR).String()
+			return fmt.Sprintf("%s %s '%s'", field, op, v)
+		}
+
+		isInt := slices.Contains(
+			[]reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64},
+			kind,
+		)
+
+		if isInt {
+			v := reflect.ValueOf(valueR).Int()
+			return fmt.Sprintf("%s %s %d", field, op, v)
+		}
+
+		isFloat := slices.Contains(
+			[]reflect.Kind{reflect.Float32, reflect.Float64},
+			kind,
+		)
+
+		if isFloat {
+			v := reflect.ValueOf(valueR).Float()
+			return fmt.Sprintf("%s %s %f", field, op, v)
+		}
+
+		if kind == reflect.Bool {
+			v := reflect.ValueOf(valueR).Bool()
+			return fmt.Sprintf("%s %s %t", field, op, v)
+		}
+
+		return fmt.Sprintf("%s %s %v", field, op, valueR)
+	}
+
+	if c.GreaterThan != nil {
+		return getString(c.GreaterThan, ">")
+	}
+	if c.GreaterThanOrEqual != nil {
+		return getString(c.GreaterThanOrEqual, ">=")
+	}
+	if c.LessThan != nil {
+		return getString(c.LessThan, "<")
+	}
+	if c.LessThanOrEqual != nil {
+		return getString(c.LessThanOrEqual, "<=")
+	}
+	if c.Equal != nil {
+		return getString(c.Equal, "=")
+	}
+	if c.NotEqual != nil {
+		return getString(c.NotEqual, "!=")
+	}
+	return ""
+}
+
 
 type Period struct {
 	Month int
@@ -124,6 +211,14 @@ func (p *Period) String() string {
 
 func (p *Period) IsValid() bool {
 	return p.Month > 0 && p.Month <= 12 && p.Year > 0
+}
+
+func (p *Period) StartDate() time.Time {
+	return time.Date(p.Year, time.Month(p.Month), 1, 0, 0, 0, 0, time.UTC)
+}
+
+func (p *Period) EndDate() time.Time {
+	return time.Date(p.Year, time.Month(p.Month)+1, 0, 23, 59, 59, 999999999, time.UTC)
 }
 
 type BulkUpdateTransaction struct {

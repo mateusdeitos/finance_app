@@ -26,5 +26,17 @@ func NewTransactionService(repos *repository.Repositories, services *Services) T
 }
 
 func (s *transactionService) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
-	return s.transactionRepo.Search(ctx, userID, period, filter)
+
+	if !period.IsValid() {
+		return nil, pkgErrors.ErrInvalidPeriod(period)
+	}
+
+	filter.StartDate = &domain.ComparableSearch[time.Time]{
+		GreaterThanOrEqual: lo.ToPtr(period.StartDate()),
+	}
+	filter.EndDate = &domain.ComparableSearch[time.Time]{
+		LessThanOrEqual: lo.ToPtr(period.EndDate()),
+	}
+
+	return s.transactionRepo.Search(ctx, filter)
 }

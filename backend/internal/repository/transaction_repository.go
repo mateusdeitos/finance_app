@@ -54,21 +54,27 @@ func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.T
 	return nil
 }
 
-func (r *transactionRepository) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
-	if !period.IsValid() {
-		return nil, pkgErrors.ErrInvalidPeriod(period)
-	}
-
+func (r *transactionRepository) Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	var ents []entity.Transaction
 	query := GetTxFromContext(ctx, r.db)
 
 	query = query.Preload("TransactionRecurrence").Preload("Tags")
 
-	query = query.Where("user_id = ?", userID)
+	if filter.UserID != nil {
+		query = query.Where("user_id = ?", *filter.UserID)
+	}
 
-	startDate := time.Date(period.Year, time.Month(period.Month), 1, 0, 0, 0, 0, time.UTC)
-	endDate := startDate.AddDate(0, 1, 0)
-	query = query.Where("date >= ? AND date < ?", startDate, endDate)
+	if len(filter.IDs) > 0 {
+		query = query.Where("id IN ?", filter.IDs)
+	}
+
+	if filter.StartDate != nil {
+		query = query.Where(filter.StartDate.ToSQL("date"))
+	}
+
+	if filter.EndDate != nil {
+		query = query.Where(filter.EndDate.ToSQL("date"))
+	}
 
 	if len(filter.AccountIDs) > 0 {
 		query = query.Where("account_id IN ?", filter.AccountIDs)
@@ -81,6 +87,18 @@ func (r *transactionRepository) Search(ctx context.Context, userID int, period d
 	if len(filter.TagIDs) > 0 {
 		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id")
 		query = query.Where("transaction_tags.tag_id IN ?", filter.TagIDs)
+	}
+
+	if len(filter.RecurrenceIDs) > 0 {
+		query = query.Where("transaction_recurrence_id IN ?", filter.RecurrenceIDs)
+	}
+
+	if len(filter.ParentIDs) > 0 {
+		query = query.Where("parent_id IN ?", filter.ParentIDs)
+	}
+
+	if filter.InstallmentNumber != nil {
+		query = query.Where(filter.InstallmentNumber.ToSQL("installment_number"))
 	}
 
 	if filter.Description != nil {
