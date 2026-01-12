@@ -60,6 +60,7 @@ type TagRepository interface {
 
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error)
+	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 }
 
 type TransactionRecurrenceRepository interface {

@@ -32,21 +32,22 @@ func (t RecurrenceType) IsValid() bool {
 }
 
 type Transaction struct {
-	ID                      int             `json:"id"`
-	ParentID                *int            `json:"parent_id,omitempty"`
-	TransactionRecurrenceID *int            `json:"transaction_recurrence_id,omitempty"`
-	InstallmentNumber       *int            `json:"installment_number,omitempty"`
-	UserID                  int             `json:"user_id"`
-	Type                    TransactionType `json:"type"`
-	AccountID               int             `json:"account_id"`
-	CategoryID              *int            `json:"category_id,omitempty"`
-	Amount                  int64           `json:"amount"` // Amount in cents
-	Date                    time.Time       `json:"date"`
-	Description             string          `json:"description"`
-	DestinationAccountID    *int            `json:"destination_account_id,omitempty"`
-	Tags                    []Tag           `json:"tags,omitempty"`
-	CreatedAt               *time.Time      `json:"created_at"`
-	UpdatedAt               *time.Time      `json:"updated_at"`
+	ID                      int                    `json:"id"`
+	ParentID                *int                   `json:"parent_id,omitempty"`
+	TransactionRecurrenceID *int                   `json:"transaction_recurrence_id,omitempty"`
+	InstallmentNumber       *int                   `json:"installment_number,omitempty"`
+	UserID                  int                    `json:"user_id"`
+	Type                    TransactionType        `json:"type"`
+	AccountID               int                    `json:"account_id"`
+	CategoryID              *int                   `json:"category_id,omitempty"`
+	Amount                  int64                  `json:"amount"` // Amount in cents
+	Date                    time.Time              `json:"date"`
+	Description             string                 `json:"description"`
+	DestinationAccountID    *int                   `json:"destination_account_id,omitempty"`
+	Tags                    []Tag                  `json:"tags,omitempty"`
+	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
+	CreatedAt               *time.Time             `json:"created_at"`
+	UpdatedAt               *time.Time             `json:"updated_at"`
 }
 
 type TransactionCreateRequest struct {
@@ -86,36 +87,44 @@ type TransactionFilter struct {
 	AccountIDs  []int             `query:"account_id[]"`
 	CategoryIDs []int             `query:"category_id[]"`
 	TagIDs      []int             `query:"tag_id[]"`
-	Period      *Period           `query:"period,omitempty"`
-	Description *string           `query:"description,omitempty"`
+	Description *TextSearch       `query:"description,omitempty"`
 	UserID      *int              `query:"user_id,omitempty"`
 	Types       []TransactionType `query:"type[]"`
 }
 
-type TransactionGroupBy string
+type TextSearch struct {
+	Query string `query:"query"`
+	Exact bool   `query:"exact"`
+}
 
-const (
-	GroupByDate         TransactionGroupBy = "date"
-	GroupByGroupingDate TransactionGroupBy = "grouping_date"
-	GroupByCategory     TransactionGroupBy = "category"
-	GroupByAccount      TransactionGroupBy = "account"
-	GroupByTag          TransactionGroupBy = "tag"
-	GroupByUser         TransactionGroupBy = "user"
-)
+type Period struct {
+	Month int
+	Year  int
+}
 
-type TransactionOrderBy string
+func (p *Period) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
 
-const (
-	OrderByDate         TransactionOrderBy = "date"
-	OrderByGroupingDate TransactionOrderBy = "grouping_date"
-	OrderByCategory     TransactionOrderBy = "category"
-	OrderByAccount      TransactionOrderBy = "account"
-	OrderByValue        TransactionOrderBy = "value"
-	OrderByDescription  TransactionOrderBy = "description"
-	OrderByTag          TransactionOrderBy = "tag"
-	OrderByUser         TransactionOrderBy = "user"
-	OrderBySplitPercent TransactionOrderBy = "split_percentage"
-)
+	month, year := 0, 0
+	fmt.Sscanf(s, "%d-%d", &year, &month)
+	p.Month = month
+	p.Year = year
+	if !p.IsValid() {
+		return fmt.Errorf("invalid period: %s, must be in the format YYYY-MM", s)
+	}
+	return nil
+}
+
+func (p *Period) String() string {
+	return fmt.Sprintf("%d-%d", p.Year, p.Month)
+}
+
+func (p *Period) IsValid() bool {
+	return p.Month > 0 && p.Month <= 12 && p.Year > 0
+}
 
 type BulkUpdateTransaction struct {
 	IDs        []int      `json:"ids"`

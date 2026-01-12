@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -22,11 +23,12 @@ type Transaction struct {
 	DestinationAccountID    *int
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
-	User                    User      `gorm:"<-:false"`
-	Account                 Account   `gorm:"<-:false"`
-	Category                *Category `gorm:"<-:false"`
-	DestinationAccount      *Account  `gorm:"<-:false"`
-	Tags                    []Tag     `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id;<-:false"`
+	User                    User                   `gorm:"<-:false"`
+	Account                 Account                `gorm:"<-:false"`
+	Category                *Category              `gorm:"<-:false"`
+	DestinationAccount      *Account               `gorm:"<-:false"`
+	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
+	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id;<-:create"`
 }
 
 func (Transaction) BeforeCreate(tx *gorm.DB) error {
@@ -42,6 +44,11 @@ func (t *Transaction) BeforeUpdate(tx *gorm.DB) error {
 }
 
 func (t *Transaction) ToDomain() *domain.Transaction {
+	var transactionRecurrence *domain.TransactionRecurrence
+	if t.TransactionRecurrence != nil {
+		transactionRecurrence = t.TransactionRecurrence.ToDomain()
+	}
+
 	trans := &domain.Transaction{
 		ID:                      t.ID,
 		ParentID:                t.ParentID,
@@ -55,15 +62,12 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		Date:                    t.Date,
 		Description:             t.Description,
 		DestinationAccountID:    t.DestinationAccountID,
-		CreatedAt:               t.CreatedAt,
-		UpdatedAt:               t.UpdatedAt,
-	}
-
-	if len(t.Tags) > 0 {
-		trans.Tags = make([]domain.Tag, len(t.Tags))
-		for i, tag := range t.Tags {
-			trans.Tags[i] = *tag.ToDomain()
-		}
+		TransactionRecurrence:   transactionRecurrence,
+		Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
+			return *tag.ToDomain()
+		}),
+		CreatedAt: t.CreatedAt,
+		UpdatedAt: t.UpdatedAt,
 	}
 
 	return trans
@@ -83,15 +87,12 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		Date:                    d.Date,
 		Description:             d.Description,
 		DestinationAccountID:    d.DestinationAccountID,
-		CreatedAt:               d.CreatedAt,
-		UpdatedAt:               d.UpdatedAt,
-	}
-
-	if len(d.Tags) > 0 {
-		t.Tags = make([]Tag, len(d.Tags))
-		for i, tag := range d.Tags {
-			t.Tags[i] = *TagFromDomain(&tag)
-		}
+		TransactionRecurrence:   TransactionRecurrenceFromDomain(d.TransactionRecurrence),
+		Tags: lo.Map(d.Tags, func(tag domain.Tag, _ int) Tag {
+			return *TagFromDomain(&tag)
+		}),
+		CreatedAt: d.CreatedAt,
+		UpdatedAt: d.UpdatedAt,
 	}
 
 	return t
@@ -116,6 +117,10 @@ func (tr *TransactionRecurrence) ToDomain() *domain.TransactionRecurrence {
 }
 
 func TransactionRecurrenceFromDomain(d *domain.TransactionRecurrence) *TransactionRecurrence {
+	if d == nil {
+		return nil
+	}
+
 	return &TransactionRecurrence{
 		ID:           d.ID,
 		UserID:       d.UserID,

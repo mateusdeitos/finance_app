@@ -69,6 +69,9 @@ var (
 	ErrFailedToCreateTag = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeInternal, []string{"failed_to_create_tag"}, fmt.Sprintf("failed to create tag at index %d", index)).AddIndex(index)
 	}
+	ErrInvalidPeriod = func(period domain.Period) *ServiceError {
+		return NewWithTag(ErrCodeBadRequest, []string{"invalid_period"}, fmt.Sprintf("invalid period: %s", period.String()))
+	}
 )
 
 // ServiceError represents a service-level error with a code and message

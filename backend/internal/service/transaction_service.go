@@ -1,6 +1,9 @@
 package service
 
 import (
+	"context"
+
+	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
 )
 
@@ -20,4 +23,8 @@ func NewTransactionService(repos *repository.Repositories, services *Services) T
 		tagRepo:              repos.Tag,
 		services:             services,
 	}
+}
+
+func (s *transactionService) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	return s.transactionRepo.Search(ctx, userID, period, filter)
 }

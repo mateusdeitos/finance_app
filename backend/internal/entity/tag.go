@@ -26,6 +26,10 @@ func (t *Tag) ToDomain() *domain.Tag {
 }
 
 func TagFromDomain(d *domain.Tag) *Tag {
+	if d == nil {
+		return nil
+	}
+
 	return &Tag{
 		ID:        d.ID,
 		UserID:    d.UserID,

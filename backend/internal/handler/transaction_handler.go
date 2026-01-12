@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
@@ -33,4 +34,52 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusCreated)
+}
+
+func (h *TransactionHandler) Search(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	month, err := strconv.Atoi(c.QueryParam("month"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid month")
+	}
+
+	year, err := strconv.Atoi(c.QueryParam("year"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid year")
+	}
+
+	period := domain.Period{
+		Month: month,
+		Year:  year,
+	}
+
+	if !period.IsValid() {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid period")
+	}
+
+	var filter domain.TransactionFilter
+	if err := c.Bind(&filter); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	filter.UserID = &userID
+
+	// Manually parse description query parameters
+	descriptionQuery := c.QueryParam("description.query")
+	if descriptionQuery != "" {
+		exact, _ := strconv.ParseBool(c.QueryParam("description.exact"))
+
+		filter.Description = &domain.TextSearch{
+			Query: descriptionQuery,
+			Exact: exact,
+		}
+	}
+
+	transactions, err := h.transactionService.Search(c.Request().Context(), userID, period, filter)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, transactions)
 }

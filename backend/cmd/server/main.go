@@ -130,7 +130,7 @@ func main() {
 
 	// Transactions
 	transactions := api.Group("/transactions")
-	// transactions.GET("", transactionHandler.Search)
+	transactions.GET("", transactionHandler.Search)
 	transactions.POST("", transactionHandler.Create)
 	// transactions.GET("/:id", transactionHandler.GetByID)
 	// transactions.PUT("/:id", transactionHandler.Update)
