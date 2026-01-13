@@ -128,6 +128,66 @@ func (_c *MockTransactionRepository_Delete_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// GetGroupedByRecurrences provides a mock function with given fields: ctx, userID, recurrenceIDs
+func (_m *MockTransactionRepository) GetGroupedByRecurrences(ctx context.Context, userID int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
+	ret := _m.Called(ctx, userID, recurrenceIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGroupedByRecurrences")
+	}
+
+	var r0 map[int][]*domain.Transaction
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int) (map[int][]*domain.Transaction, error)); ok {
+		return rf(ctx, userID, recurrenceIDs)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int) map[int][]*domain.Transaction); ok {
+		r0 = rf(ctx, userID, recurrenceIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[int][]*domain.Transaction)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, []int) error); ok {
+		r1 = rf(ctx, userID, recurrenceIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_GetGroupedByRecurrences_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetGroupedByRecurrences'
+type MockTransactionRepository_GetGroupedByRecurrences_Call struct {
+	*mock.Call
+}
+
+// GetGroupedByRecurrences is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - recurrenceIDs []int
+func (_e *MockTransactionRepository_Expecter) GetGroupedByRecurrences(ctx interface{}, userID interface{}, recurrenceIDs interface{}) *MockTransactionRepository_GetGroupedByRecurrences_Call {
+	return &MockTransactionRepository_GetGroupedByRecurrences_Call{Call: _e.mock.On("GetGroupedByRecurrences", ctx, userID, recurrenceIDs)}
+}
+
+func (_c *MockTransactionRepository_GetGroupedByRecurrences_Call) Run(run func(ctx context.Context, userID int, recurrenceIDs []int)) *MockTransactionRepository_GetGroupedByRecurrences_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].([]int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetGroupedByRecurrences_Call) Return(_a0 map[int][]*domain.Transaction, _a1 error) *MockTransactionRepository_GetGroupedByRecurrences_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetGroupedByRecurrences_Call) RunAndReturn(run func(context.Context, int, []int) (map[int][]*domain.Transaction, error)) *MockTransactionRepository_GetGroupedByRecurrences_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, filter
 func (_m *MockTransactionRepository) Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	ret := _m.Called(ctx, filter)

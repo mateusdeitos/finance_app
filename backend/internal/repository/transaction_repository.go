@@ -138,3 +138,29 @@ func (r *transactionRepository) Delete(ctx context.Context, ids []int) error {
 
 	return nil
 }
+
+func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, userID int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
+	var ents []entity.Transaction
+	query := GetTxFromContext(ctx, r.db)
+
+	if len(recurrenceIDs) == 0 {
+		return nil, errors.New("recurrence IDs are required")
+	}
+
+	if userID == 0 {
+		return nil, errors.New("user ID is required")
+	}
+
+	query = query.Where("user_id = ?", userID)
+	query = query.Where("transaction_recurrence_id IN ?", recurrenceIDs)
+
+	if err := query.Find(&ents).Error; err != nil {
+		return nil, err
+	}
+
+	result := lo.GroupByMap(ents, func(ent entity.Transaction) (int, *domain.Transaction) {
+		return lo.FromPtr(ent.TransactionRecurrenceID), ent.ToDomain()
+	})
+
+	return result, nil
+}

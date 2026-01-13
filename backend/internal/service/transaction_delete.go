@@ -50,7 +50,7 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	switch propagationSettings {
 	case domain.TransactionPropagationSettingsCurrent:
 		{
-			if err := s.deleteCurrentAndAllTransactionsLinked(ctx, []*domain.Transaction{transaction}); err != nil {
+			if err := s.deleteCurrentAndAllTransactionsLinked(ctx, userID, []*domain.Transaction{transaction}); err != nil {
 				return pkgErrors.Internal("failed to delete all transactions linked", err)
 			}
 		}
@@ -98,7 +98,7 @@ func (s *transactionService) getByID(ctx context.Context, userID int, id int) (*
 func (s *transactionService) deleteAllInstallmentsOfRecurrence(ctx context.Context, userID int, transaction *domain.Transaction) error {
 	// se a transação não possui uma recorrência, deleta apenas a transação e transações vinculadas a ela
 	if transaction.TransactionRecurrenceID == nil {
-		return s.deleteCurrentAndAllTransactionsLinked(ctx, []*domain.Transaction{transaction})
+		return s.deleteCurrentAndAllTransactionsLinked(ctx, userID, []*domain.Transaction{transaction})
 	}
 
 	// obtém todas as parcelas da recorrência
@@ -111,7 +111,7 @@ func (s *transactionService) deleteAllInstallmentsOfRecurrence(ctx context.Conte
 	}
 
 	// deleta todas as parcelas e transações vinculadas a elas
-	err = s.deleteCurrentAndAllTransactionsLinked(ctx, transactionInstallments)
+	err = s.deleteCurrentAndAllTransactionsLinked(ctx, userID, transactionInstallments)
 	if err != nil {
 		return pkgErrors.Internal(fmt.Sprintf("failed to delete installments for recurrence %d", *transaction.TransactionRecurrenceID), err)
 	}
@@ -121,7 +121,7 @@ func (s *transactionService) deleteAllInstallmentsOfRecurrence(ctx context.Conte
 
 // deleteCurrentAndAllTransactionsLinked deleta todas as transações vinculadas às transações pai
 // se as transações possuem recorrências, elas também serão deletadas
-func (s *transactionService) deleteCurrentAndAllTransactionsLinked(ctx context.Context, parentTransactions []*domain.Transaction) error {
+func (s *transactionService) deleteCurrentAndAllTransactionsLinked(ctx context.Context, userID int, parentTransactions []*domain.Transaction) error {
 	// obtém todas as transações vinculadas às transações pai
 	transactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
 		ParentIDs: lo.Map(parentTransactions, func(transaction *domain.Transaction, _ int) int {
@@ -146,45 +146,26 @@ func (s *transactionService) deleteCurrentAndAllTransactionsLinked(ctx context.C
 		return pkgErrors.Internal("failed to delete transactions", err)
 	}
 
-	if err := s.deleteRecurrencesWithoutTransactions(ctx, t); err != nil {
+	if err := s.deleteRecurrencesWithoutTransactions(ctx, userID, t); err != nil {
 		return pkgErrors.Internal("failed to delete recurrences without transactions", err)
 	}
 
 	return nil
 }
 
-func (s *transactionService) deleteRecurrencesWithoutTransactions(ctx context.Context, transactions []*domain.Transaction) error {
-	transactionsWithRecurrence := lo.Filter(transactions, func(transaction *domain.Transaction, _ int) bool {
-		return transaction.TransactionRecurrenceID != nil
-	})
-
-	// obtém todas as recorrências das transações
-	recurrenceIDMap := lo.SliceToMap(transactionsWithRecurrence, func(transaction *domain.Transaction) (int, bool) {
+func (s *transactionService) deleteRecurrencesWithoutTransactions(ctx context.Context, userID int, transactions []*domain.Transaction) error {
+	recurrenceIDs := lo.FilterMap(transactions, func(transaction *domain.Transaction, _ int) (int, bool) {
 		return lo.FromPtr(transaction.TransactionRecurrenceID), transaction.TransactionRecurrenceID != nil
 	})
 
-	recurrenceIDs := lo.Keys(recurrenceIDMap)
-
-	transactionIDs := lo.Map(transactionsWithRecurrence, func(transaction *domain.Transaction, _ int) int {
-		return transaction.ID
-	})
-
-	// busca transações que fazem parte das recorrências
-	recurrences, err := s.transactionRecurRepo.Search(ctx, domain.TransactionRecurrenceFilter{
-		TransactionIDs: transactionIDs,
-	})
+	transactionsByRecurrence, err := s.transactionRepo.GetGroupedByRecurrences(ctx, userID, recurrenceIDs)
 	if err != nil {
-		return pkgErrors.Internal("failed to get recurrences", err)
+		return pkgErrors.Internal("failed to get transactions grouped by recurrences", err)
 	}
 
-	existingRecurrenceIDs := lo.SliceToMap(recurrences, func(recurrence *domain.TransactionRecurrence) (int, bool) {
-		return recurrence.ID, true
-	})
-
-	// faz um diff entre as recorrências encontradas e as recorrências que fazem parte das transações para excluir as recorrências que não possuem mais transações
 	excludeRecurrenceIDs := make([]int, 0, len(recurrenceIDs))
-	for _, recurrenceID := range recurrenceIDs {
-		if _, ok := existingRecurrenceIDs[recurrenceID]; !ok {
+	for recurrenceID, transactions := range transactionsByRecurrence {
+		if len(transactions) == 0 {
 			excludeRecurrenceIDs = append(excludeRecurrenceIDs, recurrenceID)
 		}
 	}
@@ -199,7 +180,7 @@ func (s *transactionService) deleteRecurrencesWithoutTransactions(ctx context.Co
 
 func (s *transactionService) deleteCurrentAndFutureInstallmentsOfRecurrence(ctx context.Context, userID int, transaction *domain.Transaction) error {
 	if transaction.TransactionRecurrenceID == nil || transaction.InstallmentNumber == nil {
-		return s.deleteCurrentAndAllTransactionsLinked(ctx, []*domain.Transaction{transaction})
+		return s.deleteCurrentAndAllTransactionsLinked(ctx, userID, []*domain.Transaction{transaction})
 	}
 
 	// obtém as futuras parcelas da recorrência
@@ -215,7 +196,7 @@ func (s *transactionService) deleteCurrentAndFutureInstallmentsOfRecurrence(ctx 
 	}
 
 	// deleta todas as parcelas
-	err = s.deleteCurrentAndAllTransactionsLinked(ctx, transactionInstallments)
+	err = s.deleteCurrentAndAllTransactionsLinked(ctx, userID, transactionInstallments)
 	if err != nil {
 		return pkgErrors.Internal(fmt.Sprintf("failed to delete installments for recurrence %d", *transaction.TransactionRecurrenceID), err)
 	}
