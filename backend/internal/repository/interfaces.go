@@ -61,10 +61,13 @@ type TagRepository interface {
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error)
 	Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
+	Delete(ctx context.Context, ids []int) error
 }
 
 type TransactionRecurrenceRepository interface {
 	Create(ctx context.Context, recurrence *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)
+	Delete(ctx context.Context, ids []int) error
+	Search(ctx context.Context, filter domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error)
 }
 
 type UserSettingsRepository interface {

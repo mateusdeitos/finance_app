@@ -23,6 +23,7 @@ type Transaction struct {
 	DestinationAccountID    *int
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
+	DeletedAt               *gorm.DeletedAt
 	User                    User                   `gorm:"<-:false"`
 	Account                 Account                `gorm:"<-:false"`
 	Category                *Category              `gorm:"<-:false"`
@@ -49,6 +50,11 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		transactionRecurrence = t.TransactionRecurrence.ToDomain()
 	}
 
+	var deletedAt *time.Time
+	if t.DeletedAt != nil {
+		deletedAt = &t.DeletedAt.Time
+	}
+
 	trans := &domain.Transaction{
 		ID:                      t.ID,
 		ParentID:                t.ParentID,
@@ -68,12 +74,18 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		}),
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
+		DeletedAt: deletedAt,
 	}
 
 	return trans
 }
 
 func TransactionFromDomain(d *domain.Transaction) *Transaction {
+	var deletedAt *gorm.DeletedAt
+	if d.DeletedAt != nil {
+		deletedAt = &gorm.DeletedAt{Time: *d.DeletedAt}
+	}
+
 	t := &Transaction{
 		ID:                      d.ID,
 		ParentID:                d.ParentID,
@@ -93,6 +105,7 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		}),
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,
+		DeletedAt: deletedAt,
 	}
 
 	return t

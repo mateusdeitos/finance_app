@@ -83,3 +83,20 @@ func (h *TransactionHandler) Search(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, transactions)
 }
+
+func (h *TransactionHandler) Delete(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid transaction ID")
+	}
+
+	propagationSettings := domain.TransactionPropagationSettings(c.QueryParam("propagation_settings"))
+
+	if err := h.transactionService.Delete(c.Request().Context(), userID, id, propagationSettings); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}

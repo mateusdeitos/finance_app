@@ -50,6 +50,7 @@ type Transaction struct {
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
+	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
 }
 
 type TransactionCreateRequest struct {
@@ -71,6 +72,12 @@ type TransactionRecurrence struct {
 	Installments int        `json:"installments"`
 	CreatedAt    *time.Time `json:"created_at"`
 	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
+type TransactionRecurrenceFilter struct {
+	IDs            []int `query:"id[]"`
+	UserID         int   `query:"user_id"`
+	TransactionIDs []int `query:"transaction_id[]"`
 }
 
 type RecurrenceSettings struct {
@@ -183,6 +190,17 @@ func (c *ComparableSearch[R]) ToSQL(field string) string {
 	return ""
 }
 
+type TransactionPropagationSettings string
+
+const (
+	TransactionPropagationSettingsAll              TransactionPropagationSettings = "all"
+	TransactionPropagationSettingsCurrent          TransactionPropagationSettings = "current"
+	TransactionPropagationSettingsCurrentAndFuture TransactionPropagationSettings = "current_and_future"
+)
+
+func (p TransactionPropagationSettings) IsValid() bool {
+	return p == TransactionPropagationSettingsAll || p == TransactionPropagationSettingsCurrent || p == TransactionPropagationSettingsCurrentAndFuture
+}
 
 type Period struct {
 	Month int

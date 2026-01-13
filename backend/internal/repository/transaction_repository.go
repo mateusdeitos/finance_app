@@ -2,12 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
-	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
@@ -129,4 +128,13 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	})
 
 	return result, nil
+}
+
+func (r *transactionRepository) Delete(ctx context.Context, ids []int) error {
+	err := GetTxFromContext(ctx, r.db).Where("id IN ?", ids).Delete(&entity.Transaction{}).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+
+	return nil
 }

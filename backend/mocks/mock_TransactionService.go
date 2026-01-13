@@ -70,6 +70,116 @@ func (_c *MockTransactionService_Create_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// Delete provides a mock function with given fields: ctx, userID, id, propagationSettings
+func (_m *MockTransactionService) Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error {
+	ret := _m.Called(ctx, userID, id, propagationSettings)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.TransactionPropagationSettings) error); ok {
+		r0 = rf(ctx, userID, id, propagationSettings)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionService_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockTransactionService_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+//   - propagationSettings domain.TransactionPropagationSettings
+func (_e *MockTransactionService_Expecter) Delete(ctx interface{}, userID interface{}, id interface{}, propagationSettings interface{}) *MockTransactionService_Delete_Call {
+	return &MockTransactionService_Delete_Call{Call: _e.mock.On("Delete", ctx, userID, id, propagationSettings)}
+}
+
+func (_c *MockTransactionService_Delete_Call) Run(run func(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings)) *MockTransactionService_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.TransactionPropagationSettings))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_Delete_Call) Return(_a0 error) *MockTransactionService_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionService_Delete_Call) RunAndReturn(run func(context.Context, int, int, domain.TransactionPropagationSettings) error) *MockTransactionService_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Search provides a mock function with given fields: ctx, userID, period, filter
+func (_m *MockTransactionService) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	ret := _m.Called(ctx, userID, period, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Search")
+	}
+
+	var r0 []*domain.Transaction
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, domain.Period, domain.TransactionFilter) ([]*domain.Transaction, error)); ok {
+		return rf(ctx, userID, period, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, domain.Period, domain.TransactionFilter) []*domain.Transaction); ok {
+		r0 = rf(ctx, userID, period, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.Transaction)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, domain.Period, domain.TransactionFilter) error); ok {
+		r1 = rf(ctx, userID, period, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockTransactionService_Search_Call struct {
+	*mock.Call
+}
+
+// Search is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - period domain.Period
+//   - filter domain.TransactionFilter
+func (_e *MockTransactionService_Expecter) Search(ctx interface{}, userID interface{}, period interface{}, filter interface{}) *MockTransactionService_Search_Call {
+	return &MockTransactionService_Search_Call{Call: _e.mock.On("Search", ctx, userID, period, filter)}
+}
+
+func (_c *MockTransactionService_Search_Call) Run(run func(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter)) *MockTransactionService_Search_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(domain.Period), args[3].(domain.TransactionFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_Search_Call) Return(_a0 []*domain.Transaction, _a1 error) *MockTransactionService_Search_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_Search_Call) RunAndReturn(run func(context.Context, int, domain.Period, domain.TransactionFilter) ([]*domain.Transaction, error)) *MockTransactionService_Search_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionService creates a new instance of MockTransactionService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionService(t interface {

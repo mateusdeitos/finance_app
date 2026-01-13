@@ -81,6 +81,112 @@ func (_c *MockTransactionRecurrenceRepository_Create_Call) RunAndReturn(run func
 	return _c
 }
 
+// Delete provides a mock function with given fields: ctx, ids
+func (_m *MockTransactionRecurrenceRepository) Delete(ctx context.Context, ids []int) error {
+	ret := _m.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int) error); ok {
+		r0 = rf(ctx, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRecurrenceRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockTransactionRecurrenceRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []int
+func (_e *MockTransactionRecurrenceRepository_Expecter) Delete(ctx interface{}, ids interface{}) *MockTransactionRecurrenceRepository_Delete_Call {
+	return &MockTransactionRecurrenceRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, ids)}
+}
+
+func (_c *MockTransactionRecurrenceRepository_Delete_Call) Run(run func(ctx context.Context, ids []int)) *MockTransactionRecurrenceRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Delete_Call) Return(_a0 error) *MockTransactionRecurrenceRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Delete_Call) RunAndReturn(run func(context.Context, []int) error) *MockTransactionRecurrenceRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Search provides a mock function with given fields: ctx, filter
+func (_m *MockTransactionRecurrenceRepository) Search(ctx context.Context, filter domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error) {
+	ret := _m.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Search")
+	}
+
+	var r0 []*domain.TransactionRecurrence
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error)); ok {
+		return rf(ctx, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionRecurrenceFilter) []*domain.TransactionRecurrence); ok {
+		r0 = rf(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.TransactionRecurrence)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TransactionRecurrenceFilter) error); ok {
+		r1 = rf(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRecurrenceRepository_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockTransactionRecurrenceRepository_Search_Call struct {
+	*mock.Call
+}
+
+// Search is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.TransactionRecurrenceFilter
+func (_e *MockTransactionRecurrenceRepository_Expecter) Search(ctx interface{}, filter interface{}) *MockTransactionRecurrenceRepository_Search_Call {
+	return &MockTransactionRecurrenceRepository_Search_Call{Call: _e.mock.On("Search", ctx, filter)}
+}
+
+func (_c *MockTransactionRecurrenceRepository_Search_Call) Run(run func(ctx context.Context, filter domain.TransactionRecurrenceFilter)) *MockTransactionRecurrenceRepository_Search_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.TransactionRecurrenceFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Search_Call) Return(_a0 []*domain.TransactionRecurrence, _a1 error) *MockTransactionRecurrenceRepository_Search_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Search_Call) RunAndReturn(run func(context.Context, domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error)) *MockTransactionRecurrenceRepository_Search_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionRecurrenceRepository creates a new instance of MockTransactionRecurrenceRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionRecurrenceRepository(t interface {

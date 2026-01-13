@@ -72,6 +72,10 @@ var (
 	ErrInvalidPeriod = func(period domain.Period) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{"invalid_period"}, fmt.Sprintf("invalid period: %s", period.String()))
 	}
+	ErrInvalidPropagationSettings = func(propagationSettings domain.TransactionPropagationSettings) *ServiceError {
+		return NewWithTag(ErrCodeBadRequest, []string{"invalid_propagation_settings"}, fmt.Sprintf("invalid propagation settings: %s", propagationSettings))
+	}
+	ErrParentTransactionBelongsToAnotherUser = NewWithTag(ErrCodeForbidden, []string{"parent_transaction_belongs_to_another_user"}, "parent transaction belongs to another user")
 )
 
 // ServiceError represents a service-level error with a code and message
