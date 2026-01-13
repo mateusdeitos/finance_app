@@ -66,3 +66,9 @@ clean: ## Clean build artifacts
 	rm -rf bin/ mocks/
 	go clean
 
+
+up-db:
+	docker-compose up -d postgres
+
+up-server:
+	docker-compose up backend

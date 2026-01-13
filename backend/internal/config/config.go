@@ -37,7 +37,7 @@ func (d DatabaseConfig) DSN() string {
 }
 
 type JWTConfig struct {
-	Secret         string
+	Secret          string
 	ExpirationHours int
 }
 
@@ -46,8 +46,8 @@ func (j JWTConfig) Expiration() time.Duration {
 }
 
 type OAuthConfig struct {
-	Google    OAuthProviderConfig
-	Microsoft OAuthProviderConfig
+	Google        OAuthProviderConfig
+	Microsoft     OAuthProviderConfig
 	SessionSecret string
 }
 
@@ -62,9 +62,9 @@ type AppConfig struct {
 	Env string
 }
 
-func Load() (*Config, error) {
+func Load(files ...string) (*Config, error) {
 	// Try to load .env file, but don't fail if it doesn't exist
-	_ = godotenv.Load()
+	_ = godotenv.Load(files...)
 
 	config := &Config{
 		Server: ServerConfig{
@@ -119,4 +119,3 @@ func getEnvAsInt(key string, defaultValue int) int {
 	}
 	return defaultValue
 }
-

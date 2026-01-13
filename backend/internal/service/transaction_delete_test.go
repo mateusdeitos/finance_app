@@ -3,15 +3,21 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
 type TransactionDeleteTestSuite struct {
 	ServiceTestSuite
+}
+
+type TransactionDeleteTestWithDBSuite struct {
+	ServiceTestWithDBSuite
 }
 
 func (suite *TransactionDeleteTestSuite) TestInvalidPropagationSettings() {
@@ -54,60 +60,72 @@ func (suite *TransactionDeleteTestSuite) TestTransactionParentNotFound() {
 	suite.Equal(pkgErrors.NotFound("parent transaction"), err)
 }
 
-func (suite *TransactionDeleteTestSuite) TestPropagationSettingsCurrent() {
+func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() {
 	ctx := context.Background()
-	// getByID
-	suite.MockTransactionRepository.EXPECT().Search(ctx, domain.TransactionFilter{
-		IDs:    []int{1},
-		UserID: &suite.UserID,
-	}).Return([]*domain.Transaction{
-		{
-			ID:                      1,
-			UserID:                  suite.UserID,
-			TransactionRecurrenceID: lo.ToPtr(1),
-		},
-	}, nil)
 
-	linkedTransactions := []*domain.Transaction{
-		{
-			ID:                      2,
-			UserID:                  suite.UserID,
-			TransactionRecurrenceID: lo.ToPtr(1),
-			ParentID:                lo.ToPtr(1),
-		},
-		{
-			ID:                      3,
-			UserID:                  2,
-			TransactionRecurrenceID: lo.ToPtr(2),
-			ParentID:                lo.ToPtr(1),
-		},
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
 	}
 
-	// deleteCurrentAndAllTransactionsLinked
-	suite.MockTransactionRepository.EXPECT().Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{1},
-	}).Return(linkedTransactions, nil)
+	assert.NotEmpty(suite.T(), user.ID)
 
-	suite.MockTransactionRepository.EXPECT().Delete(ctx, 1).Return(nil)
-	for _, transaction := range linkedTransactions {
-		suite.MockTransactionRepository.EXPECT().Delete(ctx, transaction.ID).Return(nil)
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
 
-	// deleteRecurrencesWithoutTransactions
-	suite.MockTransactionRecurrenceRepository.EXPECT().Search(ctx, domain.TransactionRecurrenceFilter{
-		TransactionIDs: []int{2, 3, 1},
-	}).Return([]*domain.TransactionRecurrence{
-		{
-			ID: 1,
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	installments := 4
+
+	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            time.Now().UTC(),
+		Description:     "Test Transaction",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(installments),
 		},
-	}, nil)
+	})
 
-	suite.MockTransactionRecurrenceRepository.EXPECT().Delete(ctx, 2).Return(nil)
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.Len(suite.T(), transactions, installments)
 
-	err := suite.Services.Transaction.Delete(ctx, suite.UserID, 1, domain.TransactionPropagationSettingsCurrent)
+	firstTransaction := transactions[0]
+	recurrenceID := firstTransaction.TransactionRecurrenceID
+	assert.NotNil(suite.T(), recurrenceID)
+
+	err = suite.Services.Transaction.Delete(ctx, user.ID, firstTransaction.ID, domain.TransactionPropagationSettingsCurrent)
 	suite.NoError(err)
+
+	transactions, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.Len(suite.T(), transactions, installments-1)
+
+	remainingTransactionsHaveRecurrence := lo.EveryBy(transactions, func(transaction *domain.Transaction) bool {
+		return transaction.TransactionRecurrenceID != nil
+	})
+	assert.True(suite.T(), remainingTransactionsHaveRecurrence)
 }
 
 func TestTransactionDelete(t *testing.T) {
 	suite.Run(t, new(TransactionDeleteTestSuite))
+
+	suite.Run(t, new(TransactionDeleteTestWithDBSuite))
 }
