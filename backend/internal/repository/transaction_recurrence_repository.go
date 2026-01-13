@@ -27,6 +27,10 @@ func (r *transactionRecurrenceRepository) Create(ctx context.Context, recurrence
 }
 
 func (r *transactionRecurrenceRepository) Delete(ctx context.Context, ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
 	err := GetTxFromContext(ctx, r.db).Where("id IN ?", ids).Delete(&entity.TransactionRecurrence{}).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err

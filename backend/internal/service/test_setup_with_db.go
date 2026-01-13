@@ -9,6 +9,7 @@ import (
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
 	"github.com/finance_app/backend/pkg/database"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
 )
@@ -170,6 +171,40 @@ func (suite *ServiceTestWithDBSuite) createTestTag(ctx context.Context, user *do
 		Name:   fmt.Sprintf("test_tag_%d", randomInt),
 		UserID: user.ID,
 	})
+}
+
+func (suite *ServiceTestWithDBSuite) createAcceptedTestUserConnection(ctx context.Context, fromUserID, toUserID, fromDefaultSplitPercentage int) (*domain.UserConnection, error) {
+	userConnection, err := suite.Services.UserConnection.Create(ctx, fromUserID, toUserID, fromDefaultSplitPercentage)
+	if err != nil {
+		return nil, err
+	}
+
+	assert.Equal(suite.T(), fromUserID, userConnection.FromUserID)
+	assert.Equal(suite.T(), toUserID, userConnection.ToUserID)
+	assert.Greater(suite.T(), userConnection.ID, 0)
+	assert.Greater(suite.T(), userConnection.FromAccountID, 0)
+	assert.Greater(suite.T(), userConnection.ToAccountID, 0)
+
+	assert.Equal(suite.T(), fromDefaultSplitPercentage, userConnection.FromDefaultSplitPercentage)
+	assert.Equal(suite.T(), fromDefaultSplitPercentage, userConnection.ToDefaultSplitPercentage)
+	assert.Equal(suite.T(), domain.UserConnectionStatusPending, userConnection.ConnectionStatus)
+
+	err = suite.Services.UserConnection.UpdateStatus(ctx, toUserID, userConnection.ID, domain.UserConnectionStatusAccepted)
+	if err != nil {
+		return nil, err
+	}
+
+	userConnections, err := suite.Services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+		IDs: []int{userConnection.ID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	userConnection = userConnections[0]
+	assert.Equal(suite.T(), domain.UserConnectionStatusAccepted, userConnection.ConnectionStatus)
+
+	return userConnection, nil
 }
 
 // TearDownTest is called after each test method

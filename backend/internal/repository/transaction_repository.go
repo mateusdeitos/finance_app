@@ -139,7 +139,7 @@ func (r *transactionRepository) Delete(ctx context.Context, ids []int) error {
 	return nil
 }
 
-func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, userID int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
+func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
 	var ents []entity.Transaction
 	query := GetTxFromContext(ctx, r.db)
 
@@ -147,11 +147,10 @@ func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, use
 		return nil, errors.New("recurrence IDs are required")
 	}
 
-	if userID == 0 {
-		return nil, errors.New("user ID is required")
+	if userID != nil {
+		query = query.Where("user_id = ?", userID)
 	}
 
-	query = query.Where("user_id = ?", userID)
 	query = query.Where("transaction_recurrence_id IN ?", recurrenceIDs)
 
 	if err := query.Find(&ents).Error; err != nil {
@@ -164,7 +163,7 @@ func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, use
 
 	for _, recurrenceID := range recurrenceIDs {
 		if _, ok := result[recurrenceID]; !ok {
-			result[recurrenceID] = make([]*domain.Transaction, 0)
+			result[recurrenceID] = []*domain.Transaction{}
 		}
 	}
 

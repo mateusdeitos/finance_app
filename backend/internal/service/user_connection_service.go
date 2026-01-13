@@ -6,7 +6,6 @@ import (
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
-	"github.com/finance_app/backend/pkg/appcontext"
 	apperrors "github.com/finance_app/backend/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -34,7 +33,10 @@ func (s *userConnectionService) Create(ctx context.Context, fromUserID, toUserID
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
-	fromUser := appcontext.GetUserFromContext(ctx)
+	fromUser, err := s.userRepo.GetByID(ctx, toUserID)
+	if err != nil {
+		return nil, apperrors.Internal("failed to get to user", err)
+	}
 	if fromUser == nil {
 		return nil, apperrors.NotFound("from user")
 	}
