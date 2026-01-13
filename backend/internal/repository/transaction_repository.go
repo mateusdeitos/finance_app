@@ -162,5 +162,11 @@ func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, use
 		return lo.FromPtr(ent.TransactionRecurrenceID), ent.ToDomain()
 	})
 
+	for _, recurrenceID := range recurrenceIDs {
+		if _, ok := result[recurrenceID]; !ok {
+			result[recurrenceID] = make([]*domain.Transaction, 0)
+		}
+	}
+
 	return result, nil
 }

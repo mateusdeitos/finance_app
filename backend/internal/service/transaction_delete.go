@@ -158,6 +158,8 @@ func (s *transactionService) deleteRecurrencesWithoutTransactions(ctx context.Co
 		return lo.FromPtr(transaction.TransactionRecurrenceID), transaction.TransactionRecurrenceID != nil
 	})
 
+	recurrenceIDs = lo.Uniq(recurrenceIDs)
+
 	transactionsByRecurrence, err := s.transactionRepo.GetGroupedByRecurrences(ctx, userID, recurrenceIDs)
 	if err != nil {
 		return pkgErrors.Internal("failed to get transactions grouped by recurrences", err)
