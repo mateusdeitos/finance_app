@@ -27,9 +27,11 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 		return err
 	}
 
-	_, err = s.services.Category.GetByID(ctx, userID, transaction.CategoryID)
-	if err != nil {
-		return err
+	if transaction.CategoryID > 0 {
+		_, err = s.services.Category.GetByID(ctx, userID, transaction.CategoryID)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = s.createTransactions(ctx, userID, transaction)
@@ -55,7 +57,7 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 		errs = append(errs, pkgErrors.ErrInvalidAccountID)
 	}
 
-	if transaction.CategoryID <= 0 {
+	if transaction.CategoryID <= 0 && transaction.TransactionType != domain.TransactionTypeTransfer {
 		errs = append(errs, pkgErrors.ErrInvalidCategoryID)
 	}
 
@@ -174,7 +176,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 				UserID:                  userID,
 				Type:                    transaction.TransactionType,
 				AccountID:               transaction.AccountID,
-				CategoryID:              &transaction.CategoryID,
+				CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
 				Amount:                  transaction.Amount,
 				Tags:                    transaction.Tags,
 			})
@@ -191,7 +193,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			UserID:                  userID,
 			Type:                    transaction.TransactionType,
 			AccountID:               transaction.AccountID,
-			CategoryID:              &transaction.CategoryID,
+			CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
 			Amount:                  transaction.Amount,
 			Tags:                    transaction.Tags,
 		})
