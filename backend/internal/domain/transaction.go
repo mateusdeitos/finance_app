@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"slices"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type TransactionType string
@@ -105,11 +107,43 @@ type TransactionFilter struct {
 	InstallmentNumber *ComparableSearch[int]       `query:"installment_number,omitempty"`
 	StartDate         *ComparableSearch[time.Time] `query:"start_date,omitempty"`
 	EndDate           *ComparableSearch[time.Time] `query:"end_date,omitempty"`
+	SortBy            *SortBy                      `query:"sort_by,omitempty"`
 }
 
 type TextSearch struct {
 	Query string `query:"query"`
 	Exact bool   `query:"exact"`
+}
+
+type SortBy struct {
+	Field string
+	Order SortOrder
+}
+
+func (s *SortBy) Scope() func(db *gorm.DB) *gorm.DB {
+
+	return func(db *gorm.DB) *gorm.DB {
+		if s.Field == "" {
+			return db
+		}
+
+		if !s.Order.IsValid() {
+			s.Order = SortOrderAsc
+		}
+
+		return db.Order(fmt.Sprintf("%s %s", s.Field, s.Order))
+	}
+}
+
+type SortOrder string
+
+const (
+	SortOrderAsc  SortOrder = "asc"
+	SortOrderDesc SortOrder = "desc"
+)
+
+func (s SortOrder) IsValid() bool {
+	return s == SortOrderAsc || s == SortOrderDesc
 }
 
 type ComparableSearch[R comparable] struct {

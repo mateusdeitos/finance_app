@@ -105,13 +105,16 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 			errs = append(errs, pkgErrors.ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
 		}
 
-		if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) < 1 {
-			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
+		if transaction.RecurrenceSettings.EndDate == nil {
+			if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) < 1 {
+				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
+			}
+
+			if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) > 1000 {
+				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
+			}
 		}
 
-		if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) > 1000 {
-			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
-		}
 	}
 
 	if transaction.TransactionType == domain.TransactionTypeTransfer {
@@ -374,18 +377,16 @@ func (s *transactionService) createRecurrence(ctx context.Context, userID int, r
 	if recurrenceSettings.EndDate != nil {
 		var installments int
 
+		endDate := recurrenceSettings.EndDate
+
 		switch recurrenceSettings.Type {
 		case domain.RecurrenceTypeDaily:
-			endDate := recurrenceSettings.EndDate.AddDate(0, 0, 1)
 			installments = int(endDate.Sub(startDate).Hours() / 24)
 		case domain.RecurrenceTypeWeekly:
-			endDate := recurrenceSettings.EndDate.AddDate(0, 0, 7)
 			installments = int(endDate.Sub(startDate).Hours() / 24 / 7)
 		case domain.RecurrenceTypeMonthly:
-			endDate := recurrenceSettings.EndDate.AddDate(0, 1, 0)
 			installments = int(endDate.Sub(startDate).Hours() / 24 / 30)
 		case domain.RecurrenceTypeYearly:
-			endDate := recurrenceSettings.EndDate.AddDate(1, 0, 0)
 			installments = int(endDate.Sub(startDate).Hours() / 24 / 365)
 		}
 

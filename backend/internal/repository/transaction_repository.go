@@ -117,7 +117,9 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		query = query.Where("type IN ?", types)
 	}
 
-	query = query.Order("date DESC")
+	if filter.SortBy != nil {
+		query = query.Scopes(filter.SortBy.Scope())
+	}
 
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
