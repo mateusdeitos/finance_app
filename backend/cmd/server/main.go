@@ -105,6 +105,7 @@ func main() {
 	accounts := api.Group("/accounts")
 	accounts.GET("", accountHandler.Search)
 	accounts.POST("", accountHandler.Create)
+	accounts.PUT("/:id", accountHandler.Update)
 	accounts.DELETE("/:id", accountHandler.Delete)
 
 	// User connections
