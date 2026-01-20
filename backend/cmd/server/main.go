@@ -134,7 +134,7 @@ func main() {
 	transactions.GET("", transactionHandler.Search)
 	transactions.POST("", transactionHandler.Create)
 	transactions.DELETE("/:id", transactionHandler.Delete)
-	// transactions.GET("/:id", transactionHandler.GetByID)
+	transactions.GET("/:id", transactionHandler.GetByID)
 	// transactions.PUT("/:id", transactionHandler.Update)
 	// transactions.POST("/bulk-update", transactionHandler.BulkUpdate)
 	// transactions.POST("/import-csv", transactionHandler.ImportCSV)

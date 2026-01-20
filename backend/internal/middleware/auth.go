@@ -35,8 +35,7 @@ func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		token := parts[1]
 		user, err := m.authService.ValidateToken(c.Request().Context(), token)
 		if err != nil {
-			statusCode, message := apperrors.ToHTTPError(err)
-			return echo.NewHTTPError(statusCode, message)
+			return apperrors.ToHTTPError(err)
 		}
 
 		ctx := appcontext.WithUser(c.Request().Context(), user)

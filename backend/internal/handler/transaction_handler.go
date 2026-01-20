@@ -7,6 +7,7 @@ import (
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/labstack/echo/v4"
 )
 
@@ -82,6 +83,32 @@ func (h *TransactionHandler) Search(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, transactions)
+}
+
+func (h *TransactionHandler) GetByID(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appcontext.GetUserIDFromContext(ctx)
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return pkgErrors.BadRequest("invalid transaction ID").ToHTTPError()
+	}
+
+	t, err := h.transactionService.Search(ctx, userID, domain.Period{
+		Month: 0,
+		Year:  0,
+	}, domain.TransactionFilter{
+		IDs: []int{id},
+	})
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	if len(t) == 0 {
+		return pkgErrors.NotFound("transaction").ToHTTPError()
+	}
+
+	return c.JSON(http.StatusOK, t[0])
 }
 
 func (h *TransactionHandler) Delete(c echo.Context) error {

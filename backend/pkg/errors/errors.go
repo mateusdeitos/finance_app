@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/finance_app/backend/internal/domain"
+	"github.com/labstack/echo/v4"
 )
 
 // ErrorCode represents a service error code
@@ -109,6 +110,10 @@ func (e *ServiceError) Unwrap() error {
 	return e.Err
 }
 
+func (e *ServiceError) ToHTTPError() *echo.HTTPError {
+	return ToHTTPError(e)
+}
+
 func (e *ServiceError) AddTag(tag string) *ServiceError {
 	e.Tags = append(e.Tags, tag)
 	return e
@@ -158,30 +163,30 @@ func AsServiceError(err error) (*ServiceError, bool) {
 
 // ToHTTPError converts a service error to an HTTP error
 // Returns the HTTP status code and error message
-func ToHTTPError(err error) (int, string) {
+func ToHTTPError(err error) *echo.HTTPError {
 	serviceErr, ok := AsServiceError(err)
 	if !ok {
 		// If it's not a ServiceError, treat it as internal error
-		return http.StatusInternalServerError, "Internal server error"
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
 	switch serviceErr.Code {
 	case ErrCodeNotFound:
-		return http.StatusNotFound, serviceErr.Message
+		return echo.NewHTTPError(http.StatusNotFound, serviceErr.Message)
 	case ErrCodeAlreadyExists:
-		return http.StatusConflict, serviceErr.Message
+		return echo.NewHTTPError(http.StatusConflict, serviceErr.Message)
 	case ErrCodeUnauthorized:
-		return http.StatusUnauthorized, serviceErr.Message
+		return echo.NewHTTPError(http.StatusUnauthorized, serviceErr.Message)
 	case ErrCodeForbidden:
-		return http.StatusForbidden, serviceErr.Message
+		return echo.NewHTTPError(http.StatusForbidden, serviceErr.Message)
 	case ErrCodeValidation:
-		return http.StatusBadRequest, serviceErr.Message
+		return echo.NewHTTPError(http.StatusBadRequest, serviceErr.Message)
 	case ErrCodeBadRequest:
-		return http.StatusBadRequest, serviceErr.Message
+		return echo.NewHTTPError(http.StatusBadRequest, serviceErr.Message)
 	case ErrCodeInternal:
-		return http.StatusInternalServerError, serviceErr.Message
+		return echo.NewHTTPError(http.StatusInternalServerError, serviceErr.Message)
 	default:
-		return http.StatusInternalServerError, "Internal server error"
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 }
 
