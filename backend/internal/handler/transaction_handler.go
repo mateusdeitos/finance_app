@@ -37,6 +37,22 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
+func (h *TransactionHandler) Update(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	var transaction domain.TransactionUpdateRequest
+	if err := c.Bind(&transaction); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	err := h.transactionService.Update(c.Request().Context(), userID, &transaction)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.NoContent(http.StatusCreated)
+}
+
 func (h *TransactionHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 

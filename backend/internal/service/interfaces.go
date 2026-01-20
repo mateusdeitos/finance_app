@@ -13,6 +13,7 @@ type AuthService interface {
 
 type TransactionService interface {
 	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error
+	Update(ctx context.Context, userID int, transaction *domain.TransactionUpdateRequest) error
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 }

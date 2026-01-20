@@ -68,6 +68,20 @@ type TransactionCreateRequest struct {
 	SplitSettings        []SplitSettings     `json:"split_settings,omitempty"`
 }
 
+type TransactionUpdateRequest struct {
+	TransactionType      TransactionType                `json:"transaction_type"`
+	AccountID            int                            `json:"account_id"`
+	CategoryID           int                            `json:"category_id,omitempty"`
+	Amount               int64                          `json:"amount"`
+	Date                 time.Time                      `json:"date"`
+	Description          string                         `json:"description"`
+	DestinationAccountID *int                           `json:"destination_account_id,omitempty"`
+	Tags                 []Tag                          `json:"tags,omitempty"`
+	PropagationSettings  TransactionPropagationSettings `json:"propagation_settings"`
+	RecurrenceSettings   *RecurrenceSettings            `json:"recurrence_settings,omitempty"`
+	SplitSettings        []SplitSettings                `json:"split_settings,omitempty"`
+}
+
 type TransactionRecurrence struct {
 	ID           int        `json:"id"`
 	UserID       int        `json:"user_id"`
