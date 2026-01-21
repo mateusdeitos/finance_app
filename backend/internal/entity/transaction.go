@@ -14,6 +14,7 @@ type Transaction struct {
 	TransactionRecurrenceID *int
 	InstallmentNumber       *int
 	UserID                  int
+	OriginalUserID          *int
 	Type                    domain.TransactionType
 	AccountID               int
 	CategoryID              *int
@@ -61,6 +62,7 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		TransactionRecurrenceID: t.TransactionRecurrenceID,
 		InstallmentNumber:       t.InstallmentNumber,
 		UserID:                  t.UserID,
+		OriginalUserID:          t.OriginalUserID,
 		Type:                    t.Type,
 		AccountID:               t.AccountID,
 		CategoryID:              t.CategoryID,
@@ -92,6 +94,7 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		TransactionRecurrenceID: d.TransactionRecurrenceID,
 		InstallmentNumber:       d.InstallmentNumber,
 		UserID:                  d.UserID,
+		OriginalUserID:          d.OriginalUserID,
 		Type:                    d.Type,
 		AccountID:               d.AccountID,
 		CategoryID:              d.CategoryID,

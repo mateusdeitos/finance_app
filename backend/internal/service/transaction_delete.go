@@ -26,21 +26,12 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	}
 
 	// verifica se a transação pai pertence ao usuário, caso contrário, não permite deletar a transação
-	// TODO: criar coluna 'original_user_id' para facilitar identificar o criador das transações
-	if transaction.ParentID != nil {
-		pts, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
-			IDs: []int{*transaction.ParentID},
-		})
+	if transaction.ParentID != nil && transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
+		return pkgErrors.ErrParentTransactionBelongsToAnotherUser
+	} else if transaction.ParentID != nil {
+		parentTransaction, err := s.getByID(ctx, userID, *transaction.ParentID)
 		if err != nil {
-			return pkgErrors.Internal("failed to get parent transaction", err)
-		}
-		if len(pts) == 0 {
-			return pkgErrors.NotFound("parent transaction")
-		}
-
-		parentTransaction := pts[0]
-		if parentTransaction.UserID != userID {
-			return pkgErrors.ErrParentTransactionBelongsToAnotherUser
+			return err
 		}
 
 		// faz a troca para o fluxo deletar a transação pai e a transação atual

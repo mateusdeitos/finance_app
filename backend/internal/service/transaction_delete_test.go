@@ -40,26 +40,121 @@ func (suite *TransactionDeleteTestSuite) TestTransactionNotFound() {
 	suite.Equal(pkgErrors.NotFound("transaction"), err)
 }
 
-func (suite *TransactionDeleteTestSuite) TestTransactionParentNotFound() {
+func (suite *TransactionDeleteTestSuite) TestTransactionParentBelongsToAnotherUser() {
 	suite.MockTransactionRepository.EXPECT().Search(context.Background(), domain.TransactionFilter{
 		IDs:    []int{1},
 		UserID: &suite.UserID,
 	}).Return([]*domain.Transaction{
 		{
-			ID:       1,
-			ParentID: lo.ToPtr(2),
-			UserID:   suite.UserID,
+			ID:             1,
+			ParentID:       lo.ToPtr(2),
+			UserID:         suite.UserID,
+			OriginalUserID: lo.ToPtr(2),
 		},
 	}, nil)
-
-	suite.MockTransactionRepository.EXPECT().Search(context.Background(), domain.TransactionFilter{
-		IDs: []int{2},
-	}).Return([]*domain.Transaction{}, nil)
 
 	ctx := context.Background()
 	err := suite.Services.Transaction.Delete(ctx, 1, 1, domain.TransactionPropagationSettingsCurrent)
 	suite.Error(err)
-	suite.Equal(pkgErrors.NotFound("parent transaction"), err)
+	suite.Equal(pkgErrors.ErrParentTransactionBelongsToAnotherUser, err)
+}
+
+func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	assert.NotEmpty(suite.T(), user.ID)
+
+	user2, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	assert.NotEmpty(suite.T(), user2.ID)
+
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 100)
+	if err != nil {
+		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            time.Now().UTC(),
+		Description:     "Test Transaction",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: userConnection.ID,
+				Percentage:   lo.ToPtr(50),
+			},
+		},
+	})
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.Len(suite.T(), transactions, 2)
+
+	parent, found := lo.Find(transactions, func(transaction *domain.Transaction) bool {
+		return transaction.ParentID == nil
+	})
+
+	assert.True(suite.T(), found)
+	assert.NotNil(suite.T(), parent)
+
+	child, found := lo.Find(transactions, func(transaction *domain.Transaction) bool {
+		return transaction.ParentID != nil
+	})
+
+	assert.True(suite.T(), found)
+	assert.NotNil(suite.T(), child)
+
+	assert.Equal(suite.T(), parent.ID, lo.FromPtr(child.ParentID))
+
+	assert.Equal(suite.T(), userConnection.FromAccountID, child.AccountID)
+	assert.Equal(suite.T(), user.ID, child.UserID)
+	assert.Equal(suite.T(), user.ID, lo.FromPtr(child.OriginalUserID))
+	assert.Equal(suite.T(), domain.TransactionTypeIncome, child.Type)
+	assert.Equal(suite.T(), int64(50), child.Amount)
+	assert.Equal(suite.T(), category.ID, lo.FromPtr(child.CategoryID))
+
+	err = suite.Services.Transaction.Delete(ctx, user.ID, child.ID, domain.TransactionPropagationSettingsCurrent)
+	suite.NoError(err)
+
+	transactions, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.Len(suite.T(), transactions, 0)
+
+	transactions, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user2.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.Len(suite.T(), transactions, 0)
 }
 
 func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() {
