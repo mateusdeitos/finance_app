@@ -16,19 +16,18 @@ type Transaction struct {
 	UserID                  int
 	OriginalUserID          *int
 	Type                    domain.TransactionType
+	OperationType           domain.OperationType
 	AccountID               int
 	CategoryID              *int
 	Amount                  int64
 	Date                    time.Time
 	Description             string
-	DestinationAccountID    *int
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
 	DeletedAt               *gorm.DeletedAt
 	User                    User                   `gorm:"<-:false"`
 	Account                 Account                `gorm:"<-:false"`
 	Category                *Category              `gorm:"<-:false"`
-	DestinationAccount      *Account               `gorm:"<-:false"`
 	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
 	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id;<-:create"`
 }
@@ -64,12 +63,12 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		UserID:                  t.UserID,
 		OriginalUserID:          t.OriginalUserID,
 		Type:                    t.Type,
+		OperationType:           t.OperationType,
 		AccountID:               t.AccountID,
 		CategoryID:              t.CategoryID,
 		Amount:                  t.Amount,
 		Date:                    t.Date,
 		Description:             t.Description,
-		DestinationAccountID:    t.DestinationAccountID,
 		TransactionRecurrence:   transactionRecurrence,
 		Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
 			return *tag.ToDomain()
@@ -96,12 +95,12 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		UserID:                  d.UserID,
 		OriginalUserID:          d.OriginalUserID,
 		Type:                    d.Type,
+		OperationType:           d.OperationType,
 		AccountID:               d.AccountID,
 		CategoryID:              d.CategoryID,
 		Amount:                  d.Amount,
 		Date:                    d.Date,
 		Description:             d.Description,
-		DestinationAccountID:    d.DestinationAccountID,
 		TransactionRecurrence:   TransactionRecurrenceFromDomain(d.TransactionRecurrence),
 		Tags: lo.Map(d.Tags, func(tag domain.Tag, _ int) Tag {
 			return *TagFromDomain(&tag)
