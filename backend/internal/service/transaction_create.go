@@ -121,6 +121,10 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 		if transaction.DestinationAccountID == nil {
 			errs = append(errs, pkgErrors.ErrMissingDestinationAccount)
 		}
+
+		if len(transaction.SplitSettings) > 0 {
+			errs = append(errs, pkgErrors.ErrSplitSettingsNotAllowedForTransfer)
+		}
 	}
 
 	if len(transaction.SplitSettings) > 0 && transaction.TransactionType != domain.TransactionTypeExpense {
@@ -161,6 +165,13 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 
 	hasRecurrence := transaction.RecurrenceSettings != nil
 
+	// transfer ou expense = debit
+	// income = credit
+	operationType := domain.OperationTypeDebit
+	if transaction.TransactionType == domain.TransactionTypeIncome {
+		operationType = domain.OperationTypeCredit
+	}
+
 	if hasRecurrence {
 		recurrence, err := s.createRecurrence(ctx, userID, *transaction.RecurrenceSettings, transaction.Date)
 		if err != nil {
@@ -175,10 +186,10 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 				InstallmentNumber:       &i,
 				Date:                    s.incrementInstallmentDate(transaction.Date, lo.FromPtr(transaction.RecurrenceSettings).Type, i-1),
 				Description:             transaction.Description,
-				DestinationAccountID:    transaction.DestinationAccountID,
 				UserID:                  userID,
 				OriginalUserID:          &userID,
 				Type:                    transaction.TransactionType,
+				OperationType:           operationType,
 				AccountID:               transaction.AccountID,
 				CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
 				Amount:                  transaction.Amount,
@@ -193,15 +204,72 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			InstallmentNumber:       nil,
 			Date:                    transaction.Date,
 			Description:             transaction.Description,
-			DestinationAccountID:    transaction.DestinationAccountID,
 			UserID:                  userID,
 			OriginalUserID:          &userID,
 			Type:                    transaction.TransactionType,
+			OperationType:           operationType,
 			AccountID:               transaction.AccountID,
 			CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
 			Amount:                  transaction.Amount,
 			Tags:                    transaction.Tags,
 		})
+	}
+
+	var destinationAccount *domain.Account
+	var connection *domain.UserConnection
+	var isTransferBetweenDifferentUsers bool
+
+	if transaction.TransactionType == domain.TransactionTypeTransfer {
+		accs, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
+			IDs: []int{*transaction.DestinationAccountID},
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(accs) == 0 {
+			return pkgErrors.ErrSplitSettingInvalidDestinationAccountID(0)
+		}
+
+		destinationAccount = accs[0]
+
+		isTransferBetweenDifferentUsers = userID != destinationAccount.UserID
+
+		if isTransferBetweenDifferentUsers {
+			connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+				FromUserIDs: []int{userID},
+				ToUserIDs:   []int{destinationAccount.UserID},
+			})
+			if err != nil {
+				return err
+			}
+
+			if len(connections) == 0 {
+				return pkgErrors.ErrSplitSettingInvalidConnectionID(0).AddTag("connection_not_found")
+			}
+
+			connection = connections[0]
+		}
+	}
+
+	var r1, r2 *domain.TransactionRecurrence
+	var err error
+	if hasRecurrence {
+		if isTransferBetweenDifferentUsers {
+			r1, err = s.createRecurrence(ctx, connection.FromUserID, *transaction.RecurrenceSettings, transaction.Date)
+			if err != nil {
+				return err
+			}
+			r2, err = s.createRecurrence(ctx, connection.ToUserID, *transaction.RecurrenceSettings, transaction.Date)
+			if err != nil {
+				return err
+			}
+		} else {
+			r1, err = s.createRecurrence(ctx, userID, *transaction.RecurrenceSettings, transaction.Date)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	for i := range transactions {
@@ -213,6 +281,28 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		transactions[i].ID = t.ID
 		transactions[i].CreatedAt = t.CreatedAt
 		transactions[i].UpdatedAt = t.UpdatedAt
+
+		if t.Type == domain.TransactionTypeTransfer {
+			// se for uma transferência entre usuários diferentes,
+			// cria transfer da conta da transação para a FromAccountID da conexão
+			// cria transfer da conta da transação para a ToAccountID da conexão
+			if isTransferBetweenDifferentUsers {
+				err = s.createTransferTransaction(ctx, connection.FromUserID, connection.FromAccountID, lo.EmptyableToPtr(lo.FromPtr(r1).ID), t)
+				if err != nil {
+					return err
+				}
+
+				err = s.createTransferTransaction(ctx, connection.ToUserID, connection.ToAccountID, lo.EmptyableToPtr(lo.FromPtr(r2).ID), t)
+				if err != nil {
+					return err
+				}
+			} else {
+				err = s.createTransferTransaction(ctx, userID, destinationAccount.ID, lo.EmptyableToPtr(lo.FromPtr(r1).ID), t)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	if len(transaction.SplitSettings) > 0 {
@@ -272,7 +362,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 				toRecurrenceID = &toRecurrence.ID
 			}
 
-			for j := 0; j < originalTransactionsLen; j++ {
+			for j := range originalTransactionsLen {
 				transaction := transactions[j]
 
 				amount := transaction.Amount
@@ -282,14 +372,20 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 					amount = *splitSetting.Amount
 				}
 
+				operationType := domain.OperationTypeDebit
 				transactionType := domain.TransactionTypeExpense
+
 				if transaction.Type == domain.TransactionTypeExpense {
-					transactionType = domain.TransactionTypeIncome
+					transactionType = transaction.Type.Invert()
+					operationType = transaction.OperationType.Invert()
 				}
 
 				id := transaction.ID
-				// cria uma transação na conta compartilhada do autor da transação original com o tipo invertido para que o saldo do usuário considere corretamente a despesa - receita da divisão
-				// ex: se a transação original é uma despesa de 100, e o usuário divide em 50% para o outro usuário, cria uma receita de 50 para o usuário atual e uma despesa de 50 para o outro usuário
+				// user A = autor
+				// user B = compartilhado
+
+				// cria uma transação na conta compartilhada do user A com o tipo e operação invertidos para que o saldo do usuário considere corretamente a despesa - receita da divisão
+				// ex: se a transação original é uma despesa de 100, e o user A divide em 50% para o user B, cria uma receita de 50 para o user A e uma despesa de 50 para o user B
 				fromTransaction := domain.Transaction{
 					ID:                      0,
 					ParentID:                &id,
@@ -297,10 +393,10 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 					InstallmentNumber:       transaction.InstallmentNumber,
 					Date:                    transaction.Date,
 					Description:             transaction.Description,
-					DestinationAccountID:    nil,
 					UserID:                  fromUserID,
 					OriginalUserID:          &userID,
 					Type:                    transactionType,
+					OperationType:           operationType,
 					AccountID:               fromAccountID,
 					CategoryID:              transaction.CategoryID,
 					Amount:                  amount,
@@ -309,7 +405,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 					UpdatedAt:               nil,
 				}
 
-				// cria uma transação na conta compartilhada do usuário conectado com o mesmo tipo da transação original
+				// cria uma transação na conta compartilhada do user B com o mesmo tipo e operação da transação original
 				toTransaction := domain.Transaction{
 					ID:                      0,
 					ParentID:                &id,
@@ -317,10 +413,10 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 					InstallmentNumber:       transaction.InstallmentNumber,
 					Date:                    transaction.Date,
 					Description:             transaction.Description,
-					DestinationAccountID:    nil,
 					UserID:                  toUserID,
 					OriginalUserID:          &userID,
 					Type:                    transaction.Type,
+					OperationType:           transaction.OperationType,
 					AccountID:               toAccountID,
 					CategoryID:              nil,
 					Amount:                  amount,
@@ -406,4 +502,29 @@ func (s *transactionService) createRecurrence(ctx context.Context, userID int, r
 	} else {
 		return recurrence, nil
 	}
+}
+
+func (s *transactionService) createTransferTransaction(ctx context.Context, userID, destinationAccountID int, transferRecurrenceID *int, parent *domain.Transaction) error {
+	tr := domain.Transaction{
+		ID:                      0,
+		ParentID:                &parent.ID,
+		TransactionRecurrenceID: transferRecurrenceID,
+		InstallmentNumber:       parent.InstallmentNumber,
+		Date:                    parent.Date,
+		Description:             parent.Description,
+		UserID:                  userID,
+		OriginalUserID:          &parent.UserID,
+		Type:                    domain.TransactionTypeTransfer,
+		OperationType:           parent.OperationType.Invert(),
+		AccountID:               destinationAccountID,
+		CategoryID:              nil,
+		Amount:                  parent.Amount,
+		Tags:                    parent.Tags,
+	}
+
+	if _, err := s.transactionRepo.Create(ctx, &tr); err != nil {
+		return err
+	}
+
+	return nil
 }

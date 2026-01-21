@@ -66,6 +66,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID)
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
+	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType)
 	suite.Assert().Equal(transaction.Date, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
@@ -132,6 +133,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID)
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
+	suite.Assert().Equal(domain.OperationTypeCredit, transactions[0].OperationType)
 	suite.Assert().Equal(transaction.Date, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
@@ -190,16 +192,17 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactions, 1)
+	suite.Assert().Len(transactions, 2)
 
 	suite.Assert().NoError(err)
 
 	suite.Assert().Greater(transactions[0].ID, 0)
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID)
-	suite.Assert().Equal(transaction.DestinationAccountID, transactions[0].DestinationAccountID)
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(transaction.Date, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
+	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType)
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
 
@@ -209,7 +212,33 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Nil(transactions[0].ParentID)
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
+
+	suite.Assert().Greater(transactions[1].ID, 0)
+	suite.Assert().Equal(account2.ID, transactions[1].AccountID)
+	suite.Assert().Equal(transaction.Amount, transactions[1].Amount)
+	suite.Assert().Equal(transaction.Date, transactions[1].Date)
+	suite.Assert().Equal(transaction.Description, transactions[1].Description)
+	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[1].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, transactions[1].OperationType)
+	suite.Assert().Len(transactions[1].Tags, 1)
+	suite.Assert().Equal(transaction.Tags[0].ID, transactions[1].Tags[0].ID)
+
+	suite.Assert().Equal(user.ID, transactions[1].UserID)
+	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[1].OriginalUserID))
+
+	suite.Assert().Equal(transactions[0].ID, lo.FromPtr(transactions[1].ParentID))
+	suite.Assert().Nil(transactions[1].TransactionRecurrenceID)
+	suite.Assert().Nil(transactions[1].InstallmentNumber)
 }
+
+// TODO
+func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {}
+
+// TODO
+func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers() {}
+
+// TODO
+func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDifferentUsers() {}
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRepetitions() {
 	ctx := context.Background()
