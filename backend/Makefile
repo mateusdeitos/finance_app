@@ -1,4 +1,4 @@
-.PHONY: help build run test test-unit test-integration migrate-up migrate-down migrate-create docker-up docker-down docker-build
+.PHONY: help build run test test-unit test-integration migrate-up migrate-down migrate-create docker-up docker-down docker-build generate-mocks clean up-db up-server
 
 include .env
 
@@ -43,16 +43,16 @@ migrate-create: ## Create a new database migration as .sql
 	goose -dir migrations create $(NAME) sql
 
 docker-up: ## Start docker containers
-	docker-compose up -d
+	docker compose up -d
 
 docker-down: ## Stop docker containers
-	docker-compose down
+	docker compose down
 
 docker-build: ## Build docker image
 	docker build -f docker/Dockerfile -t finance-app-backend:latest .
 
 docker-logs: ## Show docker logs
-	docker-compose logs -f
+	docker compose logs -f
 
 generate-mocks: ## Generate mocks using mockery
 	@if ! command -v mockery > /dev/null; then \
@@ -67,8 +67,8 @@ clean: ## Clean build artifacts
 	go clean
 
 
-up-db:
-	docker-compose up -d postgres
+up-db: ## Start docker containers for database
+	docker compose up -d postgres
 
-up-server:
-	docker-compose up backend
+up-server: ## Start docker containers for server
+	docker compose up backend

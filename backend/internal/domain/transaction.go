@@ -41,6 +41,7 @@ type Transaction struct {
 	TransactionRecurrenceID *int                   `json:"transaction_recurrence_id,omitempty"`
 	InstallmentNumber       *int                   `json:"installment_number,omitempty"`
 	UserID                  int                    `json:"user_id"`
+	OriginalUserID          *int                   `json:"original_user_id"`
 	Type                    TransactionType        `json:"type"`
 	AccountID               int                    `json:"account_id"`
 	CategoryID              *int                   `json:"category_id,omitempty"`

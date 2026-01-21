@@ -69,6 +69,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 	suite.Assert().Equal(transaction.Date, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
+	suite.Assert().Equal(user.ID, transactions[0].UserID)
+	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[0].OriginalUserID))
+
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
 
@@ -131,6 +134,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(transaction.Date, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
+
+	suite.Assert().Equal(user.ID, transactions[0].UserID)
+	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[0].OriginalUserID))
 
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
@@ -196,6 +202,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
+
+	suite.Assert().Equal(user.ID, transactions[0].UserID)
+	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[0].OriginalUserID))
 
 	suite.Assert().Nil(transactions[0].ParentID)
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
@@ -319,6 +328,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 		suite.Assert().NotNil(t.TransactionRecurrenceID)
 		suite.Assert().NotNil(t.InstallmentNumber)
 		suite.Assert().Equal(t.UserID, user.ID)
+		suite.Assert().Equal(lo.FromPtr(t.OriginalUserID), user.ID)
 		suite.Assert().Equal(t.AccountID, account.ID)
 		suite.Assert().Equal(int64(t.Amount), int64(100))
 		suite.Assert().Equal(t.Type, domain.TransactionTypeExpense)
@@ -481,6 +491,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithEnd
 		suite.Assert().NotNil(t.TransactionRecurrenceID)
 		suite.Assert().NotNil(t.InstallmentNumber)
 		suite.Assert().Equal(t.UserID, user.ID)
+		suite.Assert().Equal(lo.FromPtr(t.OriginalUserID), user.ID)
 		suite.Assert().Equal(t.AccountID, account.ID)
 		suite.Assert().Equal(int64(t.Amount), int64(100))
 		suite.Assert().Equal(t.Type, domain.TransactionTypeExpense)
@@ -600,6 +611,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(transactions[0].Date, d)
 	suite.Assert().Equal(transactions[0].Description, "Test transaction")
 	suite.Assert().Equal(transactions[0].Type, domain.TransactionTypeExpense)
+	suite.Assert().Equal(transactions[0].UserID, user1.ID)
+	suite.Assert().Equal(lo.FromPtr(transactions[0].OriginalUserID), user1.ID)
 
 	suite.Assert().Greater(transactions[1].ID, 0)
 	suite.Assert().NotNil(transactions[1].ParentID)
@@ -610,6 +623,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(transactions[1].Date, d)
 	suite.Assert().Equal(transactions[1].Description, "Test transaction")
 	suite.Assert().Equal(transactions[1].Type, domain.TransactionTypeIncome)
+	suite.Assert().Equal(transactions[1].UserID, user1.ID)
+	suite.Assert().Equal(lo.FromPtr(transactions[1].OriginalUserID), user1.ID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -627,6 +642,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 
 	suite.Assert().Greater(transactionsUser2[0].ID, 0)
 	suite.Assert().Equal(transactionsUser2[0].UserID, user2.ID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[0].OriginalUserID), user1.ID)
 	suite.Assert().NotNil(transactionsUser2[0].ParentID)
 	suite.Assert().Equal(lo.FromPtr(transactionsUser2[0].ParentID), transactions[0].ID)
 	suite.Assert().Equal(transactionsUser2[0].AccountID, userConnection.ToAccountID)
