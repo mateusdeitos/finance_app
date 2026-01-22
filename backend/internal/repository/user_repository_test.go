@@ -5,64 +5,20 @@ import (
 	"testing"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/finance_app/backend/internal/entity"
+	"github.com/finance_app/backend/pkg/tests"
 	"github.com/stretchr/testify/assert"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
-	gormPostgres "gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
-
-func setupTestDB(t *testing.T) *gorm.DB {
-	ctx := context.Background()
-
-	postgresContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:15-alpine"),
-		postgres.WithDatabase("test_db"),
-		postgres.WithUsername("test_user"),
-		postgres.WithPassword("test_password"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(1).
-				WithStartupTimeout(30),
-		),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start postgres container: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if err := postgresContainer.Terminate(ctx); err != nil {
-			t.Fatalf("Failed to terminate postgres container: %v", err)
-		}
-	})
-
-	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
-	}
-
-	db, err := gorm.Open(gormPostgres.Open(connStr), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-
-	// Run migrations
-	if err := db.AutoMigrate(&entity.User{}); err != nil {
-		t.Fatalf("Failed to run migrations: %v", err)
-	}
-
-	return db
-}
 
 func TestUserRepository_Create(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
 	}
 
-	db := setupTestDB(t)
-	repo := NewUserRepository(db)
+	db, err := tests.NewTestDatabase(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	repo := NewUserRepository(db.Db)
 
 	t.Run("create user successfully", func(t *testing.T) {
 		user := &domain.User{
@@ -86,8 +42,11 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db := setupTestDB(t)
-	repo := NewUserRepository(db)
+	db, err := tests.NewTestDatabase(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	repo := NewUserRepository(db.Db)
 
 	t.Run("get user by email", func(t *testing.T) {
 		// Create user first
