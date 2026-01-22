@@ -18,6 +18,13 @@ const (
 	TransactionTypeTransfer TransactionType = "transfer"
 )
 
+func (t TransactionType) Invert() TransactionType {
+	if t == TransactionTypeExpense {
+		return TransactionTypeIncome
+	}
+	return TransactionTypeExpense
+}
+
 func (t TransactionType) IsValid() bool {
 	return t == TransactionTypeExpense || t == TransactionTypeIncome || t == TransactionTypeTransfer
 }
@@ -35,6 +42,20 @@ func (t RecurrenceType) IsValid() bool {
 	return t == RecurrenceTypeDaily || t == RecurrenceTypeWeekly || t == RecurrenceTypeMonthly || t == RecurrenceTypeYearly
 }
 
+type OperationType string
+
+const (
+	OperationTypeCredit OperationType = "credit"
+	OperationTypeDebit  OperationType = "debit"
+)
+
+func (o OperationType) Invert() OperationType {
+	if o == OperationTypeCredit {
+		return OperationTypeDebit
+	}
+	return OperationTypeCredit
+}
+
 type Transaction struct {
 	ID                      int                    `json:"id"`
 	ParentID                *int                   `json:"parent_id,omitempty"`
@@ -46,9 +67,9 @@ type Transaction struct {
 	AccountID               int                    `json:"account_id"`
 	CategoryID              *int                   `json:"category_id,omitempty"`
 	Amount                  int64                  `json:"amount"` // Amount in cents
+	OperationType           OperationType          `json:"operation_type"`
 	Date                    time.Time              `json:"date"`
 	Description             string                 `json:"description"`
-	DestinationAccountID    *int                   `json:"destination_account_id,omitempty"`
 	Tags                    []Tag                  `json:"tags,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`

@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"sync"
 
 	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
-	"github.com/finance_app/backend/pkg/database"
+	"github.com/finance_app/backend/pkg/tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/gorm"
@@ -60,6 +61,9 @@ type ServiceTestWithDBSuite struct {
 	UserConnectionRepository        repository.UserConnectionRepository
 }
 
+var initDb sync.Once
+var sharedDB *gorm.DB
+
 // SetupTest is called before each test method
 // It initializes all mocked repositories and services
 //
@@ -69,18 +73,15 @@ type ServiceTestWithDBSuite struct {
 func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.UserID = 1
 
-	cfg, err := config.Load("../../.env")
-	if err != nil {
-		suite.T().Fatalf("Failed to load config: %v", err)
-	}
-	suite.Config = cfg
+	initDb.Do(func() {
+		testDb, err := tests.NewTestDatabase(context.Background())
+		if err != nil {
+			suite.T().Fatalf("Failed to connect to database: %v", err)
+		}
+		sharedDB = testDb.Db
+	})
 
-	db, err := database.NewPostgresDB(suite.Config.Database.DSN())
-	if err != nil {
-		suite.T().Fatalf("Failed to connect to database: %v", err)
-	}
-
-	suite.DB = db
+	suite.DB = sharedDB
 
 	// Create all mocked repositories using NewMock* constructors
 	// These constructors ensure proper setup and cleanup

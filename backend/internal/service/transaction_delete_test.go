@@ -905,7 +905,11 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 }
 
 func TestTransactionDelete(t *testing.T) {
-	suite.Run(t, new(TransactionDeleteTestSuite))
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+		suite.Run(t, new(TransactionDeleteTestSuite))
+		return
+	}
 
 	suite.Run(t, new(TransactionDeleteTestWithDBSuite))
 }

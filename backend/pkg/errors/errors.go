@@ -29,12 +29,13 @@ const (
 )
 
 var (
-	ErrMissingDestinationAccount   = NewWithTag(ErrCodeBadRequest, []string{"missing_destination_account"}, "missing destination account")
-	ErrSplitAllowedOnlyForExpense  = NewWithTag(ErrCodeBadRequest, []string{"split_allowed_only_for_expense"}, "split settings are allowed only for expense transactions")
-	ErrAmountMustBeGreaterThanZero = NewWithTag(ErrCodeBadRequest, []string{"amount_must_be_greater_than_zero"}, "amount must be greater than zero")
-	ErrDateIsRequired              = NewWithTag(ErrCodeBadRequest, []string{"date_is_required"}, "date is required")
-	ErrDescriptionIsRequired       = NewWithTag(ErrCodeBadRequest, []string{"description_is_required"}, "description is required")
-	ErrTagNameCannotBeEmpty        = func(index int) *ServiceError {
+	ErrMissingDestinationAccount          = NewWithTag(ErrCodeBadRequest, []string{"missing_destination_account"}, "missing destination account")
+	ErrSplitSettingsNotAllowedForTransfer = NewWithTag(ErrCodeBadRequest, []string{"split_settings_not_allowed_for_transfer"}, "split settings are not allowed for transfer transactions")
+	ErrSplitAllowedOnlyForExpense         = NewWithTag(ErrCodeBadRequest, []string{"split_allowed_only_for_expense"}, "split settings are allowed only for expense transactions")
+	ErrAmountMustBeGreaterThanZero        = NewWithTag(ErrCodeBadRequest, []string{"amount_must_be_greater_than_zero"}, "amount must be greater than zero")
+	ErrDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{"date_is_required"}, "date is required")
+	ErrDescriptionIsRequired              = NewWithTag(ErrCodeBadRequest, []string{"description_is_required"}, "description is required")
+	ErrTagNameCannotBeEmpty               = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{"tag_name_cannot_be_empty", fmt.Sprintf("index_%d", index)}, fmt.Sprintf("tag name cannot be empty at index %d", index))
 	}
 	ErrInvalidTransactionType = func(transactionType domain.TransactionType) *ServiceError {
@@ -66,6 +67,9 @@ var (
 	}
 	ErrSplitSettingAmountMustBeGreaterThanZero = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{"split_setting_amount_must_be_greater_than_zero"}, fmt.Sprintf("split setting amount must be greater than zero at index %d", index)).AddIndex(index)
+	}
+	ErrSplitSettingInvalidDestinationAccountID = func(index int) *ServiceError {
+		return NewWithTag(ErrCodeBadRequest, []string{"split_setting_invalid_destination_account_id"}, fmt.Sprintf("split setting invalid destination account ID at index %d", index)).AddIndex(index)
 	}
 	ErrFailedToCreateTag = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeInternal, []string{"failed_to_create_tag"}, fmt.Sprintf("failed to create tag at index %d", index)).AddIndex(index)
