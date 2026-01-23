@@ -107,8 +107,11 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		// - se pai existir, significa que é compartilhada, então altera o account do pai
 		// - se não existir pai, significa que é uma transação de origem ou sem compartilhamento, então altera o account da transação
 		if lo.FromPtr(req.AccountID) > 0 {
-			t := lo.CoalesceOrEmpty(parent, own)
-			t.AccountID = lo.FromPtr(req.AccountID)
+			if parent != nil {
+				parent.AccountID = *req.AccountID
+			} else {
+				own.AccountID = *req.AccountID
+			}
 		}
 
 		// apenas atualiza category se:
