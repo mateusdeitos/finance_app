@@ -247,6 +247,112 @@ func (_c *MockTransactionRepository_Search_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// SearchOne provides a mock function with given fields: ctx, filter
+func (_m *MockTransactionRepository) SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error) {
+	ret := _m.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchOne")
+	}
+
+	var r0 *domain.Transaction
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) (*domain.Transaction, error)); ok {
+		return rf(ctx, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) *domain.Transaction); ok {
+		r0 = rf(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.Transaction)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TransactionFilter) error); ok {
+		r1 = rf(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_SearchOne_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchOne'
+type MockTransactionRepository_SearchOne_Call struct {
+	*mock.Call
+}
+
+// SearchOne is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.TransactionFilter
+func (_e *MockTransactionRepository_Expecter) SearchOne(ctx interface{}, filter interface{}) *MockTransactionRepository_SearchOne_Call {
+	return &MockTransactionRepository_SearchOne_Call{Call: _e.mock.On("SearchOne", ctx, filter)}
+}
+
+func (_c *MockTransactionRepository_SearchOne_Call) Run(run func(ctx context.Context, filter domain.TransactionFilter)) *MockTransactionRepository_SearchOne_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.TransactionFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_SearchOne_Call) Return(_a0 *domain.Transaction, _a1 error) *MockTransactionRepository_SearchOne_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_SearchOne_Call) RunAndReturn(run func(context.Context, domain.TransactionFilter) (*domain.Transaction, error)) *MockTransactionRepository_SearchOne_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function with given fields: ctx, transaction
+func (_m *MockTransactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
+	ret := _m.Called(ctx, transaction)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.Transaction) error); ok {
+		r0 = rf(ctx, transaction)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockTransactionRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - transaction *domain.Transaction
+func (_e *MockTransactionRepository_Expecter) Update(ctx interface{}, transaction interface{}) *MockTransactionRepository_Update_Call {
+	return &MockTransactionRepository_Update_Call{Call: _e.mock.On("Update", ctx, transaction)}
+}
+
+func (_c *MockTransactionRepository_Update_Call) Run(run func(ctx context.Context, transaction *domain.Transaction)) *MockTransactionRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*domain.Transaction))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_Update_Call) Return(_a0 error) *MockTransactionRepository_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRepository_Update_Call) RunAndReturn(run func(context.Context, *domain.Transaction) error) *MockTransactionRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionRepository creates a new instance of MockTransactionRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionRepository(t interface {

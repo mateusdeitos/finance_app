@@ -29,7 +29,7 @@ type Transaction struct {
 	Account                 Account                `gorm:"<-:false"`
 	Category                *Category              `gorm:"<-:false"`
 	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
-	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id;<-:create"`
+	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id"`
 }
 
 func (Transaction) BeforeCreate(tx *gorm.DB) error {

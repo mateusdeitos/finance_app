@@ -40,12 +40,17 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 func (h *TransactionHandler) Update(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid transaction ID")
+	}
+
 	var transaction domain.TransactionUpdateRequest
 	if err := c.Bind(&transaction); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	err := h.transactionService.Update(c.Request().Context(), userID, &transaction)
+	err = h.transactionService.Update(c.Request().Context(), userID, id, &transaction)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

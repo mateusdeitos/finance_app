@@ -26,7 +26,7 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	}
 
 	// verifica se a transação pai pertence ao usuário, caso contrário, não permite deletar a transação
-	if transaction.ParentID != nil && transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
+	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
 		return pkgErrors.ErrParentTransactionBelongsToAnotherUser
 	} else if transaction.ParentID != nil {
 		parentTransaction, err := s.getByID(ctx, userID, *transaction.ParentID)

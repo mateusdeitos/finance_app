@@ -7,6 +7,7 @@ import (
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
@@ -26,14 +27,29 @@ func (r *transactionRepository) Create(ctx context.Context, transaction *domain.
 		return nil, err
 	}
 
-	if err := r.replaceTags(ctx, transaction.Tags, ent); err != nil {
-		return nil, err
-	}
-
 	return ent.ToDomain(), nil
 }
 
+func (r *transactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
+	ent := entity.TransactionFromDomain(transaction)
+	if err := GetTxFromContext(ctx, r.db).Save(ent).Error; err != nil {
+		return err
+	}
+
+	if err := r.replaceTags(ctx, transaction.Tags, ent); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.Tag, ent *entity.Transaction) error {
+	db := GetTxFromContext(ctx, r.db)
+	err := db.Model(ent).Association("Tags").Clear()
+	if err != nil {
+		return err
+	}
+
 	if len(tags) == 0 {
 		return nil
 	}
@@ -43,14 +59,26 @@ func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.T
 	})
 
 	var entTags []entity.Tag
-	if err := GetTxFromContext(ctx, r.db).Where("id IN ?", tagIDs).Find(&entTags).Error; err != nil {
+	if err := db.Where("id IN ?", tagIDs).Find(&entTags).Error; err != nil {
 		return err
 	}
-	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("Tags").Replace(entTags); err != nil {
+
+	if err := db.Model(&entity.Transaction{ID: ent.ID}).Association("Tags").Append(entTags); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (r *transactionRepository) SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error) {
+	transactions, err := r.Search(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(transactions) == 0 {
+		return nil, pkgErrors.NotFound("transaction")
+	}
+	return transactions[0], nil
 }
 
 func (r *transactionRepository) Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
@@ -65,6 +93,10 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if len(filter.IDs) > 0 {
 		query = query.Where("id IN ?", filter.IDs)
+	}
+
+	if len(filter.IDsNotIn) > 0 {
+		query = query.Where("id NOT IN ?", filter.IDsNotIn)
 	}
 
 	if filter.StartDate != nil {

@@ -29,6 +29,10 @@ func (t TransactionType) IsValid() bool {
 	return t == TransactionTypeExpense || t == TransactionTypeIncome || t == TransactionTypeTransfer
 }
 
+func (t TransactionType) IsTransfer() bool {
+	return t == TransactionTypeTransfer
+}
+
 type RecurrenceType string
 
 const (
@@ -48,6 +52,13 @@ const (
 	OperationTypeCredit OperationType = "credit"
 	OperationTypeDebit  OperationType = "debit"
 )
+
+func OperationTypeFromTransactionType(t TransactionType) OperationType {
+	if t == TransactionTypeIncome {
+		return OperationTypeCredit
+	}
+	return OperationTypeDebit
+}
 
 func (o OperationType) Invert() OperationType {
 	if o == OperationTypeCredit {
@@ -91,12 +102,12 @@ type TransactionCreateRequest struct {
 }
 
 type TransactionUpdateRequest struct {
-	TransactionType      TransactionType                `json:"transaction_type"`
-	AccountID            int                            `json:"account_id"`
-	CategoryID           int                            `json:"category_id,omitempty"`
-	Amount               int64                          `json:"amount"`
-	Date                 time.Time                      `json:"date"`
-	Description          string                         `json:"description"`
+	TransactionType      *TransactionType               `json:"transaction_type"`
+	AccountID            *int                           `json:"account_id"`
+	CategoryID           *int                           `json:"category_id,omitempty"`
+	Amount               *int64                         `json:"amount"`
+	Date                 *time.Time                     `json:"date"`
+	Description          *string                        `json:"description"`
 	DestinationAccountID *int                           `json:"destination_account_id,omitempty"`
 	Tags                 []Tag                          `json:"tags,omitempty"`
 	PropagationSettings  TransactionPropagationSettings `json:"propagation_settings"`
@@ -132,6 +143,7 @@ type SplitSettings struct {
 
 type TransactionFilter struct {
 	IDs               []int                        `query:"id[]"`
+	IDsNotIn          []int                        `query:"id_not_in[]"`
 	ParentIDs         []int                        `query:"parent_id[]"`
 	RecurrenceIDs     []int                        `query:"recurrence_id[]"`
 	AccountIDs        []int                        `query:"account_id[]"`

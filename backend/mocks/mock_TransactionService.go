@@ -180,6 +180,55 @@ func (_c *MockTransactionService_Search_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// Update provides a mock function with given fields: ctx, userID, id, transaction
+func (_m *MockTransactionService) Update(ctx context.Context, userID int, id int, transaction *domain.TransactionUpdateRequest) error {
+	ret := _m.Called(ctx, userID, id, transaction)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, *domain.TransactionUpdateRequest) error); ok {
+		r0 = rf(ctx, userID, id, transaction)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionService_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockTransactionService_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+//   - transaction *domain.TransactionUpdateRequest
+func (_e *MockTransactionService_Expecter) Update(ctx interface{}, userID interface{}, id interface{}, transaction interface{}) *MockTransactionService_Update_Call {
+	return &MockTransactionService_Update_Call{Call: _e.mock.On("Update", ctx, userID, id, transaction)}
+}
+
+func (_c *MockTransactionService_Update_Call) Run(run func(ctx context.Context, userID int, id int, transaction *domain.TransactionUpdateRequest)) *MockTransactionService_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*domain.TransactionUpdateRequest))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_Update_Call) Return(_a0 error) *MockTransactionService_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionService_Update_Call) RunAndReturn(run func(context.Context, int, int, *domain.TransactionUpdateRequest) error) *MockTransactionService_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionService creates a new instance of MockTransactionService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionService(t interface {

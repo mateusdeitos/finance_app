@@ -60,7 +60,9 @@ type TagRepository interface {
 
 type TransactionRepository interface {
 	Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error)
+	Update(ctx context.Context, transaction *domain.Transaction) error
 	Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
+	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	gormPostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	goose "github.com/pressly/goose/v3"
@@ -37,7 +38,10 @@ func NewTestDatabase(ctx context.Context) (*TestDatabase, error) {
 		return nil, err
 	}
 
-	db, err := gorm.Open(gormPostgres.Open(connStr), &gorm.Config{})
+	db, err := gorm.Open(gormPostgres.Open(connStr), &gorm.Config{
+		Logger:         logger.Default.LogMode(logger.Info),
+		TranslateError: true,
+	})
 	if err != nil {
 		return nil, err
 	}
