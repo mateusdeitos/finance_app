@@ -365,12 +365,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			for j := range originalTransactionsLen {
 				transaction := transactions[j]
 
-				amount := transaction.Amount
-				if splitSetting.Percentage != nil {
-					amount = int64(float64(transaction.Amount) * float64(*splitSetting.Percentage) / 100)
-				} else if splitSetting.Amount != nil {
-					amount = *splitSetting.Amount
-				}
+				amount := s.calculateAmount(transaction.Amount, splitSetting)
 
 				operationType := domain.OperationTypeDebit
 				transactionType := domain.TransactionTypeExpense
@@ -438,6 +433,15 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	}
 
 	return nil
+}
+
+func (s *transactionService) calculateAmount(amount int64, splitSetting domain.SplitSettings) int64 {
+	if splitSetting.Percentage != nil {
+		return int64(float64(amount) * float64(*splitSetting.Percentage) / 100)
+	} else if splitSetting.Amount != nil {
+		return *splitSetting.Amount
+	}
+	return amount
 }
 
 func (s *transactionService) incrementInstallmentDate(baseDate time.Time, recurrenceType domain.RecurrenceType, increment int) time.Time {

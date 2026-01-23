@@ -156,6 +156,8 @@ type TransactionFilter struct {
 	StartDate         *ComparableSearch[time.Time] `query:"start_date,omitempty"`
 	EndDate           *ComparableSearch[time.Time] `query:"end_date,omitempty"`
 	SortBy            *SortBy                      `query:"sort_by,omitempty"`
+	Limit             *int                         `query:"limit,omitempty"`
+	Offset            *int                         `query:"offset,omitempty"`
 }
 
 type TextSearch struct {

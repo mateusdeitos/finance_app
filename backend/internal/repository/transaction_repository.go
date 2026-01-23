@@ -71,6 +71,8 @@ func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.T
 }
 
 func (r *transactionRepository) SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error) {
+	filter.Limit = lo.ToPtr(1)
+	filter.Offset = lo.ToPtr(0)
 	transactions, err := r.Search(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -151,6 +153,14 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if filter.SortBy != nil {
 		query = query.Scopes(filter.SortBy.Scope())
+	}
+
+	if filter.Limit != nil {
+		query = query.Limit(*filter.Limit)
+	}
+
+	if filter.Offset != nil {
+		query = query.Offset(*filter.Offset)
 	}
 
 	if err := query.Find(&ents).Error; err != nil {
