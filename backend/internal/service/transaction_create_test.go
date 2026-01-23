@@ -987,6 +987,120 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(transactionsUser2[0].Type, domain.TransactionTypeExpense)
 }
 
+func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUserAsOwner() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	user2, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user2)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user2)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	if err != nil {
+		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
+	}
+
+	amount := int64(100)
+
+	d := now()
+
+	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          amount,
+		Date:            d,
+		Description:     "Test transaction",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: userConnection.ID,
+				Percentage:   lo.ToPtr(50),
+			},
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user2.ID,
+		SortBy: &domain.SortBy{
+			Field: "type",
+			Order: domain.SortOrderAsc,
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	suite.Assert().Len(transactionsUser2, 2)
+
+	suite.Assert().NoError(err)
+
+	suite.Assert().Greater(transactionsUser2[0].ID, 0)
+	suite.Assert().Nil(transactionsUser2[0].ParentID)
+	suite.Assert().Equal(transactionsUser2[0].AccountID, account.ID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[0].CategoryID), category.ID)
+	suite.Assert().Equal(int64(transactionsUser2[0].Amount), amount)
+	suite.Assert().Equal(transactionsUser2[0].Date, d)
+	suite.Assert().Equal(transactionsUser2[0].Description, "Test transaction")
+	suite.Assert().Equal(transactionsUser2[0].Type, domain.TransactionTypeExpense)
+	suite.Assert().Equal(transactionsUser2[0].UserID, user2.ID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[0].OriginalUserID), user2.ID)
+
+	suite.Assert().Greater(transactionsUser2[1].ID, 0)
+	suite.Assert().NotNil(transactionsUser2[1].ParentID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[1].ParentID), transactionsUser2[0].ID)
+	suite.Assert().Equal(transactionsUser2[1].AccountID, userConnection.ToAccountID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[1].CategoryID), category.ID)
+	suite.Assert().Equal(int64(transactionsUser2[1].Amount), int64(amount/2))
+	suite.Assert().Equal(transactionsUser2[1].Date, d)
+	suite.Assert().Equal(transactionsUser2[1].Description, "Test transaction")
+	suite.Assert().Equal(transactionsUser2[1].Type, domain.TransactionTypeIncome)
+	suite.Assert().Equal(transactionsUser2[1].UserID, user2.ID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser2[1].OriginalUserID), user2.ID)
+
+	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user1.ID,
+		SortBy: &domain.SortBy{
+			Field: "type",
+			Order: domain.SortOrderAsc,
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	suite.Assert().Len(transactionsUser1, 1)
+	suite.Assert().NoError(err)
+
+	suite.Assert().Greater(transactionsUser1[0].ID, 0)
+	suite.Assert().Equal(transactionsUser1[0].UserID, user1.ID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser1[0].OriginalUserID), user2.ID)
+	suite.Assert().NotNil(transactionsUser1[0].ParentID)
+	suite.Assert().Equal(lo.FromPtr(transactionsUser1[0].ParentID), transactionsUser2[0].ID)
+	suite.Assert().Equal(transactionsUser1[0].AccountID, userConnection.FromAccountID)
+	suite.Assert().Nil(transactionsUser1[0].CategoryID)
+	suite.Assert().Equal(int64(transactionsUser1[0].Amount), int64(amount/2))
+	suite.Assert().Equal(transactionsUser1[0].Date, d)
+	suite.Assert().Equal(transactionsUser1[0].Description, "Test transaction")
+	suite.Assert().Equal(transactionsUser1[0].Type, domain.TransactionTypeExpense)
+}
+
 func now() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
