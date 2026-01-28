@@ -111,6 +111,7 @@ type TransactionUpdateRequest struct {
 	DestinationAccountID *int                           `json:"destination_account_id,omitempty"`
 	Tags                 []Tag                          `json:"tags,omitempty"`
 	PropagationSettings  TransactionPropagationSettings `json:"propagation_settings"`
+	PropagateToRelated   bool                           `json:"propagate_to_related"`
 	RecurrenceSettings   *RecurrenceSettings            `json:"recurrence_settings,omitempty"`
 	SplitSettings        []SplitSettings                `json:"split_settings,omitempty"`
 }
