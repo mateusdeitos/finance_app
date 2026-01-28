@@ -76,28 +76,23 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		if lo.FromPtr(req.TransactionType).IsValid() && !lo.FromPtr(req.TransactionType).IsTransfer() {
 			var sharedType *domain.TransactionType
 			if parent != nil && parent.ID == id {
-				parent.Type = *req.TransactionType
 				sharedType = req.TransactionType
-				parent.OperationType = domain.OperationTypeFromTransactionType(parent.Type)
 
-				own.Type = parent.Type.Invert()
-				own.OperationType = domain.OperationTypeFromTransactionType(own.Type)
+				parent.UpdateType(lo.FromPtr(sharedType))
+				own.UpdateType(parent.Type.Invert())
 
 			} else {
-				own.Type = *req.TransactionType
-				own.OperationType = domain.OperationTypeFromTransactionType(own.Type)
+				own.UpdateType(*req.TransactionType)
 
 				sharedType = lo.ToPtr(own.Type.Invert())
 
 				if parent != nil {
-					parent.Type = own.Type.Invert()
-					parent.OperationType = domain.OperationTypeFromTransactionType(parent.Type)
+					parent.UpdateType(own.Type.Invert())
 				}
 			}
 
 			if shared != nil && sharedType != nil {
-				shared.Type = *sharedType
-				shared.OperationType = domain.OperationTypeFromTransactionType(shared.Type)
+				shared.UpdateType(*sharedType)
 			}
 		}
 

@@ -54,8 +54,11 @@ const (
 )
 
 func OperationTypeFromTransactionType(t TransactionType) OperationType {
-	if t == TransactionTypeIncome {
+	switch t {
+	case TransactionTypeIncome:
 		return OperationTypeCredit
+	case TransactionTypeExpense:
+		return OperationTypeDebit
 	}
 	return OperationTypeDebit
 }
@@ -86,6 +89,11 @@ type Transaction struct {
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
 	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
+}
+
+func (t *Transaction) UpdateType(newType TransactionType) {
+	t.Type = newType
+	t.OperationType = OperationTypeFromTransactionType(t.Type)
 }
 
 type TransactionCreateRequest struct {
