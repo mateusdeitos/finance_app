@@ -91,7 +91,7 @@ type Transaction struct {
 	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
 }
 
-func (t *Transaction) UpdateType(newType TransactionType) {
+func (t *Transaction) SetType(newType TransactionType) {
 	t.Type = newType
 	t.OperationType = OperationTypeFromTransactionType(t.Type)
 }

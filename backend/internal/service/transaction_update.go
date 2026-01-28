@@ -78,21 +78,21 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			if parent != nil && parent.ID == id {
 				sharedType = req.TransactionType
 
-				parent.UpdateType(lo.FromPtr(sharedType))
-				own.UpdateType(parent.Type.Invert())
+				parent.SetType(lo.FromPtr(sharedType))
+				own.SetType(parent.Type.Invert())
 
 			} else {
-				own.UpdateType(*req.TransactionType)
+				own.SetType(*req.TransactionType)
 
 				sharedType = lo.ToPtr(own.Type.Invert())
 
 				if parent != nil {
-					parent.UpdateType(own.Type.Invert())
+					parent.SetType(own.Type.Invert())
 				}
 			}
 
 			if shared != nil && sharedType != nil {
-				shared.UpdateType(*sharedType)
+				shared.SetType(*sharedType)
 			}
 		}
 
