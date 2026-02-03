@@ -22,7 +22,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return err
 	}
 
-	if errs := s.validateUpdateTransactionRequest(ctx, userID, previousTransaction, req); len(errs) > 0 {
+	if errs := s.validateUpdateTransactionRequest(ctx, userID, *previousTransaction, req); len(errs) > 0 {
 		return pkgErrors.ServiceErrors(errs)
 	}
 
@@ -32,24 +32,14 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 
 	var ownTransactions, parentTransactions, sharedTransactions []*domain.Transaction
 
-	hasParent := previousTransaction.ParentID != nil
-
-	// busca as relacionadas caso setado para propagar para relacionadas
-	// se tiver parent, precisa propagar sempre para o sibling (transação compartilhada do usuário destino da conexão)
-	if req.PropagateToRelated || hasParent {
-		// a ideia aqui é retornar:
-		// - ownTransactions: todas as transações filhas do usuário atual relacionadas a transação atual
-		// - parentTransactions: todas as transações pai relacionadas as ownTransactions
-		// - sharedTransactions: todas as transações compartilhadas relacionadas as ownTransactions
-		// todos slices devem ter o mesmo tamanho, pois o índice é o link entre as transações
-		ownTransactions, parentTransactions, sharedTransactions, err = s.fetchRelatedTransactions(ctx, userID, id, previousTransaction, req)
-		if err != nil {
-			return err
-		}
-	} else {
-		ownTransactions = []*domain.Transaction{previousTransaction}
-		parentTransactions = []*domain.Transaction{}
-		sharedTransactions = []*domain.Transaction{}
+	// a ideia aqui é retornar:
+	// - ownTransactions: todas as transações filhas do usuário atual relacionadas a transação atual
+	// - parentTransactions: todas as transações pai relacionadas as ownTransactions
+	// - sharedTransactions: todas as transações compartilhadas relacionadas as ownTransactions
+	// todos slices devem ter o mesmo tamanho, pois o índice é o link entre as transações
+	ownTransactions, parentTransactions, sharedTransactions, err = s.fetchRelatedTransactions(ctx, userID, id, previousTransaction, req)
+	if err != nil {
+		return err
 	}
 
 	safeGet := func(slice []*domain.Transaction, index int) *domain.Transaction {
@@ -68,32 +58,26 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		parent := safeGet(parentTransactions, i)
 		shared := safeGet(sharedTransactions, i)
 
-		if parent != nil && shared == nil {
-			return pkgErrors.Internal(fmt.Sprintf("parentTransactions index found %d but sharedTransactions index %d not found", i, i), nil)
-		}
+		if req.SplitSettings == nil && parent != nil {
+			if err := s.Delete(ctx, userID, own.ID, domain.TransactionPropagationSettingsCurrent); err != nil {
+				return err
+			}
 
-		// se parent era income e virou expense, own=income e shared=expense e vice-versa
-		if lo.FromPtr(req.TransactionType).IsValid() && !lo.FromPtr(req.TransactionType).IsTransfer() {
-			var sharedType *domain.TransactionType
-			if parent != nil && parent.ID == id {
-				sharedType = req.TransactionType
-
-				parent.SetType(lo.FromPtr(sharedType))
-				own.SetType(parent.Type.Invert())
-
-			} else {
-				own.SetType(*req.TransactionType)
-
-				sharedType = lo.ToPtr(own.Type.Invert())
-
-				if parent != nil {
-					parent.SetType(own.Type.Invert())
+			if shared != nil {
+				if err := s.Delete(ctx, shared.UserID, shared.ID, domain.TransactionPropagationSettingsCurrent); err != nil {
+					return err
 				}
 			}
 
-			if shared != nil && sharedType != nil {
-				shared.SetType(*sharedType)
-			}
+			own = parent
+
+			parent = nil
+			shared = nil
+		}
+
+		// se parent era income e virou expense, own=income e shared=expense e vice-versa
+		if lo.FromPtr(req.TransactionType).IsValid() {
+			s.handleTransactionTypeChange(ctx, userID, *previousTransaction, own, parent, shared, *req.TransactionType)
 		}
 
 		// apenas atualiza account se:
@@ -120,39 +104,16 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 
 		if req.Amount != nil && *req.Amount > 0 {
-
-			// apenas atualiza o amount do parent se a transação sendo atualizada é o parent
-			if parent != nil && parent.ID == id {
+			if parent != nil {
 				parent.Amount = *req.Amount
-
-				if req.PropagateToRelated {
-					if req.SplitSettings == nil {
-						req.SplitSettings = []domain.SplitSettings{
-							{
-								Percentage: lo.ToPtr(int(float64(own.Amount) / float64(parent.Amount) * 100)),
-							},
-						}
-					}
-
-					own.Amount = s.calculateAmount(parent.Amount, req.SplitSettings[0])
-
-					if shared != nil {
-						shared.Amount = s.calculateAmount(parent.Amount, req.SplitSettings[0])
-					}
-				}
 			} else {
-				previousAmount := own.Amount
 				own.Amount = *req.Amount
-				if shared != nil {
-					shared.Amount = *req.Amount
-				}
-
-				// propaga a mudança para o parent proporcionalmente ao amount da transação atual
-				if parent != nil {
-					rate := float64(parent.Amount) / float64(previousAmount)
-					parent.Amount = int64(float64(own.Amount) * rate)
-				}
 			}
+		}
+
+		if req.SplitSettings != nil && shared != nil {
+			own.Amount = s.calculateAmount(parent.Amount, req.SplitSettings[0])
+			shared.Amount = s.calculateAmount(parent.Amount, req.SplitSettings[0])
 		}
 
 		if req.Date != nil && !req.Date.IsZero() {
@@ -205,6 +166,33 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	return s.dbTransaction.Commit(ctx)
 }
 
+func (s *transactionService) handleTransactionTypeChange(
+	ctx context.Context,
+	userID int,
+	previousTransaction domain.Transaction,
+	own *domain.Transaction,
+	parent *domain.Transaction,
+	shared *domain.Transaction,
+	newType domain.TransactionType,
+) {
+	var sharedType *domain.TransactionType
+	if parent != nil {
+		sharedType = &newType
+
+		parent.SetType(lo.FromPtr(sharedType))
+		own.SetType(parent.Type.Invert())
+
+	} else {
+		own.SetType(newType)
+
+		sharedType = lo.ToPtr(own.Type.Invert())
+	}
+
+	if shared != nil && sharedType != nil {
+		shared.SetType(*sharedType)
+	}
+}
+
 func (s *transactionService) fetchRelatedTransactions(
 	ctx context.Context,
 	userID,
@@ -216,84 +204,38 @@ func (s *transactionService) fetchRelatedTransactions(
 	parentTransactions := []*domain.Transaction{}
 	sharedTransactions := []*domain.Transaction{}
 
-	hasParent := previousTransaction.ParentID != nil
 	hasInstallments := previousTransaction.TransactionRecurrenceID != nil && previousTransaction.InstallmentNumber != nil
 	recurrenceIDs := []int{}
 	if hasInstallments {
 		recurrenceIDs = append(recurrenceIDs, *previousTransaction.TransactionRecurrenceID)
 	}
 
-	shouldPropagateChangesToParent := req.PropagateToRelated
+	// busca todos filhos da transação atual
+	childTransactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
+		ParentIDs: []int{id},
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	if hasParent {
+	// caso não possua filhos ou não queira propagar mudanças
+	if len(childTransactions) == 0 {
 		ownTransactions = append(ownTransactions, previousTransaction)
-
-		if shouldPropagateChangesToParent {
-			parentTransaction, err := s.getByID(ctx, userID, *previousTransaction.ParentID)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			parentTransactions = append(parentTransactions, parentTransaction)
-
-			if parentTransaction.TransactionRecurrenceID != nil {
-				recurrenceIDs = append(recurrenceIDs, *parentTransaction.TransactionRecurrenceID)
-			}
-		}
-
-		// busca todos filhos da transação pai menos a transação atual
-		// mesmo req.PropagateToRelated = false, deve atualizar o sibling, pois é como se as duas transações fossem a mesma transação
-		siblingTransactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
-			IDsNotIn:  []int{id},
-			ParentIDs: []int{*previousTransaction.ParentID},
-		})
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		if len(siblingTransactions) != 1 {
-			return nil, nil, nil, pkgErrors.Internal(fmt.Sprintf("failed to fetch related transactions: siblingTransactions: %d", len(siblingTransactions)), nil)
-		}
-
-		sharedTransactions = append(sharedTransactions, siblingTransactions...)
-
-		for _, siblingTransaction := range siblingTransactions {
-			if siblingTransaction.TransactionRecurrenceID != nil {
-				recurrenceIDs = append(recurrenceIDs, *siblingTransaction.TransactionRecurrenceID)
-			}
-		}
 	} else {
-		var childTransactions []*domain.Transaction
-		var err error
 
-		// busca todos filhos da transação atual
-		if req.PropagateToRelated {
-			childTransactions, err = s.transactionRepo.Search(ctx, domain.TransactionFilter{
-				ParentIDs: []int{id},
-			})
-			if err != nil {
-				return nil, nil, nil, err
+		// caso possua filhos, é uma transação compartilhada ou transfer
+		parentTransactions = append(parentTransactions, previousTransaction)
+		for _, childTransaction := range childTransactions {
+			if childTransaction.TransactionRecurrenceID != nil {
+				recurrenceIDs = append(recurrenceIDs, *childTransaction.TransactionRecurrenceID)
+			}
+
+			if childTransaction.UserID == userID {
+				ownTransactions = append(ownTransactions, childTransaction)
+			} else {
+				sharedTransactions = append(sharedTransactions, childTransaction)
 			}
 		}
-
-		// caso não possua filhos ou não queira propagar mudanças
-		if len(childTransactions) == 0 {
-			ownTransactions = append(ownTransactions, previousTransaction)
-		} else {
-
-			// caso possua filhos, é uma transação compartilhada
-			parentTransactions = append(parentTransactions, previousTransaction)
-			for _, childTransaction := range childTransactions {
-				if childTransaction.TransactionRecurrenceID != nil {
-					recurrenceIDs = append(recurrenceIDs, *childTransaction.TransactionRecurrenceID)
-				}
-
-				if childTransaction.UserID == userID {
-					ownTransactions = append(ownTransactions, childTransaction)
-				} else {
-					sharedTransactions = append(sharedTransactions, childTransaction)
-				}
-			}
-		}
-
 	}
 
 	// propagation current atualiza somente a transação atual, parent e sibling
@@ -313,11 +255,9 @@ func (s *transactionService) fetchRelatedTransactions(
 		}
 
 		idsNotIn := []int{id}
-
-		// set tem parent, já obteve e appendou
-		if hasParent {
-			idsNotIn = append(idsNotIn, *previousTransaction.ParentID)
-		}
+		idsNotIn = append(idsNotIn, lo.Map(childTransactions, func(c *domain.Transaction, _ int) int {
+			return c.ID
+		})...)
 
 		// aqui deve retornar o restante da transações relacionadas, incluindo os parents, own e siblings
 		recurrenceTransactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
@@ -359,13 +299,6 @@ func (s *transactionService) fetchRelatedTransactions(
 		return o >= 1 && o == p && p == s
 	})
 
-	// 5. atualizando transação filha sem propagar para o parent
-	if !req.PropagateToRelated {
-		validScenarios = append(validScenarios, func(o, p, s int) bool {
-			return o == 1 && p == 0 && (s == 0 || s == 1)
-		})
-	}
-
 	valid := lo.SomeBy(validScenarios, func(f func(o, p, s int) bool) bool {
 		return f(len(ownTransactions), len(parentTransactions), len(sharedTransactions))
 	})
@@ -377,7 +310,7 @@ func (s *transactionService) fetchRelatedTransactions(
 	return nil, nil, nil, pkgErrors.Internal(fmt.Sprintf("failed to fetch related transactions: ownTransactions: %d, parentTransactions: %d, sharedTransactions: %d", len(ownTransactions), len(parentTransactions), len(sharedTransactions)), nil)
 }
 
-func (s *transactionService) validateUpdateTransactionRequest(ctx context.Context, userID int, transaction *domain.Transaction, req *domain.TransactionUpdateRequest) []*pkgErrors.ServiceError {
+func (s *transactionService) validateUpdateTransactionRequest(ctx context.Context, userID int, transaction domain.Transaction, req *domain.TransactionUpdateRequest) []*pkgErrors.ServiceError {
 	errs := []*pkgErrors.ServiceError{}
 
 	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
@@ -386,6 +319,10 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 
 	if req.TransactionType != nil && !req.TransactionType.IsValid() {
 		errs = append(errs, pkgErrors.ErrInvalidTransactionType(*req.TransactionType))
+	}
+
+	if transaction.ParentID != nil {
+		errs = append(errs, pkgErrors.ErrChildTransactionCannotBeUpdated)
 	}
 
 	if lo.FromPtr(req.AccountID) > 0 {
