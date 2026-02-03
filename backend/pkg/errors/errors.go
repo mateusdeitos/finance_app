@@ -3,6 +3,7 @@ package errors
 import (
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/labstack/echo/v4"
@@ -57,6 +58,7 @@ const (
 	ErrorTagInvalidPropagationSettings                          ErrorTag = "TRANSACTION.INVALID_PROPAGATION_SETTINGS"
 	ErrorTagParentTransactionBelongsToAnotherUser               ErrorTag = "TRANSACTION.PARENT_TRANSACTION_BELONGS_TO_ANOTHER_USER"
 	ErrorTagAccountCannotBeChangedForSharedTransactions         ErrorTag = "TRANSACTION.ACCOUNT_CANNOT_BE_CHANGED_FOR_SHARED_TRANSACTIONS"
+	ErrorTagChildTransactionCannotBeUpdated                     ErrorTag = "TRANSACTION.CHILD_TRANSACTION_CANNOT_BE_UPDATED"
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
@@ -116,6 +118,7 @@ var (
 	}
 	ErrParentTransactionBelongsToAnotherUser       = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagParentTransactionBelongsToAnotherUser)}, "parent transaction belongs to another user")
 	ErrAccountCannotBeChangedForSharedTransactions = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
+	ErrChildTransactionCannotBeUpdated             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
 )
 
 // ServiceError represents a service-level error with a code and message
@@ -130,6 +133,22 @@ type ServiceErrors []*ServiceError
 
 func (es ServiceErrors) Error() string {
 	return fmt.Sprintf("%s: %s", es[0].Code, es[0].Message)
+}
+
+func Is(errs error, target ServiceError) bool {
+	sErrs, ok := errs.(ServiceErrors)
+	if !ok {
+		return false
+	}
+
+	for _, err := range sErrs {
+		for _, tag := range err.Tags {
+			if slices.Contains(target.Tags, tag) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (es ServiceErrors) Unwrap() error {
