@@ -10,7 +10,6 @@ import (
 
 type Transaction struct {
 	ID                      int
-	ParentID                *int
 	TransactionRecurrenceID *int
 	InstallmentNumber       *int
 	UserID                  int
@@ -30,6 +29,7 @@ type Transaction struct {
 	Category                *Category              `gorm:"<-:false"`
 	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
 	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id"`
+	LinkedTransactions      []Transaction          `gorm:"many2many:linked_transactions;joinForeignKey:transaction_id;joinReferences:linked_transaction_id"`
 }
 
 func (Transaction) BeforeCreate(tx *gorm.DB) error {
@@ -55,9 +55,15 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		deletedAt = &t.DeletedAt.Time
 	}
 
+	var linkedTransactions []domain.Transaction
+	if len(t.LinkedTransactions) > 0 {
+		linkedTransactions = lo.Map(t.LinkedTransactions, func(lt Transaction, _ int) domain.Transaction {
+			return *lt.ToDomain()
+		})
+	}
+
 	trans := &domain.Transaction{
 		ID:                      t.ID,
-		ParentID:                t.ParentID,
 		TransactionRecurrenceID: t.TransactionRecurrenceID,
 		InstallmentNumber:       t.InstallmentNumber,
 		UserID:                  t.UserID,
@@ -70,6 +76,7 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		Date:                    t.Date,
 		Description:             t.Description,
 		TransactionRecurrence:   transactionRecurrence,
+		LinkedTransactions:      linkedTransactions,
 		Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
 			return *tag.ToDomain()
 		}),
@@ -89,7 +96,6 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 
 	t := &Transaction{
 		ID:                      d.ID,
-		ParentID:                d.ParentID,
 		TransactionRecurrenceID: d.TransactionRecurrenceID,
 		InstallmentNumber:       d.InstallmentNumber,
 		UserID:                  d.UserID,
@@ -104,6 +110,9 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		TransactionRecurrence:   TransactionRecurrenceFromDomain(d.TransactionRecurrence),
 		Tags: lo.Map(d.Tags, func(tag domain.Tag, _ int) Tag {
 			return *TagFromDomain(&tag)
+		}),
+		LinkedTransactions: lo.Map(d.LinkedTransactions, func(lt domain.Transaction, _ int) Transaction {
+			return *TransactionFromDomain(&lt)
 		}),
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,

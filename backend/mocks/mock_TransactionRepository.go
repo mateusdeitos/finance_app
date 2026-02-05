@@ -188,6 +188,65 @@ func (_c *MockTransactionRepository_GetGroupedByRecurrences_Call) RunAndReturn(r
 	return _c
 }
 
+// GetSourceTransactionIDs provides a mock function with given fields: ctx, linkedTransactionID
+func (_m *MockTransactionRepository) GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error) {
+	ret := _m.Called(ctx, linkedTransactionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSourceTransactionIDs")
+	}
+
+	var r0 []int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]int, error)); ok {
+		return rf(ctx, linkedTransactionID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []int); ok {
+		r0 = rf(ctx, linkedTransactionID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, linkedTransactionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_GetSourceTransactionIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSourceTransactionIDs'
+type MockTransactionRepository_GetSourceTransactionIDs_Call struct {
+	*mock.Call
+}
+
+// GetSourceTransactionIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - linkedTransactionID int
+func (_e *MockTransactionRepository_Expecter) GetSourceTransactionIDs(ctx interface{}, linkedTransactionID interface{}) *MockTransactionRepository_GetSourceTransactionIDs_Call {
+	return &MockTransactionRepository_GetSourceTransactionIDs_Call{Call: _e.mock.On("GetSourceTransactionIDs", ctx, linkedTransactionID)}
+}
+
+func (_c *MockTransactionRepository_GetSourceTransactionIDs_Call) Run(run func(ctx context.Context, linkedTransactionID int)) *MockTransactionRepository_GetSourceTransactionIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetSourceTransactionIDs_Call) Return(_a0 []int, _a1 error) *MockTransactionRepository_GetSourceTransactionIDs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetSourceTransactionIDs_Call) RunAndReturn(run func(context.Context, int) ([]int, error)) *MockTransactionRepository_GetSourceTransactionIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, filter
 func (_m *MockTransactionRepository) Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	ret := _m.Called(ctx, filter)

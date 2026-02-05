@@ -47,11 +47,15 @@ func (r *userConnectionRepository) Search(ctx context.Context, options domain.Us
 	if len(options.ToUserIDs) > 0 {
 		query = query.Where("to_user_id IN ?", options.ToUserIDs)
 	}
-	if len(options.FromAccountIDs) > 0 {
-		query = query.Where("from_account_id IN ?", options.FromAccountIDs)
-	}
-	if len(options.ToAccountIDs) > 0 {
-		query = query.Where("to_account_id IN ?", options.ToAccountIDs)
+	if len(options.AccountIDs) > 0 {
+		query = query.Where("(from_account_id IN ? OR to_account_id IN ?)", options.AccountIDs, options.AccountIDs)
+	} else {
+		if len(options.FromAccountIDs) > 0 {
+			query = query.Where("from_account_id IN ?", options.FromAccountIDs)
+		}
+		if len(options.ToAccountIDs) > 0 {
+			query = query.Where("to_account_id IN ?", options.ToAccountIDs)
+		}
 	}
 	if options.ConnectionStatus != "" {
 		query = query.Where("connection_status = ?", options.ConnectionStatus)

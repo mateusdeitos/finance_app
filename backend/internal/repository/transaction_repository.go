@@ -87,10 +87,20 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	var ents []entity.Transaction
 	query := GetTxFromContext(ctx, r.db)
 
-	query = query.Preload("TransactionRecurrence").Preload("Tags")
+	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("Tags")
 
 	if filter.UserID != nil {
 		query = query.Where("user_id = ?", *filter.UserID)
+
+		query = query.Where(`
+		NOT EXISTS (
+			SELECT 1
+			  FROM linked_transactions
+			 WHERE linked_transaction_id = transactions.id
+			   AND transactions.original_user_id = transactions.user_id
+		)
+		`)
+
 	}
 
 	if len(filter.IDs) > 0 {
@@ -124,10 +134,6 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if len(filter.RecurrenceIDs) > 0 {
 		query = query.Where("transaction_recurrence_id IN ?", filter.RecurrenceIDs)
-	}
-
-	if len(filter.ParentIDs) > 0 {
-		query = query.Where("parent_id IN ?", filter.ParentIDs)
 	}
 
 	if filter.InstallmentNumber != nil {

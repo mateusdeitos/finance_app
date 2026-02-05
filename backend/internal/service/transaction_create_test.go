@@ -77,7 +77,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
 
-	suite.Assert().Nil(transactions[0].ParentID)
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
 }
@@ -144,7 +143,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 	suite.Assert().Len(transactions[0].Tags, 1)
 	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
 
-	suite.Assert().Nil(transactions[0].ParentID)
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
 }
@@ -166,11 +164,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
 
-	tag, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
 	transaction := domain.TransactionCreateRequest{
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
@@ -178,7 +171,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		Amount:               100,
 		Date:                 now(),
 		Description:          "Test transaction",
-		Tags:                 []domain.Tag{*tag},
+		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
 
 	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
@@ -188,6 +181,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -197,6 +191,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 
 	suite.Assert().NoError(err)
 
+	// Primeira transação é o débito (conta origem), segunda é o crédito (conta destino)
 	suite.Assert().Greater(transactions[0].ID, 0)
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID)
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
@@ -205,14 +200,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].Type)
 	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType)
 	suite.Assert().Len(transactions[0].Tags, 1)
-	suite.Assert().Equal(transaction.Tags[0].ID, transactions[0].Tags[0].ID)
+	suite.Assert().Greater(transactions[0].Tags[0].ID, 0)
 
 	suite.Assert().Equal(user.ID, transactions[0].UserID)
 	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[0].OriginalUserID))
 
-	suite.Assert().Nil(transactions[0].ParentID)
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
+	suite.Assert().Len(transactions[0].LinkedTransactions, 1)
+	suite.Assert().Equal(transactions[1].ID, transactions[0].LinkedTransactions[0].ID)
 
 	suite.Assert().Greater(transactions[1].ID, 0)
 	suite.Assert().Equal(account2.ID, transactions[1].AccountID)
@@ -227,7 +223,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Equal(user.ID, transactions[1].UserID)
 	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[1].OriginalUserID))
 
-	suite.Assert().Equal(transactions[0].ID, lo.FromPtr(transactions[1].ParentID))
 	suite.Assert().Nil(transactions[1].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[1].InstallmentNumber)
 }
@@ -303,12 +298,11 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		// ao ordenar por installment_number, serão obtidos os pares de transações (debito e credito)
 		if i%2 == 0 {
 			suite.Assert().Equal(account1.ID, transactions[i].AccountID, fmt.Sprintf("transactions[%d].AccountID should be %d", i, account1.ID))
-			suite.Assert().Nil(transactions[i].ParentID, fmt.Sprintf("transactions[%d].ParentID should be nil", i))
+			suite.Assert().Len(transactions[i].LinkedTransactions, 1, fmt.Sprintf("transactions[%d].LinkedTransactions should have 1", i))
 			suite.Assert().Equal(domain.OperationTypeDebit, transactions[i].OperationType, fmt.Sprintf("transactions[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		} else {
 			suite.Assert().Equal(account2.ID, transactions[i].AccountID, fmt.Sprintf("transactions[%d].AccountID should be %d", i, account2.ID))
-			suite.Assert().NotNil(transactions[i].ParentID, fmt.Sprintf("transactions[%d].ParentID should not be nil", i))
-			suite.Assert().Equal(transactions[i-1].ID, lo.FromPtr(transactions[i].ParentID), fmt.Sprintf("transactions[%d].ParentID should be %d", i, transactions[i-1].ID))
+			suite.Assert().Equal(transactions[i-1].LinkedTransactions[0].ID, transactions[i].ID, fmt.Sprintf("transactions[%d] should be linked to transactions[%d]", i, i-1))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactions[i].OperationType, fmt.Sprintf("transactions[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 
@@ -345,22 +339,32 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
 	}
 
-	tag, err := suite.createTestTag(ctx, user1)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	transaction := domain.TransactionCreateRequest{
+	transferUser1ToUser2 := domain.TransactionCreateRequest{
 		AccountID:            account1.ID,
-		DestinationAccountID: lo.ToPtr(account2.ID),
+		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               100,
 		Date:                 now(),
-		Description:          "Test transaction",
-		Tags:                 []domain.Tag{*tag},
+		Description:          "Test transfer from user1 to user2",
+		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &transaction)
+	err = suite.Services.Transaction.Create(ctx, user1.ID, &transferUser1ToUser2)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transferUser2ToUser1 := domain.TransactionCreateRequest{
+		AccountID:            account2.ID,
+		DestinationAccountID: lo.ToPtr(connection.FromAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               500,
+		Date:                 now(),
+		Description:          "Test transfer from user2 to user1",
+		Tags:                 []domain.Tag{{Name: "Test tag"}},
+	}
+
+	err = suite.Services.Transaction.Create(ctx, user2.ID, &transferUser2ToUser1)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -368,8 +372,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user1.ID,
 		SortBy: &domain.SortBy{
-			Field: "type",
-			Order: domain.SortOrderDesc, // para obter as transações na ordem correta (debito e credito)
+			Field: "original_user_id",
+			Order: domain.SortOrderAsc,
 		},
 	})
 	if err != nil {
@@ -385,44 +389,59 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.Assert().Nil(transactionsUser1[i].InstallmentNumber, fmt.Sprintf("transactionsUser1[%d].InstallmentNumber should be nil", i))
 		suite.Assert().Nil(transactionsUser1[i].CategoryID, fmt.Sprintf("transactionsUser1[%d].CategoryID should be nil", i))
 		suite.Assert().Equal(user1.ID, transactionsUser1[i].UserID, fmt.Sprintf("transactionsUser1[%d].UserID should be %d", i, user1.ID))
-		suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user1.ID))
-		suite.Assert().Equal(int64(100), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 100))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser1[i].Type, fmt.Sprintf("transactionsUser1[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 
-		// ao ordenar por type, serão obtidos os pares de transações (debito e credito)
-		if i%2 == 0 {
+		if i == 0 {
+		suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user1.ID))
+		suite.Assert().Equal(int64(100), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 100))
 			suite.Assert().Equal(account1.ID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, account1.ID))
-			suite.Assert().Nil(transactionsUser1[i].ParentID, fmt.Sprintf("transactionsUser1[%d].ParentID should be nil", i))
+		suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (to_account_id)", i))
 			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		} else {
+			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
+			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().NotNil(transactionsUser1[i].ParentID, fmt.Sprintf("transactionsUser1[%d].ParentID should not be nil", i))
-			suite.Assert().Equal(transactionsUser1[i-1].ID, lo.FromPtr(transactionsUser1[i].ParentID), fmt.Sprintf("transactionsUser1[%d].ParentID should be %d", i, transactionsUser1[i-1].ID))
+			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 0", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
+		SortBy: &domain.SortBy{
+			Field: "original_user_id",
+			Order: domain.SortOrderDesc,
+		},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactionsUser2, 1)
+	suite.Assert().Len(transactionsUser2, 2)
 
 	suite.Assert().NoError(err)
 
-	suite.Assert().Greater(transactionsUser2[0].ID, 0)
-	suite.Assert().Equal(user2.ID, transactionsUser2[0].UserID, "transactionsUser2[0].UserID should be user2.ID")
-	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID), "transactionsUser2[0].OriginalUserID should be user2.ID")
-	suite.Assert().Equal(int64(100), int64(transactionsUser2[0].Amount), "transactionsUser2[0].Amount should be 100")
-	suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser2[0].Type, "transactionsUser2[0].Type should be domain.TransactionTypeTransfer")
-	suite.Assert().Equal(connection.ToAccountID, transactionsUser2[0].AccountID, "transactionsUser2[0].AccountID should be connection.ToAccountID")
-	suite.Assert().Nil(transactionsUser2[0].CategoryID, "transactionsUser2[0].CategoryID should be nil")
-	suite.Assert().Equal(connection.ToUserID, transactionsUser2[0].UserID, "transactionsUser2[0].UserID should be connection.ToUserID")
-	suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[0].OperationType, "transactionsUser2[0].OperationType should be domain.OperationTypeCredit")
-	suite.Assert().Equal(transactionsUser1[0].ID, lo.FromPtr(transactionsUser2[0].ParentID), "transactionsUser2[0].ParentID should be transactionsUser1[0].ID")
+	for i := range transactionsUser2 {
+		suite.Assert().Nil(transactionsUser2[i].TransactionRecurrenceID, fmt.Sprintf("transactionsUser2[%d].TransactionRecurrenceID should be nil", i))
+		suite.Assert().Nil(transactionsUser2[i].InstallmentNumber, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber should be nil", i))
+		suite.Assert().Nil(transactionsUser2[i].CategoryID, fmt.Sprintf("transactionsUser2[%d].CategoryID should be nil", i))
+		suite.Assert().Equal(user2.ID, transactionsUser2[i].UserID, fmt.Sprintf("transactionsUser2[%d].UserID should be %d", i, user2.ID))
+		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser2[i].Type, fmt.Sprintf("transactionsUser2[%d].Type should be %s", i, domain.TransactionTypeTransfer))
+
+		if i == 0 {
+			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user2.ID))
+			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
+			suite.Assert().Equal(account2.ID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, account2.ID))
+			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (to_account_id)", i))
+			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+		} else {
+			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
+			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
+			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
+			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 0", i))
+			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+		}
+	}
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDifferentUsers() {

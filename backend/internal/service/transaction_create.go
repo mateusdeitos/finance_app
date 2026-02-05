@@ -155,25 +155,25 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 	return errs
 }
 
-func (s *transactionService) createTransactions(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error {
+func (s *transactionService) createTransactions(ctx context.Context, userID int, req *domain.TransactionCreateRequest) error {
 	transactions := []domain.Transaction{}
 
-	errs := s.createTags(ctx, userID, transaction.Tags)
+	errs := s.createTags(ctx, userID, req.Tags)
 	if len(errs) > 0 {
 		return pkgErrors.ServiceErrors(errs)
 	}
 
-	hasRecurrence := transaction.RecurrenceSettings != nil
+	hasRecurrence := req.RecurrenceSettings != nil
 
 	// transfer ou expense = debit
 	// income = credit
 	operationType := domain.OperationTypeDebit
-	if transaction.TransactionType == domain.TransactionTypeIncome {
+	if req.TransactionType == domain.TransactionTypeIncome {
 		operationType = domain.OperationTypeCredit
 	}
 
 	if hasRecurrence {
-		recurrence, err := s.createRecurrence(ctx, userID, *transaction.RecurrenceSettings, transaction.Date)
+		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings, req.Date)
 		if err != nil {
 			return err
 		}
@@ -181,98 +181,44 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		for i := 1; i <= recurrence.Installments; i++ {
 			transactions = append(transactions, domain.Transaction{
 				ID:                      0,
-				ParentID:                nil,
 				TransactionRecurrenceID: &recurrence.ID,
 				InstallmentNumber:       &i,
-				Date:                    s.incrementInstallmentDate(transaction.Date, lo.FromPtr(transaction.RecurrenceSettings).Type, i-1),
-				Description:             transaction.Description,
+				Date:                    s.incrementInstallmentDate(req.Date, lo.FromPtr(req.RecurrenceSettings).Type, i-1),
+				Description:             req.Description,
 				UserID:                  userID,
 				OriginalUserID:          &userID,
-				Type:                    transaction.TransactionType,
+				Type:                    req.TransactionType,
 				OperationType:           operationType,
-				AccountID:               transaction.AccountID,
-				CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
-				Amount:                  transaction.Amount,
-				Tags:                    transaction.Tags,
+				AccountID:               req.AccountID,
+				CategoryID:              lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, nil, &req.CategoryID),
+				Amount:                  req.Amount,
+				Tags:                    req.Tags,
 			})
 		}
 	} else {
 		transactions = append(transactions, domain.Transaction{
 			ID:                      0,
-			ParentID:                nil,
 			TransactionRecurrenceID: nil,
 			InstallmentNumber:       nil,
-			Date:                    transaction.Date,
-			Description:             transaction.Description,
+			Date:                    req.Date,
+			Description:             req.Description,
 			UserID:                  userID,
 			OriginalUserID:          &userID,
-			Type:                    transaction.TransactionType,
+			Type:                    req.TransactionType,
 			OperationType:           operationType,
-			AccountID:               transaction.AccountID,
-			CategoryID:              lo.Ternary(transaction.TransactionType == domain.TransactionTypeTransfer, nil, &transaction.CategoryID),
-			Amount:                  transaction.Amount,
-			Tags:                    transaction.Tags,
+			AccountID:               req.AccountID,
+			CategoryID:              lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, nil, &req.CategoryID),
+			Amount:                  req.Amount,
+			Tags:                    req.Tags,
 		})
-	}
-
-	var destinationAccount *domain.Account
-	var connection *domain.UserConnection
-	var isTransferBetweenDifferentUsers bool
-
-	if transaction.TransactionType == domain.TransactionTypeTransfer {
-		accs, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
-			IDs: []int{*transaction.DestinationAccountID},
-		})
-		if err != nil {
-			return err
-		}
-
-		if len(accs) == 0 {
-			return pkgErrors.ErrSplitSettingInvalidDestinationAccountID(0)
-		}
-
-		destinationAccount = accs[0]
-
-		isTransferBetweenDifferentUsers = userID != destinationAccount.UserID
-
-		if isTransferBetweenDifferentUsers {
-			connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-				FromUserIDs: []int{userID},
-				ToUserIDs:   []int{destinationAccount.UserID},
-			})
-			if err != nil {
-				return err
-			}
-
-			if len(connections) == 0 {
-				return pkgErrors.ErrSplitSettingInvalidConnectionID(0).AddTag("connection_not_found")
-			}
-
-			connection = connections[0]
-		}
-	}
-
-	var r1, r2 *domain.TransactionRecurrence
-	var err error
-	if hasRecurrence {
-		if isTransferBetweenDifferentUsers {
-			r1, err = s.createRecurrence(ctx, connection.FromUserID, *transaction.RecurrenceSettings, transaction.Date)
-			if err != nil {
-				return err
-			}
-			r2, err = s.createRecurrence(ctx, connection.ToUserID, *transaction.RecurrenceSettings, transaction.Date)
-			if err != nil {
-				return err
-			}
-		} else {
-			r1, err = s.createRecurrence(ctx, userID, *transaction.RecurrenceSettings, transaction.Date)
-			if err != nil {
-				return err
-			}
-		}
 	}
 
 	for i := range transactions {
+		tr := &transactions[i]
+		if err := s.injectLinkedTransactions(ctx, userID, tr, req, req.SplitSettings, req.RecurrenceSettings); err != nil {
+			return err
+		}
+
 		t, err := s.transactionRepo.Create(ctx, &transactions[i])
 		if err != nil {
 			return err
@@ -281,158 +227,173 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		transactions[i].ID = t.ID
 		transactions[i].CreatedAt = t.CreatedAt
 		transactions[i].UpdatedAt = t.UpdatedAt
-
-		if t.Type == domain.TransactionTypeTransfer {
-			// se for uma transferência entre usuários diferentes,
-			// cria transfer da conta da transação para a FromAccountID da conexão
-			// cria transfer da conta da transação para a ToAccountID da conexão
-			if isTransferBetweenDifferentUsers {
-				err = s.createTransferTransaction(ctx, connection.FromUserID, connection.FromAccountID, lo.EmptyableToPtr(lo.FromPtr(r1).ID), t)
-				if err != nil {
-					return err
-				}
-
-				err = s.createTransferTransaction(ctx, connection.ToUserID, connection.ToAccountID, lo.EmptyableToPtr(lo.FromPtr(r2).ID), t)
-				if err != nil {
-					return err
-				}
-			} else {
-				err = s.createTransferTransaction(ctx, userID, destinationAccount.ID, lo.EmptyableToPtr(lo.FromPtr(r1).ID), t)
-				if err != nil {
-					return err
-				}
-			}
-		}
 	}
 
-	if len(transaction.SplitSettings) > 0 {
-		connectionIDs := lo.Map(transaction.SplitSettings, func(splitSetting domain.SplitSettings, _ int) int {
-			return splitSetting.ConnectionID
-		})
+	return nil
+}
 
-		connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-			IDs: connectionIDs,
-		})
+func (s *transactionService) injectLinkedTransactions(
+	ctx context.Context,
+	userID int,
+	transaction *domain.Transaction,
+	req *domain.TransactionCreateRequest,
+	splitSettings []domain.SplitSettings,
+	recurrenceSettings *domain.RecurrenceSettings) error {
+
+	hasRecurrence := recurrenceSettings != nil
+
+	var connectionIDs []int
+
+	if req.TransactionType != domain.TransactionTypeTransfer && len(splitSettings) == 0 {
+		return nil
+	}
+
+	if req.TransactionType == domain.TransactionTypeTransfer {
+		conn, err := s.getConnectionFromDestinationAccountID(ctx, userID, *req.DestinationAccountID)
 		if err != nil {
 			return err
 		}
 
-		connMapByID := lo.Reduce(connections, func(agg map[int]*domain.UserConnection, connection *domain.UserConnection, _ int) map[int]*domain.UserConnection {
-			agg[connection.ID] = connection
-			return agg
-		}, map[int]*domain.UserConnection{})
+		// se a transferencia for entre usuários, sobrescreve o splitSettings com o connectionID e 100% de split para criar a transação de transferência
+		if conn != nil {
+			connectionIDs = []int{conn.ID}
 
-		originalTransactionsLen := len(transactions)
-
-		sharedTransactions := make([]domain.Transaction, 0, len(transaction.SplitSettings)*2*originalTransactionsLen)
-
-		for i, splitSetting := range transaction.SplitSettings {
-			connection := connMapByID[splitSetting.ConnectionID]
-			if connection == nil {
-				return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
+			// seta um splitSettings 'fake' para que o restante do código funcione normalmente
+			splitSettings = []domain.SplitSettings{
+				{
+					ConnectionID: conn.ID,
+					Percentage:   lo.ToPtr(100),
+				},
 			}
 
-			if connection.FromUserID != userID && connection.ToUserID != userID {
-				return pkgErrors.ErrSplitSettingInvalidConnectionID(i).AddTag("user_id_not_in_connection")
-			}
-
-			// o from e o to podem estar invertidos caso o usuário que está criando a transação não seja o usuário que criou a conexão
-			// para facilitar, normalizo aqui para o from sempre ser o usuário que está criando a transação
-			fromUserID, toUserID := connection.FromUserID, connection.ToUserID
-			fromAccountID, toAccountID := connection.FromAccountID, connection.ToAccountID
-
-			// se o from não for o usuário que está criando a transação, invertemos os IDs, pois é o To
-			if fromUserID != userID {
-				fromUserID, toUserID = toUserID, fromUserID
-				fromAccountID, toAccountID = toAccountID, fromAccountID
-			}
-
-			var fromRecurrenceID, toRecurrenceID *int
+		} else {
+			// transferência entre contas do mesmo usuário
+			var recurrenceID *int
 			if hasRecurrence {
-				fromRecurrence, err := s.createRecurrence(ctx, fromUserID, *transaction.RecurrenceSettings, transaction.Date)
+				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings, transaction.Date)
 				if err != nil {
 					return err
 				}
-				fromRecurrenceID = &fromRecurrence.ID
-
-				toRecurrence, err := s.createRecurrence(ctx, toUserID, *transaction.RecurrenceSettings, transaction.Date)
-				if err != nil {
-					return err
-				}
-				toRecurrenceID = &toRecurrence.ID
+				recurrenceID = &r.ID
 			}
 
-			for j := range originalTransactionsLen {
-				transaction := transactions[j]
+			transaction.LinkedTransactions = append(transaction.LinkedTransactions, domain.Transaction{
+				ID:                      0,
+				TransactionRecurrenceID: recurrenceID,
+				InstallmentNumber:       transaction.InstallmentNumber,
+				Date:                    transaction.Date,
+				Description:             transaction.Description,
+				UserID:                  userID,
+				OriginalUserID:          &userID,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           transaction.OperationType.Invert(),
+				AccountID:               *req.DestinationAccountID,
+				CategoryID:              nil,
+				Amount:                  transaction.Amount,
+				Tags:                    transaction.Tags,
+			})
 
-				amount := s.calculateAmount(transaction.Amount, splitSetting)
-
-				operationType := domain.OperationTypeDebit
-				transactionType := domain.TransactionTypeExpense
-
-				if transaction.Type == domain.TransactionTypeExpense {
-					transactionType = transaction.Type.Invert()
-					operationType = transaction.OperationType.Invert()
-				}
-
-				id := transaction.ID
-				// user A = autor
-				// user B = compartilhado
-
-				// cria uma transação na conta compartilhada do user A com o tipo e operação invertidos para que o saldo do usuário considere corretamente a despesa - receita da divisão
-				// ex: se a transação original é uma despesa de 100, e o user A divide em 50% para o user B, cria uma receita de 50 para o user A e uma despesa de 50 para o user B
-				fromTransaction := domain.Transaction{
-					ID:                      0,
-					ParentID:                &id,
-					TransactionRecurrenceID: toRecurrenceID,
-					InstallmentNumber:       transaction.InstallmentNumber,
-					Date:                    transaction.Date,
-					Description:             transaction.Description,
-					UserID:                  fromUserID,
-					OriginalUserID:          &userID,
-					Type:                    transactionType,
-					OperationType:           operationType,
-					AccountID:               fromAccountID,
-					CategoryID:              transaction.CategoryID,
-					Amount:                  amount,
-					Tags:                    transaction.Tags,
-					CreatedAt:               nil,
-					UpdatedAt:               nil,
-				}
-
-				// cria uma transação na conta compartilhada do user B com o mesmo tipo e operação da transação original
-				toTransaction := domain.Transaction{
-					ID:                      0,
-					ParentID:                &id,
-					TransactionRecurrenceID: fromRecurrenceID,
-					InstallmentNumber:       transaction.InstallmentNumber,
-					Date:                    transaction.Date,
-					Description:             transaction.Description,
-					UserID:                  toUserID,
-					OriginalUserID:          &userID,
-					Type:                    transaction.Type,
-					OperationType:           transaction.OperationType,
-					AccountID:               toAccountID,
-					CategoryID:              nil,
-					Amount:                  amount,
-					Tags:                    nil,
-					CreatedAt:               nil,
-					UpdatedAt:               nil,
-				}
-
-				sharedTransactions = append(sharedTransactions, fromTransaction, toTransaction)
-			}
+			return nil
 		}
 
-		for _, transaction := range sharedTransactions {
-			_, err := s.transactionRepo.Create(ctx, &transaction)
+	} else {
+		connectionIDs = lo.Map(splitSettings, func(splitSetting domain.SplitSettings, _ int) int {
+			return splitSetting.ConnectionID
+		})
+	}
+
+	if len(connectionIDs) == 0 {
+		return nil
+	}
+
+	connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+		IDs: connectionIDs,
+	})
+	if err != nil {
+		return err
+	}
+
+	connMapByID := lo.Reduce(connections, func(agg map[int]*domain.UserConnection, connection *domain.UserConnection, _ int) map[int]*domain.UserConnection {
+		agg[connection.ID] = connection
+		return agg
+	}, map[int]*domain.UserConnection{})
+
+	for i, splitSetting := range splitSettings {
+		connection := connMapByID[splitSetting.ConnectionID]
+		if connection == nil {
+			return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
+		}
+
+		if connection.FromUserID != userID && connection.ToUserID != userID {
+			return pkgErrors.ErrSplitSettingInvalidConnectionID(i).AddTag("user_id_not_in_connection")
+		}
+
+		connection.SwapIfNeeded(userID)
+
+		toAccountID := connection.ToAccountID
+		if req.TransactionType == domain.TransactionTypeTransfer {
+			toAccountID = *req.DestinationAccountID
+		}
+
+		amount := s.calculateAmount(transaction.Amount, splitSetting)
+
+		toTransaction := domain.Transaction{
+			ID:                0,
+			InstallmentNumber: transaction.InstallmentNumber,
+			Date:              transaction.Date,
+			Description:       transaction.Description,
+			UserID:            connection.ToUserID,
+			OriginalUserID:    &userID,
+			Type:              transaction.Type,
+			OperationType:     lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, transaction.OperationType.Invert(), transaction.OperationType),
+			AccountID:         toAccountID,
+			CategoryID:        nil,
+			Amount:            amount,
+			Tags:              nil,
+			CreatedAt:         nil,
+			UpdatedAt:         nil,
+		}
+
+		if hasRecurrence {
+			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings, transaction.Date)
 			if err != nil {
 				return err
 			}
+			toTransaction.TransactionRecurrenceID = &r.ID
 		}
+
+		transaction.LinkedTransactions = append(transaction.LinkedTransactions, toTransaction)
 	}
 
 	return nil
+}
+
+func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
+	accs, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
+		IDs: []int{destinationAccountID},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(accs) == 0 {
+		return nil, pkgErrors.NotFound("account")
+	}
+
+	if accs[0].UserID == userID {
+		return nil, nil
+	}
+
+	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+		AccountIDs: []int{destinationAccountID},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(conns) == 0 {
+		return nil, pkgErrors.NotFound("user connection")
+	}
+
+	return conns[0], nil
 }
 
 func (s *transactionService) calculateAmount(amount int64, splitSetting domain.SplitSettings) int64 {
@@ -506,29 +467,4 @@ func (s *transactionService) createRecurrence(ctx context.Context, userID int, r
 	} else {
 		return recurrence, nil
 	}
-}
-
-func (s *transactionService) createTransferTransaction(ctx context.Context, userID, destinationAccountID int, transferRecurrenceID *int, parent *domain.Transaction) error {
-	tr := domain.Transaction{
-		ID:                      0,
-		ParentID:                &parent.ID,
-		TransactionRecurrenceID: transferRecurrenceID,
-		InstallmentNumber:       parent.InstallmentNumber,
-		Date:                    parent.Date,
-		Description:             parent.Description,
-		UserID:                  userID,
-		OriginalUserID:          &parent.UserID,
-		Type:                    domain.TransactionTypeTransfer,
-		OperationType:           parent.OperationType.Invert(),
-		AccountID:               destinationAccountID,
-		CategoryID:              nil,
-		Amount:                  parent.Amount,
-		Tags:                    parent.Tags,
-	}
-
-	if _, err := s.transactionRepo.Create(ctx, &tr); err != nil {
-		return err
-	}
-
-	return nil
 }

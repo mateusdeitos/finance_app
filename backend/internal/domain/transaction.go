@@ -72,7 +72,6 @@ func (o OperationType) Invert() OperationType {
 
 type Transaction struct {
 	ID                      int                    `json:"id"`
-	ParentID                *int                   `json:"parent_id,omitempty"`
 	TransactionRecurrenceID *int                   `json:"transaction_recurrence_id,omitempty"`
 	InstallmentNumber       *int                   `json:"installment_number,omitempty"`
 	UserID                  int                    `json:"user_id"`
@@ -85,6 +84,7 @@ type Transaction struct {
 	Date                    time.Time              `json:"date"`
 	Description             string                 `json:"description"`
 	Tags                    []Tag                  `json:"tags,omitempty"`
+	LinkedTransactions      []Transaction          `json:"linked_transactions,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
@@ -152,7 +152,6 @@ type SplitSettings struct {
 type TransactionFilter struct {
 	IDs               []int                        `query:"id[]"`
 	IDsNotIn          []int                        `query:"id_not_in[]"`
-	ParentIDs         []int                        `query:"parent_id[]"`
 	RecurrenceIDs     []int                        `query:"recurrence_id[]"`
 	AccountIDs        []int                        `query:"account_id[]"`
 	CategoryIDs       []int                        `query:"category_id[]"`
