@@ -87,7 +87,7 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	var ents []entity.Transaction
 	query := GetTxFromContext(ctx, r.db)
 
-	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("Tags")
+	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("Tags").Preload("LinkedTransactions.Tags")
 
 	if filter.UserID != nil {
 		query = query.Where("user_id = ?", *filter.UserID)
@@ -187,6 +187,14 @@ func (r *transactionRepository) Delete(ctx context.Context, ids []int) error {
 	}
 
 	return nil
+}
+
+func (r *transactionRepository) GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error) {
+	var ids []int
+	err := GetTxFromContext(ctx, r.db).Table("linked_transactions").
+		Where("linked_transaction_id = ?", linkedTransactionID).
+		Pluck("transaction_id", &ids).Error
+	return ids, err
 }
 
 func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
