@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"strings"
 	"time"
 
@@ -446,13 +447,13 @@ func (s *transactionService) createRecurrence(ctx context.Context, userID int, r
 
 		switch recurrenceSettings.Type {
 		case domain.RecurrenceTypeDaily:
-			installments = int(endDate.Sub(startDate).Hours() / 24)
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24))
 		case domain.RecurrenceTypeWeekly:
-			installments = int(endDate.Sub(startDate).Hours() / 24 / 7)
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 7))
 		case domain.RecurrenceTypeMonthly:
-			installments = int(endDate.Sub(startDate).Hours() / 24 / 30)
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 30))
 		case domain.RecurrenceTypeYearly:
-			installments = int(endDate.Sub(startDate).Hours() / 24 / 365)
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 365))
 		}
 
 		if installments < 1 {
