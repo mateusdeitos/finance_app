@@ -20,22 +20,28 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
-	transaction, err := s.getByID(ctx, userID, id)
+	transaction, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{id},
+	})
 	if err != nil {
 		return err
 	}
 
-	// verifica se a transação pai pertence ao usuário, caso contrário, não permite deletar a transação
-	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
+	// verifica se a transação "source" pertence ao usuário, caso contrário, não permite deletar a transação
+	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID && transaction.UserID != userID {
 		return pkgErrors.ErrParentTransactionBelongsToAnotherUser
-	} else if transaction.ParentID != nil {
-		parentTransaction, err := s.getByID(ctx, userID, *transaction.ParentID)
+	}
+	sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id)
+	if err != nil {
+		return pkgErrors.Internal("failed to get source transaction IDs", err)
+	}
+	if len(sourceIDs) > 0 {
+		sourceTransaction, err := s.getByID(ctx, userID, sourceIDs[0])
 		if err != nil {
 			return err
 		}
-
-		// faz a troca para o fluxo deletar a transação pai e a transação atual
-		transaction = parentTransaction
+		// faz a troca para o fluxo deletar a transação source e a transação atual
+		transaction = sourceTransaction
 	}
 
 	switch propagationSettings {
@@ -69,19 +75,10 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 }
 
 func (s *transactionService) getByID(ctx context.Context, userID int, id int) (*domain.Transaction, error) {
-	transactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
+	return s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
 		IDs:    []int{id},
 		UserID: &userID,
 	})
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to get transaction", err)
-	}
-
-	if len(transactions) == 0 {
-		return nil, pkgErrors.NotFound("transaction")
-	}
-
-	return transactions[0], nil
 }
 
 // deleteAllInstallmentsOfRecurrence deleta todas as parcelas de uma recorrência e a própria recorrência
@@ -110,23 +107,27 @@ func (s *transactionService) deleteAllInstallmentsOfRecurrence(ctx context.Conte
 	return nil
 }
 
-// deleteCurrentAndAllTransactionsLinked deleta todas as transações vinculadas às transações pai
+// deleteCurrentAndAllTransactionsLinked deleta todas as transações vinculadas às transações source (via LinkedTransactions no Search)
 // se as transações possuem recorrências, elas também serão deletadas
-func (s *transactionService) deleteCurrentAndAllTransactionsLinked(ctx context.Context, parentTransactions []*domain.Transaction) error {
-	// obtém todas as transações vinculadas às transações pai
-	transactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
-		ParentIDs: lo.Map(parentTransactions, func(transaction *domain.Transaction, _ int) int {
-			return transaction.ID
-		}),
+func (s *transactionService) deleteCurrentAndAllTransactionsLinked(ctx context.Context, sourceTransactions []*domain.Transaction) error {
+	sourceIDs := lo.Map(sourceTransactions, func(t *domain.Transaction, _ int) int { return t.ID })
+	sources, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
+		IDs: sourceIDs,
 	})
 	if err != nil {
-		return pkgErrors.Internal("failed to get transactions", err)
+		return pkgErrors.Internal("failed to get source transactions with linked", err)
+	}
+	var linkedTransactions []*domain.Transaction
+	for _, s := range sources {
+		for i := range s.LinkedTransactions {
+			linkedTransactions = append(linkedTransactions, &s.LinkedTransactions[i])
+		}
 	}
 
-	// concatena as transações pai e as transações vinculadas
-	t := make([]*domain.Transaction, 0, len(transactions)+len(parentTransactions))
-	t = append(t, transactions...)
-	t = append(t, parentTransactions...)
+	// concatena as transações source e as transações vinculadas
+	t := make([]*domain.Transaction, 0, len(linkedTransactions)+len(sourceTransactions))
+	t = append(t, linkedTransactions...)
+	t = append(t, sourceTransactions...)
 
 	// deleta todas as transações, primeiro as vinculadas e depois as pai para evitar erros de chave estrangeira
 	transactionIDs := lo.Map(t, func(transaction *domain.Transaction, _ int) int {

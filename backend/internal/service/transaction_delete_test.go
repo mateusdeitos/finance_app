@@ -47,7 +47,6 @@ func (suite *TransactionDeleteTestSuite) TestTransactionParentBelongsToAnotherUs
 	}).Return([]*domain.Transaction{
 		{
 			ID:             1,
-			ParentID:       lo.ToPtr(2),
 			UserID:         suite.UserID,
 			OriginalUserID: lo.ToPtr(2),
 		},
@@ -106,47 +105,35 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
 		},
 	})
 
+	parent, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+	assert.NotNil(suite.T(), parent)
+	assert.Len(suite.T(), parent.LinkedTransactions, 1, "transfer creates 1 linked transaction")
+
+	child := parent.LinkedTransactions[0]
+	assert.NotNil(suite.T(), child)
+
+	assert.Equal(suite.T(), userConnection.ToAccountID, child.AccountID)
+	assert.Equal(suite.T(), user2.ID, child.UserID)
+	assert.Equal(suite.T(), user.ID, lo.FromPtr(child.OriginalUserID))
+	assert.Equal(suite.T(), domain.TransactionTypeExpense, child.Type)
+	assert.Equal(suite.T(), int64(50), child.Amount)
+
+	err = suite.Services.Transaction.Delete(ctx, user.ID, parent.ID, domain.TransactionPropagationSettingsCurrent)
+	suite.NoError(err)
+
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user.ID,
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactions, 2)
-
-	parent, found := lo.Find(transactions, func(transaction *domain.Transaction) bool {
-		return transaction.ParentID == nil
-	})
-
-	assert.True(suite.T(), found)
-	assert.NotNil(suite.T(), parent)
-
-	child, found := lo.Find(transactions, func(transaction *domain.Transaction) bool {
-		return transaction.ParentID != nil
-	})
-
-	assert.True(suite.T(), found)
-	assert.NotNil(suite.T(), child)
-
-	assert.Equal(suite.T(), parent.ID, lo.FromPtr(child.ParentID))
-
-	assert.Equal(suite.T(), userConnection.FromAccountID, child.AccountID)
-	assert.Equal(suite.T(), user.ID, child.UserID)
-	assert.Equal(suite.T(), user.ID, lo.FromPtr(child.OriginalUserID))
-	assert.Equal(suite.T(), domain.TransactionTypeIncome, child.Type)
-	assert.Equal(suite.T(), int64(50), child.Amount)
-	assert.Equal(suite.T(), category.ID, lo.FromPtr(child.CategoryID))
-
-	err = suite.Services.Transaction.Delete(ctx, user.ID, child.ID, domain.TransactionPropagationSettingsCurrent)
-	suite.NoError(err)
-
-	transactions, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to search transactions: %v", err)
-	}
-	assert.Len(suite.T(), transactions, 0)
+	assert.Len(suite.T(), transactions, 0, "deleting linked transaction should delete both debit and credit")
 
 	transactions, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -365,7 +352,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	assert.Len(suite.T(), recurrences, 1)
 }
 
-func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWithLinkedTransactionsUsingOwnedChildTransaction() {
+func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWithLinkedTransactionsDeletingChildTransaction() {
 	ctx := context.Background()
 
 	user, err := suite.createTestUser(ctx)
@@ -412,42 +399,14 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		},
 	})
 
+	// Despesa compartilhada: criada apenas na to_account (user2). User1 tem 0 transações.
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user.ID,
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 2, "should create one expense and one income transaction")
-
-	var originalTransaction *domain.Transaction
-	var incomeTransaction *domain.Transaction
-
-	for _, transaction := range transactionsUser1 {
-		switch transaction.Type {
-		case domain.TransactionTypeExpense:
-			originalTransaction = transaction
-		case domain.TransactionTypeIncome:
-			incomeTransaction = transaction
-		}
-	}
-
-	assert.NotNil(suite.T(), originalTransaction)
-	assert.NotNil(suite.T(), incomeTransaction)
-
-	assert.Equal(suite.T(), int64(100), originalTransaction.Amount)
-	assert.Nil(suite.T(), originalTransaction.ParentID)
-	assert.Equal(suite.T(), account.ID, originalTransaction.AccountID)
-	assert.Equal(suite.T(), category.ID, lo.FromPtr(originalTransaction.CategoryID))
-	assert.Nil(suite.T(), originalTransaction.TransactionRecurrenceID, "originalTransaction.TransactionRecurrenceID should be nil")
-	assert.Equal(suite.T(), user.ID, originalTransaction.UserID, "originalTransaction.UserID should be user.ID")
-
-	assert.Equal(suite.T(), int64(50), incomeTransaction.Amount)
-	assert.NotNil(suite.T(), incomeTransaction.ParentID)
-	assert.Equal(suite.T(), userConnection.FromAccountID, incomeTransaction.AccountID)
-	assert.Equal(suite.T(), category.ID, lo.FromPtr(incomeTransaction.CategoryID))
-	assert.Nil(suite.T(), incomeTransaction.TransactionRecurrenceID, "incomeTransaction.TransactionRecurrenceID should be nil")
-	assert.Equal(suite.T(), user.ID, incomeTransaction.UserID, "incomeTransaction.UserID should be user.ID")
+	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -456,16 +415,17 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 
-	assert.Len(suite.T(), transactionsUser2, 1, "should create one income transaction")
+	assert.Len(suite.T(), transactionsUser2, 1, "should create one expense transaction in to_account")
 	assert.Equal(suite.T(), transactionsUser2[0].Amount, int64(50), "transactionsUser2[0].Amount should be 50")
-	assert.NotNil(suite.T(), transactionsUser2[0].ParentID)
-	assert.Equal(suite.T(), *transactionsUser2[0].ParentID, originalTransaction.ID, "transactionsUser2[0].ParentID should be originalTransaction.ID")
 	assert.Equal(suite.T(), transactionsUser2[0].Type, domain.TransactionTypeExpense, "transactionsUser2[0].Type should be domain.TransactionTypeExpense")
-	assert.Equal(suite.T(), userConnection.ToAccountID, transactionsUser2[0].AccountID)
-	assert.Nil(suite.T(), transactionsUser2[0].CategoryID)
-	assert.Equal(suite.T(), userConnection.ToUserID, transactionsUser2[0].UserID)
+	assert.Equal(suite.T(), userConnection.ToAccountID, transactionsUser2[0].AccountID, "transactionsUser2[0].AccountID should be userConnection.ToAccountID")
+	assert.Nil(suite.T(), transactionsUser2[0].CategoryID, "transactionsUser2[0].CategoryID should be nil")
+	assert.Equal(suite.T(), userConnection.ToUserID, transactionsUser2[0].UserID, "transactionsUser2[0].UserID should be userConnection.ToUserID")
+	assert.Equal(suite.T(), user.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID), "transactionsUser2[0].OriginalUserID should be user.ID")
 
-	err = suite.Services.Transaction.Delete(ctx, user.ID, incomeTransaction.ID, domain.TransactionPropagationSettingsCurrent)
+	// User1 (creator) pode deletar a transação que está na conta do user2
+	// Isso deleta a origem e a transação destino
+	err = suite.Services.Transaction.Delete(ctx, user.ID, transactionsUser2[0].ID, domain.TransactionPropagationSettingsCurrent)
 	suite.NoError(err)
 
 	transactionsUser1, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
@@ -474,7 +434,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 0, "should delete the original transaction and the income transaction")
+	assert.Len(suite.T(), transactionsUser1, 0, "should delete the expense transaction of user1")
 
 	transactionsUser2, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -482,7 +442,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser2, 0, "should delete the income transaction")
+	assert.Len(suite.T(), transactionsUser2, 0, "should delete the expense transaction of user2")
 }
 
 func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWithLinkedTransactions() {
@@ -538,36 +498,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 2, "should create one expense and one income transaction")
-
-	var originalTransaction *domain.Transaction
-	var incomeTransaction *domain.Transaction
-
-	for _, transaction := range transactionsUser1 {
-		switch transaction.Type {
-		case domain.TransactionTypeExpense:
-			originalTransaction = transaction
-		case domain.TransactionTypeIncome:
-			incomeTransaction = transaction
-		}
-	}
-
-	assert.NotNil(suite.T(), originalTransaction)
-	assert.NotNil(suite.T(), incomeTransaction)
-
-	assert.Equal(suite.T(), int64(100), originalTransaction.Amount)
-	assert.Nil(suite.T(), originalTransaction.ParentID)
-	assert.Equal(suite.T(), account.ID, originalTransaction.AccountID)
-	assert.Equal(suite.T(), category.ID, lo.FromPtr(originalTransaction.CategoryID))
-	assert.Nil(suite.T(), originalTransaction.TransactionRecurrenceID, "originalTransaction.TransactionRecurrenceID should be nil")
-	assert.Equal(suite.T(), user.ID, originalTransaction.UserID, "originalTransaction.UserID should be user.ID")
-
-	assert.Equal(suite.T(), int64(50), incomeTransaction.Amount)
-	assert.NotNil(suite.T(), incomeTransaction.ParentID)
-	assert.Equal(suite.T(), userConnection.FromAccountID, incomeTransaction.AccountID)
-	assert.Equal(suite.T(), category.ID, lo.FromPtr(incomeTransaction.CategoryID))
-	assert.Nil(suite.T(), incomeTransaction.TransactionRecurrenceID, "incomeTransaction.TransactionRecurrenceID should be nil")
-	assert.Equal(suite.T(), user.ID, incomeTransaction.UserID, "incomeTransaction.UserID should be user.ID")
+	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -576,25 +507,16 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 
-	assert.Len(suite.T(), transactionsUser2, 1, "should create one income transaction")
+	assert.Len(suite.T(), transactionsUser2, 1, "should create one expense transaction in from_account")
 	assert.Equal(suite.T(), transactionsUser2[0].Amount, int64(50), "transactionsUser2[0].Amount should be 50")
-	assert.NotNil(suite.T(), transactionsUser2[0].ParentID)
-	assert.Equal(suite.T(), *transactionsUser2[0].ParentID, originalTransaction.ID, "transactionsUser2[0].ParentID should be originalTransaction.ID")
 	assert.Equal(suite.T(), transactionsUser2[0].Type, domain.TransactionTypeExpense, "transactionsUser2[0].Type should be domain.TransactionTypeExpense")
 	assert.Equal(suite.T(), userConnection.ToAccountID, transactionsUser2[0].AccountID)
 	assert.Nil(suite.T(), transactionsUser2[0].CategoryID)
 	assert.Equal(suite.T(), userConnection.ToUserID, transactionsUser2[0].UserID)
+	assert.Equal(suite.T(), user.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID), "transactionsUser2[0].OriginalUserID should be user.ID")
 
-	err = suite.Services.Transaction.Delete(ctx, user.ID, originalTransaction.ID, domain.TransactionPropagationSettingsCurrent)
+	err = suite.Services.Transaction.Delete(ctx, user.ID, transactionsUser2[0].ID, domain.TransactionPropagationSettingsCurrent)
 	suite.NoError(err)
-
-	transactionsUser1, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to search transactions: %v", err)
-	}
-	assert.Len(suite.T(), transactionsUser1, 0, "should delete the original transaction and the income transaction")
 
 	transactionsUser2, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -602,7 +524,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser2, 0, "should delete the income transaction")
+	assert.Len(suite.T(), transactionsUser2, 0, "should delete the expense transaction")
 }
 
 func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLinkedTransactions() {
@@ -664,54 +586,20 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, installments*2, fmt.Sprintf("should create %d expense and %d income transactions", installments, installments))
-
-	var originalTransactions []*domain.Transaction
-	var incomeTransactions []*domain.Transaction
-
-	for _, transaction := range transactionsUser1 {
-		switch transaction.Type {
-		case domain.TransactionTypeExpense:
-			originalTransactions = append(originalTransactions, transaction)
-		case domain.TransactionTypeIncome:
-			incomeTransactions = append(incomeTransactions, transaction)
-		}
-	}
-
-	assert.Len(suite.T(), originalTransactions, installments)
-	assert.Len(suite.T(), incomeTransactions, installments)
-
-	for i, originalTransaction := range originalTransactions {
-		assert.Equal(suite.T(), int64(100), originalTransaction.Amount, fmt.Sprintf("originalTransactions[%d].Amount should be 100", i))
-		assert.Nil(suite.T(), originalTransaction.ParentID, fmt.Sprintf("originalTransactions[%d].ParentID should be nil", i))
-		assert.Equal(suite.T(), account.ID, originalTransaction.AccountID, fmt.Sprintf("originalTransactions[%d].AccountID should be account.ID", i))
-		assert.Equal(suite.T(), category.ID, lo.FromPtr(originalTransaction.CategoryID), fmt.Sprintf("originalTransactions[%d].CategoryID should be category.ID", i))
-		assert.NotNil(suite.T(), originalTransaction.TransactionRecurrenceID, fmt.Sprintf("originalTransactions[%d].TransactionRecurrenceID should not be nil", i))
-		assert.Equal(suite.T(), user.ID, originalTransaction.UserID, fmt.Sprintf("originalTransactions[%d].UserID should be user.ID", i))
-	}
-
-	for i, incomeTransaction := range incomeTransactions {
-		assert.Equal(suite.T(), int64(50), incomeTransaction.Amount, fmt.Sprintf("incomeTransactions[%d].Amount should be 50", i))
-		assert.NotNil(suite.T(), incomeTransaction.ParentID, fmt.Sprintf("incomeTransactions[%d].ParentID should not be nil", i))
-		assert.Equal(suite.T(), userConnection.FromAccountID, incomeTransaction.AccountID, fmt.Sprintf("incomeTransactions[%d].AccountID should be userConnection.FromAccountID", i))
-		assert.Equal(suite.T(), category.ID, lo.FromPtr(incomeTransaction.CategoryID), fmt.Sprintf("incomeTransactions[%d].CategoryID should be category.ID", i))
-		assert.NotNil(suite.T(), incomeTransaction.TransactionRecurrenceID, fmt.Sprintf("incomeTransactions[%d].TransactionRecurrenceID should not be nil", i))
-		assert.Equal(suite.T(), user.ID, incomeTransaction.UserID, fmt.Sprintf("incomeTransactions[%d].UserID should be user.ID", i))
-	}
+	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 
-	assert.Len(suite.T(), transactionsUser2, installments, fmt.Sprintf("should create %d income transactions", installments))
+	assert.Len(suite.T(), transactionsUser2, installments, fmt.Sprintf("should create %d expense transactions in to_account", installments))
 
 	for i, transaction := range transactionsUser2 {
 		assert.Equal(suite.T(), int64(50), transaction.Amount, fmt.Sprintf("transactionsUser2[%d].Amount should be 50", i))
-		assert.NotNil(suite.T(), transaction.ParentID, fmt.Sprintf("transactionsUser2[%d].ParentID should not be nil", i))
-		assert.Equal(suite.T(), *transaction.ParentID, originalTransactions[i].ID, fmt.Sprintf("transactionsUser2[%d].ParentID should be originalTransaction.ID", i))
 		assert.Equal(suite.T(), transaction.Type, domain.TransactionTypeExpense, fmt.Sprintf("transactionsUser2[%d].Type should be domain.TransactionTypeExpense", i))
 		assert.Equal(suite.T(), userConnection.ToAccountID, transaction.AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be userConnection.ToAccountID", i))
 		assert.Nil(suite.T(), transaction.CategoryID, fmt.Sprintf("transactionsUser2[%d].CategoryID should be nil", i))
@@ -719,16 +607,8 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 		assert.Equal(suite.T(), userConnection.ToUserID, transaction.UserID, fmt.Sprintf("transactionsUser2[%d].UserID should be userConnection.ToUserID", i))
 	}
 
-	err = suite.Services.Transaction.Delete(ctx, user.ID, originalTransactions[0].ID, domain.TransactionPropagationSettingsAll)
+	err = suite.Services.Transaction.Delete(ctx, user.ID, transactionsUser2[0].ID, domain.TransactionPropagationSettingsAll)
 	suite.NoError(err)
-
-	transactionsUser1, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to search transactions: %v", err)
-	}
-	assert.Len(suite.T(), transactionsUser1, 0, "should delete the original transaction and the income transaction")
 
 	transactionsUser2, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -736,7 +616,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser2, 0, "should delete the income transaction")
+	assert.Len(suite.T(), transactionsUser2, 0, "should delete all expense transactions")
 }
 
 func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAndFutureWithLinkedTransactions() {
@@ -799,74 +679,19 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, installments*2, fmt.Sprintf("should create %d expense and %d income transactions", installments, installments))
-
-	var originalTransactions []*domain.Transaction
-	var incomeTransactions []*domain.Transaction
-
-	for _, transaction := range transactionsUser1 {
-		switch transaction.Type {
-		case domain.TransactionTypeExpense:
-			originalTransactions = append(originalTransactions, transaction)
-		case domain.TransactionTypeIncome:
-			incomeTransactions = append(incomeTransactions, transaction)
-		}
-	}
-
-	assert.Len(suite.T(), originalTransactions, installments)
-	assert.Len(suite.T(), incomeTransactions, installments)
-
-	for i, originalTransaction := range originalTransactions {
-		assert.Equal(suite.T(), int64(100), originalTransaction.Amount, fmt.Sprintf("originalTransactions[%d].Amount should be 100", i))
-		assert.Nil(suite.T(), originalTransaction.ParentID, fmt.Sprintf("originalTransactions[%d].ParentID should be nil", i))
-		assert.Equal(suite.T(), account.ID, originalTransaction.AccountID, fmt.Sprintf("originalTransactions[%d].AccountID should be account.ID", i))
-		assert.Equal(suite.T(), category.ID, lo.FromPtr(originalTransaction.CategoryID), fmt.Sprintf("originalTransactions[%d].CategoryID should be category.ID", i))
-		assert.Equal(suite.T(), user.ID, originalTransaction.UserID, fmt.Sprintf("originalTransactions[%d].UserID should be user.ID", i))
-
-		assert.NotNil(suite.T(), originalTransaction.TransactionRecurrenceID, fmt.Sprintf("originalTransactions[%d].TransactionRecurrenceID should not be nil", i))
-		assert.NotNil(suite.T(), originalTransaction.InstallmentNumber, fmt.Sprintf("originalTransactions[%d].InstallmentNumber should not be nil", i))
-		assert.GreaterOrEqual(suite.T(), lo.FromPtr(originalTransaction.InstallmentNumber), 1, fmt.Sprintf("originalTransactions[%d].InstallmentNumber should be greater than or equal to 1", i))
-		assert.LessOrEqual(suite.T(), lo.FromPtr(originalTransaction.InstallmentNumber), installments, fmt.Sprintf("originalTransactions[%d].InstallmentNumber should be less than or equal to %d", i, installments))
-	}
-
-	for i, incomeTransaction := range incomeTransactions {
-		assert.Equal(suite.T(), int64(50), incomeTransaction.Amount, fmt.Sprintf("incomeTransactions[%d].Amount should be 50", i))
-		assert.NotNil(suite.T(), incomeTransaction.ParentID, fmt.Sprintf("incomeTransactions[%d].ParentID should not be nil", i))
-		assert.Equal(suite.T(), userConnection.FromAccountID, incomeTransaction.AccountID, fmt.Sprintf("incomeTransactions[%d].AccountID should be userConnection.FromAccountID", i))
-		assert.Equal(suite.T(), category.ID, lo.FromPtr(incomeTransaction.CategoryID), fmt.Sprintf("incomeTransactions[%d].CategoryID should be category.ID", i))
-		assert.Equal(suite.T(), user.ID, incomeTransaction.UserID, fmt.Sprintf("incomeTransactions[%d].UserID should be user.ID", i))
-
-		assert.NotNil(suite.T(), incomeTransaction.TransactionRecurrenceID, fmt.Sprintf("incomeTransactions[%d].TransactionRecurrenceID should not be nil", i))
-		assert.NotNil(suite.T(), incomeTransaction.InstallmentNumber, fmt.Sprintf("incomeTransactions[%d].InstallmentNumber should not be nil", i))
-		assert.GreaterOrEqual(suite.T(), lo.FromPtr(incomeTransaction.InstallmentNumber), 1, fmt.Sprintf("incomeTransactions[%d].InstallmentNumber should be greater than or equal to 1", i))
-		assert.LessOrEqual(suite.T(), lo.FromPtr(incomeTransaction.InstallmentNumber), installments, fmt.Sprintf("incomeTransactions[%d].InstallmentNumber should be less than or equal to %d", i, installments))
-	}
+	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction in from_account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 
-	assert.Len(suite.T(), transactionsUser2, installments, fmt.Sprintf("should create %d income transactions", installments))
+	assert.Len(suite.T(), transactionsUser2, installments, fmt.Sprintf("should create %d expense transactions in to_account", installments))
 
-	for i, transaction := range transactionsUser2 {
-		assert.Equal(suite.T(), int64(50), transaction.Amount, fmt.Sprintf("transactionsUser2[%d].Amount should be 50", i))
-		assert.NotNil(suite.T(), transaction.ParentID, fmt.Sprintf("transactionsUser2[%d].ParentID should not be nil", i))
-		assert.Equal(suite.T(), *transaction.ParentID, originalTransactions[i].ID, fmt.Sprintf("transactionsUser2[%d].ParentID should be originalTransaction.ID", i))
-		assert.Equal(suite.T(), transaction.Type, domain.TransactionTypeExpense, fmt.Sprintf("transactionsUser2[%d].Type should be domain.TransactionTypeExpense", i))
-		assert.Equal(suite.T(), userConnection.ToAccountID, transaction.AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be userConnection.ToAccountID", i))
-		assert.Nil(suite.T(), transaction.CategoryID, fmt.Sprintf("transactionsUser2[%d].CategoryID should be nil", i))
-		assert.Equal(suite.T(), userConnection.ToUserID, transaction.UserID, fmt.Sprintf("transactionsUser2[%d].UserID should be userConnection.ToUserID", i))
-
-		assert.NotNil(suite.T(), transaction.TransactionRecurrenceID, fmt.Sprintf("transactionsUser2[%d].TransactionRecurrenceID should not be nil", i))
-		assert.NotNil(suite.T(), transaction.InstallmentNumber, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber should not be nil", i))
-		assert.GreaterOrEqual(suite.T(), lo.FromPtr(transaction.InstallmentNumber), 1, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber should be greater than or equal to 1", i))
-		assert.LessOrEqual(suite.T(), lo.FromPtr(transaction.InstallmentNumber), installments, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber should be less than or equal to %d", i, installments))
-	}
-
-	toDelete, found := lo.Find(originalTransactions, func(transaction *domain.Transaction) bool {
+	toDelete, found := lo.Find(transactionsUser2, func(transaction *domain.Transaction) bool {
 		return lo.FromPtr(transaction.InstallmentNumber) == installmentsToDelete+1
 	})
 
@@ -881,25 +706,26 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, installments*2-installmentsToDelete*2, "should delete the original transaction and the income transaction")
+	assert.Len(suite.T(), transactionsUser1, installments-installmentsToDelete, "should delete current and future installments, leaving first installmentsToDelete")
 
 	for i, transaction := range transactionsUser1 {
 		assert.NotNil(suite.T(), transaction.InstallmentNumber, fmt.Sprintf("transactionsUser1[%d].InstallmentNumber should not be nil", i))
-		assert.Less(suite.T(), lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete+1, fmt.Sprintf("transactionsUser1[%d].InstallmentNumber = %d should be less than %d", i, lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete+1))
+		assert.LessOrEqual(suite.T(), lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete, fmt.Sprintf("transactionsUser1[%d].InstallmentNumber = %d should be <= %d", i, lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete))
 		assert.NotNil(suite.T(), transaction.TransactionRecurrenceID, fmt.Sprintf("transactionsUser1[%d].TransactionRecurrenceID should not be nil", i))
 	}
 
 	transactionsUser2, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser2, installments-installmentsToDelete, "should delete the income transaction")
+	assert.Len(suite.T(), transactionsUser2, installments-installmentsToDelete, "should delete current and future installments, leaving first installmentsToDelete")
 
 	for i, transaction := range transactionsUser2 {
 		assert.NotNil(suite.T(), transaction.InstallmentNumber, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber should not be nil", i))
-		assert.Less(suite.T(), lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete+1, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber = %d should be less than %d", i, lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete+1))
+		assert.LessOrEqual(suite.T(), lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete, fmt.Sprintf("transactionsUser2[%d].InstallmentNumber = %d should be <= %d", i, lo.FromPtr(transaction.InstallmentNumber), installmentsToDelete))
 		assert.NotNil(suite.T(), transaction.TransactionRecurrenceID, fmt.Sprintf("transactionsUser2[%d].TransactionRecurrenceID should not be nil", i))
 	}
 }
