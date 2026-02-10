@@ -65,6 +65,7 @@ type TransactionRepository interface {
 	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
+	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
 }
 
 type TransactionRecurrenceRepository interface {
