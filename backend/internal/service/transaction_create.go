@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"math"
 	"strings"
 	"time"
 
@@ -83,39 +82,9 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 	}
 
 	if transaction.RecurrenceSettings != nil {
-		if !transaction.RecurrenceSettings.Type.IsValid() {
-			errs = append(errs, pkgErrors.ErrInvalidRecurrenceType(transaction.RecurrenceSettings.Type))
+		if rErrs := s.validateRecurrenceSettings(transaction.Date, transaction.RecurrenceSettings); len(rErrs) > 0 {
+			errs = append(errs, rErrs...)
 		}
-
-		if transaction.RecurrenceSettings.EndDate == nil && transaction.RecurrenceSettings.Repetitions == nil {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateOrRepetitionsIsRequired)
-		}
-
-		if transaction.RecurrenceSettings.EndDate != nil && !transaction.RecurrenceSettings.EndDate.After(transaction.Date) {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
-		}
-
-		if transaction.RecurrenceSettings.EndDate != nil {
-			diff := transaction.RecurrenceSettings.EndDate.Sub(transaction.Date)
-			if int(diff.Hours())%24 != 0 {
-				errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
-			}
-		}
-
-		if transaction.RecurrenceSettings.EndDate != nil && transaction.RecurrenceSettings.Repetitions != nil {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
-		}
-
-		if transaction.RecurrenceSettings.EndDate == nil {
-			if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) < 1 {
-				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
-			}
-
-			if lo.FromPtr(transaction.RecurrenceSettings.Repetitions) > 1000 {
-				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
-			}
-		}
-
 	}
 
 	if transaction.TransactionType == domain.TransactionTypeTransfer {
@@ -153,6 +122,51 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 			}
 		}
 	}
+	return errs
+}
+
+func (s *transactionService) validateRecurrenceSettings(
+	transactionDate time.Time,
+	recurrenceSettings *domain.RecurrenceSettings,
+) []*pkgErrors.ServiceError {
+	errs := []*pkgErrors.ServiceError{}
+
+	if recurrenceSettings == nil {
+		return errs
+	}
+	if !recurrenceSettings.Type.IsValid() {
+		errs = append(errs, pkgErrors.ErrInvalidRecurrenceType(recurrenceSettings.Type))
+	}
+
+	if recurrenceSettings.EndDate == nil && recurrenceSettings.Repetitions == nil {
+		errs = append(errs, pkgErrors.ErrRecurrenceEndDateOrRepetitionsIsRequired)
+	}
+
+	if recurrenceSettings.EndDate != nil && !recurrenceSettings.EndDate.After(transactionDate) {
+		errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
+	}
+
+	if recurrenceSettings.EndDate != nil {
+		diff := recurrenceSettings.EndDate.Sub(transactionDate)
+		if int(diff.Hours())%24 != 0 {
+			errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
+		}
+	}
+
+	if recurrenceSettings.EndDate != nil && recurrenceSettings.Repetitions != nil {
+		errs = append(errs, pkgErrors.ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
+	}
+
+	if recurrenceSettings.EndDate == nil {
+		if lo.FromPtr(recurrenceSettings.Repetitions) < 1 {
+			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
+		}
+
+		if lo.FromPtr(recurrenceSettings.Repetitions) > 1000 {
+			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
+		}
+	}
+
 	return errs
 }
 
@@ -434,34 +448,7 @@ func (s *transactionService) createTags(ctx context.Context, userID int, tags []
 }
 
 func (s *transactionService) createRecurrence(ctx context.Context, userID int, recurrenceSettings domain.RecurrenceSettings, startDate time.Time) (*domain.TransactionRecurrence, error) {
-	tr := &domain.TransactionRecurrence{
-		ID:           0,
-		Installments: lo.FromPtr(recurrenceSettings.Repetitions),
-		UserID:       userID,
-	}
-
-	if recurrenceSettings.EndDate != nil {
-		var installments int
-
-		endDate := recurrenceSettings.EndDate
-
-		switch recurrenceSettings.Type {
-		case domain.RecurrenceTypeDaily:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24))
-		case domain.RecurrenceTypeWeekly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 7))
-		case domain.RecurrenceTypeMonthly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 30))
-		case domain.RecurrenceTypeYearly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 365))
-		}
-
-		if installments < 1 {
-			installments = 1
-		}
-
-		tr.Installments = installments
-	}
+	tr := domain.RecurrenceFromSettings(recurrenceSettings, userID, startDate)
 
 	if recurrence, err := s.transactionRecurRepo.Create(ctx, tr); err != nil {
 		return nil, err

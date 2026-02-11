@@ -70,6 +70,7 @@ type TransactionRepository interface {
 
 type TransactionRecurrenceRepository interface {
 	Create(ctx context.Context, recurrence *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)
+	Update(ctx context.Context, recurrence *domain.TransactionRecurrence) error
 	Delete(ctx context.Context, ids []int) error
 	Search(ctx context.Context, filter domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error)
 }

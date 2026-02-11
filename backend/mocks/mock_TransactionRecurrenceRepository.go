@@ -187,6 +187,53 @@ func (_c *MockTransactionRecurrenceRepository_Search_Call) RunAndReturn(run func
 	return _c
 }
 
+// Update provides a mock function with given fields: ctx, recurrence
+func (_m *MockTransactionRecurrenceRepository) Update(ctx context.Context, recurrence *domain.TransactionRecurrence) error {
+	ret := _m.Called(ctx, recurrence)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.TransactionRecurrence) error); ok {
+		r0 = rf(ctx, recurrence)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRecurrenceRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockTransactionRecurrenceRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - recurrence *domain.TransactionRecurrence
+func (_e *MockTransactionRecurrenceRepository_Expecter) Update(ctx interface{}, recurrence interface{}) *MockTransactionRecurrenceRepository_Update_Call {
+	return &MockTransactionRecurrenceRepository_Update_Call{Call: _e.mock.On("Update", ctx, recurrence)}
+}
+
+func (_c *MockTransactionRecurrenceRepository_Update_Call) Run(run func(ctx context.Context, recurrence *domain.TransactionRecurrence)) *MockTransactionRecurrenceRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*domain.TransactionRecurrence))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Update_Call) Return(_a0 error) *MockTransactionRecurrenceRepository_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRecurrenceRepository_Update_Call) RunAndReturn(run func(context.Context, *domain.TransactionRecurrence) error) *MockTransactionRecurrenceRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionRecurrenceRepository creates a new instance of MockTransactionRecurrenceRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionRecurrenceRepository(t interface {

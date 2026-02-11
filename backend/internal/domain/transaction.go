@@ -3,10 +3,12 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -129,6 +131,39 @@ type TransactionRecurrence struct {
 	Installments int        `json:"installments"`
 	CreatedAt    *time.Time `json:"created_at"`
 	UpdatedAt    *time.Time `json:"updated_at"`
+}
+
+func RecurrenceFromSettings(recurrenceSettings RecurrenceSettings, userID int, startDate time.Time) *TransactionRecurrence {
+	tr := &TransactionRecurrence{
+		ID:           0,
+		Installments: lo.FromPtr(recurrenceSettings.Repetitions),
+		UserID:       userID,
+	}
+
+	if recurrenceSettings.EndDate != nil {
+		var installments int
+
+		endDate := recurrenceSettings.EndDate
+
+		switch recurrenceSettings.Type {
+		case RecurrenceTypeDaily:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24))
+		case RecurrenceTypeWeekly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 7))
+		case RecurrenceTypeMonthly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 30))
+		case RecurrenceTypeYearly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 365))
+		}
+
+		if installments < 1 {
+			installments = 1
+		}
+
+		tr.Installments = installments
+	}
+
+	return tr
 }
 
 type TransactionRecurrenceFilter struct {
