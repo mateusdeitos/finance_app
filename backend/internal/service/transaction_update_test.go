@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -171,16 +170,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnOtherUsersTrans
 	suite.Assert().True(pkgErrors.IsNotFound(err))
 }
 
-func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithoutPropagation() {
+// expense/income	FALSE	expense/income	nil	-	- update description, amount, category, account if informed
+func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnIncome() {
 	ctx := context.Background()
 	user, err := suite.createTestUser(ctx)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test user: %v", err)
-	}
-
-	user2, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user 2: %v", err)
 	}
 
 	account, err := suite.createTestAccount(ctx, user)
@@ -188,34 +183,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithou
 		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
 
-	account2, err := suite.createTestAccount(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test account: %v", err)
-	}
-
 	category, err := suite.createTestCategory(ctx, user)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
-	category2, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
-	tag, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	tag2, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	connection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test connection: %v", err)
 	}
 
 	d := now()
@@ -227,13 +197,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithou
 		Amount:          100,
 		Date:            d,
 		Description:     "Test transaction",
-		Tags:            []domain.Tag{*tag},
-		SplitSettings: []domain.SplitSettings{
-			{
-				ConnectionID: connection.ID,
-				Percentage:   lo.ToPtr(50),
-			},
-		},
+		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
 
 	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
@@ -243,79 +207,41 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithou
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	t, found := lo.Find(transactions, func(t *domain.Transaction) bool {
-		return t.ParentID == nil
+	if len(transactions) != 1 {
+		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
+	}
+
+	t := transactions[0]
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		Amount:         100,
+		Type:           domain.TransactionTypeExpense,
+		OperationType:  domain.OperationTypeDebit,
+		AccountID:      account.ID,
+		CategoryID:     lo.ToPtr(category.ID),
+		Date:           d,
+		Description:    "Test transaction",
+		Tags:           []domain.Tag{{Name: "Test tag"}},
+		UserID:         user.ID,
+		OriginalUserID: lo.ToPtr(user.ID),
 	})
-
-	if len(transactions) != 2 {
-		suite.T().Fatalf("Expected 2 transactions, got %d", len(transactions))
-	}
-
-	if !found {
-		suite.T().Fatalf("Failed to find parent transaction")
-	}
-
-	suite.Assert().NotNil(transaction)
-
-	suite.Assert().Equal(int64(100), t.Amount)
-	suite.Assert().Equal(domain.TransactionTypeExpense, t.Type)
-	suite.Assert().Equal(domain.OperationTypeDebit, t.OperationType)
-	suite.Assert().Equal(account.ID, t.AccountID)
-	suite.Assert().Equal(category.ID, lo.FromPtr(t.CategoryID))
-
-	suite.Assert().Len(t.Tags, 1)
-	suite.Assert().Equal(tag.ID, t.Tags[0].ID)
-
-	suite.Assert().Equal(d, t.Date)
-	suite.Assert().Equal("Test transaction", t.Description)
-	suite.Assert().Equal(user.ID, t.UserID)
-	suite.Assert().Equal(user.ID, lo.FromPtr(t.OriginalUserID))
 
 	transactionID := t.ID
 
-	children, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{transactionID},
-		SortBy: &domain.SortBy{
-			Field: "user_id",
-			Order: domain.SortOrderAsc,
-		},
-	})
+	account2, err := suite.createTestAccount(ctx, user)
 	if err != nil {
-		suite.T().Fatalf("Failed to get children: %v", err)
+		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
 
-	if len(children) != 2 {
-		suite.T().Fatalf("Expected 2 children, got %d", len(children))
-	}
-
-	for i, child := range children {
-		if i == 0 {
-			suite.Assert().Equal(user.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeIncome, child.Type, fmt.Sprintf("child[%d].Type should be %s", i, domain.TransactionTypeIncome))
-			suite.Assert().Equal(domain.OperationTypeCredit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeCredit))
-			suite.Assert().Equal(connection.FromAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(category.ID, lo.FromPtr(child.CategoryID), fmt.Sprintf("child[%d].CategoryID should be %d", i, category.ID))
-			suite.Assert().Len(child.Tags, 1, fmt.Sprintf("child[%d].Tags should have 1 tag", i))
-			suite.Assert().Equal(tag.ID, child.Tags[0].ID, fmt.Sprintf("child[%d].Tags[0].ID should be %d", i, tag.ID))
-		} else {
-			suite.Assert().Equal(user2.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user2.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeExpense, child.Type, "não deve inverter o tipo da transação para o usuário compartilhado")
-			suite.Assert().Equal(domain.OperationTypeDebit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeDebit))
-			suite.Assert().Equal(connection.ToAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Nil(child.CategoryID, fmt.Sprintf("child[%d].CategoryID should be nil", i))
-			suite.Assert().Len(child.Tags, 0, fmt.Sprintf("child[%d].Tags should have 0 tags", i))
-		}
-
-		suite.Assert().Equal(int64(50), child.Amount, fmt.Sprintf("child[%d].Amount should be %d", i, 50))
-		suite.Assert().Equal(d, child.Date, fmt.Sprintf("child[%d].Date should be %s", i, d))
-		suite.Assert().Equal("Test transaction", child.Description, fmt.Sprintf("child[%d].Description should be %s", i, "Test transaction"))
+	category2, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
 	}
 
 	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
@@ -323,7 +249,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithou
 		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
-		Tags:            []domain.Tag{*tag2},
+		Tags:            []domain.Tag{{Name: "Test tag 2"}},
 		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
@@ -338,65 +264,23 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithou
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().NotNil(t)
-	suite.Assert().NoError(err)
-	suite.Assert().Equal(int64(200), t.Amount)
-	suite.Assert().Equal(domain.TransactionTypeIncome, t.Type)
-	suite.Assert().Equal(domain.OperationTypeCredit, t.OperationType)
-	suite.Assert().Equal(account2.ID, t.AccountID)
-	suite.Assert().Equal(category2.ID, lo.FromPtr(t.CategoryID))
-
-	suite.Assert().Len(t.Tags, 1)
-	suite.Assert().Equal(tag2.ID, t.Tags[0].ID)
-
-	suite.Assert().Equal(d.AddDate(0, 0, 1), t.Date)
-	suite.Assert().Equal("Test transaction updated", t.Description)
-	suite.Assert().Equal(user.ID, t.UserID)
-	suite.Assert().Equal(user.ID, lo.FromPtr(t.OriginalUserID))
-
-	children, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{transactionID},
-		SortBy: &domain.SortBy{
-			Field: "user_id",
-			Order: domain.SortOrderAsc,
-		},
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		ID:                      transactionID,
+		Amount:                  200,
+		Type:                    domain.TransactionTypeIncome,
+		OperationType:           domain.OperationTypeCredit,
+		AccountID:               account2.ID,
+		CategoryID:              lo.ToPtr(category2.ID),
+		Date:                    d.AddDate(0, 0, 1),
+		Description:             "Test transaction updated",
+		Tags:                    []domain.Tag{{Name: "Test tag 2"}},
+		UserID:                  user.ID,
+		OriginalUserID:          lo.ToPtr(user.ID),
+		TransactionRecurrenceID: nil,
 	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get children: %v", err)
-	}
-
-	if len(children) != 2 {
-		suite.T().Fatalf("Expected 1 child, got %d", len(children))
-	}
-
-	for i, child := range children {
-		if i == 0 {
-			suite.Assert().Equal(user.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(t.Type.Invert(), child.Type, fmt.Sprintf("child[%d].Type should be %s", i, t.Type.Invert()))
-			suite.Assert().Equal(t.OperationType.Invert(), child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, t.OperationType.Invert()))
-			suite.Assert().Equal(connection.FromAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(lo.FromPtr(t.CategoryID), lo.FromPtr(child.CategoryID), fmt.Sprintf("child[%d].CategoryID should be %d", i, category.ID))
-			suite.Assert().Len(child.Tags, 1, fmt.Sprintf("child[%d].Tags should have 1 tag", i))
-			suite.Assert().Equal(tag2.ID, child.Tags[0].ID, fmt.Sprintf("child[%d].Tags[0].ID should be %d", i, tag.ID))
-		} else {
-			suite.Assert().Equal(user2.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user2.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(t.Type, child.Type, fmt.Sprintf("child[%d].Type should be %s", i, t.Type))
-			suite.Assert().Equal(t.OperationType, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, t.OperationType))
-			suite.Assert().Equal(connection.ToAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Nil(child.CategoryID, fmt.Sprintf("child[%d].CategoryID should be nil", i))
-			suite.Assert().Len(child.Tags, 0, fmt.Sprintf("child[%d].Tags should have 0 tags", i))
-		}
-
-		suite.Assert().Equal(int64(50), child.Amount, fmt.Sprintf("child[%d].Amount should be %d", i, 50))
-		suite.Assert().Equal(d.AddDate(0, 0, 1), child.Date, fmt.Sprintf("child[%d].Date should be %s", i, d))
-		suite.Assert().Equal("Test transaction updated", child.Description, fmt.Sprintf("child[%d].Description should be %s", i, "Test transaction"))
-	}
 
 }
 
-func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithPropagation() {
 	ctx := context.Background()
 	user, err := suite.createTestUser(ctx)
 	if err != nil {
@@ -474,7 +358,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithPr
 	}
 
 	parent, found := lo.Find(transactions, func(t *domain.Transaction) bool {
-		return t.ParentID == nil
+		return len(t.LinkedTransactions) > 0
 	})
 
 	if len(transactions) != 2 {
@@ -503,17 +387,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithPr
 
 	transactionID := parent.ID
 
-	children, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{transactionID},
-		SortBy: &domain.SortBy{
-			Field: "user_id",
-			Order: domain.SortOrderAsc,
-		},
+	sources, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		IDs:    []int{transactionID},
+		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
-		suite.T().Fatalf("Failed to get children: %v", err)
+		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
-
+	var children []*domain.Transaction
+	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
+		lt := sources[0].LinkedTransactions
+		children = make([]*domain.Transaction, len(lt))
+		for i := range lt {
+			children[i] = &lt[i]
+		}
+	}
 	if len(children) != 2 {
 		suite.T().Fatalf("Expected 2 children, got %d", len(children))
 	}
@@ -581,19 +469,23 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateParentTransactionWithPr
 	suite.Assert().Equal(user.ID, parent.UserID)
 	suite.Assert().Equal(user.ID, lo.FromPtr(parent.OriginalUserID))
 
-	updatedChildren, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{parent.ID},
-		SortBy: &domain.SortBy{
-			Field: "user_id",
-			Order: domain.SortOrderAsc,
-		},
+	sources, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		IDs:    []int{parent.ID},
+		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
-		suite.T().Fatalf("Failed to get updatedChildren: %v", err)
+		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
-
+	var updatedChildren []*domain.Transaction
+	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
+		lt := sources[0].LinkedTransactions
+		updatedChildren = make([]*domain.Transaction, len(lt))
+		for i := range lt {
+			updatedChildren[i] = &lt[i]
+		}
+	}
 	if len(updatedChildren) != 2 {
-		suite.T().Fatalf("Expected 1 child, got %d", len(updatedChildren))
+		suite.T().Fatalf("Expected 2 children, got %d", len(updatedChildren))
 	}
 
 	for i, child := range updatedChildren {
@@ -693,7 +585,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnChildTransactio
 	}
 
 	parent, found := lo.Find(transactions, func(t *domain.Transaction) bool {
-		return t.ParentID == nil
+		return len(t.LinkedTransactions) > 0
 	})
 
 	if len(transactions) != 2 {
@@ -720,17 +612,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnChildTransactio
 	suite.Assert().Equal(user.ID, parent.UserID)
 	suite.Assert().Equal(user.ID, lo.FromPtr(parent.OriginalUserID))
 
-	children, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		ParentIDs: []int{parent.ID},
-		SortBy: &domain.SortBy{
-			Field: "user_id",
-			Order: domain.SortOrderAsc,
-		},
+	sources, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		IDs:    []int{parent.ID},
+		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
-		suite.T().Fatalf("Failed to get children: %v", err)
+		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
-
+	var children []*domain.Transaction
+	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
+		lt := sources[0].LinkedTransactions
+		children = make([]*domain.Transaction, len(lt))
+		for i := range lt {
+			children[i] = &lt[i]
+		}
+	}
 	if len(children) != 2 {
 		suite.T().Fatalf("Expected 2 children, got %d", len(children))
 	}

@@ -78,6 +78,13 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 	var ents []entity.Account
 	query := GetTxFromContext(ctx, r.db)
 
+	if options.Limit > 0 {
+		query = query.Limit(options.Limit)
+	}
+	if options.Offset > 0 {
+		query = query.Offset(options.Offset)
+	}
+
 	query = query.Select(`accounts.*`)
 
 	if len(options.UserIDs) > 0 {

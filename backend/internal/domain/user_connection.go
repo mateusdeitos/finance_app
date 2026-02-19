@@ -36,6 +36,8 @@ func (c *UserConnection) SwapIfNeeded(currentUserID int) {
 }
 
 type UserConnectionSearchOptions struct {
+	Limit            int                      `json:"limit"`
+	Offset           int                      `json:"offset"`
 	IDs              []int                    `json:"ids"`
 	FromUserIDs      []int                    `json:"from_user_ids"`
 	ToUserIDs        []int                    `json:"to_user_ids"`

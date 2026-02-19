@@ -123,9 +123,10 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 }
 
 type TransactionRecurrence struct {
-	ID           int `gorm:"primaryKey;autoIncrement"`
-	UserID       int `gorm:"not null"`
-	Installments int `gorm:"not null"`
+	ID           int                   `gorm:"primaryKey;autoIncrement"`
+	Type         domain.RecurrenceType `gorm:"not null"`
+	UserID       int                   `gorm:"not null"`
+	Installments int                   `gorm:"not null"`
 	CreatedAt    *time.Time
 	UpdatedAt    *time.Time
 }
@@ -133,6 +134,7 @@ type TransactionRecurrence struct {
 func (tr *TransactionRecurrence) ToDomain() *domain.TransactionRecurrence {
 	return &domain.TransactionRecurrence{
 		ID:           tr.ID,
+		Type:         tr.Type,
 		UserID:       tr.UserID,
 		Installments: tr.Installments,
 		CreatedAt:    tr.CreatedAt,
@@ -147,6 +149,7 @@ func TransactionRecurrenceFromDomain(d *domain.TransactionRecurrence) *Transacti
 
 	return &TransactionRecurrence{
 		ID:           d.ID,
+		Type:         d.Type,
 		UserID:       d.UserID,
 		Installments: d.Installments,
 		CreatedAt:    d.CreatedAt,

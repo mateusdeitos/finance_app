@@ -47,6 +47,21 @@ func (s *accountService) Search(ctx context.Context, options domain.AccountSearc
 	return s.accountRepo.Search(ctx, options)
 }
 
+func (s *accountService) SearchOne(ctx context.Context, options domain.AccountSearchOptions) (*domain.Account, error) {
+	options.Limit = 1
+	options.Offset = 0
+
+	accounts, err := s.accountRepo.Search(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+	if len(accounts) == 0 {
+		return nil, pkgErrors.NotFound("account")
+	}
+
+	return accounts[0], nil
+}
+
 func (s *accountService) Update(ctx context.Context, userID int, account *domain.Account) error {
 	ctx, err := s.dbTransaction.Begin(ctx)
 	if err != nil {

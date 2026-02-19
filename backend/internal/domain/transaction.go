@@ -126,16 +126,18 @@ type TransactionUpdateRequest struct {
 }
 
 type TransactionRecurrence struct {
-	ID           int        `json:"id"`
-	UserID       int        `json:"user_id"`
-	Installments int        `json:"installments"`
-	CreatedAt    *time.Time `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at"`
+	ID           int            `json:"id"`
+	UserID       int            `json:"user_id"`
+	Type         RecurrenceType `json:"type"`
+	Installments int            `json:"installments"`
+	CreatedAt    *time.Time     `json:"created_at"`
+	UpdatedAt    *time.Time     `json:"updated_at"`
 }
 
 func RecurrenceFromSettings(recurrenceSettings RecurrenceSettings, userID int, startDate time.Time) *TransactionRecurrence {
 	tr := &TransactionRecurrence{
 		ID:           0,
+		Type:         recurrenceSettings.Type,
 		Installments: lo.FromPtr(recurrenceSettings.Repetitions),
 		UserID:       userID,
 	}

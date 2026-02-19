@@ -383,32 +383,54 @@ func (s *transactionService) injectLinkedTransactions(
 	return nil
 }
 
+func (s *transactionService) getTransactionAccountFromConnectionID(ctx context.Context, userID, connectionID int) (domain.Account, error) {
+	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
+		IDs: []int{connectionID},
+	})
+	if err != nil {
+		return domain.Account{}, err
+	}
+
+	if conn == nil {
+		return domain.Account{}, pkgErrors.NotFound("user connection")
+	}
+
+	conn.SwapIfNeeded(userID)
+
+	acc, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
+		IDs: []int{conn.FromAccountID},
+	})
+	if err != nil {
+		return domain.Account{}, err
+	}
+
+	if acc == nil {
+		return domain.Account{}, pkgErrors.NotFound("account")
+	}
+
+	return *acc, nil
+}
+
 func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
-	accs, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
+	acc, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
 		IDs: []int{destinationAccountID},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(accs) == 0 {
-		return nil, pkgErrors.NotFound("account")
-	}
 
-	if accs[0].UserID == userID {
+	if acc.UserID == userID {
 		return nil, nil
 	}
 
-	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
 		AccountIDs: []int{destinationAccountID},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(conns) == 0 {
-		return nil, pkgErrors.NotFound("user connection")
-	}
 
-	return conns[0], nil
+	return conn, nil
 }
 
 func (s *transactionService) calculateAmount(amount int64, splitSetting domain.SplitSettings) int64 {

@@ -10,6 +10,7 @@ import (
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type transactionRepository struct {
@@ -31,12 +32,19 @@ func (r *transactionRepository) Create(ctx context.Context, transaction *domain.
 }
 
 func (r *transactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
+	tags := lo.Map(transaction.Tags, func(tag domain.Tag, _ int) domain.Tag {
+		tag.UserID = transaction.UserID
+		return tag
+	})
+
+	transaction.Tags = nil
+
 	ent := entity.TransactionFromDomain(transaction)
 	if err := GetTxFromContext(ctx, r.db).Save(ent).Error; err != nil {
 		return err
 	}
 
-	if err := r.replaceTags(ctx, transaction.Tags, ent); err != nil {
+	if err := r.replaceTags(ctx, tags, ent); err != nil {
 		return err
 	}
 
@@ -54,16 +62,15 @@ func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.T
 		return nil
 	}
 
-	tagIDs := lo.Map(tags, func(tag domain.Tag, _ int) int {
-		return tag.ID
+	entTags := lo.Map(tags, func(tag domain.Tag, _ int) entity.Tag {
+		return *entity.TagFromDomain(&tag)
 	})
 
-	var entTags []entity.Tag
-	if err := db.Where("id IN ?", tagIDs).Find(&entTags).Error; err != nil {
-		return err
-	}
-
-	if err := db.Model(&entity.Transaction{ID: ent.ID}).Association("Tags").Append(entTags); err != nil {
+	if err := db.
+		Model(&entity.Transaction{ID: ent.ID}).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Association("Tags").
+		Append(entTags); err != nil {
 		return err
 	}
 

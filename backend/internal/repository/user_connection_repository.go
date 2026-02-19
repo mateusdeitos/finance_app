@@ -38,6 +38,13 @@ func (r *userConnectionRepository) Search(ctx context.Context, options domain.Us
 	var ents []entity.UserConnection
 	query := GetTxFromContext(ctx, r.db)
 
+	if options.Limit > 0 {
+		query = query.Limit(options.Limit)
+	}
+	if options.Offset > 0 {
+		query = query.Offset(options.Offset)
+	}
+
 	if len(options.IDs) > 0 {
 		query = query.Where("id IN ?", options.IDs)
 	}
