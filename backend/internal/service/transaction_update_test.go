@@ -367,12 +367,13 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 	}
 
 	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
-		Amount:      lo.ToPtr(int64(200)),
-		AccountID:   lo.ToPtr(account2.ID),
-		CategoryID:  lo.ToPtr(category2.ID),
-		Tags:        []domain.Tag{{Name: "Test tag 2"}},
-		Date:        lo.ToPtr(d.AddDate(0, 0, 1)),
-		Description: lo.ToPtr("Test transaction updated"),
+		Amount:          lo.ToPtr(int64(200)),
+		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
+		AccountID:       lo.ToPtr(account2.ID),
+		CategoryID:      lo.ToPtr(category2.ID),
+		Tags:            []domain.Tag{{Name: "Test tag 2"}},
+		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Description:     lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
 				ConnectionID: userConnection.ID,
@@ -394,8 +395,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
 		ID:                      transactionID,
 		Amount:                  200,
-		Type:                    domain.TransactionTypeExpense,
-		OperationType:           domain.OperationTypeDebit,
+		Type:                    domain.TransactionTypeIncome,
+		OperationType:           domain.OperationTypeCredit,
 		AccountID:               account2.ID,
 		CategoryID:              lo.ToPtr(category2.ID),
 		Date:                    d.AddDate(0, 0, 1),
@@ -407,8 +408,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		LinkedTransactions: []domain.Transaction{
 			{
 				Amount:                  100,
-				Type:                    domain.TransactionTypeExpense,
-				OperationType:           domain.OperationTypeDebit,
+				Type:                    domain.TransactionTypeIncome,
+				OperationType:           domain.OperationTypeCredit,
 				AccountID:               userConnection.ToAccountID,
 				CategoryID:              nil,
 				Date:                    d.AddDate(0, 0, 1),

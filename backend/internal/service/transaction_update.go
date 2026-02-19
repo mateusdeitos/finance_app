@@ -498,14 +498,15 @@ func (s *transactionService) rebuildTransactions(
 					UpdatedAt:      nil,
 				},
 			}
-		} else if data.scenario.TypeChanged() {
+		}
+
+		if data.scenario.TypeChanged() {
 			data.transactions[i].SetType(*data.req.TransactionType)
 
 			for j := range data.transactions[i].LinkedTransactions {
-				data.transactions[i].LinkedTransactions[j].SetType(lo.FromPtr(data.req.TransactionType).Invert())
+				data.transactions[i].LinkedTransactions[j].SetType(*data.req.TransactionType)
 			}
 		}
-
 	}
 
 	return nil
@@ -604,15 +605,6 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	}
 
 	return nil
-}
-
-func (s *transactionService) handleTransactionTypeChange(
-	ctx context.Context,
-	userID int,
-	previousTransaction domain.Transaction,
-	own *domain.Transaction,
-	newType domain.TransactionType,
-) {
 }
 
 func (s *transactionService) fetchRelatedTransactions(
@@ -764,9 +756,7 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 		}
 	}
 
-	if len(req.SplitSettings) > 0 && req.TransactionType != nil && *req.TransactionType != domain.TransactionTypeExpense {
-		errs = append(errs, pkgErrors.ErrSplitAllowedOnlyForExpense)
-	} else if len(req.SplitSettings) > 0 {
+	if len(req.SplitSettings) > 0 {
 		for i, splitSetting := range req.SplitSettings {
 			if splitSetting.ConnectionID <= 0 {
 				errs = append(errs, pkgErrors.ErrSplitSettingInvalidConnectionID(i))
