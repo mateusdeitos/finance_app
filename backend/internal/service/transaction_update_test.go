@@ -281,7 +281,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 
 }
 
-// expense/income	FALSE	expense/income	not nil	-	- update description, amount, category, account if informed
+// expense/income	FALSE	expense/income	not nil	-
+//   - update description, amount, category, account if informed
 //   - create linked transactions with inverted type using the split_settings property
 func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnIncomeWithLinkedTransactions() {
 	ctx := context.Background()
@@ -422,6 +423,152 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 				LinkedTransactions:      []domain.Transaction{},
 			},
 		},
+	})
+}
+
+// expense/income	TRUE	expense/income	nil	-
+//   - update description, amount, category, account if informed
+//   - delete all linked_transactions that have transaction_id = transaction.id
+func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinkedTransactionsToOwnIncomeWithoutSplit() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	user2, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
+	if err != nil {
+		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
+	}
+
+	d := now()
+
+	transaction := domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "Test transaction",
+		Tags:            []domain.Tag{{Name: "Test tag"}},
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: userConnection.ID,
+				Percentage:   lo.ToPtr(50),
+			},
+		},
+	}
+
+	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	if len(transactions) != 1 {
+		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
+	}
+
+	t := transactions[0]
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		Amount:         100,
+		Type:           domain.TransactionTypeExpense,
+		OperationType:  domain.OperationTypeDebit,
+		AccountID:      account.ID,
+		CategoryID:     lo.ToPtr(category.ID),
+		Date:           d,
+		Description:    "Test transaction",
+		Tags:           []domain.Tag{{Name: "Test tag"}},
+		UserID:         user.ID,
+		OriginalUserID: lo.ToPtr(user.ID),
+		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  50,
+				Type:                    domain.TransactionTypeExpense,
+				OperationType:           domain.OperationTypeDebit,
+				AccountID:               userConnection.ToAccountID,
+				CategoryID:              nil,
+				Date:                    d,
+				Description:             "Test transaction",
+				Tags:                    []domain.Tag{},
+				UserID:                  user2.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
+		},
+	})
+
+	transactionID := t.ID
+
+	account2, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category2, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
+		Amount:          lo.ToPtr(int64(200)),
+		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
+		AccountID:       lo.ToPtr(account2.ID),
+		CategoryID:      lo.ToPtr(category2.ID),
+		Tags:            []domain.Tag{{Name: "Test tag 2"}},
+		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Description:     lo.ToPtr("Test transaction updated"),
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to update transaction: %v", err)
+	}
+
+	t, err = suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{transactionID},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		ID:                      transactionID,
+		Amount:                  200,
+		Type:                    domain.TransactionTypeIncome,
+		OperationType:           domain.OperationTypeCredit,
+		AccountID:               account2.ID,
+		CategoryID:              lo.ToPtr(category2.ID),
+		Date:                    d.AddDate(0, 0, 1),
+		Description:             "Test transaction updated",
+		Tags:                    []domain.Tag{{Name: "Test tag 2"}},
+		UserID:                  user.ID,
+		OriginalUserID:          lo.ToPtr(user.ID),
+		TransactionRecurrenceID: nil,
+		LinkedTransactions:      []domain.Transaction{},
 	})
 }
 

@@ -122,6 +122,12 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 
 	}
 
+	if len(data.transactionIDsToRemove) > 0 {
+		if err := s.transactionRepo.Delete(ctx, lo.Keys(data.transactionIDsToRemove)); err != nil {
+			return err
+		}
+	}
+
 	return s.dbTransaction.Commit(ctx)
 }
 

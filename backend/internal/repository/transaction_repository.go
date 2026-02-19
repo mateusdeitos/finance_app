@@ -44,6 +44,10 @@ func (r *transactionRepository) Update(ctx context.Context, transaction *domain.
 		return err
 	}
 
+	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("LinkedTransactions").Replace(ent.LinkedTransactions); err != nil {
+		return err
+	}
+
 	if err := r.replaceTags(ctx, tags, ent); err != nil {
 		return err
 	}
