@@ -383,34 +383,6 @@ func (s *transactionService) injectLinkedTransactions(
 	return nil
 }
 
-func (s *transactionService) getTransactionAccountFromConnectionID(ctx context.Context, userID, connectionID int) (domain.Account, error) {
-	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
-		IDs: []int{connectionID},
-	})
-	if err != nil {
-		return domain.Account{}, err
-	}
-
-	if conn == nil {
-		return domain.Account{}, pkgErrors.NotFound("user connection")
-	}
-
-	conn.SwapIfNeeded(userID)
-
-	acc, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
-		IDs: []int{conn.FromAccountID},
-	})
-	if err != nil {
-		return domain.Account{}, err
-	}
-
-	if acc == nil {
-		return domain.Account{}, pkgErrors.NotFound("account")
-	}
-
-	return *acc, nil
-}
-
 func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
 	acc, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
 		IDs: []int{destinationAccountID},

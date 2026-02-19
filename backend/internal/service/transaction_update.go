@@ -11,14 +11,6 @@ import (
 	"github.com/samber/lo"
 )
 
-type transactionUpdateData struct {
-	userID                 int
-	req                    *domain.TransactionUpdateRequest
-	previousTransaction    *domain.Transaction
-	transactions           []*domain.Transaction
-	transactionIDsToRemove []int
-}
-
 func (s *transactionService) Update(ctx context.Context, id, userID int, req *domain.TransactionUpdateRequest) error {
 	ctx, err := s.dbTransaction.Begin(ctx)
 	if err != nil {
@@ -44,15 +36,34 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		req:                    req,
 		previousTransaction:    previousTransaction,
 		transactions:           []*domain.Transaction{},
-		transactionIDsToRemove: []int{},
+		transactionIDsToRemove: make(map[int]bool),
 	}
 
+	data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
+	if err != nil {
+		return err
+	}
+
+	// carrega todas transações e parcelas
 	err = s.fetchRelatedTransactions(ctx, data)
 	if err != nil {
 		return err
 	}
 
+	// faz um resync nas transações vinculadas de acordo com o split enviado
+	err = s.rebuildTransactions(ctx, data)
+	if err != nil {
+		return err
+	}
+
+	// atualiza/remove a recorrência de acordo com o recurrenceSettings enviado
 	err = s.handlerRecurrenceUpdate(ctx, data)
+	if err != nil {
+		return err
+	}
+
+	// normaliza as parcelas de acordo com as recorrências atualizadas
+	err = s.normalizeInstallments(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -61,27 +72,6 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		own := data.transactions[i]
 		if own == nil {
 			return pkgErrors.Internal(fmt.Sprintf("ownTransactions index %d not found", i), nil)
-		}
-
-		var err error
-		own.LinkedTransactions, err = s.rebuildLinkedTransactions(ctx, own, data)
-		if err != nil {
-			return err
-		}
-
-		if previousTransaction.TransactionRecurrence != nil {
-			own.TransactionRecurrence = previousTransaction.TransactionRecurrence
-			own.InstallmentNumber = lo.ToPtr(i + 1)
-
-			for _, linkedTransaction := range own.LinkedTransactions {
-				linkedTransaction.TransactionRecurrence = previousTransaction.TransactionRecurrence
-				linkedTransaction.InstallmentNumber = lo.ToPtr(i + 1)
-			}
-		}
-
-		// se parent era income e virou expense, own=income e shared=expense e vice-versa
-		if lo.FromPtr(req.TransactionType).IsValid() {
-			s.handleTransactionTypeChange(ctx, userID, *previousTransaction, own, *req.TransactionType)
 		}
 
 		if lo.FromPtr(req.AccountID) > 0 {
@@ -99,126 +89,426 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		if req.Date != nil && !req.Date.IsZero() {
 			own.Date = own.Date.AddDate(0, 0, dateDiffDays)
 
-			for _, linkedTransaction := range own.LinkedTransactions {
-				linkedTransaction.Date = linkedTransaction.Date.AddDate(0, 0, dateDiffDays)
+			for i := range own.LinkedTransactions {
+				own.LinkedTransactions[i].Date = own.LinkedTransactions[i].Date.AddDate(0, 0, dateDiffDays)
 			}
 		}
 
 		if req.Description != nil && strings.TrimSpace(*req.Description) != "" {
 			own.Description = *req.Description
 
-			for _, linkedTransaction := range own.LinkedTransactions {
-				linkedTransaction.Description = *req.Description
+			for i := range own.LinkedTransactions {
+				own.LinkedTransactions[i].Description = *req.Description
 			}
 		}
 
 		own.Tags = req.Tags
-		for _, linkedTransaction := range own.LinkedTransactions {
-			if linkedTransaction.UserID == userID {
-				linkedTransaction.Tags = req.Tags
+		for i := range own.LinkedTransactions {
+			if own.LinkedTransactions[i].UserID == userID {
+				own.LinkedTransactions[i].Tags = req.Tags
 			}
 		}
 
-		own, err = s.handleTransactionRecurrenceUpdate(ctx, userID, i, *own)
-		if err != nil {
-			return err
+		if own.ID == 0 {
+			if _, err := s.transactionRepo.Create(ctx, own); err != nil {
+				return err
+			}
+
+		} else {
+			if err := s.transactionRepo.Update(ctx, own); err != nil {
+				return err
+			}
 		}
 
-		if own == nil {
-			continue
-		}
-
-		if err := s.transactionRepo.Update(ctx, own); err != nil {
-			return err
-		}
 	}
 
 	return s.dbTransaction.Commit(ctx)
 }
 
-func (s *transactionService) rebuildLinkedTransactions(
-	ctx context.Context,
-	own *domain.Transaction,
-	data *transactionUpdateData,
-) ([]domain.Transaction, error) {
-	if len(data.req.SplitSettings) == 0 {
-		return []domain.Transaction{}, nil
-	}
+func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, data *transactionUpdateData) (updateChanges, error) {
+	newType := lo.FromPtr(lo.CoalesceOrEmpty(data.req.TransactionType, &data.previousTransaction.Type))
+	hadSplitSettings := len(data.previousTransaction.LinkedTransactions) > 0 && data.previousTransaction.Type != domain.TransactionTypeTransfer
+	hasSplitSettings := len(data.req.SplitSettings) > 0
 
-	accountsIDs := lo.Map(own.LinkedTransactions, func(linkedTransaction domain.Transaction, _ int) int {
-		return linkedTransaction.AccountID
-	})
-	connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-		AccountIDs: accountsIDs,
-	})
-	if err != nil {
-		return []domain.Transaction{}, err
-	}
-
-	accountIDsUserIDsMap := lo.Reduce(own.LinkedTransactions, func(agg map[string]*domain.Transaction, transaction domain.Transaction, _ int) map[string]*domain.Transaction {
-		hash := fmt.Sprintf("%d-%d", transaction.AccountID, transaction.UserID)
-		agg[hash] = &transaction
-		return agg
-	}, map[string]*domain.Transaction{})
-
-	connectionsTransactionsMap := lo.Reduce(connections, func(agg map[int]domain.Transaction, connection *domain.UserConnection, _ int) map[int]domain.Transaction {
-		hashFrom := fmt.Sprintf("%d-%d", connection.FromAccountID, connection.FromUserID)
-		if t, ok := accountIDsUserIDsMap[hashFrom]; ok {
-			agg[connection.ID] = *t
-			return agg
-		}
-
-		hashTo := fmt.Sprintf("%d-%d", connection.ToAccountID, connection.ToUserID)
-		if t, ok := accountIDsUserIDsMap[hashTo]; ok {
-			agg[connection.ID] = *t
-			return agg
-		}
-
-		return agg
-	}, map[int]domain.Transaction{})
-
-	splitSettingsMap := make(map[int]domain.SplitSettings)
-
-	newConnectionIDs := lo.FilterMap(data.req.SplitSettings, func(splitSetting domain.SplitSettings, _ int) (int, bool) {
-		splitSettingsMap[splitSetting.ConnectionID] = splitSetting
-
-		if connection, ok := connectionsTransactionsMap[splitSetting.ConnectionID]; !ok {
-			return connection.ID, true
-		}
-		return 0, false
-	})
-
-	if len(newConnectionIDs) > 0 {
-		newConnections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-			IDs: newConnectionIDs,
+	checkIsTransferToSameUser := func(accountID, userID int) (bool, error) {
+		destinationAccount, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
+			IDs: []int{accountID},
 		})
 		if err != nil {
-			return []domain.Transaction{}, err
+			return false, err
 		}
 
-		for _, newConnection := range newConnections {
-			newConnection.SwapIfNeeded(data.userID)
-			splitSetting, ok := splitSettingsMap[newConnection.ID]
-			if !ok {
-				return []domain.Transaction{}, pkgErrors.Internal("split setting not found", nil)
+		return destinationAccount.UserID == userID, nil
+	}
+
+	var scenario updateScenario
+
+	switch data.previousTransaction.Type {
+	case domain.TransactionTypeExpense:
+		switch newType {
+		case domain.TransactionTypeIncome:
+			switch hasSplitSettings {
+			case true:
+				scenario = lo.Ternary(hadSplitSettings, EXPENSE_WITH_SPLIT_TO_INCOME_WITH_SPLIT, EXPENSE_WITHOUT_SPLIT_TO_INCOME_WITH_SPLIT)
+			case false:
+				scenario = lo.Ternary(hadSplitSettings, EXPENSE_WITH_SPLIT_TO_INCOME_WITHOUT_SPLIT, EXPENSE_WITHOUT_SPLIT_TO_INCOME_WITHOUT_SPLIT)
 			}
 
-			connectionsTransactionsMap[newConnection.ID] = domain.Transaction{
-				ID:             0,
-				UserID:         newConnection.ToUserID,
-				OriginalUserID: &data.userID,
-				AccountID:      newConnection.ToAccountID,
-				Type:           own.Type,
-				OperationType:  own.OperationType,
-				Date:           own.Date,
-				Description:    own.Description,
-				Amount:         s.calculateAmount(own.Amount, splitSetting),
-				CategoryID:     nil,
+		case domain.TransactionTypeTransfer:
+			isTransferToSameUser, err := checkIsTransferToSameUser(*data.req.DestinationAccountID, data.userID)
+			if err != nil {
+				return updateChanges{}, err
+			}
+
+			switch hadSplitSettings {
+			case true:
+				scenario = lo.Ternary(isTransferToSameUser, EXPENSE_WITH_SPLIT_TO_TRANSFER_TO_SAME_USER, EXPENSE_WITH_SPLIT_TO_TRANSFER_TO_DIFFERENT_USER)
+			case false:
+				scenario = lo.Ternary(isTransferToSameUser, EXPENSE_WITHOUT_SPLIT_TO_TRANSFER_TO_SAME_USER, EXPENSE_WITHOUT_SPLIT_TO_TRANSFER_TO_DIFFERENT_USER)
+			}
+
+		case domain.TransactionTypeExpense:
+			switch hasSplitSettings {
+			case true:
+				scenario = lo.Ternary(hadSplitSettings, EXPENSE_WITH_SPLIT_TO_EXPENSE_WITH_SPLIT, EXPENSE_WITHOUT_SPLIT_TO_EXPENSE_WITH_SPLIT)
+			case false:
+				scenario = lo.Ternary(hadSplitSettings, EXPENSE_WITH_SPLIT_TO_EXPENSE_WITHOUT_SPLIT, EXPENSE_WITHOUT_SPLIT_TO_EXPENSE_WITHOUT_SPLIT)
+			}
+		}
+
+	case domain.TransactionTypeIncome:
+		switch newType {
+		case domain.TransactionTypeExpense:
+			switch hasSplitSettings {
+			case true:
+				scenario = lo.Ternary(hadSplitSettings, INCOME_WITH_SPLIT_TO_EXPENSE_WITH_SPLIT, INCOME_WITHOUT_SPLIT_TO_EXPENSE_WITH_SPLIT)
+			case false:
+				scenario = lo.Ternary(hadSplitSettings, INCOME_WITH_SPLIT_TO_EXPENSE_WITHOUT_SPLIT, INCOME_WITHOUT_SPLIT_TO_EXPENSE_WITHOUT_SPLIT)
+			}
+
+		case domain.TransactionTypeTransfer:
+			isTransferToSameUser, err := checkIsTransferToSameUser(*data.req.DestinationAccountID, data.userID)
+			if err != nil {
+				return updateChanges{}, err
+			}
+
+			switch hadSplitSettings {
+			case true:
+				scenario = lo.Ternary(isTransferToSameUser, INCOME_WITH_SPLIT_TO_TRANSFER_TO_SAME_USER, INCOME_WITH_SPLIT_TO_TRANSFER_TO_DIFFERENT_USER)
+			case false:
+				scenario = lo.Ternary(isTransferToSameUser, INCOME_WITHOUT_SPLIT_TO_TRANSFER_TO_SAME_USER, INCOME_WITHOUT_SPLIT_TO_TRANSFER_TO_DIFFERENT_USER)
+			}
+
+		case domain.TransactionTypeIncome:
+			switch hasSplitSettings {
+			case true:
+				scenario = lo.Ternary(hadSplitSettings, INCOME_WITH_SPLIT_TO_INCOME_WITH_SPLIT, INCOME_WITHOUT_SPLIT_TO_INCOME_WITH_SPLIT)
+			case false:
+				scenario = lo.Ternary(hadSplitSettings, INCOME_WITH_SPLIT_TO_INCOME_WITHOUT_SPLIT, INCOME_WITHOUT_SPLIT_TO_INCOME_WITHOUT_SPLIT)
+			}
+		}
+
+	case domain.TransactionTypeTransfer:
+		switch newType {
+		case domain.TransactionTypeExpense:
+			switch hasSplitSettings {
+			case true:
+				scenario = TRANSFER_TO_EXPENSE_WITH_SPLIT
+			case false:
+				scenario = TRANSFER_TO_EXPENSE_WITHOUT_SPLIT
+			}
+
+		case domain.TransactionTypeIncome:
+			switch hasSplitSettings {
+			case true:
+				scenario = TRANSFER_TO_INCOME_WITH_SPLIT
+			case false:
+				scenario = TRANSFER_TO_INCOME_WITHOUT_SPLIT
+			}
+
+		case domain.TransactionTypeTransfer:
+			isTransferToSameUser, err := checkIsTransferToSameUser(*data.req.DestinationAccountID, data.userID)
+			if err != nil {
+				return updateChanges{}, err
+			}
+
+			transferWasToSameUser, err := checkIsTransferToSameUser(data.previousTransaction.AccountID, data.userID)
+			if err != nil {
+				return updateChanges{}, err
+			}
+
+			switch isTransferToSameUser {
+			case true:
+				scenario = lo.Ternary(transferWasToSameUser, TRANSFER_SAME_USER_TO_SAME_USER, TRANSFER_DIFFERENT_USER_TO_SAME_USER)
+			case false:
+				scenario = lo.Ternary(transferWasToSameUser, TRANSFER_SAME_USER_TO_DIFFERENT_USER, TRANSFER_DIFFERENT_USER_TO_DIFFERENT_USER)
 			}
 		}
 	}
 
-	return lo.Values(connectionsTransactionsMap), nil
+	splitHasChanged := len(data.req.SplitSettings) != len(data.previousTransaction.LinkedTransactions)
+	if !splitHasChanged {
+		userIDAccountIDMapPrevious := lo.Reduce(data.previousTransaction.LinkedTransactions, func(agg map[int]int, transaction domain.Transaction, _ int) map[int]int {
+			agg[transaction.UserID] = transaction.AccountID
+			return agg
+		}, map[int]int{})
+
+		connIDs := lo.Map(data.req.SplitSettings, func(splitSetting domain.SplitSettings, _ int) int {
+			return splitSetting.ConnectionID
+		})
+
+		conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+			IDs: connIDs,
+		})
+		if err != nil {
+			return updateChanges{}, err
+		}
+
+		data.splitConnections = conns
+
+		userIDAccountIDMapCurrent := lo.Reduce(conns, func(agg map[int]int, conn *domain.UserConnection, _ int) map[int]int {
+			conn.SwapIfNeeded(data.userID)
+			agg[conn.ToUserID] = conn.ToAccountID
+			return agg
+		}, make(map[int]int))
+
+		for userID, prevAccountID := range userIDAccountIDMapPrevious {
+			if currentAccountID, exist := userIDAccountIDMapCurrent[userID]; !exist || prevAccountID != currentAccountID {
+				splitHasChanged = true
+				break
+			}
+		}
+
+	}
+
+	return updateChanges{
+		Value:           scenario,
+		SplitHasChanged: hasSplitSettings != hadSplitSettings,
+	}, nil
+}
+
+func (s *transactionService) normalizeInstallments(ctx context.Context, data *transactionUpdateData) error {
+	if len(data.transactions) == 0 {
+		return nil
+	}
+
+	r := data.transactions[0].TransactionRecurrence
+
+	if r == nil && data.previousTransaction.TransactionRecurrenceID == nil {
+		return nil
+	}
+
+	if r == nil {
+		r = &domain.TransactionRecurrence{
+			Installments: 0,
+		}
+	}
+
+	for i := range data.transactions {
+
+		if r.Installments >= i+1 {
+			continue
+		}
+
+		// reduziu numero de parcelas, remove a transação e todas as parcelas associadas
+		data.transactionIDsToRemove[data.transactions[i].ID] = true
+
+		for j := range data.transactions[i].LinkedTransactions {
+			data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+		}
+
+		data.transactions[i].LinkedTransactions = nil
+
+	}
+
+	if r.Installments > len(data.transactions) {
+		for i := len(data.transactions); i < r.Installments; i++ {
+			baseDate := lo.CoalesceOrEmpty(data.req.Date, &data.transactions[0].Date)
+			data.transactions = append(data.transactions, &domain.Transaction{
+				ID:                0,
+				InstallmentNumber: lo.ToPtr(i + 1),
+				Date:              s.incrementInstallmentDate(*baseDate, r.Type, i-1),
+			})
+		}
+	}
+
+	return nil
+}
+
+func (s *transactionService) rebuildTransactions(
+	ctx context.Context,
+	data *transactionUpdateData,
+) error {
+
+	var userIDAccountIDMap map[int]int
+	if data.scenario.SplitHasChanged {
+		userIDAccountIDMap = lo.Reduce(data.splitConnections, func(agg map[int]int, conn *domain.UserConnection, _ int) map[int]int {
+			agg[conn.ToUserID] = conn.ToAccountID
+			return agg
+		}, make(map[int]int))
+	}
+
+	for i := range data.transactions {
+		baseAmount := data.transactions[i].Amount
+		if data.req.Amount != nil {
+			baseAmount = *data.req.Amount
+		}
+
+		if data.scenario.RemovedSplit() || data.scenario.WasTransfer() {
+			for j := range data.transactions[i].LinkedTransactions {
+				data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+			}
+
+			data.transactions[i].LinkedTransactions = nil
+		} else if data.scenario.AddedSplit() {
+			for j := range data.req.SplitSettings {
+				splitSetting := data.req.SplitSettings[j]
+				if splitSetting.ConnectionID == 0 {
+					return pkgErrors.ErrSplitSettingInvalidConnectionID(j)
+				}
+
+				conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
+					IDs: []int{splitSetting.ConnectionID},
+				})
+				if err != nil {
+					return err
+				}
+
+				conn.SwapIfNeeded(data.userID)
+
+				amount := s.calculateAmount(baseAmount, splitSetting)
+
+				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
+					ID:             0,
+					Date:           data.transactions[i].Date,
+					Description:    data.transactions[i].Description,
+					UserID:         conn.ToUserID,
+					OriginalUserID: &data.userID,
+					Type:           data.transactions[i].Type,
+					OperationType:  data.transactions[i].OperationType,
+					AccountID:      conn.ToAccountID,
+					CategoryID:     nil,
+					Amount:         amount,
+					Tags:           []domain.Tag{},
+					CreatedAt:      nil,
+					UpdatedAt:      nil,
+				})
+			}
+		} else if data.scenario.SplitHasChanged {
+			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
+			existingUserIDAccountIDMap := make(map[int]int, len(data.transactions[i].LinkedTransactions))
+
+			// remove as transactions que foram removidas e atualiza as que continuam existindo
+			for j := range data.transactions[i].LinkedTransactions {
+				if accountID, exist := userIDAccountIDMap[data.transactions[i].LinkedTransactions[j].UserID]; !exist {
+					data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+					continue
+				} else if accountID != data.transactions[i].LinkedTransactions[j].AccountID {
+					data.transactions[i].LinkedTransactions[j].AccountID = accountID
+				}
+
+				linkedTransactions = append(linkedTransactions, data.transactions[i].LinkedTransactions[j])
+
+				if _, exist := existingUserIDAccountIDMap[data.transactions[i].LinkedTransactions[j].UserID]; !exist {
+					existingUserIDAccountIDMap[data.transactions[i].LinkedTransactions[j].UserID] = data.transactions[i].LinkedTransactions[j].AccountID
+				}
+			}
+
+			for _, splitSetting := range data.req.SplitSettings {
+				if splitSetting.ConnectionID == 0 {
+					return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
+				}
+
+				conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
+					IDs: []int{splitSetting.ConnectionID},
+				})
+				if err != nil {
+					return err
+				}
+
+				amount := s.calculateAmount(baseAmount, splitSetting)
+
+				_, idx, found := lo.FindIndexOf(data.transactions[i].LinkedTransactions, func(t domain.Transaction) bool {
+					return t.UserID == conn.ToUserID || t.UserID == conn.FromUserID
+				})
+				if !found {
+					conn.SwapIfNeeded(data.userID)
+
+					data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
+						ID:             0,
+						Date:           data.transactions[i].Date,
+						Description:    data.transactions[i].Description,
+						UserID:         conn.ToUserID,
+						OriginalUserID: &data.userID,
+						Type:           data.transactions[i].Type,
+						OperationType:  data.transactions[i].OperationType,
+						AccountID:      conn.ToAccountID,
+						CategoryID:     nil,
+						Amount:         amount,
+						Tags:           []domain.Tag{},
+						CreatedAt:      nil,
+						UpdatedAt:      nil,
+					})
+					continue
+				}
+
+				data.transactions[i].LinkedTransactions[idx].Amount = amount
+			}
+
+			data.transactions[i].LinkedTransactions = linkedTransactions
+		} else if data.scenario.TypeChangedToTransfer() {
+			for j := range data.transactions[i].LinkedTransactions {
+				data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+			}
+
+			userID := data.transactions[i].UserID
+			accountID := *data.req.DestinationAccountID
+
+			if !data.scenario.IsTransferToSameUser() {
+				c, err := s.getConnectionFromDestinationAccountID(ctx, data.userID, accountID)
+				if err != nil {
+					return err
+				}
+
+				c.SwapIfNeeded(data.userID)
+
+				userID = c.ToUserID
+				accountID = c.ToAccountID
+			}
+
+			data.transactions[i].Type = domain.TransactionTypeTransfer
+			data.transactions[i].OperationType = domain.OperationTypeDebit
+			data.transactions[i].CategoryID = nil
+			data.transactions[i].AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &data.transactions[i].AccountID))
+
+			data.transactions[i].LinkedTransactions = []domain.Transaction{
+				{
+					ID:             0,
+					Date:           data.transactions[i].Date,
+					Description:    data.transactions[i].Description,
+					UserID:         userID,
+					OriginalUserID: data.transactions[i].OriginalUserID,
+					Type:           domain.TransactionTypeTransfer,
+					OperationType:  domain.OperationTypeCredit,
+					AccountID:      accountID,
+					CategoryID:     nil,
+					Amount:         data.transactions[i].Amount,
+					Tags:           lo.Ternary(data.scenario.IsTransferToSameUser(), data.transactions[i].Tags, []domain.Tag{}),
+					CreatedAt:      nil,
+					UpdatedAt:      nil,
+				},
+			}
+		} else if data.scenario.TypeChanged() {
+			data.transactions[i].SetType(*data.req.TransactionType)
+
+			for j := range data.transactions[i].LinkedTransactions {
+				data.transactions[i].LinkedTransactions[j].SetType(lo.FromPtr(data.req.TransactionType).Invert())
+			}
+		}
+
+	}
+
+	return nil
 }
 
 func (s *transactionService) handlerRecurrenceUpdate(
@@ -230,18 +520,25 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	}
 
 	if data.req.RecurrenceSettings == nil && data.previousTransaction.TransactionRecurrenceID != nil {
-		if err := s.transactionRecurRepo.Delete(ctx, []int{*data.previousTransaction.TransactionRecurrenceID}); err != nil {
-			return err
-		}
-
-		for _, linkedTransaction := range data.previousTransaction.LinkedTransactions {
-			if linkedTransaction.TransactionRecurrenceID == nil {
+		recurrenceIDs := []int{}
+		for i := range data.transactions {
+			if data.transactions[i].TransactionRecurrenceID == nil {
 				continue
 			}
 
-			if err := s.transactionRecurRepo.Delete(ctx, []int{*data.previousTransaction.TransactionRecurrenceID}); err != nil {
-				return err
+			recurrenceIDs = append(recurrenceIDs, *data.transactions[i].TransactionRecurrenceID)
+
+			for j := range data.transactions[i].LinkedTransactions {
+				if data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID == nil {
+					continue
+				}
+
+				recurrenceIDs = append(recurrenceIDs, *data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID)
 			}
+		}
+
+		if err := s.transactionRecurRepo.Delete(ctx, recurrenceIDs); err != nil {
+			return err
 		}
 
 		return nil
@@ -252,60 +549,61 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	}
 
 	date := lo.CoalesceOrEmpty(data.req.Date, &data.previousTransaction.Date)
-	newRecurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, data.userID, *date)
 
-	if data.previousTransaction.TransactionRecurrenceID != nil {
-		newRecurrence.ID = *data.previousTransaction.TransactionRecurrenceID
+	recurrenceByUserID := make(map[int]domain.TransactionRecurrence)
+
+	upsertRecurrence := func(userID int, t domain.Transaction) (domain.TransactionRecurrence, error) {
+		if r, ok := recurrenceByUserID[userID]; ok {
+			return r, nil
+		}
+
+		recurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, userID, *date)
+		if t.TransactionRecurrenceID != nil {
+			recurrence.ID = *t.TransactionRecurrenceID
+
+			err := s.transactionRecurRepo.Update(ctx, recurrence)
+			if err != nil {
+				return domain.TransactionRecurrence{}, err
+			}
+
+			recurrenceByUserID[userID] = *recurrence
+
+			return *recurrence, nil
+		}
+
+		r, err := s.transactionRecurRepo.Create(ctx, recurrence)
+		if err != nil {
+			return domain.TransactionRecurrence{}, err
+		}
+
+		recurrenceByUserID[userID] = *r
+
+		return *r, nil
 	}
 
-	data.previousTransaction.TransactionRecurrence = newRecurrence
+	r, err := upsertRecurrence(data.userID, *data.previousTransaction)
+	if err != nil {
+		return err
+	}
 
-	for i := range data.previousTransaction.LinkedTransactions {
-		linkedTransaction := &data.previousTransaction.LinkedTransactions[i]
-		id, _ := lo.Coalesce(lo.FromPtr(linkedTransaction.TransactionRecurrenceID), 0)
+	for i := range data.transactions {
+		data.transactions[i].TransactionRecurrence = &r
+		data.transactions[i].TransactionRecurrenceID = &r.ID
+		data.transactions[i].InstallmentNumber = lo.ToPtr(i + 1)
 
-		newRecurrence.ID = id
-		linkedTransaction.TransactionRecurrence = newRecurrence
+		for j := range data.transactions[i].LinkedTransactions {
+			rlt, err := upsertRecurrence(data.transactions[i].LinkedTransactions[j].UserID, data.transactions[i].LinkedTransactions[j])
+			if err != nil {
+				return err
+			}
+
+			data.transactions[i].LinkedTransactions[j].TransactionRecurrence = &rlt
+			data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID = &rlt.ID
+			data.transactions[i].LinkedTransactions[j].InstallmentNumber = lo.ToPtr(i + 1)
+		}
 	}
 
 	return nil
-}
-
-func (s *transactionService) handleTransactionRecurrenceUpdate(
-	ctx context.Context,
-	userID int,
-	index int,
-	t domain.Transaction,
-) (*domain.Transaction, error) {
-	if t.TransactionRecurrenceID == nil {
-		t.TransactionRecurrenceID = nil
-		t.InstallmentNumber = nil
-
-		for _, linkedTransaction := range t.LinkedTransactions {
-			linkedTransaction.TransactionRecurrenceID = nil
-			linkedTransaction.InstallmentNumber = nil
-		}
-
-		return &t, nil
-	}
-
-	if lo.FromPtr(t.InstallmentNumber) > t.TransactionRecurrence.Installments {
-		if err := s.Delete(ctx, userID, t.ID, domain.TransactionPropagationSettingsCurrent); err != nil {
-			return nil, err
-		}
-
-		if len(t.LinkedTransactions) > 0 {
-			for _, linkedTransaction := range t.LinkedTransactions {
-				if err := s.Delete(ctx, linkedTransaction.UserID, linkedTransaction.ID, domain.TransactionPropagationSettingsCurrent); err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		return nil, nil
-	}
-
-	return &t, nil
 }
 
 func (s *transactionService) handleTransactionTypeChange(
@@ -324,7 +622,7 @@ func (s *transactionService) fetchRelatedTransactions(
 	transactions := []*domain.Transaction{data.previousTransaction}
 	hasInstallments := data.previousTransaction.TransactionRecurrenceID != nil && data.previousTransaction.InstallmentNumber != nil
 
-	// propagation current atualiza somente a transação atual, parent e sibling
+	// propagation current atualiza somente a transação atual e linked transactions
 	shouldUpdateInstallments := hasInstallments && data.req.PropagationSettings != domain.TransactionPropagationSettingsCurrent
 
 	if shouldUpdateInstallments {

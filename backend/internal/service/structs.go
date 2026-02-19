@@ -143,7 +143,7 @@ func (tus updateChanges) TransferUserChanged() bool {
 }
 
 func (tus updateChanges) RemovedSplit() bool {
-	return tus.TypeChanged() && slices.Contains([]updateScenario{
+	return slices.Contains([]updateScenario{
 		EXPENSE_WITH_SPLIT_TO_EXPENSE_WITHOUT_SPLIT,
 		EXPENSE_WITH_SPLIT_TO_INCOME_WITHOUT_SPLIT,
 		INCOME_WITH_SPLIT_TO_EXPENSE_WITHOUT_SPLIT,
@@ -154,7 +154,7 @@ func (tus updateChanges) RemovedSplit() bool {
 }
 
 func (tus updateChanges) AddedSplit() bool {
-	return tus.TypeChanged() && slices.Contains([]updateScenario{
+	return slices.Contains([]updateScenario{
 		EXPENSE_WITHOUT_SPLIT_TO_EXPENSE_WITH_SPLIT,
 		EXPENSE_WITHOUT_SPLIT_TO_INCOME_WITH_SPLIT,
 		INCOME_WITHOUT_SPLIT_TO_EXPENSE_WITH_SPLIT,

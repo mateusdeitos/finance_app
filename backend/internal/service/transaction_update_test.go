@@ -281,399 +281,204 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 
 }
 
+// expense/income	FALSE	expense/income	not nil	-	- update description, amount, category, account if informed
+//   - create linked transactions with inverted type using the split_settings property
+func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnIncomeWithLinkedTransactions() {
 	ctx := context.Background()
 	user, err := suite.createTestUser(ctx)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test user: %v", err)
 	}
 
-	user2, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user 2: %v", err)
-	}
-
 	account, err := suite.createTestAccount(ctx, user)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
+
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	d := now()
+
+	transaction := domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "Test transaction",
+		Tags:            []domain.Tag{{Name: "Test tag"}},
+	}
+
+	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	if len(transactions) != 1 {
+		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
+	}
+
+	t := transactions[0]
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		Amount:         100,
+		Type:           domain.TransactionTypeExpense,
+		OperationType:  domain.OperationTypeDebit,
+		AccountID:      account.ID,
+		CategoryID:     lo.ToPtr(category.ID),
+		Date:           d,
+		Description:    "Test transaction",
+		Tags:           []domain.Tag{{Name: "Test tag"}},
+		UserID:         user.ID,
+		OriginalUserID: lo.ToPtr(user.ID),
+	})
+
+	transactionID := t.ID
 
 	account2, err := suite.createTestAccount(ctx, user)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test account: %v", err)
 	}
 
-	category, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
 	category2, err := suite.createTestCategory(ctx, user)
 	if err != nil {
 		suite.T().Fatalf("Failed to create test category: %v", err)
 	}
 
-	tag, err := suite.createTestTag(ctx, user)
+	user2, err := suite.createTestUser(ctx)
 	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
+		suite.T().Fatalf("Failed to create test user: %v", err)
 	}
 
-	tag2, err := suite.createTestTag(ctx, user)
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
 	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
+		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
 	}
 
-	connection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test connection: %v", err)
-	}
-
-	d := now()
-
-	transaction := domain.TransactionCreateRequest{
-		AccountID:       account.ID,
-		CategoryID:      category.ID,
-		TransactionType: domain.TransactionTypeExpense,
-		Amount:          100,
-		Date:            d,
-		Description:     "Test transaction",
-		Tags:            []domain.Tag{*tag},
+	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
+		Amount:      lo.ToPtr(int64(200)),
+		AccountID:   lo.ToPtr(account2.ID),
+		CategoryID:  lo.ToPtr(category2.ID),
+		Tags:        []domain.Tag{{Name: "Test tag 2"}},
+		Date:        lo.ToPtr(d.AddDate(0, 0, 1)),
+		Description: lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
-				ConnectionID: connection.ID,
+				ConnectionID: userConnection.ID,
 				Percentage:   lo.ToPtr(50),
 			},
 		},
-	}
-
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
-	if err != nil {
-		suite.T().Fatalf("Failed to create transaction: %v", err)
-	}
-
-	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
-	}
-
-	parent, found := lo.Find(transactions, func(t *domain.Transaction) bool {
-		return len(t.LinkedTransactions) > 0
-	})
-
-	if len(transactions) != 2 {
-		suite.T().Fatalf("Expected 2 transactions, got %d", len(transactions))
-	}
-
-	if !found {
-		suite.T().Fatalf("Failed to find parent transaction")
-	}
-
-	suite.Assert().NotNil(transaction)
-
-	suite.Assert().Equal(int64(100), parent.Amount)
-	suite.Assert().Equal(domain.TransactionTypeExpense, parent.Type)
-	suite.Assert().Equal(domain.OperationTypeDebit, parent.OperationType)
-	suite.Assert().Equal(account.ID, parent.AccountID)
-	suite.Assert().Equal(category.ID, lo.FromPtr(parent.CategoryID))
-
-	suite.Assert().Len(parent.Tags, 1)
-	suite.Assert().Equal(tag.ID, parent.Tags[0].ID)
-
-	suite.Assert().Equal(d, parent.Date)
-	suite.Assert().Equal("Test transaction", parent.Description)
-	suite.Assert().Equal(user.ID, parent.UserID)
-	suite.Assert().Equal(user.ID, lo.FromPtr(parent.OriginalUserID))
-
-	transactionID := parent.ID
-
-	sources, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		IDs:    []int{transactionID},
-		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
-	}
-	var children []*domain.Transaction
-	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
-		lt := sources[0].LinkedTransactions
-		children = make([]*domain.Transaction, len(lt))
-		for i := range lt {
-			children[i] = &lt[i]
-		}
-	}
-	if len(children) != 2 {
-		suite.T().Fatalf("Expected 2 children, got %d", len(children))
-	}
-
-	for i, child := range children {
-		if i == 0 {
-			suite.Assert().Equal(user.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeIncome, child.Type, fmt.Sprintf("child[%d].Type should be %s", i, domain.TransactionTypeIncome))
-			suite.Assert().Equal(domain.OperationTypeCredit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeCredit))
-			suite.Assert().Equal(connection.FromAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(lo.FromPtr(parent.CategoryID), lo.FromPtr(child.CategoryID), fmt.Sprintf("child[%d].CategoryID should be %d", i, lo.FromPtr(parent.CategoryID)))
-			suite.Assert().Len(child.Tags, 1, fmt.Sprintf("child[%d].Tags should have 1 tag", i))
-			suite.Assert().Equal(tag.ID, child.Tags[0].ID, fmt.Sprintf("child[%d].Tags[0].ID should be %d", i, tag.ID))
-		} else {
-			suite.Assert().Equal(user2.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user2.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeExpense, child.Type, "não deve inverter o tipo da transação para o usuário compartilhado")
-			suite.Assert().Equal(domain.OperationTypeDebit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeDebit))
-			suite.Assert().Equal(connection.ToAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Nil(child.CategoryID, fmt.Sprintf("child[%d].CategoryID should be nil", i))
-			suite.Assert().Len(child.Tags, 0, fmt.Sprintf("child[%d].Tags should have 0 tags", i))
-		}
-
-		suite.Assert().Equal(int64(50), child.Amount, fmt.Sprintf("child[%d].Amount should be %d", i, 50))
-		suite.Assert().Equal(d, child.Date, fmt.Sprintf("child[%d].Date should be %s", i, d))
-		suite.Assert().Equal("Test transaction", child.Description, fmt.Sprintf("child[%d].Description should be %s", i, "Test transaction"))
-	}
-
-	updatedDate := d.AddDate(0, 0, 1)
-
-	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
-		Amount:          lo.ToPtr(int64(200)),
-		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
-		AccountID:       lo.ToPtr(account2.ID),
-		CategoryID:      lo.ToPtr(category2.ID),
-		Tags:            []domain.Tag{*tag2},
-		Date:            lo.ToPtr(updatedDate),
-		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to update transaction: %v", err)
 	}
 
-	parent, err = suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+	t, err = suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
 		IDs: []int{transactionID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().NotNil(parent)
-	suite.Assert().NoError(err)
-	suite.Assert().Equal(int64(200), parent.Amount)
-	suite.Assert().Equal(domain.TransactionTypeIncome, parent.Type)
-	suite.Assert().Equal(domain.OperationTypeCredit, parent.OperationType)
-	suite.Assert().Equal(account2.ID, parent.AccountID)
-	suite.Assert().Equal(category2.ID, lo.FromPtr(parent.CategoryID))
-
-	suite.Assert().Len(parent.Tags, 1)
-	suite.Assert().Equal(tag2.ID, parent.Tags[0].ID)
-
-	suite.Assert().Equal(updatedDate, parent.Date)
-	suite.Assert().Equal("Test transaction updated", parent.Description)
-	suite.Assert().Equal(user.ID, parent.UserID)
-	suite.Assert().Equal(user.ID, lo.FromPtr(parent.OriginalUserID))
-
-	sources, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		IDs:    []int{parent.ID},
-		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
-	}
-	var updatedChildren []*domain.Transaction
-	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
-		lt := sources[0].LinkedTransactions
-		updatedChildren = make([]*domain.Transaction, len(lt))
-		for i := range lt {
-			updatedChildren[i] = &lt[i]
-		}
-	}
-	if len(updatedChildren) != 2 {
-		suite.T().Fatalf("Expected 2 children, got %d", len(updatedChildren))
-	}
-
-	for i, child := range updatedChildren {
-		if i == 0 {
-			suite.Assert().Len(child.Tags, 1, fmt.Sprintf("child[%d].Tags should have 1 tag", i))
-			suite.Assert().Equal(tag2.ID, child.Tags[0].ID, fmt.Sprintf("child[%d].Tags[0].ID should be %d", i, tag2.ID))
-			suite.Assert().Equal(lo.FromPtr(parent.CategoryID), lo.FromPtr(child.CategoryID), fmt.Sprintf("child[%d].CategoryID should be %d", i, lo.FromPtr(children[i].CategoryID)))
-		} else {
-			suite.Assert().Len(child.Tags, 0, fmt.Sprintf("child[%d].Tags should have 0 tags", i))
-			suite.Assert().Nil(child.CategoryID, fmt.Sprintf("child[%d].CategoryID should be nil", i))
-		}
-
-		suite.Assert().Equal(children[i].Type.Invert(), child.Type, fmt.Sprintf("child[%d].Type should be %s", i, children[i].Type.Invert()))
-		suite.Assert().Equal(children[i].OperationType.Invert(), child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, children[i].OperationType.Invert()))
-
-		suite.Assert().Equal(children[i].UserID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, children[i].UserID))
-		suite.Assert().Equal(lo.FromPtr(children[i].OriginalUserID), lo.FromPtr(child.OriginalUserID), fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-		suite.Assert().Equal(children[i].AccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.FromAccountID))
-
-		suite.Assert().Equal(int64(50), child.Amount, fmt.Sprintf("child[%d].Amount should be %d", i, 50))
-		suite.Assert().Equal(updatedDate, child.Date, fmt.Sprintf("child[%d].Date should be %s", i, updatedDate))
-		suite.Assert().Equal("Test transaction updated", child.Description, fmt.Sprintf("child[%d].Description should be %s", i, "Test transaction"))
-	}
-
-}
-
-func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnChildTransactions() {
-	ctx := context.Background()
-	user, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user: %v", err)
-	}
-
-	user2, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user 2: %v", err)
-	}
-
-	account, err := suite.createTestAccount(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test account: %v", err)
-	}
-
-	category, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
-	category2, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
-	tag, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	tag2, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	connection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test connection: %v", err)
-	}
-
-	d := now()
-
-	transaction := domain.TransactionCreateRequest{
-		AccountID:       account.ID,
-		CategoryID:      category.ID,
-		TransactionType: domain.TransactionTypeExpense,
-		Amount:          100,
-		Date:            d,
-		Description:     "Test transaction",
-		Tags:            []domain.Tag{*tag},
-		SplitSettings: []domain.SplitSettings{
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		ID:                      transactionID,
+		Amount:                  200,
+		Type:                    domain.TransactionTypeExpense,
+		OperationType:           domain.OperationTypeDebit,
+		AccountID:               account2.ID,
+		CategoryID:              lo.ToPtr(category2.ID),
+		Date:                    d.AddDate(0, 0, 1),
+		Description:             "Test transaction updated",
+		Tags:                    []domain.Tag{{Name: "Test tag 2"}},
+		UserID:                  user.ID,
+		OriginalUserID:          lo.ToPtr(user.ID),
+		TransactionRecurrenceID: nil,
+		LinkedTransactions: []domain.Transaction{
 			{
-				ConnectionID: connection.ID,
-				Percentage:   lo.ToPtr(50),
+				Amount:                  100,
+				Type:                    domain.TransactionTypeExpense,
+				OperationType:           domain.OperationTypeDebit,
+				AccountID:               userConnection.ToAccountID,
+				CategoryID:              nil,
+				Date:                    d.AddDate(0, 0, 1),
+				Description:             "Test transaction updated",
+				Tags:                    []domain.Tag{},
+				UserID:                  user2.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
 			},
 		},
-	}
-
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
-	if err != nil {
-		suite.T().Fatalf("Failed to create transaction: %v", err)
-	}
-
-	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
 	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
+}
+
+func assertTransaction(suite *ServiceTestWithDBSuite, actual, expected *domain.Transaction) {
+	suite.Assert().NotNil(actual, "transaction should not be nil")
+
+	if expected.ID != 0 {
+		suite.Assert().Equal(expected.ID, actual.ID, "expected.ID")
 	}
 
-	parent, found := lo.Find(transactions, func(t *domain.Transaction) bool {
-		return len(t.LinkedTransactions) > 0
-	})
+	suite.Assert().Equal(expected.Amount, actual.Amount, "expected.Amount")
+	suite.Assert().Equal(expected.Type, actual.Type, "expected.Type")
+	suite.Assert().Equal(expected.OperationType, actual.OperationType, "expected.OperationType")
+	suite.Assert().Equal(expected.AccountID, actual.AccountID, "expected.AccountID")
+	if expected.CategoryID != nil {
+		suite.Assert().Equal(*expected.CategoryID, lo.FromPtr(actual.CategoryID), "expected.CategoryID")
+	} else {
+		suite.Assert().Nil(actual.CategoryID, "expected.CategoryID")
+	}
+	suite.Assert().Equal(expected.Date, actual.Date, "expected.Date")
+	suite.Assert().Equal(expected.Description, actual.Description, "expected.Description")
+	suite.Assert().Equal(expected.UserID, actual.UserID, "expected.UserID")
+	suite.Assert().Equal(lo.FromPtr(expected.OriginalUserID), lo.FromPtr(actual.OriginalUserID), "expected.OriginalUserID")
 
-	if len(transactions) != 2 {
-		suite.T().Fatalf("Expected 2 transactions, got %d", len(transactions))
+	if len(expected.Tags) != len(actual.Tags) {
+		suite.T().Fatalf("len(expected.Tags) != len(actual.Tags): %d != %d", len(expected.Tags), len(actual.Tags))
+	}
+	for i := range expected.Tags {
+		if expected.Tags[i].ID != 0 {
+			suite.Assert().Equalf(expected.Tags[i].ID, actual.Tags[i].ID, "expected.Tags[%d].ID", i)
+		}
+		suite.Assert().Equalf(expected.Tags[i].Name, actual.Tags[i].Name, "expected.Tags[%d].Name", i)
 	}
 
-	if !found {
-		suite.T().Fatalf("Failed to find parent transaction")
+	if len(expected.LinkedTransactions) != len(actual.LinkedTransactions) {
+		suite.T().Fatalf("len(expected.LinkedTransactions) != len(actual.LinkedTransactions): %d != %d", len(expected.LinkedTransactions), len(actual.LinkedTransactions))
 	}
-
-	suite.Assert().NotNil(transaction)
-
-	suite.Assert().Equal(int64(100), parent.Amount)
-	suite.Assert().Equal(domain.TransactionTypeExpense, parent.Type)
-	suite.Assert().Equal(domain.OperationTypeDebit, parent.OperationType)
-	suite.Assert().Equal(account.ID, parent.AccountID)
-	suite.Assert().Equal(category.ID, lo.FromPtr(parent.CategoryID))
-
-	suite.Assert().Len(parent.Tags, 1)
-	suite.Assert().Equal(tag.ID, parent.Tags[0].ID)
-
-	suite.Assert().Equal(d, parent.Date)
-	suite.Assert().Equal("Test transaction", parent.Description)
-	suite.Assert().Equal(user.ID, parent.UserID)
-	suite.Assert().Equal(user.ID, lo.FromPtr(parent.OriginalUserID))
-
-	sources, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		IDs:    []int{parent.ID},
-		SortBy: &domain.SortBy{Field: "user_id", Order: domain.SortOrderAsc},
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
-	}
-	var children []*domain.Transaction
-	if len(sources) > 0 && len(sources[0].LinkedTransactions) > 0 {
-		lt := sources[0].LinkedTransactions
-		children = make([]*domain.Transaction, len(lt))
-		for i := range lt {
-			children[i] = &lt[i]
+	for i := range expected.LinkedTransactions {
+		if expected.LinkedTransactions[i].ID != 0 {
+			suite.Assert().Equalf(expected.LinkedTransactions[i].ID, actual.LinkedTransactions[i].ID, "expected.LinkedTransactions[%d].ID", i)
+		}
+		suite.Assert().Equalf(expected.LinkedTransactions[i].Amount, actual.LinkedTransactions[i].Amount, "expected.LinkedTransactions[%d].Amount", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].Date, actual.LinkedTransactions[i].Date, "expected.LinkedTransactions[%d].Date", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].Description, actual.LinkedTransactions[i].Description, "expected.LinkedTransactions[%d].Description", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].Type, actual.LinkedTransactions[i].Type, "expected.LinkedTransactions[%d].Type", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].OperationType, actual.LinkedTransactions[i].OperationType, "expected.LinkedTransactions[%d].OperationType", i)
+		suite.Assert().Equalf(lo.FromPtr(expected.LinkedTransactions[i].CategoryID), lo.FromPtr(actual.LinkedTransactions[i].CategoryID), "expected.LinkedTransactions[%d].CategoryID", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].Tags, actual.LinkedTransactions[i].Tags, "expected.LinkedTransactions[%d].Tags", i)
+		suite.Assert().Equalf(expected.LinkedTransactions[i].UserID, actual.LinkedTransactions[i].UserID, "expected.LinkedTransactions[%d].UserID", i)
+		suite.Assert().Equalf(lo.FromPtr(expected.LinkedTransactions[i].OriginalUserID), lo.FromPtr(actual.LinkedTransactions[i].OriginalUserID), "expected.LinkedTransactions[%d].OriginalUserID", i)
+		suite.Assert().Equalf(len(expected.LinkedTransactions[i].Tags), len(actual.LinkedTransactions[i].Tags), "len(expected.LinkedTransactions[%d].Tags)", i)
+		for j := range expected.LinkedTransactions[i].Tags {
+			if expected.LinkedTransactions[i].Tags[j].ID != 0 {
+				suite.Assert().Equalf(expected.LinkedTransactions[i].Tags[j].ID, actual.LinkedTransactions[i].Tags[j].ID, "expected.LinkedTransactions[%d].Tags[%d].ID", i, j)
+			}
+			suite.Assert().Equalf(expected.LinkedTransactions[i].Tags[j].Name, actual.LinkedTransactions[i].Tags[j].Name, "expected.LinkedTransactions[%d].Tags[%d].Name", i, j)
 		}
 	}
-	if len(children) != 2 {
-		suite.T().Fatalf("Expected 2 children, got %d", len(children))
-	}
-
-	for i, child := range children {
-		if i == 0 {
-			suite.Assert().Equal(user.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeIncome, child.Type, fmt.Sprintf("child[%d].Type should be %s", i, domain.TransactionTypeIncome))
-			suite.Assert().Equal(domain.OperationTypeCredit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeCredit))
-			suite.Assert().Equal(connection.FromAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(lo.FromPtr(parent.CategoryID), lo.FromPtr(child.CategoryID), fmt.Sprintf("child[%d].CategoryID should be %d", i, lo.FromPtr(parent.CategoryID)))
-			suite.Assert().Len(child.Tags, 1, fmt.Sprintf("child[%d].Tags should have 1 tag", i))
-			suite.Assert().Equal(tag.ID, child.Tags[0].ID, fmt.Sprintf("child[%d].Tags[0].ID should be %d", i, tag.ID))
-		} else {
-			suite.Assert().Equal(user2.ID, child.UserID, fmt.Sprintf("child[%d].UserID should be %d", i, user2.ID))
-			suite.Assert().Equal(lo.FromPtr(child.OriginalUserID), user.ID, fmt.Sprintf("child[%d].OriginalUserID should be %d", i, user.ID))
-			suite.Assert().Equal(domain.TransactionTypeExpense, child.Type, "não deve inverter o tipo da transação para o usuário compartilhado")
-			suite.Assert().Equal(domain.OperationTypeDebit, child.OperationType, fmt.Sprintf("child[%d].OperationType should be %s", i, domain.OperationTypeDebit))
-			suite.Assert().Equal(connection.ToAccountID, child.AccountID, fmt.Sprintf("child[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Nil(child.CategoryID, fmt.Sprintf("child[%d].CategoryID should be nil", i))
-			suite.Assert().Len(child.Tags, 0, fmt.Sprintf("child[%d].Tags should have 0 tags", i))
-		}
-
-		suite.Assert().Equal(int64(50), child.Amount, fmt.Sprintf("child[%d].Amount should be %d", i, 50))
-		suite.Assert().Equal(d, child.Date, fmt.Sprintf("child[%d].Date should be %s", i, d))
-		suite.Assert().Equal("Test transaction", child.Description, fmt.Sprintf("child[%d].Description should be %s", i, "Test transaction"))
-	}
-
-	updatedDate := d.AddDate(0, 0, 1)
-
-	err = suite.Services.Transaction.Update(ctx, children[0].ID, user.ID, &domain.TransactionUpdateRequest{
-		Amount:          lo.ToPtr(int64(75)),
-		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
-		CategoryID:      lo.ToPtr(category2.ID),
-		Tags:            []domain.Tag{*tag2},
-		Date:            lo.ToPtr(updatedDate),
-		Description:     lo.ToPtr("Test transaction updated"),
-	})
-	if err == nil {
-		suite.T().Fatalf("Expected error, got nil")
-	}
-
-	isExpectedError := pkgErrors.Is(err, *pkgErrors.ErrChildTransactionCannotBeUpdated)
-
-	suite.Assert().True(isExpectedError, "expected ErrChildTransactionCannotBeUpdated")
-
 }
 
 func TestTransactionUpdateWithDB(t *testing.T) {

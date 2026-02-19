@@ -15,6 +15,21 @@
         "DB_HOST": "localhost",
         "DB_PORT": "5442"
       }
+    },
+    {
+      "name": "Debug TransactionUpdate Test",
+      "type": "go",
+      "request": "launch",
+      "mode": "test",
+      "program": "${workspaceFolder}/backend/internal/service",
+      "cwd": "${workspaceFolder}/backend",
+      "args": [
+        "-test.run",
+        "TestTransactionUpdateWithDB",
+        "-testify.m",
+        "TestScenario2_OwnExpenseToOwnIncomeWithLinkedTransactions",
+        "-test.v"
+      ]
     }
   ]
 }
