@@ -208,6 +208,23 @@ func (suite *ServiceTestWithDBSuite) createAcceptedTestUserConnection(ctx contex
 	return userConnection, nil
 }
 
+func (suite *ServiceTestWithDBSuite) createManyConnections(ctx context.Context, fromUserID int, n int) ([]*domain.UserConnection, error) {
+	userConnections := make([]*domain.UserConnection, 0, n)
+	for range n {
+		user, err := suite.createTestUser(ctx)
+		if err != nil {
+			return nil, err
+		}
+		userConnection, err := suite.createAcceptedTestUserConnection(ctx, fromUserID, user.ID, 50)
+		if err != nil {
+			return nil, err
+		}
+		userConnections = append(userConnections, userConnection)
+
+	}
+	return userConnections, nil
+}
+
 // TearDownTest is called after each test method
 // It can be overridden in test suites that need cleanup
 func (suite *ServiceTestWithDBSuite) TearDownTest() {

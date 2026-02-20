@@ -83,7 +83,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			own.AccountID = *req.AccountID
 		}
 
-		if lo.FromPtr(req.CategoryID) > 0 {
+		if lo.FromPtr(req.CategoryID) > 0 && !own.Type.IsTransfer() {
 			own.CategoryID = req.CategoryID
 		}
 
@@ -398,7 +398,7 @@ func (s *transactionService) rebuildTransactions(
 					UpdatedAt:      nil,
 				})
 			}
-		} else if data.scenario.SplitHasChanged {
+		} else if data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() {
 			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
 			transactionsByUserIDMap := make(map[int]*domain.Transaction, len(data.transactions[i].LinkedTransactions))
 
@@ -450,7 +450,9 @@ func (s *transactionService) rebuildTransactions(
 				})
 			}
 
-		} else if data.scenario.TypeChangedToTransfer() {
+		}
+
+		if data.scenario.TypeChangedToTransfer() {
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
 			}
@@ -474,6 +476,7 @@ func (s *transactionService) rebuildTransactions(
 			data.transactions[i].OperationType = domain.OperationTypeDebit
 			data.transactions[i].CategoryID = nil
 			data.transactions[i].AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &data.transactions[i].AccountID))
+			data.transactions[i].Amount = baseAmount
 
 			data.transactions[i].LinkedTransactions = []domain.Transaction{
 				{
@@ -486,23 +489,17 @@ func (s *transactionService) rebuildTransactions(
 					OperationType:  domain.OperationTypeCredit,
 					AccountID:      accountID,
 					CategoryID:     nil,
-					Amount:         data.transactions[i].Amount,
+					Amount:         baseAmount,
 					Tags:           lo.Ternary(data.scenario.IsTransferToSameUser(), data.transactions[i].Tags, []domain.Tag{}),
 					CreatedAt:      nil,
 					UpdatedAt:      nil,
 				},
 			}
-		}
-
-		if data.scenario.TypeChanged() {
+		} else if data.scenario.TypeChanged() {
 			data.transactions[i].SetType(*data.req.TransactionType)
 
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactions[i].LinkedTransactions[j].SetType(*data.req.TransactionType)
-
-				if data.scenario.TypeChangedToTransfer() {
-					data.transactions[i].LinkedTransactions[j].OperationType = domain.OperationTypeCredit
-				}
 			}
 		}
 	}
