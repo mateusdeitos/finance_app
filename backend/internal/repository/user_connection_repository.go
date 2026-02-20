@@ -67,6 +67,9 @@ func (r *userConnectionRepository) Search(ctx context.Context, options domain.Us
 	if options.ConnectionStatus != "" {
 		query = query.Where("connection_status = ?", options.ConnectionStatus)
 	}
+	if options.SortBy != nil {
+		query = query.Scopes(options.SortBy.Scope())
+	}
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
 	}

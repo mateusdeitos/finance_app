@@ -45,4 +45,5 @@ type UserConnectionSearchOptions struct {
 	FromAccountIDs   []int                    `json:"from_account_ids"`
 	ToAccountIDs     []int                    `json:"to_account_ids"`
 	ConnectionStatus UserConnectionStatusEnum `json:"connection_status"`
+	SortBy           *SortBy                  `json:"sort_by"`
 }

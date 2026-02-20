@@ -13,7 +13,6 @@ type transactionUpdateData struct {
 	transactions           []*domain.Transaction
 	transactionIDsToRemove map[int]bool
 	scenario               updateChanges
-	splitConnections       []*domain.UserConnection
 }
 
 type updateScenario int

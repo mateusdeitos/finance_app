@@ -181,9 +181,10 @@ type RecurrenceSettings struct {
 }
 
 type SplitSettings struct {
-	ConnectionID int    `json:"connection_id"`
-	Percentage   *int   `json:"percentage,omitempty"`
-	Amount       *int64 `json:"amount,omitempty"`
+	ConnectionID   int `json:"connection_id"`
+	UserConnection *UserConnection
+	Percentage     *int   `json:"percentage,omitempty"`
+	Amount         *int64 `json:"amount,omitempty"`
 }
 
 type TransactionFilter struct {
