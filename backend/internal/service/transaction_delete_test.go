@@ -586,7 +586,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction in from_account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,

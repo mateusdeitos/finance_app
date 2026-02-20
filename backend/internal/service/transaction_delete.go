@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
@@ -185,8 +186,8 @@ func (s *transactionService) deleteCurrentAndFutureInstallmentsOfRecurrence(ctx 
 	transactionInstallments, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
 		RecurrenceIDs: []int{*transaction.TransactionRecurrenceID},
 		UserID:        &userID,
-		InstallmentNumber: &domain.ComparableSearch[int]{
-			GreaterThanOrEqual: transaction.InstallmentNumber,
+		StartDate: &domain.ComparableSearch[time.Time]{
+			GreaterThanOrEqual: lo.ToPtr(transaction.Date),
 		},
 	})
 	if err != nil {
