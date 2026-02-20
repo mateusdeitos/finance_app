@@ -44,6 +44,11 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return err
 	}
 
+	errs := s.createTags(ctx, userID, req.Tags)
+	if len(errs) > 0 {
+		return pkgErrors.ServiceErrors(errs)
+	}
+
 	// carrega todas transações e parcelas
 	err = s.fetchRelatedTransactions(ctx, data)
 	if err != nil {
@@ -494,6 +499,10 @@ func (s *transactionService) rebuildTransactions(
 
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactions[i].LinkedTransactions[j].SetType(*data.req.TransactionType)
+
+				if data.scenario.TypeChangedToTransfer() {
+					data.transactions[i].LinkedTransactions[j].OperationType = domain.OperationTypeCredit
+				}
 			}
 		}
 	}

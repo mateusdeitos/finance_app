@@ -10,7 +10,6 @@ import (
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type transactionRepository struct {
@@ -32,9 +31,9 @@ func (r *transactionRepository) Create(ctx context.Context, transaction *domain.
 }
 
 func (r *transactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
-	tags := lo.Map(transaction.Tags, func(tag domain.Tag, _ int) domain.Tag {
+	tags := lo.Map(transaction.Tags, func(tag domain.Tag, _ int) entity.Tag {
 		tag.UserID = transaction.UserID
-		return tag
+		return *entity.TagFromDomain(&tag)
 	})
 
 	transaction.Tags = nil
@@ -46,8 +45,22 @@ func (r *transactionRepository) Update(ctx context.Context, transaction *domain.
 		return err
 	}
 
-	for _, lt := range lts {
-		if err := GetTxFromContext(ctx, r.db).Save(&lt).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("Tags").Replace(tags); err != nil {
+		return err
+	}
+
+	for i := range lts {
+		if err := GetTxFromContext(ctx, r.db).Save(&lts[i]).Error; err != nil {
+			return err
+		}
+
+		if lts[i].UserID != transaction.UserID {
+			continue
+		}
+
+		lts[i].Tags = tags
+
+		if err := GetTxFromContext(ctx, r.db).Model(&lts[i]).Association("Tags").Replace(tags); err != nil {
 			return err
 		}
 	}
@@ -55,37 +68,6 @@ func (r *transactionRepository) Update(ctx context.Context, transaction *domain.
 	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("LinkedTransactions").Replace(lts); err != nil {
 		return err
 	}
-
-	if err := r.replaceTags(ctx, tags, ent); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.Tag, ent *entity.Transaction) error {
-	db := GetTxFromContext(ctx, r.db)
-	err := db.Model(ent).Association("Tags").Clear()
-	if err != nil {
-		return err
-	}
-
-	if len(tags) == 0 {
-		return nil
-	}
-
-	entTags := lo.Map(tags, func(tag domain.Tag, _ int) entity.Tag {
-		return *entity.TagFromDomain(&tag)
-	})
-
-	if err := db.
-		Model(&entity.Transaction{ID: ent.ID}).
-		Clauses(clause.OnConflict{DoNothing: true}).
-		Association("Tags").
-		Append(entTags); err != nil {
-		return err
-	}
-
 	return nil
 }
 
