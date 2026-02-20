@@ -55,12 +55,6 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return err
 	}
 
-	// faz um resync nas transações vinculadas de acordo com o split enviado
-	err = s.rebuildTransactions(ctx, data)
-	if err != nil {
-		return err
-	}
-
 	// atualiza/remove a recorrência de acordo com o recurrenceSettings enviado
 	err = s.handlerRecurrenceUpdate(ctx, data)
 	if err != nil {
@@ -73,7 +67,17 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return err
 	}
 
+	// faz um resync nas transações vinculadas de acordo com o split enviado
+	err = s.rebuildTransactions(ctx, data)
+	if err != nil {
+		return err
+	}
+
 	for i := range data.transactions {
+		if !s.shouldUpdateTransactionBasedOnPropagationSettings(data.transactions[i], data) {
+			continue
+		}
+
 		own := data.transactions[i]
 		if own == nil {
 			return pkgErrors.Internal(fmt.Sprintf("ownTransactions index %d not found", i), nil)
@@ -360,6 +364,10 @@ func (s *transactionService) rebuildTransactions(
 	}
 
 	for i := range data.transactions {
+		if !s.shouldUpdateTransactionBasedOnPropagationSettings(data.transactions[i], data) {
+			continue
+		}
+
 		baseAmount := data.transactions[i].Amount
 		if data.req.Amount != nil {
 			baseAmount = *data.req.Amount
@@ -505,6 +513,18 @@ func (s *transactionService) rebuildTransactions(
 	}
 
 	return nil
+}
+
+func (s *transactionService) shouldUpdateTransactionBasedOnPropagationSettings(t *domain.Transaction, data *transactionUpdateData) bool {
+	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent && t.ID != data.previousTransaction.ID {
+		return false
+	} else if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
+		t.ID != data.previousTransaction.ID &&
+		!t.Date.After(data.previousTransaction.Date) {
+		return false
+	}
+
+	return true
 }
 
 func (s *transactionService) handlerRecurrenceUpdate(
