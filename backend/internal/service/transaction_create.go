@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"time"
 
@@ -180,6 +181,10 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 
 	hasRecurrence := req.RecurrenceSettings != nil
 
+	if err := s.injectUserConnectionsOnSplitSettings(ctx, userID, req.SplitSettings); err != nil {
+		return err
+	}
+
 	// transfer ou expense = debit
 	// income = credit
 	operationType := domain.OperationTypeDebit
@@ -247,6 +252,39 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	return nil
 }
 
+func (s *transactionService) injectUserConnectionsOnSplitSettings(ctx context.Context, userID int, splitSettings []domain.SplitSettings) error {
+	if len(splitSettings) == 0 {
+		return nil
+	}
+
+	connIDs := lo.FilterMap(splitSettings, func(splitSetting domain.SplitSettings, _ int) (int, bool) {
+		return splitSetting.ConnectionID, splitSetting.ConnectionID > 0
+	})
+
+	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+		IDs: connIDs,
+		SortBy: &domain.SortBy{
+			Field: "id",
+			Order: domain.SortOrderAsc,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	slices.SortFunc(splitSettings, func(a, b domain.SplitSettings) int {
+		return a.ConnectionID - b.ConnectionID
+	})
+
+	for i := range splitSettings {
+		conn := conns[i]
+		conn.SwapIfNeeded(userID)
+		splitSettings[i].UserConnection = conn
+	}
+
+	return nil
+}
+
 func (s *transactionService) injectLinkedTransactions(
 	ctx context.Context,
 	userID int,
@@ -272,12 +310,14 @@ func (s *transactionService) injectLinkedTransactions(
 		// se a transferencia for entre usuários, sobrescreve o splitSettings com o connectionID e 100% de split para criar a transação de transferência
 		if conn != nil {
 			connectionIDs = []int{conn.ID}
+			conn.SwapIfNeeded(userID)
 
 			// seta um splitSettings 'fake' para que o restante do código funcione normalmente
 			splitSettings = []domain.SplitSettings{
 				{
-					ConnectionID: conn.ID,
-					Percentage:   lo.ToPtr(100),
+					ConnectionID:   conn.ID,
+					UserConnection: conn,
+					Percentage:     lo.ToPtr(100),
 				},
 			}
 
@@ -321,20 +361,8 @@ func (s *transactionService) injectLinkedTransactions(
 		return nil
 	}
 
-	connections, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-		IDs: connectionIDs,
-	})
-	if err != nil {
-		return err
-	}
-
-	connMapByID := lo.Reduce(connections, func(agg map[int]*domain.UserConnection, connection *domain.UserConnection, _ int) map[int]*domain.UserConnection {
-		agg[connection.ID] = connection
-		return agg
-	}, map[int]*domain.UserConnection{})
-
 	for i, splitSetting := range splitSettings {
-		connection := connMapByID[splitSetting.ConnectionID]
+		connection := splitSetting.UserConnection
 		if connection == nil {
 			return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
 		}
@@ -342,8 +370,6 @@ func (s *transactionService) injectLinkedTransactions(
 		if connection.FromUserID != userID && connection.ToUserID != userID {
 			return pkgErrors.ErrSplitSettingInvalidConnectionID(i).AddTag("user_id_not_in_connection")
 		}
-
-		connection.SwapIfNeeded(userID)
 
 		toAccountID := connection.ToAccountID
 		if req.TransactionType == domain.TransactionTypeTransfer {

@@ -40,11 +40,19 @@ func (r *transactionRepository) Update(ctx context.Context, transaction *domain.
 	transaction.Tags = nil
 
 	ent := entity.TransactionFromDomain(transaction)
+	lts := ent.LinkedTransactions
+	ent.LinkedTransactions = nil
 	if err := GetTxFromContext(ctx, r.db).Save(ent).Error; err != nil {
 		return err
 	}
 
-	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("LinkedTransactions").Replace(ent.LinkedTransactions); err != nil {
+	for _, lt := range lts {
+		if err := GetTxFromContext(ctx, r.db).Save(&lt).Error; err != nil {
+			return err
+		}
+	}
+
+	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("LinkedTransactions").Replace(lts); err != nil {
 		return err
 	}
 

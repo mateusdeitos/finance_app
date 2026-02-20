@@ -253,43 +253,42 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	}
 
 	splitHasChanged := len(data.req.SplitSettings) != len(data.previousTransaction.LinkedTransactions)
-	if !splitHasChanged {
-		userIDAccountIDMapPrevious := lo.Reduce(data.previousTransaction.LinkedTransactions, func(agg map[int]int, transaction domain.Transaction, _ int) map[int]int {
-			agg[transaction.UserID] = transaction.AccountID
-			return agg
-		}, map[int]int{})
 
-		connIDs := lo.Map(data.req.SplitSettings, func(splitSetting domain.SplitSettings, _ int) int {
-			return splitSetting.ConnectionID
-		})
-
-		conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-			IDs: connIDs,
-		})
+	if len(data.req.SplitSettings) > 0 {
+		err := s.injectUserConnectionsOnSplitSettings(ctx, data.userID, data.req.SplitSettings)
 		if err != nil {
 			return updateChanges{}, err
 		}
 
-		data.splitConnections = conns
+		// se a quantidade de splits nao mudou, pode acontecer que uma conexao existente foi removida e uma nova foi adicionada
+		if !splitHasChanged {
+			userIDAccountIDMapPrevious := lo.Reduce(data.previousTransaction.LinkedTransactions, func(agg map[int]int, transaction domain.Transaction, _ int) map[int]int {
+				agg[transaction.UserID] = transaction.AccountID
+				return agg
+			}, map[int]int{})
 
-		userIDAccountIDMapCurrent := lo.Reduce(conns, func(agg map[int]int, conn *domain.UserConnection, _ int) map[int]int {
-			conn.SwapIfNeeded(data.userID)
-			agg[conn.ToUserID] = conn.ToAccountID
-			return agg
-		}, make(map[int]int))
+			userIDAccountIDMapCurrent := make(map[int]int)
+			for _, splitSetting := range data.req.SplitSettings {
+				if splitSetting.UserConnection == nil {
+					continue
+				}
 
-		for userID, prevAccountID := range userIDAccountIDMapPrevious {
-			if currentAccountID, exist := userIDAccountIDMapCurrent[userID]; !exist || prevAccountID != currentAccountID {
-				splitHasChanged = true
-				break
+				userIDAccountIDMapCurrent[splitSetting.UserConnection.ToUserID] = splitSetting.UserConnection.ToAccountID
 			}
-		}
 
+			for userID, prevAccountID := range userIDAccountIDMapPrevious {
+				if currentAccountID, exist := userIDAccountIDMapCurrent[userID]; !exist || prevAccountID != currentAccountID {
+					splitHasChanged = true
+					break
+				}
+			}
+
+		}
 	}
 
 	return updateChanges{
 		Value:           scenario,
-		SplitHasChanged: hasSplitSettings != hadSplitSettings,
+		SplitHasChanged: splitHasChanged,
 	}, nil
 }
 
@@ -348,7 +347,8 @@ func (s *transactionService) rebuildTransactions(
 
 	var userIDAccountIDMap map[int]int
 	if data.scenario.SplitHasChanged {
-		userIDAccountIDMap = lo.Reduce(data.splitConnections, func(agg map[int]int, conn *domain.UserConnection, _ int) map[int]int {
+		userIDAccountIDMap = lo.Reduce(data.req.SplitSettings, func(agg map[int]int, splitSetting domain.SplitSettings, _ int) map[int]int {
+			conn := splitSetting.UserConnection
 			agg[conn.ToUserID] = conn.ToAccountID
 			return agg
 		}, make(map[int]int))
@@ -369,18 +369,11 @@ func (s *transactionService) rebuildTransactions(
 		} else if data.scenario.AddedSplit() {
 			for j := range data.req.SplitSettings {
 				splitSetting := data.req.SplitSettings[j]
-				if splitSetting.ConnectionID == 0 {
+				if splitSetting.UserConnection == nil {
 					return pkgErrors.ErrSplitSettingInvalidConnectionID(j)
 				}
 
-				conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
-					IDs: []int{splitSetting.ConnectionID},
-				})
-				if err != nil {
-					return err
-				}
-
-				conn.SwapIfNeeded(data.userID)
+				conn := splitSetting.UserConnection
 
 				amount := s.calculateAmount(baseAmount, splitSetting)
 
@@ -402,7 +395,7 @@ func (s *transactionService) rebuildTransactions(
 			}
 		} else if data.scenario.SplitHasChanged {
 			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
-			existingUserIDAccountIDMap := make(map[int]int, len(data.transactions[i].LinkedTransactions))
+			transactionsByUserIDMap := make(map[int]*domain.Transaction, len(data.transactions[i].LinkedTransactions))
 
 			// remove as transactions que foram removidas e atualiza as que continuam existindo
 			for j := range data.transactions[i].LinkedTransactions {
@@ -415,53 +408,43 @@ func (s *transactionService) rebuildTransactions(
 
 				linkedTransactions = append(linkedTransactions, data.transactions[i].LinkedTransactions[j])
 
-				if _, exist := existingUserIDAccountIDMap[data.transactions[i].LinkedTransactions[j].UserID]; !exist {
-					existingUserIDAccountIDMap[data.transactions[i].LinkedTransactions[j].UserID] = data.transactions[i].LinkedTransactions[j].AccountID
+				if _, exist := transactionsByUserIDMap[data.transactions[i].LinkedTransactions[j].UserID]; !exist {
+					transactionsByUserIDMap[data.transactions[i].LinkedTransactions[j].UserID] = &data.transactions[i].LinkedTransactions[j]
 				}
 			}
 
 			for _, splitSetting := range data.req.SplitSettings {
-				if splitSetting.ConnectionID == 0 {
+				if splitSetting.UserConnection == nil {
 					return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
 				}
 
-				conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
-					IDs: []int{splitSetting.ConnectionID},
-				})
-				if err != nil {
-					return err
-				}
+				conn := splitSetting.UserConnection
 
 				amount := s.calculateAmount(baseAmount, splitSetting)
 
-				_, idx, found := lo.FindIndexOf(data.transactions[i].LinkedTransactions, func(t domain.Transaction) bool {
-					return t.UserID == conn.ToUserID || t.UserID == conn.FromUserID
-				})
-				if !found {
-					conn.SwapIfNeeded(data.userID)
-
-					data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
-						ID:             0,
-						Date:           data.transactions[i].Date,
-						Description:    data.transactions[i].Description,
-						UserID:         conn.ToUserID,
-						OriginalUserID: &data.userID,
-						Type:           data.transactions[i].Type,
-						OperationType:  data.transactions[i].OperationType,
-						AccountID:      conn.ToAccountID,
-						CategoryID:     nil,
-						Amount:         amount,
-						Tags:           []domain.Tag{},
-						CreatedAt:      nil,
-						UpdatedAt:      nil,
-					})
+				t, found := transactionsByUserIDMap[conn.ToUserID]
+				if found {
+					t.Amount = amount
 					continue
 				}
 
-				data.transactions[i].LinkedTransactions[idx].Amount = amount
+				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
+					ID:             0,
+					Date:           data.transactions[i].Date,
+					Description:    data.transactions[i].Description,
+					UserID:         conn.ToUserID,
+					OriginalUserID: &data.userID,
+					Type:           data.transactions[i].Type,
+					OperationType:  data.transactions[i].OperationType,
+					AccountID:      conn.ToAccountID,
+					CategoryID:     nil,
+					Amount:         amount,
+					Tags:           []domain.Tag{},
+					CreatedAt:      nil,
+					UpdatedAt:      nil,
+				})
 			}
 
-			data.transactions[i].LinkedTransactions = linkedTransactions
 		} else if data.scenario.TypeChangedToTransfer() {
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
@@ -776,7 +759,7 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 				errs = append(errs, pkgErrors.ErrSplitSettingPercentageAndAmountCannotBeUsedTogether(i))
 			}
 
-			if splitSetting.Percentage != nil && *splitSetting.Percentage < 1 || *splitSetting.Percentage > 100 {
+			if splitSetting.Percentage != nil && (*splitSetting.Percentage < 1 || *splitSetting.Percentage > 100) {
 				errs = append(errs, pkgErrors.ErrSplitSettingPercentageMustBeBetween1And100(i))
 			}
 
