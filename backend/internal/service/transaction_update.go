@@ -406,7 +406,7 @@ func (s *transactionService) rebuildTransactions(
 					UpdatedAt:      nil,
 				})
 			}
-		} else if data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() {
+		} else if data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() && !data.scenario.RemainedTransfer() {
 			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
 			transactionsByUserIDMap := make(map[int]*domain.Transaction, len(data.transactions[i].LinkedTransactions))
 
@@ -460,9 +460,12 @@ func (s *transactionService) rebuildTransactions(
 
 		}
 
-		if data.scenario.TypeChangedToTransfer() {
-			for j := range data.transactions[i].LinkedTransactions {
-				data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+		if data.scenario.TypeChangedToTransfer() || data.scenario.RemainedTransfer() {
+			// se era expense/income e virou transfer, remove as transactions vinculadas
+			if !data.scenario.RemainedTransfer() {
+				for j := range data.transactions[i].LinkedTransactions {
+					data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+				}
 			}
 
 			userID := data.transactions[i].UserID

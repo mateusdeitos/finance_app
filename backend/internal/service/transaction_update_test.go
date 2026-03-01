@@ -1234,6 +1234,145 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 }
 
+func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	account2, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	d := now()
+
+	amount := int64(5850 * 100)
+
+	transaction := domain.TransactionCreateRequest{
+		AccountID:            account.ID,
+		TransactionType:      domain.TransactionTypeTransfer,
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		Amount:               amount,
+		Date:                 d,
+		Description:          "Test transaction",
+		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+	}
+
+	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	if len(transactions) != 1 {
+		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
+	}
+
+	t := transactions[0]
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		Amount:         amount,
+		Type:           domain.TransactionTypeTransfer,
+		OperationType:  domain.OperationTypeDebit,
+		AccountID:      account.ID,
+		Date:           d,
+		Description:    "Test transaction",
+		Tags:           []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+		UserID:         user.ID,
+		OriginalUserID: lo.ToPtr(user.ID),
+		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  amount,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
+				AccountID:               account2.ID,
+				CategoryID:              nil,
+				Date:                    d,
+				Description:             "Test transaction",
+				Tags:                    []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
+		},
+	})
+
+	expectedDate := d.AddDate(0, 0, 1)
+
+	account3, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	err = suite.Services.Transaction.Update(ctx, t.ID, user.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(int64(200)),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		AccountID:            lo.ToPtr(account2.ID),
+		DestinationAccountID: lo.ToPtr(account3.ID),
+		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
+		Date:                 lo.ToPtr(expectedDate),
+		Description:          lo.ToPtr("Test transaction updated to transfer"),
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to update transaction: %v", err)
+	}
+
+	t, err = suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{t.ID},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
+		ID:                      t.ID,
+		Amount:                  200,
+		Type:                    domain.TransactionTypeTransfer,
+		OperationType:           domain.OperationTypeDebit,
+		AccountID:               account2.ID,
+		CategoryID:              nil,
+		Date:                    expectedDate,
+		Description:             "Test transaction updated to transfer",
+		Tags:                    []domain.Tag{{Name: "Test tag 4"}},
+		UserID:                  user.ID,
+		OriginalUserID:          lo.ToPtr(user.ID),
+		TransactionRecurrenceID: nil,
+		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  200,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
+				AccountID:               account3.ID,
+				CategoryID:              nil,
+				Date:                    expectedDate,
+				Description:             "Test transaction updated to transfer",
+				Tags:                    []domain.Tag{{Name: "Test tag 4"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
+		},
+	})
+
+}
+
 func assertTransaction(suite *ServiceTestWithDBSuite, actual, expected *domain.Transaction) {
 	suite.Assert().NotNil(actual, "transaction should not be nil")
 

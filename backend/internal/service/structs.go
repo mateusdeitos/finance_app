@@ -102,6 +102,15 @@ func (tus updateChanges) TypeChanged() bool {
 	}, tus.Value)
 }
 
+func (tus updateChanges) RemainedTransfer() bool {
+	return slices.Contains([]updateScenario{
+		TRANSFER_SAME_USER_TO_SAME_USER,
+		TRANSFER_SAME_USER_TO_DIFFERENT_USER,
+		TRANSFER_DIFFERENT_USER_TO_SAME_USER,
+		TRANSFER_DIFFERENT_USER_TO_DIFFERENT_USER,
+	}, tus.Value)
+}
+
 func (tus updateChanges) TypeChangedToTransfer() bool {
 	return tus.TypeChanged() && slices.Contains([]updateScenario{
 		EXPENSE_WITHOUT_SPLIT_TO_TRANSFER_TO_SAME_USER,
@@ -125,16 +134,18 @@ func (tus updateChanges) WasTransfer() bool {
 }
 
 func (tus updateChanges) IsTransferToSameUser() bool {
-	return tus.TypeChangedToTransfer() && slices.Contains([]updateScenario{
+	return (tus.TypeChangedToTransfer() || tus.RemainedTransfer()) && slices.Contains([]updateScenario{
 		EXPENSE_WITHOUT_SPLIT_TO_TRANSFER_TO_SAME_USER,
 		EXPENSE_WITH_SPLIT_TO_TRANSFER_TO_SAME_USER,
 		INCOME_WITHOUT_SPLIT_TO_TRANSFER_TO_SAME_USER,
 		INCOME_WITH_SPLIT_TO_TRANSFER_TO_SAME_USER,
+		TRANSFER_DIFFERENT_USER_TO_SAME_USER,
+		TRANSFER_SAME_USER_TO_SAME_USER,
 	}, tus.Value)
 }
 
 func (tus updateChanges) TransferUserChanged() bool {
-	return tus.TypeChangedToTransfer() && slices.Contains([]updateScenario{
+	return (tus.TypeChangedToTransfer() || tus.RemainedTransfer()) && slices.Contains([]updateScenario{
 		TRANSFER_SAME_USER_TO_DIFFERENT_USER,
 		TRANSFER_DIFFERENT_USER_TO_SAME_USER,
 		TRANSFER_DIFFERENT_USER_TO_DIFFERENT_USER,
