@@ -125,7 +125,7 @@ func (tus updateChanges) TypeChangedToTransfer() bool {
 }
 
 func (tus updateChanges) WasTransfer() bool {
-	return tus.TypeChangedToTransfer() && slices.Contains([]updateScenario{
+	return tus.TypeChanged() && slices.Contains([]updateScenario{
 		TRANSFER_TO_EXPENSE_WITHOUT_SPLIT,
 		TRANSFER_TO_EXPENSE_WITH_SPLIT,
 		TRANSFER_TO_INCOME_WITHOUT_SPLIT,

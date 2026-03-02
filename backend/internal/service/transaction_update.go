@@ -379,7 +379,9 @@ func (s *transactionService) rebuildTransactions(
 			}
 
 			data.transactions[i].LinkedTransactions = nil
-		} else if data.scenario.AddedSplit() {
+		}
+
+		if data.scenario.AddedSplit() {
 			for j := range data.req.SplitSettings {
 				splitSetting := data.req.SplitSettings[j]
 				if splitSetting.UserConnection == nil {
