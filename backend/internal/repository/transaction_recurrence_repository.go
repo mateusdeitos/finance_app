@@ -28,7 +28,7 @@ func (r *transactionRecurrenceRepository) Create(ctx context.Context, recurrence
 
 func (r *transactionRecurrenceRepository) Update(ctx context.Context, recurrence *domain.TransactionRecurrence) error {
 	ent := entity.TransactionRecurrenceFromDomain(recurrence)
-	if err := GetTxFromContext(ctx, r.db).Save(ent).Error; err != nil {
+	if err := GetTxFromContext(ctx, r.db).Updates(ent).Error; err != nil {
 		return err
 	}
 	return nil
