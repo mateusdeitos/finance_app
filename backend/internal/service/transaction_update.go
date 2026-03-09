@@ -298,11 +298,19 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	return updateChanges{
 		Value:           scenario,
 		SplitHasChanged: splitHasChanged,
+		HadRecurrence:   data.previousTransaction.TransactionRecurrenceID != nil,
 	}, nil
 }
 
-func (s *transactionService) normalizeInstallments(ctx context.Context, data *transactionUpdateData) error {
+func (s *transactionService) normalizeInstallments(_ context.Context, data *transactionUpdateData) error {
 	if len(data.transactions) == 0 {
+		return nil
+	}
+
+	// For propagation=current with an existing recurrence, the other installments were not
+	// fetched and must not be touched — skip all normalization.
+	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent &&
+		data.scenario.HadRecurrence {
 		return nil
 	}
 
@@ -336,12 +344,24 @@ func (s *transactionService) normalizeInstallments(ctx context.Context, data *tr
 	}
 
 	if r.Installments > len(data.transactions) {
+		base := data.previousTransaction
 		for i := len(data.transactions); i < r.Installments; i++ {
-			baseDate := lo.CoalesceOrEmpty(data.req.Date, &data.transactions[0].Date)
+			baseDate := lo.CoalesceOrEmpty(data.req.Date, &base.Date)
 			data.transactions = append(data.transactions, &domain.Transaction{
-				ID:                0,
-				InstallmentNumber: lo.ToPtr(i + 1),
-				Date:              s.incrementInstallmentDate(*baseDate, r.Type, i-1),
+				ID:                      0,
+				InstallmentNumber:       lo.ToPtr(i + 1),
+				Date:                    s.incrementInstallmentDate(*baseDate, r.Type, i),
+				UserID:                  base.UserID,
+				OriginalUserID:          base.OriginalUserID,
+				Type:                    base.Type,
+				OperationType:           base.OperationType,
+				AccountID:               base.AccountID,
+				CategoryID:              base.CategoryID,
+				Amount:                  base.Amount,
+				Description:             base.Description,
+				Tags:                    base.Tags,
+				TransactionRecurrenceID: base.TransactionRecurrenceID,
+				TransactionRecurrence:   base.TransactionRecurrence,
 			})
 		}
 	}
@@ -363,6 +383,9 @@ func (s *transactionService) rebuildTransactions(
 		}, make(map[int]int))
 	}
 
+	// cache of recurrences created for new linked users during AddedSplit
+	linkedUserRecurrenceByUserID := make(map[int]*domain.TransactionRecurrence)
+
 	for i := range data.transactions {
 		if !s.shouldUpdateTransactionBasedOnPropagationSettings(data.transactions[i], data) {
 			continue
@@ -381,7 +404,8 @@ func (s *transactionService) rebuildTransactions(
 			data.transactions[i].LinkedTransactions = nil
 		}
 
-		if data.scenario.AddedSplit() {
+		isNewInstallment := data.transactions[i].ID == 0
+		if data.scenario.AddedSplit() || (isNewInstallment && len(data.req.SplitSettings) > 0) {
 			for j := range data.req.SplitSettings {
 				splitSetting := data.req.SplitSettings[j]
 				if splitSetting.UserConnection == nil {
@@ -389,10 +413,9 @@ func (s *transactionService) rebuildTransactions(
 				}
 
 				conn := splitSetting.UserConnection
-
 				amount := s.calculateAmount(baseAmount, splitSetting)
 
-				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
+				lt := domain.Transaction{
 					ID:             0,
 					Date:           data.transactions[i].Date,
 					Description:    data.transactions[i].Description,
@@ -404,9 +427,30 @@ func (s *transactionService) rebuildTransactions(
 					CategoryID:     nil,
 					Amount:         amount,
 					Tags:           []domain.Tag{},
-					CreatedAt:      nil,
-					UpdatedAt:      nil,
-				})
+					InstallmentNumber: data.transactions[i].InstallmentNumber,
+				}
+
+				// if the parent has a recurrence, create one for the linked user too
+				if data.transactions[i].TransactionRecurrenceID != nil && data.transactions[i].TransactionRecurrence != nil {
+					r, ok := linkedUserRecurrenceByUserID[conn.ToUserID]
+					if !ok {
+						parentR := data.transactions[i].TransactionRecurrence
+						created, err := s.transactionRecurRepo.Create(ctx, &domain.TransactionRecurrence{
+							UserID:       conn.ToUserID,
+							Type:         parentR.Type,
+							Installments: parentR.Installments,
+						})
+						if err != nil {
+							return err
+						}
+						linkedUserRecurrenceByUserID[conn.ToUserID] = created
+						r = created
+					}
+					lt.TransactionRecurrenceID = &r.ID
+					lt.TransactionRecurrence = r
+				}
+
+				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, lt)
 			}
 		} else if data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() && !data.scenario.RemainedTransfer() {
 			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
@@ -521,6 +565,11 @@ func (s *transactionService) rebuildTransactions(
 }
 
 func (s *transactionService) shouldUpdateTransactionBasedOnPropagationSettings(t *domain.Transaction, data *transactionUpdateData) bool {
+	// se a transação é nova, atualiza ela
+	if t.ID == 0 {
+		return true
+	}
+
 	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent && t.ID != data.previousTransaction.ID {
 		return false
 	} else if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
@@ -541,6 +590,16 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	}
 
 	if data.req.RecurrenceSettings == nil && data.previousTransaction.TransactionRecurrenceID != nil {
+		// propagation=current: only detach the current transaction from the recurrence.
+		// The recurrence record itself must be preserved because other installments still reference it.
+		if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent {
+			data.previousTransaction.TransactionRecurrenceID = nil
+			data.previousTransaction.TransactionRecurrence = nil
+			data.transactions[0].TransactionRecurrenceID = nil
+			data.transactions[0].TransactionRecurrence = nil
+			return nil
+		}
+
 		recurrenceIDs := []int{}
 		for i := range data.transactions {
 			if data.transactions[i].TransactionRecurrenceID == nil {
@@ -556,12 +615,45 @@ func (s *transactionService) handlerRecurrenceUpdate(
 
 				recurrenceIDs = append(recurrenceIDs, *data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID)
 			}
+
+			// mark all installments except the one being updated for removal
+			if data.transactions[i].ID != data.previousTransaction.ID {
+				data.transactionIDsToRemove[data.transactions[i].ID] = true
+				for j := range data.transactions[i].LinkedTransactions {
+					data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
+				}
+				data.transactions[i].LinkedTransactions = nil
+			} else {
+				// clear recurrence from the current transaction
+				data.transactions[i].TransactionRecurrenceID = nil
+				data.transactions[i].TransactionRecurrence = nil
+			}
 		}
 
-		if err := s.transactionRecurRepo.Delete(ctx, recurrenceIDs); err != nil {
-			return err
+		// keep only the current transaction in data.transactions
+		data.transactions = lo.Filter(data.transactions, func(t *domain.Transaction, _ int) bool {
+			return t.ID == data.previousTransaction.ID
+		})
+
+		// propagation=current_and_future: past installments (not fetched) still reference the recurrence
+		// record, so we must not delete it.
+		hasPastInstallments := data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
+			lo.FromPtr(data.previousTransaction.InstallmentNumber) > 1
+
+		if !hasPastInstallments {
+			if err := s.transactionRecurRepo.Delete(ctx, recurrenceIDs); err != nil {
+				return err
+			}
 		}
 
+		return nil
+	}
+
+	// For propagation=current with an existing recurrence, the recurrence is shared with
+	// other installments — we must not modify or recreate it. normalizeInstallments will
+	// also be skipped so no new stubs are created.
+	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent &&
+		data.scenario.HadRecurrence {
 		return nil
 	}
 
@@ -570,6 +662,28 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	}
 
 	date := lo.CoalesceOrEmpty(data.req.Date, &data.previousTransaction.Date)
+
+	// For propagation=current_and_future when past installments exist, the old recurrence
+	// must be shrunk to cover only the past installments, and a new recurrence must be
+	// created for the current+future batch.
+	hasPastInstallments := data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
+		lo.FromPtr(data.previousTransaction.InstallmentNumber) > 1
+
+	if hasPastInstallments && data.previousTransaction.TransactionRecurrenceID != nil {
+		oldRecurrence := data.previousTransaction.TransactionRecurrence
+		oldRecurrence.Installments = lo.FromPtr(data.previousTransaction.InstallmentNumber) - 1
+		if err := s.transactionRecurRepo.Update(ctx, oldRecurrence); err != nil {
+			return err
+		}
+
+		// Clear recurrenceID so upsertRecurrence creates a fresh recurrence for this batch
+		for i := range data.transactions {
+			data.transactions[i].TransactionRecurrenceID = nil
+			for j := range data.transactions[i].LinkedTransactions {
+				data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID = nil
+			}
+		}
+	}
 
 	recurrenceByUserID := make(map[int]domain.TransactionRecurrence)
 

@@ -20,6 +20,7 @@ type updateScenario int
 type updateChanges struct {
 	Value           updateScenario
 	SplitHasChanged bool
+	HadRecurrence   bool // whether the transaction originally had a recurrence before any mutations
 }
 
 func UpdateNotChangedType() updateChanges {
