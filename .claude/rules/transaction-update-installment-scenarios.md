@@ -1,3 +1,9 @@
+---
+paths:
+  - "backend/internal/service/transaction_update*.go"
+  - "backend/internal/service/transaction_update*_test.go"
+---
+
 # Transaction Update — Installment & Split Scenarios
 
 Specification for integration tests covering `TransactionService.Update` when
