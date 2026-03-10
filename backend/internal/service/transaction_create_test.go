@@ -79,6 +79,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
+
+	transactionsWithSettlements, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user.ID,
+		WithSettlements: true,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transactions with settlements: %v", err)
+	}
+	suite.Assert().Len(transactionsWithSettlements[0].SettlementsFromSource, 0)
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
@@ -145,6 +154,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 
 	suite.Assert().Nil(transactions[0].TransactionRecurrenceID)
 	suite.Assert().Nil(transactions[0].InstallmentNumber)
+
+	transactionsWithSettlements, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user.ID,
+		WithSettlements: true,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transactions with settlements: %v", err)
+	}
+	suite.Assert().Len(transactionsWithSettlements[0].SettlementsFromSource, 0)
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
@@ -215,6 +233,17 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 
 	suite.Assert().Equal(user.ID, transactions[0].LinkedTransactions[0].UserID, "transactions[0].LinkedTransactions[0].UserID should be equal to user.ID")
 	suite.Assert().Equal(user.ID, lo.FromPtr(transactions[0].LinkedTransactions[0].OriginalUserID), "transactions[0].LinkedTransactions[0].OriginalUserID should be equal to user.ID")
+
+	transactionsWithSettlements, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user.ID,
+		WithSettlements: true,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transactions with settlements: %v", err)
+	}
+	for _, t := range transactionsWithSettlements {
+		suite.Assert().Len(t.SettlementsFromSource, 0, "transfer should have no settlements")
+	}
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
@@ -434,6 +463,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 0", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
+	}
+
+	allTransactionsWithSettlements, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		WithSettlements: true,
+		IDs: append(
+			lo.Map(transactionsUser1, func(t *domain.Transaction, _ int) int { return t.ID }),
+			lo.Map(transactionsUser2, func(t *domain.Transaction, _ int) int { return t.ID })...,
+		),
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transactions with settlements: %v", err)
+	}
+	for _, t := range allTransactionsWithSettlements {
+		suite.Assert().Len(t.SettlementsFromSource, 0, "cross-user transfer should have no settlements")
 	}
 }
 
@@ -955,7 +998,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	}
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user1.ID,
+		UserID:          &user1.ID,
+		WithSettlements: true,
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -985,6 +1029,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(domain.TransactionTypeExpense, transactionsUser1[0].LinkedTransactions[0].Type)
 	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[0].UserID)
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[0].OriginalUserID))
+
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
+	settlement := transactionsUser1[0].SettlementsFromSource[0]
+	suite.Assert().Equal(user1.ID, settlement.UserID)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
+	suite.Assert().Equal(int64(amount/2), settlement.Amount)
+	suite.Assert().Equal(account.ID, settlement.AccountID)
+	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
+	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -1083,7 +1136,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 
 	// User2 (criador) não tem transação na própria conta
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user2.ID,
+		UserID:          &user2.ID,
+		WithSettlements: true,
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -1100,6 +1154,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(domain.TransactionTypeExpense, transactionsUser2[0].Type)
 	suite.Assert().Equal(user2.ID, transactionsUser2[0].UserID)
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
+
+	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 1)
+	settlement := transactionsUser2[0].SettlementsFromSource[0]
+	suite.Assert().Equal(user2.ID, settlement.UserID)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
+	suite.Assert().Equal(int64(amount/2), settlement.Amount)
+	suite.Assert().Equal(account.ID, settlement.AccountID)
+	suite.Assert().Equal(transactionsUser2[0].ID, settlement.SourceTransactionID)
+	suite.Assert().Equal(transactionsUser1[0].ID, settlement.ParentTransactionID)
 }
 
 func now() time.Time {

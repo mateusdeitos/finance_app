@@ -247,6 +247,35 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		transactions[i].ID = t.ID
 		transactions[i].CreatedAt = t.CreatedAt
 		transactions[i].UpdatedAt = t.UpdatedAt
+
+		if req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
+			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType) error {
+	settlementType := domain.SettlementTypeCredit
+	if transactionType == domain.TransactionTypeIncome {
+		settlementType = domain.SettlementTypeDebit
+	}
+
+	for _, lt := range authorTransaction.LinkedTransactions {
+		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
+			UserID:              userID,
+			Amount:              lt.Amount,
+			Type:                settlementType,
+			AccountID:           authorTransaction.AccountID,
+			SourceTransactionID: authorTransaction.ID,
+			ParentTransactionID: lt.ID,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

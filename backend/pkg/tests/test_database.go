@@ -38,8 +38,13 @@ func NewTestDatabase(ctx context.Context) (*TestDatabase, error) {
 		return nil, err
 	}
 
+	logLevel := logger.Silent
+	if os.Getenv("TEST_DB_LOG_LEVEL") == "info" {
+		logLevel = logger.Info
+	}
+
 	db, err := gorm.Open(gormPostgres.Open(connStr), &gorm.Config{
-		Logger:         logger.Default.LogMode(logger.Info),
+		Logger:         logger.Default.LogMode(logLevel),
 		TranslateError: true,
 	})
 	if err != nil {

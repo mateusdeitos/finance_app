@@ -30,6 +30,7 @@ type Transaction struct {
 	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
 	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id"`
 	LinkedTransactions      []Transaction          `gorm:"many2many:linked_transactions;joinForeignKey:transaction_id;joinReferences:linked_transaction_id"`
+	SettlementsFromSource   []Settlement           `gorm:"foreignKey:SourceTransactionID;<-:false"`
 }
 
 func (Transaction) BeforeCreate(tx *gorm.DB) error {
@@ -62,6 +63,10 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		})
 	}
 
+	settlementsFromSource := lo.Map(t.SettlementsFromSource, func(s Settlement, _ int) domain.Settlement {
+		return *s.ToDomain()
+	})
+
 	trans := &domain.Transaction{
 		ID:                      t.ID,
 		TransactionRecurrenceID: t.TransactionRecurrenceID,
@@ -77,6 +82,7 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		Description:             t.Description,
 		TransactionRecurrence:   transactionRecurrence,
 		LinkedTransactions:      linkedTransactions,
+		SettlementsFromSource:   settlementsFromSource,
 		Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
 			return *tag.ToDomain()
 		}),

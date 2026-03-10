@@ -90,6 +90,10 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("Tags").Preload("LinkedTransactions.Tags")
 
+	if filter.WithSettlements {
+		query = query.Preload("SettlementsFromSource")
+	}
+
 	if filter.UserID != nil {
 		query = query.Where("user_id = ?", *filter.UserID)
 

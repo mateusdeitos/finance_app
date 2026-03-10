@@ -88,6 +88,7 @@ type Transaction struct {
 	Tags                    []Tag                  `json:"tags,omitempty"`
 	LinkedTransactions      []Transaction          `json:"linked_transactions,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
+	SettlementsFromSource   []Settlement           `json:"settlements_from_source,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
 	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
@@ -203,6 +204,7 @@ type TransactionFilter struct {
 	SortBy            *SortBy                      `query:"sort_by,omitempty"`
 	Limit             *int                         `query:"limit,omitempty"`
 	Offset            *int                         `query:"offset,omitempty"`
+	WithSettlements   bool                         `query:"with_settlements,omitempty"`
 }
 
 type TextSearch struct {
