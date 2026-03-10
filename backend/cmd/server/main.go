@@ -53,15 +53,17 @@ func main() {
 		Tag:                   repository.NewTagRepository(db),
 		Transaction:           repository.NewTransactionRepository(db),
 		TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
+		Settlement:            repository.NewSettlementRepository(db),
 		// 	UserSettings:          repository.NewUserSettingsRepository(db),
 	}
 
 	// Initialize services
 	services := &service.Services{
-		Auth:     service.NewAuthService(repos, cfg),
-		Account:  service.NewAccountService(repos),
-		Category: service.NewCategoryService(repos),
-		Tag:      service.NewTagService(repos),
+		Auth:       service.NewAuthService(repos, cfg),
+		Account:    service.NewAccountService(repos),
+		Category:   service.NewCategoryService(repos),
+		Tag:        service.NewTagService(repos),
+		Settlement: service.NewSettlementService(repos),
 	}
 
 	services.UserConnection = service.NewUserConnectionService(repos, services)

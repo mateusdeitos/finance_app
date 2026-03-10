@@ -50,6 +50,14 @@ type UserConnectionService interface {
 	SearchOne(ctx context.Context, options domain.UserConnectionSearchOptions) (*domain.UserConnection, error)
 }
 
+type SettlementService interface {
+	Search(ctx context.Context, filter domain.SettlementFilter) ([]*domain.Settlement, error)
+	SearchOne(ctx context.Context, filter domain.SettlementFilter) (*domain.Settlement, error)
+	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
+	Update(ctx context.Context, settlement *domain.Settlement) error
+	Delete(ctx context.Context, ids []int) error
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
@@ -58,4 +66,5 @@ type Services struct {
 	Tag            TagService
 	Transaction    TransactionService
 	UserConnection UserConnectionService
+	Settlement     SettlementService
 }

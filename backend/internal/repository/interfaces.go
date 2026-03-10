@@ -80,6 +80,13 @@ type UserSettingsRepository interface {
 	CreateOrUpdate(ctx context.Context, settings *domain.UserSettings) error
 }
 
+type SettlementRepository interface {
+	Search(ctx context.Context, filter domain.SettlementFilter) ([]*domain.Settlement, error)
+	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
+	Update(ctx context.Context, settlement *domain.Settlement) error
+	Delete(ctx context.Context, ids []int) error
+}
+
 // Repositories contains all repository interfaces
 type Repositories struct {
 	DBTransaction         DBTransaction
@@ -92,4 +99,5 @@ type Repositories struct {
 	TransactionRecurrence TransactionRecurrenceRepository
 	UserSettings          UserSettingsRepository
 	UserConnection        UserConnectionRepository
+	Settlement            SettlementRepository
 }
