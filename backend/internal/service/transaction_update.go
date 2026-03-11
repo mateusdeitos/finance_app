@@ -119,14 +119,33 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 
 		if own.ID == 0 {
-			if _, err := s.transactionRepo.Create(ctx, own); err != nil {
+			created, err := s.transactionRepo.Create(ctx, own)
+			if err != nil {
 				return err
 			}
+			own.ID = created.ID
+			own.LinkedTransactions = created.LinkedTransactions
 
 		} else {
 			if err := s.transactionRepo.Update(ctx, own); err != nil {
 				return err
 			}
+			// Re-fetch linked transactions if any were newly created (ID=0) during
+			// this update so that syncSettlementsForTransaction gets valid IDs.
+			hasNewLinkedTx := lo.ContainsBy(own.LinkedTransactions, func(lt domain.Transaction) bool {
+				return lt.ID == 0
+			})
+			if hasNewLinkedTx {
+				fetched, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{own.ID}})
+				if err != nil {
+					return err
+				}
+				own.LinkedTransactions = fetched.LinkedTransactions
+			}
+		}
+
+		if err := s.syncSettlementsForTransaction(ctx, data.userID, own); err != nil {
+			return err
 		}
 
 	}
@@ -558,6 +577,64 @@ func (s *transactionService) rebuildTransactions(
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactions[i].LinkedTransactions[j].SetType(*data.req.TransactionType)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, own *domain.Transaction) error {
+	if own.Type.IsTransfer() || len(own.LinkedTransactions) == 0 {
+		existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
+			SourceTransactionIDs: []int{own.ID},
+		})
+		if err != nil {
+			return err
+		}
+		if len(existing) > 0 {
+			ids := make([]int, len(existing))
+			for i, s := range existing {
+				ids[i] = s.ID
+			}
+			if err := s.services.Settlement.Delete(ctx, ids); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	settlementType := domain.SettlementTypeCredit
+	if own.Type == domain.TransactionTypeIncome {
+		settlementType = domain.SettlementTypeDebit
+	}
+
+	existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{own.ID},
+	})
+	if err != nil {
+		return err
+	}
+	if len(existing) > 0 {
+		ids := make([]int, len(existing))
+		for i, s := range existing {
+			ids[i] = s.ID
+		}
+		if err := s.services.Settlement.Delete(ctx, ids); err != nil {
+			return err
+		}
+	}
+
+	for _, lt := range own.LinkedTransactions {
+		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
+			UserID:              userID,
+			Amount:              lt.Amount,
+			Type:                settlementType,
+			AccountID:           own.AccountID,
+			SourceTransactionID: own.ID,
+			ParentTransactionID: lt.ID,
+		})
+		if err != nil {
+			return err
 		}
 	}
 

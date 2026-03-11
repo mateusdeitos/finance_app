@@ -3100,6 +3100,471 @@ func assertTransaction(suite *ServiceTestWithDBSuite, actual, expected *domain.T
 	}
 }
 
+// ─── Settlement sync tests ───────────────────────────────────────────────────
+
+func (suite *TransactionUpdateWithDBTestSuite) settlementsForSource(ctx context.Context, sourceTransactionID int) []*domain.Settlement {
+	suite.T().Helper()
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{sourceTransactionID},
+	})
+	suite.Require().NoError(err)
+	return settlements
+}
+
+// 2.1 Amount change: adding a split with explicit amount syncs that amount into the settlement
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	// Create without split
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            d,
+		Description:     "test",
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, t.ID))
+
+	// Add split with explicit amount=80
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Amount: lo.ToPtr(int64(80))}},
+	}))
+
+	settlements := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(settlements, 1)
+	suite.Assert().Equal(int64(80), settlements[0].Amount)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlements[0].Type)
+	suite.Assert().Equal(accountA.ID, settlements[0].AccountID)
+	suite.Assert().Equal(userA.ID, settlements[0].UserID)
+}
+
+// 2.2 Type change expense→income flips credit→debit
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToIncome() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+
+	// verify initial credit settlement
+	before := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(before, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, before[0].Type)
+
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	after := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(domain.SettlementTypeDebit, after[0].Type)
+}
+
+// 2.3 Type change income→expense flips debit→credit (round-trip via expense→income→expense)
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToExpense() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	// Create expense with split → credit settlement
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+
+	// Update: expense→income → debit settlement
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+	mid := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(mid, 1)
+	suite.Assert().Equal(domain.SettlementTypeDebit, mid[0].Type)
+
+	// Update: income→expense → credit settlement
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	after := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, after[0].Type)
+}
+
+// 2.4 Added split (no split → with split) creates settlement
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AddSplit() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, t.ID))
+
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	after := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, after[0].Type)
+	suite.Assert().Equal(int64(50), after[0].Amount)
+}
+
+// 2.5 Removed split (with split → no split) deletes settlement via cascade
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 1)
+
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		// no SplitSettings → removes split
+	}))
+
+	suite.Assert().Empty(suite.settlementsForSource(ctx, t.ID))
+}
+
+// 2.6 Account change updates settlement account_id
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	accountA2, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	suite.Require().NoError(err)
+
+	before := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(before, 1)
+	suite.Assert().Equal(accountA.ID, before[0].AccountID)
+
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
+		AccountID:     lo.ToPtr(accountA2.ID),
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	after := suite.settlementsForSource(ctx, t.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(accountA2.ID, after[0].AccountID)
+}
+
+// 2.7 Propagation=current only updates current installment's settlement
+// Uses type change (expense→income flips credit→debit) since type changes apply without SplitHasChanged.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCurrent() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(3),
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installments, 3)
+
+	// Change only installment 2 type expense→income (propagation=current)
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, installments[1].ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
+		SplitSettings:       []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	// installment 1: unchanged → credit
+	s1 := suite.settlementsForSource(ctx, installments[0].ID)
+	suite.Require().Len(s1, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, s1[0].Type)
+
+	// installment 2: flipped → debit
+	s2 := suite.settlementsForSource(ctx, installments[1].ID)
+	suite.Require().Len(s2, 1)
+	suite.Assert().Equal(domain.SettlementTypeDebit, s2[0].Type)
+
+	// installment 3: unchanged → credit
+	s3 := suite.settlementsForSource(ctx, installments[2].ID)
+	suite.Require().Len(s3, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, s3[0].Type)
+}
+
+// 2.8 Propagation=current_and_future updates current+future installments' settlements
+// Uses type change (expense→income flips credit→debit) since type changes apply without SplitHasChanged.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCurrentAndFuture() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(3),
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installments, 3)
+
+	// Change installment 2+ type expense→income (propagation=current_and_future)
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, installments[1].ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
+		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(2),
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	// installment 1 (past): unchanged → credit
+	s1 := suite.settlementsForSource(ctx, installments[0].ID)
+	suite.Require().Len(s1, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, s1[0].Type)
+
+	// installments 2 and 3 (current+future): flipped → debit
+	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	updatedInstallments := make([]*domain.Transaction, 0)
+	for _, t := range installmentsAfter {
+		if t.ID != installments[0].ID {
+			updatedInstallments = append(updatedInstallments, t)
+		}
+	}
+	suite.Require().Len(updatedInstallments, 2)
+	for _, t := range updatedInstallments {
+		s := suite.settlementsForSource(ctx, t.ID)
+		suite.Require().Len(s, 1, "installment %d should have 1 settlement", t.ID)
+		suite.Assert().Equal(domain.SettlementTypeDebit, s[0].Type, "installment %d settlement should be debit", t.ID)
+	}
+}
+
+// 2.9 Propagation=all updates all installments' settlements
+// Uses type change (expense→income flips all 3 settlements from credit→debit).
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(3),
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installments, 3)
+
+	// All 3 should start as credit
+	for _, t := range installments {
+		s := suite.settlementsForSource(ctx, t.ID)
+		suite.Require().Len(s, 1)
+		suite.Assert().Equal(domain.SettlementTypeCredit, s[0].Type)
+	}
+
+	// Change type to income for all installments (propagation=all)
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, installments[0].ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(3),
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installmentsAfter, 3)
+
+	for _, t := range installmentsAfter {
+		s := suite.settlementsForSource(ctx, t.ID)
+		suite.Require().Len(s, 1, "installment %d should have 1 settlement", t.ID)
+		suite.Assert().Equal(domain.SettlementTypeDebit, s[0].Type, "installment %d settlement should be debit after type change to income", t.ID)
+	}
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
