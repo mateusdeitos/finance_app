@@ -50,12 +50,12 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	err = h.transactionService.Update(c.Request().Context(), userID, id, &transaction)
+	err = h.transactionService.Update(c.Request().Context(), id, userID, &transaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return pkgErrors.ToHTTPError(err)
 	}
 
-	return c.NoContent(http.StatusCreated)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *TransactionHandler) Search(c echo.Context) error {

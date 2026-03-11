@@ -59,6 +59,7 @@ type ServiceTestWithDBSuite struct {
 	TransactionRecurrenceRepository repository.TransactionRecurrenceRepository
 	UserSettingsRepository          repository.UserSettingsRepository
 	UserConnectionRepository        repository.UserConnectionRepository
+	SettlementRepository            repository.SettlementRepository
 }
 
 var initDb sync.Once
@@ -96,6 +97,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.TransactionRecurrenceRepository = repository.NewTransactionRecurrenceRepository(suite.DB)
 	suite.UserSettingsRepository = repository.NewUserSettingsRepository(suite.DB)
 	suite.UserConnectionRepository = repository.NewUserConnectionRepository(suite.DB)
+	suite.SettlementRepository = repository.NewSettlementRepository(suite.DB)
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -109,6 +111,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		TransactionRecurrence: suite.TransactionRecurrenceRepository,
 		UserSettings:          suite.UserSettingsRepository,
 		UserConnection:        suite.UserConnectionRepository,
+		Settlement:            suite.SettlementRepository,
 	}
 
 	// Create test config for AuthService
@@ -124,13 +127,15 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	accountService := NewAccountService(suite.Repos)
 	categoryService := NewCategoryService(suite.Repos)
 	tagService := NewTagService(suite.Repos)
+	settlementService := NewSettlementService(suite.Repos)
 
 	// Create Services struct with the services created so far
 	suite.Services = &Services{
-		Auth:     authService,
-		Account:  accountService,
-		Category: categoryService,
-		Tag:      tagService,
+		Auth:       authService,
+		Account:    accountService,
+		Category:   categoryService,
+		Tag:        tagService,
+		Settlement: settlementService,
 	}
 
 	// Create services that depend on the Services struct
@@ -206,6 +211,23 @@ func (suite *ServiceTestWithDBSuite) createAcceptedTestUserConnection(ctx contex
 	assert.Equal(suite.T(), domain.UserConnectionStatusAccepted, userConnection.ConnectionStatus)
 
 	return userConnection, nil
+}
+
+func (suite *ServiceTestWithDBSuite) createManyConnections(ctx context.Context, fromUserID int, n int) ([]*domain.UserConnection, error) {
+	userConnections := make([]*domain.UserConnection, 0, n)
+	for range n {
+		user, err := suite.createTestUser(ctx)
+		if err != nil {
+			return nil, err
+		}
+		userConnection, err := suite.createAcceptedTestUserConnection(ctx, fromUserID, user.ID, 50)
+		if err != nil {
+			return nil, err
+		}
+		userConnections = append(userConnections, userConnection)
+
+	}
+	return userConnections, nil
 }
 
 // TearDownTest is called after each test method

@@ -190,6 +190,65 @@ func (_c *MockUserConnectionService_Search_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// SearchOne provides a mock function with given fields: ctx, options
+func (_m *MockUserConnectionService) SearchOne(ctx context.Context, options domain.UserConnectionSearchOptions) (*domain.UserConnection, error) {
+	ret := _m.Called(ctx, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchOne")
+	}
+
+	var r0 *domain.UserConnection
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.UserConnectionSearchOptions) (*domain.UserConnection, error)); ok {
+		return rf(ctx, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.UserConnectionSearchOptions) *domain.UserConnection); ok {
+		r0 = rf(ctx, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.UserConnection)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.UserConnectionSearchOptions) error); ok {
+		r1 = rf(ctx, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserConnectionService_SearchOne_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchOne'
+type MockUserConnectionService_SearchOne_Call struct {
+	*mock.Call
+}
+
+// SearchOne is a helper method to define mock.On call
+//   - ctx context.Context
+//   - options domain.UserConnectionSearchOptions
+func (_e *MockUserConnectionService_Expecter) SearchOne(ctx interface{}, options interface{}) *MockUserConnectionService_SearchOne_Call {
+	return &MockUserConnectionService_SearchOne_Call{Call: _e.mock.On("SearchOne", ctx, options)}
+}
+
+func (_c *MockUserConnectionService_SearchOne_Call) Run(run func(ctx context.Context, options domain.UserConnectionSearchOptions)) *MockUserConnectionService_SearchOne_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.UserConnectionSearchOptions))
+	})
+	return _c
+}
+
+func (_c *MockUserConnectionService_SearchOne_Call) Return(_a0 *domain.UserConnection, _a1 error) *MockUserConnectionService_SearchOne_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserConnectionService_SearchOne_Call) RunAndReturn(run func(context.Context, domain.UserConnectionSearchOptions) (*domain.UserConnection, error)) *MockUserConnectionService_SearchOne_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateStatus provides a mock function with given fields: ctx, userID, id, status
 func (_m *MockUserConnectionService) UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error {
 	ret := _m.Called(ctx, userID, id, status)

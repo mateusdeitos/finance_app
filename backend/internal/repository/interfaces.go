@@ -65,10 +65,12 @@ type TransactionRepository interface {
 	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
+	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
 }
 
 type TransactionRecurrenceRepository interface {
 	Create(ctx context.Context, recurrence *domain.TransactionRecurrence) (*domain.TransactionRecurrence, error)
+	Update(ctx context.Context, recurrence *domain.TransactionRecurrence) error
 	Delete(ctx context.Context, ids []int) error
 	Search(ctx context.Context, filter domain.TransactionRecurrenceFilter) ([]*domain.TransactionRecurrence, error)
 }
@@ -76,6 +78,13 @@ type TransactionRecurrenceRepository interface {
 type UserSettingsRepository interface {
 	GetByUserID(ctx context.Context, userID int) (*domain.UserSettings, error)
 	CreateOrUpdate(ctx context.Context, settings *domain.UserSettings) error
+}
+
+type SettlementRepository interface {
+	Search(ctx context.Context, filter domain.SettlementFilter) ([]*domain.Settlement, error)
+	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
+	Update(ctx context.Context, settlement *domain.Settlement) error
+	Delete(ctx context.Context, ids []int) error
 }
 
 // Repositories contains all repository interfaces
@@ -90,4 +99,5 @@ type Repositories struct {
 	TransactionRecurrence TransactionRecurrenceRepository
 	UserSettings          UserSettingsRepository
 	UserConnection        UserConnectionRepository
+	Settlement            SettlementRepository
 }

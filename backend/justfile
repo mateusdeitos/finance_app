@@ -1,0 +1,87 @@
+# Use dotenv-load if you want to load .env automatically
+set dotenv-load := true
+
+# Show this help message
+help:
+	@echo 'Usage: just [recipe]'
+	@echo ''
+	@echo 'Available recipes:'
+	@just --list
+
+# Build the application
+build:
+	go build -o bin/server ./cmd/server
+
+# Run the application
+run:
+	go run cmd/server/main.go
+
+# Run all tests
+test:
+	go test ./...
+
+# Run unit tests only
+test-unit:
+	go test -short ./...
+
+# Run integration tests
+test-integration:
+	go test -tags=integration ./...
+
+# Run database migrations up
+migrate-up:
+	if [ -z "${DB_DSN?Error: DB_DSN environment variable is required}" ]; then \
+		echo "Example: just migrate-up DB_DSN='postgres://user:pass@localhost/dbname?sslmode=disable'"; \
+		exit 1; \
+	fi
+	goose -dir migrations postgres "${DB_DSN}" up
+
+# Run database migrations down
+migrate-down:
+	if [ -z "${DB_DSN?Error: DB_DSN environment variable is required}" ]; then \
+		echo "Example: just migrate-down DB_DSN='postgres://user:pass@localhost/dbname?sslmode=disable'"; \
+		exit 1; \
+	fi
+	goose -dir migrations postgres "${DB_DSN}" down
+
+# Create a new database migration as .sql
+migrate-create name:
+	goose -dir migrations create {{name}} sql
+
+# Start docker containers
+docker-up:
+	docker compose up -d
+
+# Stop docker containers
+docker-down:
+	docker compose down
+
+# Build docker image
+docker-build:
+	docker build -f docker/Dockerfile -t finance-app-backend:latest .
+
+# Show docker logs
+docker-logs:
+	docker compose logs -f
+
+# Generate mocks using mockery
+generate-mocks:
+	if ! command -v mockery > /dev/null; then \
+		echo "Installing mockery..."; \
+		go install github.com/vektra/mockery/v2@latest; \
+	fi
+	echo "Generating mocks..."
+	mockery || (echo "Error generating mocks. Try running: go mod tidy && go mod download" && exit 1)
+
+# Clean build artifacts
+clean:
+	rm -rf bin/ mocks/
+	go clean
+
+# Start docker containers for database
+up-db:
+	docker compose up -d postgres
+
+# Start docker containers for server
+up-server:
+	docker compose up backend

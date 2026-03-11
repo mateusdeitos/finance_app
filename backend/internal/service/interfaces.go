@@ -22,6 +22,7 @@ type AccountService interface {
 	Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error)
 	GetByID(ctx context.Context, userID, id int) (*domain.Account, error)
 	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
+	SearchOne(ctx context.Context, options domain.AccountSearchOptions) (*domain.Account, error)
 	Update(ctx context.Context, userID int, account *domain.Account) error
 	Delete(ctx context.Context, userID, id int) error
 }
@@ -46,6 +47,15 @@ type UserConnectionService interface {
 	UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error
 	Delete(ctx context.Context, userID, id int) error
 	Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error)
+	SearchOne(ctx context.Context, options domain.UserConnectionSearchOptions) (*domain.UserConnection, error)
+}
+
+type SettlementService interface {
+	Search(ctx context.Context, filter domain.SettlementFilter) ([]*domain.Settlement, error)
+	SearchOne(ctx context.Context, filter domain.SettlementFilter) (*domain.Settlement, error)
+	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
+	Update(ctx context.Context, settlement *domain.Settlement) error
+	Delete(ctx context.Context, ids []int) error
 }
 
 // Services contains all service interfaces
@@ -56,4 +66,5 @@ type Services struct {
 	Tag            TagService
 	Transaction    TransactionService
 	UserConnection UserConnectionService
+	Settlement     SettlementService
 }

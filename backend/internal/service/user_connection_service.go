@@ -7,6 +7,7 @@ import (
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
 	apperrors "github.com/finance_app/backend/pkg/errors"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -132,4 +133,19 @@ func (s *userConnectionService) Delete(ctx context.Context, userID, id int) erro
 
 func (s *userConnectionService) Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error) {
 	return s.userConnectionRepo.Search(ctx, options)
+}
+
+func (s *userConnectionService) SearchOne(ctx context.Context, options domain.UserConnectionSearchOptions) (*domain.UserConnection, error) {
+	options.Limit = 1
+	options.Offset = 0
+
+	conns, err := s.userConnectionRepo.Search(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(conns) == 0 {
+		return nil, pkgErrors.NotFound("user connection")
+	}
+	return conns[0], nil
 }

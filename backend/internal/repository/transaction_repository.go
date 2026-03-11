@@ -31,42 +31,43 @@ func (r *transactionRepository) Create(ctx context.Context, transaction *domain.
 }
 
 func (r *transactionRepository) Update(ctx context.Context, transaction *domain.Transaction) error {
+	tags := lo.Map(transaction.Tags, func(tag domain.Tag, _ int) entity.Tag {
+		tag.UserID = transaction.UserID
+		return *entity.TagFromDomain(&tag)
+	})
+
+	transaction.Tags = nil
+
 	ent := entity.TransactionFromDomain(transaction)
+	lts := ent.LinkedTransactions
+	ent.LinkedTransactions = nil
 	if err := GetTxFromContext(ctx, r.db).Save(ent).Error; err != nil {
 		return err
 	}
 
-	if err := r.replaceTags(ctx, transaction.Tags, ent); err != nil {
+	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("Tags").Replace(tags); err != nil {
 		return err
 	}
 
-	return nil
-}
+	for i := range lts {
+		if err := GetTxFromContext(ctx, r.db).Save(&lts[i]).Error; err != nil {
+			return err
+		}
 
-func (r *transactionRepository) replaceTags(ctx context.Context, tags []domain.Tag, ent *entity.Transaction) error {
-	db := GetTxFromContext(ctx, r.db)
-	err := db.Model(ent).Association("Tags").Clear()
-	if err != nil {
+		if lts[i].UserID != transaction.UserID {
+			continue
+		}
+
+		lts[i].Tags = tags
+
+		if err := GetTxFromContext(ctx, r.db).Model(&lts[i]).Association("Tags").Replace(tags); err != nil {
+			return err
+		}
+	}
+
+	if err := GetTxFromContext(ctx, r.db).Model(ent).Association("LinkedTransactions").Replace(lts); err != nil {
 		return err
 	}
-
-	if len(tags) == 0 {
-		return nil
-	}
-
-	tagIDs := lo.Map(tags, func(tag domain.Tag, _ int) int {
-		return tag.ID
-	})
-
-	var entTags []entity.Tag
-	if err := db.Where("id IN ?", tagIDs).Find(&entTags).Error; err != nil {
-		return err
-	}
-
-	if err := db.Model(&entity.Transaction{ID: ent.ID}).Association("Tags").Append(entTags); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -87,10 +88,24 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	var ents []entity.Transaction
 	query := GetTxFromContext(ctx, r.db)
 
-	query = query.Preload("TransactionRecurrence").Preload("Tags")
+	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("Tags").Preload("LinkedTransactions.Tags")
+
+	if filter.WithSettlements {
+		query = query.Preload("SettlementsFromSource")
+	}
 
 	if filter.UserID != nil {
 		query = query.Where("user_id = ?", *filter.UserID)
+
+		query = query.Where(`
+		NOT EXISTS (
+			SELECT 1
+			  FROM linked_transactions
+			 WHERE linked_transaction_id = transactions.id
+			   AND transactions.original_user_id = transactions.user_id
+		)
+		`)
+
 	}
 
 	if len(filter.IDs) > 0 {
@@ -124,10 +139,6 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if len(filter.RecurrenceIDs) > 0 {
 		query = query.Where("transaction_recurrence_id IN ?", filter.RecurrenceIDs)
-	}
-
-	if len(filter.ParentIDs) > 0 {
-		query = query.Where("parent_id IN ?", filter.ParentIDs)
 	}
 
 	if filter.InstallmentNumber != nil {
@@ -181,6 +192,14 @@ func (r *transactionRepository) Delete(ctx context.Context, ids []int) error {
 	}
 
 	return nil
+}
+
+func (r *transactionRepository) GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error) {
+	var ids []int
+	err := GetTxFromContext(ctx, r.db).Table("linked_transactions").
+		Where("linked_transaction_id = ?", linkedTransactionID).
+		Pluck("transaction_id", &ids).Error
+	return ids, err
 }
 
 func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {

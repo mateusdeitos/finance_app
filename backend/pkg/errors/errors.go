@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/labstack/echo/v4"
@@ -32,7 +33,7 @@ const (
 type ErrorTag string
 
 const (
-	ErrorTagIndex                                               ErrorTag = "INDEX_%D"
+	ErrorTagIndex                                               ErrorTag = "INDEX_%d"
 	ErrorTagMissingDestinationAccount                           ErrorTag = "TRANSACTION.MISSING_DESTINATION_ACCOUNT"
 	ErrorTagSplitSettingsNotAllowedForTransfer                  ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_FOR_TRANSFER"
 	ErrorTagSplitAllowedOnlyForExpense                          ErrorTag = "TRANSACTION.SPLIT_ALLOWED_ONLY_FOR_EXPENSE"
@@ -132,7 +133,11 @@ type ServiceError struct {
 type ServiceErrors []*ServiceError
 
 func (es ServiceErrors) Error() string {
-	return fmt.Sprintf("%s: %s", es[0].Code, es[0].Message)
+	var msg strings.Builder
+	for _, err := range es {
+		fmt.Fprintf(&msg, "%s: %s\n", err.Code, err.Message)
+	}
+	return msg.String()
 }
 
 func Is(errs error, target ServiceError) bool {

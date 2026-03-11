@@ -26,6 +26,14 @@ func (r *transactionRecurrenceRepository) Create(ctx context.Context, recurrence
 	return ent.ToDomain(), nil
 }
 
+func (r *transactionRecurrenceRepository) Update(ctx context.Context, recurrence *domain.TransactionRecurrence) error {
+	ent := entity.TransactionRecurrenceFromDomain(recurrence)
+	if err := GetTxFromContext(ctx, r.db).Updates(ent).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *transactionRecurrenceRepository) Delete(ctx context.Context, ids []int) error {
 	if len(ids) == 0 {
 		return nil

@@ -3,10 +3,12 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"time"
 
+	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -72,7 +74,6 @@ func (o OperationType) Invert() OperationType {
 
 type Transaction struct {
 	ID                      int                    `json:"id"`
-	ParentID                *int                   `json:"parent_id,omitempty"`
 	TransactionRecurrenceID *int                   `json:"transaction_recurrence_id,omitempty"`
 	InstallmentNumber       *int                   `json:"installment_number,omitempty"`
 	UserID                  int                    `json:"user_id"`
@@ -85,7 +86,9 @@ type Transaction struct {
 	Date                    time.Time              `json:"date"`
 	Description             string                 `json:"description"`
 	Tags                    []Tag                  `json:"tags,omitempty"`
+	LinkedTransactions      []Transaction          `json:"linked_transactions,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
+	SettlementsFromSource   []Settlement           `json:"settlements_from_source,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
 	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
@@ -124,11 +127,46 @@ type TransactionUpdateRequest struct {
 }
 
 type TransactionRecurrence struct {
-	ID           int        `json:"id"`
-	UserID       int        `json:"user_id"`
-	Installments int        `json:"installments"`
-	CreatedAt    *time.Time `json:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at"`
+	ID           int            `json:"id"`
+	UserID       int            `json:"user_id"`
+	Type         RecurrenceType `json:"type"`
+	Installments int            `json:"installments"`
+	CreatedAt    *time.Time     `json:"created_at"`
+	UpdatedAt    *time.Time     `json:"updated_at"`
+}
+
+func RecurrenceFromSettings(recurrenceSettings RecurrenceSettings, userID int, startDate time.Time) *TransactionRecurrence {
+	tr := &TransactionRecurrence{
+		ID:           0,
+		Type:         recurrenceSettings.Type,
+		Installments: lo.FromPtr(recurrenceSettings.Repetitions),
+		UserID:       userID,
+	}
+
+	if recurrenceSettings.EndDate != nil {
+		var installments int
+
+		endDate := recurrenceSettings.EndDate
+
+		switch recurrenceSettings.Type {
+		case RecurrenceTypeDaily:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24))
+		case RecurrenceTypeWeekly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 7))
+		case RecurrenceTypeMonthly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 30))
+		case RecurrenceTypeYearly:
+			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 365))
+		}
+
+		if installments < 1 {
+			installments = 1
+		}
+
+		tr.Installments = installments
+	}
+
+	return tr
 }
 
 type TransactionRecurrenceFilter struct {
@@ -144,15 +182,15 @@ type RecurrenceSettings struct {
 }
 
 type SplitSettings struct {
-	ConnectionID int    `json:"connection_id"`
-	Percentage   *int   `json:"percentage,omitempty"`
-	Amount       *int64 `json:"amount,omitempty"`
+	ConnectionID   int `json:"connection_id"`
+	UserConnection *UserConnection
+	Percentage     *int   `json:"percentage,omitempty"`
+	Amount         *int64 `json:"amount,omitempty"`
 }
 
 type TransactionFilter struct {
 	IDs               []int                        `query:"id[]"`
 	IDsNotIn          []int                        `query:"id_not_in[]"`
-	ParentIDs         []int                        `query:"parent_id[]"`
 	RecurrenceIDs     []int                        `query:"recurrence_id[]"`
 	AccountIDs        []int                        `query:"account_id[]"`
 	CategoryIDs       []int                        `query:"category_id[]"`
@@ -166,6 +204,7 @@ type TransactionFilter struct {
 	SortBy            *SortBy                      `query:"sort_by,omitempty"`
 	Limit             *int                         `query:"limit,omitempty"`
 	Offset            *int                         `query:"offset,omitempty"`
+	WithSettlements   bool                         `query:"with_settlements,omitempty"`
 }
 
 type TextSearch struct {

@@ -13,6 +13,8 @@ type Account struct {
 }
 
 type AccountSearchOptions struct {
+	Limit   int   `json:"limit"`
+	Offset  int   `json:"offset"`
 	IDs     []int `json:"ids"`
 	UserIDs []int `json:"user_ids"`
 }

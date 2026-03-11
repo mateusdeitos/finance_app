@@ -129,5 +129,5 @@ func (s *tagService) parseTagName(name string) (string, error) {
 	if err := s.validateTagName(name); err != nil {
 		return "", err
 	}
-	return strings.ToLower(strings.TrimSpace(name)), nil
+	return name, nil
 }
