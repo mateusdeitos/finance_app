@@ -1035,7 +1035,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
-	suite.Assert().Equal(account.ID, settlement.AccountID)
+	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
 	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
 
@@ -1160,7 +1160,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user2.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
-	suite.Assert().Equal(account.ID, settlement.AccountID)
+	suite.Assert().Equal(userConnection.ToAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser2[0].ID, settlement.SourceTransactionID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.ParentTransactionID)
 }

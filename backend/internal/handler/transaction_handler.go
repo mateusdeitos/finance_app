@@ -132,6 +132,37 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, t[0])
 }
 
+func (h *TransactionHandler) GetBalance(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	month, err := strconv.Atoi(c.QueryParam("month"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid month")
+	}
+
+	year, err := strconv.Atoi(c.QueryParam("year"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid year")
+	}
+
+	period := domain.Period{Month: month, Year: year}
+	if !period.IsValid() {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid period")
+	}
+
+	var filter domain.BalanceFilter
+	if err := c.Bind(&filter); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+	}
+
+	result, err := h.transactionService.GetBalance(c.Request().Context(), userID, period, filter)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
 func (h *TransactionHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 

@@ -15,6 +15,7 @@ type Account struct {
 	UserID         int
 	Name           string
 	Description    *string
+	InitialBalance int64
 	CreatedAt      *time.Time
 	UpdatedAt      *time.Time
 	UserConnection *AccountUserConnection `gorm:"<-:false"`
@@ -22,12 +23,13 @@ type Account struct {
 
 func (a *Account) ToDomain() *domain.Account {
 	acc := &domain.Account{
-		ID:          a.ID,
-		UserID:      a.UserID,
-		Name:        a.Name,
-		Description: a.Description,
-		CreatedAt:   a.CreatedAt,
-		UpdatedAt:   a.UpdatedAt,
+		ID:             a.ID,
+		UserID:         a.UserID,
+		Name:           a.Name,
+		Description:    a.Description,
+		InitialBalance: a.InitialBalance,
+		CreatedAt:      a.CreatedAt,
+		UpdatedAt:      a.UpdatedAt,
 	}
 
 	if a.UserConnection != nil {
@@ -39,12 +41,13 @@ func (a *Account) ToDomain() *domain.Account {
 
 func AccountFromDomain(d *domain.Account) *Account {
 	a := &Account{
-		ID:          d.ID,
-		UserID:      d.UserID,
-		Name:        d.Name,
-		Description: d.Description,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
+		ID:             d.ID,
+		UserID:         d.UserID,
+		Name:           d.Name,
+		Description:    d.Description,
+		InitialBalance: d.InitialBalance,
+		CreatedAt:      d.CreatedAt,
+		UpdatedAt:      d.UpdatedAt,
 	}
 
 	if d.UserConnection != nil {

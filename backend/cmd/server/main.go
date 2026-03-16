@@ -135,6 +135,7 @@ func main() {
 	transactions := api.Group("/transactions")
 	transactions.GET("", transactionHandler.Search)
 	transactions.POST("", transactionHandler.Create)
+	transactions.GET("/balance", transactionHandler.GetBalance)
 	transactions.DELETE("/:id", transactionHandler.Delete)
 	transactions.GET("/:id", transactionHandler.GetByID)
 	transactions.PUT("/:id", transactionHandler.Update)

@@ -119,6 +119,67 @@ func (_c *MockTransactionService_Delete_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// GetBalance provides a mock function with given fields: ctx, userID, period, filter
+func (_m *MockTransactionService) GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
+	ret := _m.Called(ctx, userID, period, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBalance")
+	}
+
+	var r0 *domain.BalanceResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, domain.Period, domain.BalanceFilter) (*domain.BalanceResult, error)); ok {
+		return rf(ctx, userID, period, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, domain.Period, domain.BalanceFilter) *domain.BalanceResult); ok {
+		r0 = rf(ctx, userID, period, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.BalanceResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, domain.Period, domain.BalanceFilter) error); ok {
+		r1 = rf(ctx, userID, period, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_GetBalance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBalance'
+type MockTransactionService_GetBalance_Call struct {
+	*mock.Call
+}
+
+// GetBalance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - period domain.Period
+//   - filter domain.BalanceFilter
+func (_e *MockTransactionService_Expecter) GetBalance(ctx interface{}, userID interface{}, period interface{}, filter interface{}) *MockTransactionService_GetBalance_Call {
+	return &MockTransactionService_GetBalance_Call{Call: _e.mock.On("GetBalance", ctx, userID, period, filter)}
+}
+
+func (_c *MockTransactionService_GetBalance_Call) Run(run func(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter)) *MockTransactionService_GetBalance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(domain.Period), args[3].(domain.BalanceFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_GetBalance_Call) Return(_a0 *domain.BalanceResult, _a1 error) *MockTransactionService_GetBalance_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_GetBalance_Call) RunAndReturn(run func(context.Context, int, domain.Period, domain.BalanceFilter) (*domain.BalanceResult, error)) *MockTransactionService_GetBalance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, userID, period, filter
 func (_m *MockTransactionService) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	ret := _m.Called(ctx, userID, period, filter)

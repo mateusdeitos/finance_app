@@ -3149,7 +3149,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange()
 	suite.Require().Len(settlements, 1)
 	suite.Assert().Equal(int64(80), settlements[0].Amount)
 	suite.Assert().Equal(domain.SettlementTypeCredit, settlements[0].Type)
-	suite.Assert().Equal(accountA.ID, settlements[0].AccountID)
+	suite.Assert().Equal(conn.FromAccountID, settlements[0].AccountID)
 	suite.Assert().Equal(userA.ID, settlements[0].UserID)
 }
 
@@ -3351,7 +3351,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 
 	before := suite.settlementsForSource(ctx, t.ID)
 	suite.Require().Len(before, 1)
-	suite.Assert().Equal(accountA.ID, before[0].AccountID)
+	suite.Assert().Equal(conn.FromAccountID, before[0].AccountID)
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		AccountID:     lo.ToPtr(accountA2.ID),
@@ -3360,7 +3360,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 
 	after := suite.settlementsForSource(ctx, t.ID)
 	suite.Require().Len(after, 1)
-	suite.Assert().Equal(accountA2.ID, after[0].AccountID)
+	// settlement account is always conn.FromAccountID regardless of the author's personal account
+	suite.Assert().Equal(conn.FromAccountID, after[0].AccountID)
 }
 
 // 2.7 Propagation=current only updates current installment's settlement
