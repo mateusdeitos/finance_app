@@ -7,6 +7,7 @@ type Account struct {
 	UserID         int             `json:"user_id"`
 	Name           string          `json:"name"`
 	Description    *string         `json:"description,omitempty"`
+	InitialBalance int64           `json:"initial_balance"`
 	CreatedAt      *time.Time      `json:"created_at"`
 	UpdatedAt      *time.Time      `json:"updated_at"`
 	UserConnection *UserConnection `json:"user_connection,omitempty"`

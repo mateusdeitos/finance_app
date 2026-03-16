@@ -10,21 +10,45 @@ import (
 )
 
 type accountService struct {
-	dbTransaction repository.DBTransaction
-	accountRepo   repository.AccountRepository
-	userRepo      repository.UserRepository
+	dbTransaction      repository.DBTransaction
+	accountRepo        repository.AccountRepository
+	userRepo           repository.UserRepository
+	userConnectionRepo repository.UserConnectionRepository
 }
 
 func NewAccountService(repos *repository.Repositories) AccountService {
 	return &accountService{
-		dbTransaction: repos.DBTransaction,
-		accountRepo:   repos.Account,
-		userRepo:      repos.User,
+		dbTransaction:      repos.DBTransaction,
+		accountRepo:        repos.Account,
+		userRepo:           repos.User,
+		userConnectionRepo: repos.UserConnection,
 	}
+}
+
+// isConnectionAccount returns true when the account is referenced by any user_connection.
+func (s *accountService) isConnectionAccount(ctx context.Context, accountID int) (bool, error) {
+	conns, err := s.userConnectionRepo.Search(ctx, domain.UserConnectionSearchOptions{
+		AccountIDs: []int{accountID},
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(conns) > 0, nil
 }
 
 func (s *accountService) Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error) {
 	account.UserID = userID
+
+	if account.InitialBalance != 0 {
+		isConn, err := s.isConnectionAccount(ctx, account.ID)
+		if err != nil {
+			return nil, pkgErrors.Internal("failed to check connection account", err)
+		}
+		if isConn {
+			return nil, pkgErrors.BadRequest("initial balance cannot be set on connection accounts")
+		}
+	}
+
 	return s.accountRepo.Create(ctx, account)
 }
 
@@ -81,6 +105,16 @@ func (s *accountService) Update(ctx context.Context, userID int, account *domain
 	// Only owner can update
 	if existing.UserID != userID {
 		return pkgErrors.Forbidden("only account owner can update")
+	}
+
+	if account.InitialBalance != 0 {
+		isConn, err := s.isConnectionAccount(ctx, account.ID)
+		if err != nil {
+			return pkgErrors.Internal("failed to check connection account", err)
+		}
+		if isConn {
+			return pkgErrors.BadRequest("initial balance cannot be set on connection accounts")
+		}
 	}
 
 	account.UserID = existing.UserID

@@ -471,6 +471,20 @@ func (s *transactionService) rebuildTransactions(
 
 				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, lt)
 			}
+		} else if data.req.Amount != nil && len(data.req.SplitSettings) > 0 && !data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() && !data.scenario.RemainedTransfer() {
+			// Amount changed but split connections are unchanged: recalculate linked transaction amounts.
+			toAccountByUserID := make(map[int]domain.SplitSettings, len(data.req.SplitSettings))
+			for _, ss := range data.req.SplitSettings {
+				if ss.UserConnection != nil {
+					toAccountByUserID[ss.UserConnection.ToUserID] = ss
+				}
+			}
+			for j := range data.transactions[i].LinkedTransactions {
+				lt := &data.transactions[i].LinkedTransactions[j]
+				if ss, ok := toAccountByUserID[lt.UserID]; ok {
+					lt.Amount = s.calculateAmount(baseAmount, ss)
+				}
+			}
 		} else if data.scenario.SplitHasChanged && !data.scenario.TypeChangedToTransfer() && !data.scenario.RemainedTransfer() {
 			linkedTransactions := make([]domain.Transaction, 0, len(userIDAccountIDMap))
 			transactionsByUserIDMap := make(map[int]*domain.Transaction, len(data.transactions[i].LinkedTransactions))
@@ -526,9 +540,11 @@ func (s *transactionService) rebuildTransactions(
 		}
 
 		if data.scenario.TypeChangedToTransfer() || data.scenario.RemainedTransfer() {
-			// se era expense/income e virou transfer, remove as transactions vinculadas
-			if !data.scenario.RemainedTransfer() {
-				for j := range data.transactions[i].LinkedTransactions {
+			// Remove all existing linked transactions. For TypeChangedToTransfer these are
+			// split-linked txs; for RemainedTransfer these are the old credit/debit txs that
+			// must be replaced by the new ones built below.
+			for j := range data.transactions[i].LinkedTransactions {
+				if data.transactions[i].LinkedTransactions[j].ID > 0 {
 					data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
 				}
 			}
@@ -624,12 +640,37 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 	}
 
+	// Map counterpart's connection account ID → author's connection account ID.
+	// lt.AccountID is set to connection.ToAccountID in injectLinkedTransactions/rebuildTransactions.
+	connAccountByToAccount := make(map[int]int, len(own.LinkedTransactions))
+	if len(own.LinkedTransactions) > 0 {
+		toAccountIDs := make([]int, len(own.LinkedTransactions))
+		for i, lt := range own.LinkedTransactions {
+			toAccountIDs[i] = lt.AccountID
+		}
+		conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+			AccountIDs: toAccountIDs,
+		})
+		if err != nil {
+			return err
+		}
+		for _, conn := range conns {
+			conn.SwapIfNeeded(userID)
+			connAccountByToAccount[conn.ToAccountID] = conn.FromAccountID
+		}
+	}
+
 	for _, lt := range own.LinkedTransactions {
+		accountID := own.AccountID
+		if connAccount, ok := connAccountByToAccount[lt.AccountID]; ok {
+			accountID = connAccount
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
 			Type:                settlementType,
-			AccountID:           own.AccountID,
+			AccountID:           accountID,
 			SourceTransactionID: own.ID,
 			ParentTransactionID: lt.ID,
 		})

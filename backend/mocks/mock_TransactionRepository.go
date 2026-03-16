@@ -128,6 +128,65 @@ func (_c *MockTransactionRepository_Delete_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// GetBalance provides a mock function with given fields: ctx, filter
+func (_m *MockTransactionRepository) GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
+	ret := _m.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBalance")
+	}
+
+	var r0 *domain.BalanceResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.BalanceFilter) (*domain.BalanceResult, error)); ok {
+		return rf(ctx, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.BalanceFilter) *domain.BalanceResult); ok {
+		r0 = rf(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.BalanceResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.BalanceFilter) error); ok {
+		r1 = rf(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_GetBalance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBalance'
+type MockTransactionRepository_GetBalance_Call struct {
+	*mock.Call
+}
+
+// GetBalance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.BalanceFilter
+func (_e *MockTransactionRepository_Expecter) GetBalance(ctx interface{}, filter interface{}) *MockTransactionRepository_GetBalance_Call {
+	return &MockTransactionRepository_GetBalance_Call{Call: _e.mock.On("GetBalance", ctx, filter)}
+}
+
+func (_c *MockTransactionRepository_GetBalance_Call) Run(run func(ctx context.Context, filter domain.BalanceFilter)) *MockTransactionRepository_GetBalance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.BalanceFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetBalance_Call) Return(_a0 *domain.BalanceResult, _a1 error) *MockTransactionRepository_GetBalance_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_GetBalance_Call) RunAndReturn(run func(context.Context, domain.BalanceFilter) (*domain.BalanceResult, error)) *MockTransactionRepository_GetBalance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetGroupedByRecurrences provides a mock function with given fields: ctx, userID, recurrenceIDs
 func (_m *MockTransactionRepository) GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error) {
 	ret := _m.Called(ctx, userID, recurrenceIDs)

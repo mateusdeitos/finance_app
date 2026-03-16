@@ -249,7 +249,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		transactions[i].UpdatedAt = t.UpdatedAt
 
 		if req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
-			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType); err != nil {
+			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType, req.SplitSettings); err != nil {
 				return err
 			}
 		}
@@ -258,18 +258,33 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	return nil
 }
 
-func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType) error {
+func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType, splitSettings []domain.SplitSettings) error {
 	settlementType := domain.SettlementTypeCredit
 	if transactionType == domain.TransactionTypeIncome {
 		settlementType = domain.SettlementTypeDebit
 	}
 
+	// Map counterpart's connection account ID → author's connection account ID.
+	// After SwapIfNeeded, FromAccountID is the author's and ToAccountID is the counterpart's.
+	// The linked transaction's AccountID is set to connection.ToAccountID in injectLinkedTransactions.
+	connAccountByToAccount := make(map[int]int, len(splitSettings))
+	for _, ss := range splitSettings {
+		if ss.UserConnection != nil {
+			connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
+		}
+	}
+
 	for _, lt := range authorTransaction.LinkedTransactions {
+		accountID := authorTransaction.AccountID
+		if connAccount, ok := connAccountByToAccount[lt.AccountID]; ok {
+			accountID = connAccount
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
 			Type:                settlementType,
-			AccountID:           authorTransaction.AccountID,
+			AccountID:           accountID,
 			SourceTransactionID: authorTransaction.ID,
 			ParentTransactionID: lt.ID,
 		})
