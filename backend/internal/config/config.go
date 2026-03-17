@@ -58,8 +58,9 @@ type OAuthProviderConfig struct {
 }
 
 type AppConfig struct {
-	URL string
-	Env string
+	URL         string
+	FrontendURL string
+	Env         string
 }
 
 func Load(files ...string) (*Config, error) {
@@ -97,8 +98,9 @@ func Load(files ...string) (*Config, error) {
 			SessionSecret: getEnv("OAUTH_SESSION_SECRET", "change-me-in-production"),
 		},
 		App: AppConfig{
-			URL: getEnv("APP_URL", "http://localhost:8080"),
-			Env: getEnv("ENV", "development"),
+			URL:         getEnv("APP_URL", "http://localhost:8080"),
+			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
+			Env:         getEnv("ENV", "development"),
 		},
 	}
 

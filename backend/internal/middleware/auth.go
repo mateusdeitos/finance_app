@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/finance_app/backend/internal/handler"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
 	apperrors "github.com/finance_app/backend/pkg/errors"
@@ -22,17 +23,15 @@ func NewAuthMiddleware(services *service.Services) *AuthMiddleware {
 
 func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		authHeader := c.Request().Header.Get("Authorization")
-		if authHeader == "" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "missing authorization header")
+		token := tokenFromHeader(c.Request())
+		if token == "" {
+			token = tokenFromCookie(c)
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return echo.NewHTTPError(http.StatusUnauthorized, "invalid authorization header format")
+		if token == "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "missing authentication")
 		}
 
-		token := parts[1]
 		user, err := m.authService.ValidateToken(c.Request().Context(), token)
 		if err != nil {
 			return apperrors.ToHTTPError(err)
@@ -44,4 +43,27 @@ func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		c.SetRequest(c.Request().WithContext(ctx))
 		return next(c)
 	}
+}
+
+func tokenFromHeader(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return ""
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+
+	return parts[1]
+}
+
+func tokenFromCookie(c echo.Context) string {
+	cookie, err := c.Cookie(handler.AuthCookieName)
+	if err != nil {
+		return ""
+	}
+
+	return cookie.Value
 }

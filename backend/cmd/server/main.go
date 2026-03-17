@@ -70,7 +70,7 @@ func main() {
 	services.Transaction = service.NewTransactionService(repos, services)
 
 	// Initialize handlers
-	authHandler := handler.NewAuthHandler(services)
+	authHandler := handler.NewAuthHandler(services, cfg)
 	accountHandler := handler.NewAccountHandler(services)
 	categoryHandler := handler.NewCategoryHandler(services)
 	tagHandler := handler.NewTagHandler(services)
