@@ -64,6 +64,14 @@ docker-build:
 docker-logs:
 	docker compose logs -f
 
+# Run linter
+lint:
+	if ! command -v golangci-lint > /dev/null; then \
+		echo "Installing golangci-lint..."; \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest; \
+	fi
+	golangci-lint run --timeout=5m ./...
+
 # Generate mocks using mockery
 generate-mocks:
 	if ! command -v mockery > /dev/null; then \
