@@ -100,6 +100,7 @@ func main() {
 	auth := e.Group("/auth")
 	auth.GET("/:provider", authHandler.OAuthStart)
 	auth.GET("/:provider/callback", authHandler.OAuthCallback)
+	auth.POST("/logout", authHandler.Logout)
 
 	// Protected routes
 	api := e.Group("/api")

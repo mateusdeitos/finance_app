@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -78,7 +77,20 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 	c.SetCookie(cookie)
 
-	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/auth/callback", h.cfg.App.FrontendURL))
+	return c.Redirect(http.StatusTemporaryRedirect, h.cfg.App.FrontendURL+"/auth/callback")
+}
+
+func (h *AuthHandler) Logout(c echo.Context) error {
+	c.SetCookie(&http.Cookie{
+		Name:     AuthCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   h.cfg.App.Env == "production",
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+	return c.NoContent(http.StatusOK)
 }
 
 func (h *AuthHandler) Me(c echo.Context) error {
