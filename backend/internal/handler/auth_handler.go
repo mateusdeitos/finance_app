@@ -3,7 +3,9 @@ package handler
 import (
 	"context"
 	"net/http"
+	"time"
 
+	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
@@ -12,19 +14,18 @@ import (
 	"github.com/markbates/goth/gothic"
 )
 
+const AuthCookieName = "auth_token"
+
 type AuthHandler struct {
 	authService service.AuthService
+	cfg         *config.Config
 }
 
-func NewAuthHandler(services *service.Services) *AuthHandler {
+func NewAuthHandler(services *service.Services, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authService: services.Auth,
+		cfg:         cfg,
 	}
-}
-
-type AuthResponse struct {
-	User  *domain.User `json:"user"`
-	Token string       `json:"token"`
 }
 
 func (h *AuthHandler) OAuthStart(c echo.Context) error {
@@ -55,23 +56,28 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to complete OAuth: "+err.Error())
 	}
 
-	// Convert goth user to domain user
 	domainUser := &domain.User{
 		Name:  user.Name,
 		Email: user.Email,
 	}
 
-	authUser, token, err := h.authService.OAuthCallback(c.Request().Context(), provider, domainUser, user.UserID)
+	_, token, err := h.authService.OAuthCallback(c.Request().Context(), provider, domainUser, user.UserID)
 	if err != nil {
 		return HandleServiceError(err)
 	}
 
-	// In production, redirect to frontend with token
-	// For now, return JSON
-	return c.JSON(http.StatusOK, AuthResponse{
-		User:  authUser,
-		Token: token,
-	})
+	cookie := &http.Cookie{
+		Name:     AuthCookieName,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   h.cfg.App.Env == "production",
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
+	}
+	c.SetCookie(cookie)
+
+	return c.Redirect(http.StatusTemporaryRedirect, h.cfg.App.FrontendURL)
 }
 
 func (h *AuthHandler) Me(c echo.Context) error {
