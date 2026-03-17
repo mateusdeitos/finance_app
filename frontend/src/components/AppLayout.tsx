@@ -1,4 +1,4 @@
-import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, ActionIcon, Box } from '@mantine/core'
+import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, Box } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconReceipt2, IconChevronDown } from '@tabler/icons-react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
@@ -16,6 +16,10 @@ export function AppLayout() {
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
   const { mutation: logoutMutation } = useLogout()
+
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+    : '?'
 
   return (
     <AppShell
@@ -53,15 +57,11 @@ export function AppLayout() {
           {user && (
             <Menu shadow="md" width={180} position="bottom-end">
               <Menu.Target>
-                <ActionIcon variant="subtle" size="xl" radius="xl" aria-label="User menu">
-                  <Group gap="xs" wrap="nowrap">
-                    <Avatar color="blue" radius="xl" size="sm" name={user?.name} />
-                    <Text size="sm" fw={500} visibleFrom="sm">
-                      {user.name}
-                    </Text>
-                    <IconChevronDown size={14} />
-                  </Group>
-                </ActionIcon>
+                <Group gap={4} wrap="nowrap" align="center" style={{ cursor: 'pointer' }}>
+                  <Avatar color="blue" radius="xl" size="sm">{initials}</Avatar>
+                  <Text size="sm" fw={500} visibleFrom="sm">{user.name.split(' ')[0]}</Text>
+                  <IconChevronDown size={14} />
+                </Group>
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{user.email}</Menu.Label>
