@@ -53,6 +53,7 @@ linters:
     # TODO new features-defer: does not affect current code, can be selectively enabled later
     - exhaustruct        # 50 issues: struct field completeness
     - gochecknoglobals   # 15 issues: global variable check
+    - gochecknoinits     # 1 issue: init function in auto-generated swagger docs
     - modernize          # 5 issues: modern Go syntax suggestions
     - godox              # 1 issue: TODO/FIXME comment markers
     - dogsled            # 1 issue: blank identifier count
@@ -165,10 +166,10 @@ linters:
         linters:
           - staticcheck      # SA4010: append result unused in complex rebuild logic
 
-formatters:
-  enable:
-    # TODO format code and enable - 4 files currently non-compliant with gofmt/goimports:
-    #   internal/domain/settlement.go, internal/entity/settlement.go,
-    #   internal/middleware/error_handler.go, internal/service/transaction_update.go
-    # - gofmt
-    # - goimports
+# TODO: enable formatters once code is formatted - 4 files non-compliant with gofmt/goimports:
+#   internal/domain/settlement.go, internal/entity/settlement.go,
+#   internal/middleware/error_handler.go, internal/service/transaction_update.go
+# formatters:
+#   enable:
+#     - gofmt
+#     - goimports
