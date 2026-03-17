@@ -76,7 +76,27 @@ export function useCreateTransaction() {
 
 ## Authentication / Route Protection
 
-Use TanStack Router's `beforeLoad` on protected routes to check authentication (by calling the "get current user" endpoint). This is preferred over a standalone `PrivateRoute` component. If the user is not authenticated, redirect to the login page.
+Use `createAuthenticatedRoute` (in `src/utils/createAuthenticatedRoute.ts`) instead of `createFileRoute` for protected routes. It wraps `beforeLoad` to call `ensureQueryData` for the `me` query and redirect to `/login` if unauthenticated.
+
+```ts
+export const Route = createAuthenticatedRoute('/transactions')({
+  component: TransactionsPage,
+})
+```
+
+## Query Keys
+
+All query keys must use the `QueryKeys` const object defined in `src/utils/queryKeys.ts`. Never use magic strings directly in `queryKey` arrays.
+
+```ts
+// ✅ correct
+useQuery({ queryKey: [QueryKeys.Me], queryFn: fetchMe })
+
+// ❌ wrong
+useQuery({ queryKey: ['me'], queryFn: fetchMe })
+```
+
+When adding a new query, add its key to `QueryKeys` first.
 
 ## Mobile First
 
