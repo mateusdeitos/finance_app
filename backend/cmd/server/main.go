@@ -84,7 +84,12 @@ func main() {
 	// Middleware
 	e.Use(echomiddleware.Logger())
 	e.Use(echomiddleware.Recover())
-	e.Use(echomiddleware.CORS())
+	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
+		AllowOrigins:     []string{cfg.App.FrontendURL},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
+		AllowCredentials: true,
+	}))
 
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
