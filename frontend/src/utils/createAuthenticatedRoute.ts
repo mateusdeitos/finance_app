@@ -1,23 +1,14 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { fetchMe } from '@/api/auth'
-import { QueryKeys } from '@/utils/queryKeys'
+import { createFileRoute } from '@tanstack/react-router'
 
-export function createAuthenticatedRoute(path: Parameters<typeof createFileRoute>[0]) {
-  const route = createFileRoute(path as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+type RoutePath = Parameters<typeof createFileRoute>[0]
 
-  return (options: Parameters<typeof route>[0] = {} as any) => // eslint-disable-line @typescript-eslint/no-explicit-any
-    route({
-      ...options,
-      beforeLoad: async (ctx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        try {
-          await ctx.context.queryClient.ensureQueryData({
-            queryKey: [QueryKeys.Me],
-            queryFn: fetchMe,
-          })
-        } catch {
-          throw redirect({ to: '/login' })
-        }
-        return options?.beforeLoad?.(ctx)
-      },
-    })
+/**
+ * Builds the full route path for a route nested under the `/_authenticated` layout.
+ * Use this with `createFileRoute` in files under `routes/_authenticated.*.tsx`.
+ *
+ * @example
+ * export const Route = createFileRoute(authenticatedPath('/transactions'))({ ... })
+ */
+export function authenticatedPath(path: string): RoutePath {
+  return `/_authenticated${path}` as RoutePath
 }

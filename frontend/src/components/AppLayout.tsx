@@ -1,8 +1,7 @@
 import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, ActionIcon, Box } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconReceipt2, IconChevronDown } from '@tabler/icons-react'
-import { Link, useRouterState } from '@tanstack/react-router'
-import type { ReactNode } from 'react'
+import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
 
@@ -10,21 +9,13 @@ const navLinks = [
   { label: 'Transações', icon: IconReceipt2, to: '/transactions' },
 ]
 
-interface AppLayoutProps {
-  children: ReactNode
-}
-
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout() {
   const [opened, { toggle }] = useDisclosure()
   const { query: meQuery } = useMe()
   const user = meQuery.data
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
   const { mutation: logoutMutation } = useLogout()
-
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
-    : '?'
 
   return (
     <AppShell
@@ -64,9 +55,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Menu.Target>
                 <ActionIcon variant="subtle" size="xl" radius="xl" aria-label="User menu">
                   <Group gap="xs" wrap="nowrap">
-                    <Avatar color="blue" radius="xl" size="sm">
-                      {initials}
-                    </Avatar>
+                    <Avatar color="blue" radius="xl" size="sm" name={user?.name} />
                     <Text size="sm" fw={500} visibleFrom="sm">
                       {user.name}
                     </Text>
@@ -102,7 +91,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </AppShell.Navbar>
 
       <AppShell.Main>
-        {children}
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   )
