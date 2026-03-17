@@ -72,6 +72,14 @@ lint:
 	fi
 	golangci-lint run --timeout=5m ./...
 
+# Generate Swagger docs from handler annotations
+generate-docs:
+	if ! command -v swag > /dev/null; then \
+		echo "Installing swag..."; \
+		go install github.com/swaggo/swag/cmd/swag@latest; \
+	fi
+	swag init -g cmd/server/main.go --output docs --parseInternal
+
 # Generate mocks using mockery
 generate-mocks:
 	if ! command -v mockery > /dev/null; then \

@@ -1,0 +1,1181 @@
+basePath: /
+definitions:
+  domain.Account:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      initial_balance:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+      user_connection:
+        $ref: '#/definitions/domain.UserConnection'
+      user_id:
+        type: integer
+    type: object
+  domain.BalanceResult:
+    properties:
+      balance:
+        type: integer
+    type: object
+  domain.Category:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/domain.Category'
+        type: array
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      parent:
+        $ref: '#/definitions/domain.Category'
+      parent_id:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.OperationType:
+    enum:
+    - credit
+    - debit
+    type: string
+    x-enum-varnames:
+    - OperationTypeCredit
+    - OperationTypeDebit
+  domain.RecurrenceSettings:
+    properties:
+      end_date:
+        type: string
+      repetitions:
+        description: nil = indefinite
+        type: integer
+      type:
+        $ref: '#/definitions/domain.RecurrenceType'
+    type: object
+  domain.RecurrenceType:
+    enum:
+    - daily
+    - weekly
+    - monthly
+    - yearly
+    type: string
+    x-enum-varnames:
+    - RecurrenceTypeDaily
+    - RecurrenceTypeWeekly
+    - RecurrenceTypeMonthly
+    - RecurrenceTypeYearly
+  domain.Settlement:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        description: Amount in cents
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      parent_transaction_id:
+        type: integer
+      source_transaction_id:
+        type: integer
+      type:
+        $ref: '#/definitions/domain.SettlementType'
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.SettlementType:
+    enum:
+    - credit
+    - debit
+    type: string
+    x-enum-varnames:
+    - SettlementTypeCredit
+    - SettlementTypeDebit
+  domain.SplitSettings:
+    properties:
+      amount:
+        type: integer
+      connection_id:
+        type: integer
+      percentage:
+        type: integer
+      userConnection:
+        $ref: '#/definitions/domain.UserConnection'
+    type: object
+  domain.Tag:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.Transaction:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        description: Amount in cents
+        type: integer
+      category_id:
+        type: integer
+      created_at:
+        type: string
+      date:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      installment_number:
+        type: integer
+      linked_transactions:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
+      operation_type:
+        $ref: '#/definitions/domain.OperationType'
+      original_user_id:
+        type: integer
+      settlements_from_source:
+        items:
+          $ref: '#/definitions/domain.Settlement'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/domain.Tag'
+        type: array
+      transaction_recurrence:
+        $ref: '#/definitions/domain.TransactionRecurrence'
+      transaction_recurrence_id:
+        type: integer
+      type:
+        $ref: '#/definitions/domain.TransactionType'
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.TransactionCreateRequest:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: integer
+      category_id:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      destination_account_id:
+        type: integer
+      recurrence_settings:
+        $ref: '#/definitions/domain.RecurrenceSettings'
+      split_settings:
+        items:
+          $ref: '#/definitions/domain.SplitSettings'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/domain.Tag'
+        type: array
+      transaction_type:
+        $ref: '#/definitions/domain.TransactionType'
+    type: object
+  domain.TransactionPropagationSettings:
+    enum:
+    - all
+    - current
+    - current_and_future
+    type: string
+    x-enum-varnames:
+    - TransactionPropagationSettingsAll
+    - TransactionPropagationSettingsCurrent
+    - TransactionPropagationSettingsCurrentAndFuture
+  domain.TransactionRecurrence:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      installments:
+        type: integer
+      type:
+        $ref: '#/definitions/domain.RecurrenceType'
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.TransactionType:
+    enum:
+    - expense
+    - income
+    - transfer
+    type: string
+    x-enum-varnames:
+    - TransactionTypeExpense
+    - TransactionTypeIncome
+    - TransactionTypeTransfer
+  domain.TransactionUpdateRequest:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: integer
+      category_id:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      destination_account_id:
+        type: integer
+      propagation_settings:
+        $ref: '#/definitions/domain.TransactionPropagationSettings'
+      recurrence_settings:
+        $ref: '#/definitions/domain.RecurrenceSettings'
+      split_settings:
+        items:
+          $ref: '#/definitions/domain.SplitSettings'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/domain.Tag'
+        type: array
+      transaction_type:
+        $ref: '#/definitions/domain.TransactionType'
+    type: object
+  domain.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.UserConnection:
+    properties:
+      connection_status:
+        $ref: '#/definitions/domain.UserConnectionStatusEnum'
+      created_at:
+        type: string
+      from_account_id:
+        type: integer
+      from_default_split_percentage:
+        type: integer
+      from_user_id:
+        type: integer
+      id:
+        type: integer
+      to_account_id:
+        type: integer
+      to_default_split_percentage:
+        type: integer
+      to_user_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  domain.UserConnectionStatusEnum:
+    enum:
+    - pending
+    - accepted
+    - rejected
+    type: string
+    x-enum-varnames:
+    - UserConnectionStatusPending
+    - UserConnectionStatusAccepted
+    - UserConnectionStatusRejected
+  middleware.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Go backend for a couples' finance management app.
+  title: Finance App API
+  version: "1.0"
+paths:
+  /api/accounts:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Account'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List accounts
+      tags:
+      - accounts
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Account'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create account
+      tags:
+      - accounts
+  /api/accounts/{id}:
+    delete:
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete account
+      tags:
+      - accounts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account data
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Account'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update account
+      tags:
+      - accounts
+  /api/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Category'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Category'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Category'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create category
+      tags:
+      - categories
+  /api/categories/{id}:
+    delete:
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete category
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Category data
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Category'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update category
+      tags:
+      - categories
+  /api/tags:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Tag'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List tags
+      tags:
+      - tags
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tag data
+        in: body
+        name: tag
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Tag'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Tag'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create tag
+      tags:
+      - tags
+  /api/tags/{id}:
+    delete:
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete tag
+      tags:
+      - tags
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Tag data
+        in: body
+        name: tag
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Tag'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update tag
+      tags:
+      - tags
+  /api/transactions:
+    get:
+      parameters:
+      - description: Month (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Year
+        in: query
+        name: year
+        required: true
+        type: integer
+      - collectionFormat: multi
+        description: Filter by account IDs
+        in: query
+        items:
+          type: integer
+        name: account_id[]
+        type: array
+      - collectionFormat: multi
+        description: Filter by category IDs
+        in: query
+        items:
+          type: integer
+        name: category_id[]
+        type: array
+      - collectionFormat: multi
+        description: Filter by tag IDs
+        in: query
+        items:
+          type: integer
+        name: tag_id[]
+        type: array
+      - collectionFormat: multi
+        description: Filter by type
+        in: query
+        items:
+          enum:
+          - expense
+          - income
+          - transfer
+          type: string
+        name: type[]
+        type: array
+      - description: Search description text
+        in: query
+        name: description.query
+        type: string
+      - description: Exact description match
+        in: query
+        name: description.exact
+        type: boolean
+      - description: Include settlements
+        in: query
+        name: with_settlements
+        type: boolean
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Transaction'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List transactions for a period
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: Creates an expense, income, or transfer. For recurring transactions
+        include recurrence_settings. For split transactions include split_settings.
+      parameters:
+      - description: Transaction data
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TransactionCreateRequest'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create transaction
+      tags:
+      - transactions
+  /api/transactions/{id}:
+    delete:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: How to handle recurring installments
+        enum:
+        - all
+        - current
+        - current_and_future
+        in: query
+        name: propagation_settings
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete transaction
+      tags:
+      - transactions
+    get:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Transaction'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get transaction by ID
+      tags:
+      - transactions
+    put:
+      consumes:
+      - application/json
+      description: All fields are optional. Use propagation_settings to control how
+        updates affect recurring installments.
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: transaction
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TransactionUpdateRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update transaction
+      tags:
+      - transactions
+  /api/transactions/balance:
+    get:
+      description: Returns net balance (income − expenses) for the given month/year.
+        Set accumulated=true to include all prior periods.
+      parameters:
+      - description: Month (1-12)
+        in: query
+        name: month
+        required: true
+        type: integer
+      - description: Year
+        in: query
+        name: year
+        required: true
+        type: integer
+      - collectionFormat: multi
+        description: Filter by account IDs
+        in: query
+        items:
+          type: integer
+        name: account_id[]
+        type: array
+      - collectionFormat: multi
+        description: Filter by category IDs
+        in: query
+        items:
+          type: integer
+        name: category_id[]
+        type: array
+      - collectionFormat: multi
+        description: Filter by tag IDs
+        in: query
+        items:
+          type: integer
+        name: tag_id[]
+        type: array
+      - description: Include all prior periods
+        in: query
+        name: accumulated
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.BalanceResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get balance for a period
+      tags:
+      - transactions
+  /api/user-connections:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by status
+        enum:
+        - pending
+        - accepted
+        - rejected
+        in: query
+        name: connection_status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.UserConnection'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List user connections
+      tags:
+      - user-connections
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Connection data
+        in: body
+        name: connection
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UserConnection'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.UserConnection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create user connection (invite partner)
+      tags:
+      - user-connections
+  /api/user-connections/{id}:
+    delete:
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete user connection
+      tags:
+      - user-connections
+  /api/user-connections/{id}/{status}:
+    patch:
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        enum:
+        - pending
+        - accepted
+        - rejected
+        in: path
+        name: status
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update connection status (accept / reject)
+      tags:
+      - user-connections
+  /auth/{provider}:
+    get:
+      description: Redirects the user to the OAuth provider's authorization page
+      parameters:
+      - description: OAuth provider
+        enum:
+        - google
+        in: path
+        name: provider
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Found
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Start OAuth flow
+      tags:
+      - auth
+  /auth/{provider}/callback:
+    get:
+      description: Completes the OAuth flow, sets the auth_token HttpOnly cookie,
+        and redirects to the frontend
+      parameters:
+      - description: OAuth provider
+        enum:
+        - google
+        in: path
+        name: provider
+        required: true
+        type: string
+      - description: Authorization code from provider
+        in: query
+        name: code
+        type: string
+      - description: State parameter
+        in: query
+        name: state
+        type: string
+      responses:
+        "307":
+          description: Temporary Redirect
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: OAuth callback
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: JWT token — prefix with "Bearer "
+    in: header
+    name: Authorization
+    type: apiKey
+  CookieAuth:
+    description: JWT token in HttpOnly cookie set after OAuth login
+    in: cookie
+    name: auth_token
+    type: apiKey
+swagger: "2.0"

@@ -20,6 +20,21 @@ import (
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
+// @title          Finance App API
+// @version        1.0
+// @description    Go backend for a couples' finance management app.
+// @host           localhost:8080
+// @BasePath       /
+//
+// @securityDefinitions.apikey  CookieAuth
+// @in                          cookie
+// @name                        auth_token
+// @description                 JWT token in HttpOnly cookie set after OAuth login
+//
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 JWT token — prefix with "Bearer "
 func main() {
 	// Load configuration
 	cfg, err := config.Load()
@@ -96,10 +111,14 @@ func main() {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
+	// API docs (Swagger UI + OpenAPI spec)
+	handler.RegisterDocsRoutes(e)
+
 	// Auth routes (public)
 	auth := e.Group("/auth")
 	auth.GET("/:provider", authHandler.OAuthStart)
 	auth.GET("/:provider/callback", authHandler.OAuthCallback)
+	auth.POST("/logout", authHandler.Logout)
 
 	// Protected routes
 	api := e.Group("/api")
