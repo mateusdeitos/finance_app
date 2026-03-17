@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "setup-golangci-lint": {
+      "source": "alingse/golangci-lint-skills",
+      "sourceType": "github",
+      "computedHash": "d03feb4afecc0406b2a92fb2b7262c1fbf13c9446b8e92912a7c839cf12c5b08"
+    }
+  }
+}
