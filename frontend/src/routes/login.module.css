@@ -1,0 +1,53 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(160deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-white) 60%);
+}
+
+.content {
+  width: 100%;
+  max-width: 24rem;
+}
+
+.emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mantine-color-blue-8);
+  text-align: center;
+}
+
+.subtitle {
+  color: var(--mantine-color-grey-6);
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 18rem;
+}
+
+.features {
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  background: var(--mantine-color-white);
+  border-radius: var(--mantine-radius-md);
+  border: 1px solid var(--mantine-color-grey-1);
+}
+
+.googleButton {
+  min-height: 3rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-color: var(--mantine-color-grey-2);
+}
+
+.googleButton:hover {
+  background-color: var(--mantine-color-grey-0);
+}
