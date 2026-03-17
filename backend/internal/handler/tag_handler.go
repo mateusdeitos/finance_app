@@ -20,6 +20,18 @@ func NewTagHandler(services *service.Services) *TagHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Create tag
+// @Tags         tags
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        tag  body      domain.Tag  true  "Tag data"
+// @Success      201  {object}  domain.Tag
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/tags [post]
 func (h *TagHandler) Create(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -36,6 +48,15 @@ func (h *TagHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, created)
 }
 
+// Search godoc
+// @Summary      List tags
+// @Tags         tags
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      200  {array}   domain.Tag
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/tags [get]
 func (h *TagHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -49,6 +70,19 @@ func (h *TagHandler) Search(c echo.Context) error {
 	return c.JSON(http.StatusOK, tags)
 }
 
+// Update godoc
+// @Summary      Update tag
+// @Tags         tags
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id   path  int         true  "Tag ID"
+// @Param        tag  body  domain.Tag  true  "Tag data"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/tags/{id} [put]
 func (h *TagHandler) Update(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -70,6 +104,16 @@ func (h *TagHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Delete godoc
+// @Summary      Delete tag
+// @Tags         tags
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Tag ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/tags/{id} [delete]
 func (h *TagHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 

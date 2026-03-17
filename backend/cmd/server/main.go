@@ -20,6 +20,21 @@ import (
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
+// @title          Finance App API
+// @version        1.0
+// @description    Go backend for a couples' finance management app.
+// @host           localhost:8080
+// @BasePath       /
+//
+// @securityDefinitions.apikey  CookieAuth
+// @in                          cookie
+// @name                        auth_token
+// @description                 JWT token in HttpOnly cookie set after OAuth login
+//
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 JWT token — prefix with "Bearer "
 func main() {
 	// Load configuration
 	cfg, err := config.Load()

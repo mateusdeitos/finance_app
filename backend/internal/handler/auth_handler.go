@@ -29,6 +29,14 @@ func NewAuthHandler(services *service.Services, cfg *config.Config) *AuthHandler
 	}
 }
 
+// OAuthStart godoc
+// @Summary      Start OAuth flow
+// @Description  Redirects the user to the OAuth provider's authorization page
+// @Tags         auth
+// @Param        provider  path  string  true  "OAuth provider" Enums(google)
+// @Success      302
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Router       /auth/{provider} [get]
 func (h *AuthHandler) OAuthStart(c echo.Context) error {
 	provider := c.Param("provider")
 	if provider == "" {
@@ -46,6 +54,16 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 	return nil
 }
 
+// OAuthCallback godoc
+// @Summary      OAuth callback
+// @Description  Completes the OAuth flow, sets the auth_token HttpOnly cookie, and redirects to the frontend
+// @Tags         auth
+// @Param        provider  path   string  true   "OAuth provider" Enums(google)
+// @Param        code      query  string  false  "Authorization code from provider"
+// @Param        state     query  string  false  "State parameter"
+// @Success      307
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Router       /auth/{provider}/callback [get]
 func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	provider := c.Param("provider")
 	if provider == "" {
@@ -81,6 +99,15 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("%s/auth/callback", h.cfg.App.FrontendURL))
 }
 
+// Me godoc
+// @Summary      Get current user
+// @Tags         auth
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      200  {object}  domain.User
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/auth/me [get]
 func (h *AuthHandler) Me(c echo.Context) error {
 	user := appcontext.GetUserFromContext(c.Request().Context())
 	if user == nil {
