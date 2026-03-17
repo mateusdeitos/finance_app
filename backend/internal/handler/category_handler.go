@@ -20,6 +20,18 @@ func NewCategoryHandler(services *service.Services) *CategoryHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Create category
+// @Tags         categories
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        category  body      domain.Category  true  "Category data"
+// @Success      201       {object}  domain.Category
+// @Failure      400       {object}  middleware.ErrorResponse
+// @Failure      401       {object}  middleware.ErrorResponse
+// @Router       /api/categories [post]
 func (h *CategoryHandler) Create(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -36,6 +48,15 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, created)
 }
 
+// Search godoc
+// @Summary      List categories
+// @Tags         categories
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      200  {array}   domain.Category
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/categories [get]
 func (h *CategoryHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -49,6 +70,19 @@ func (h *CategoryHandler) Search(c echo.Context) error {
 	return c.JSON(http.StatusOK, categories)
 }
 
+// Update godoc
+// @Summary      Update category
+// @Tags         categories
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id        path  int              true  "Category ID"
+// @Param        category  body  domain.Category  true  "Category data"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/categories/{id} [put]
 func (h *CategoryHandler) Update(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -70,6 +104,16 @@ func (h *CategoryHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Delete godoc
+// @Summary      Delete category
+// @Tags         categories
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Category ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/categories/{id} [delete]
 func (h *CategoryHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 

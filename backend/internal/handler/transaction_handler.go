@@ -21,6 +21,18 @@ func NewTransactionHandler(services *service.Services) *TransactionHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Create transaction
+// @Description  Creates an expense, income, or transfer. For recurring transactions include recurrence_settings. For split transactions include split_settings.
+// @Tags         transactions
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        transaction  body  domain.TransactionCreateRequest  true  "Transaction data"
+// @Success      201
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions [post]
 func (h *TransactionHandler) Create(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -37,6 +49,20 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 	return c.NoContent(http.StatusCreated)
 }
 
+// Update godoc
+// @Summary      Update transaction
+// @Description  All fields are optional. Use propagation_settings to control how updates affect recurring installments.
+// @Tags         transactions
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id           path  int                              true  "Transaction ID"
+// @Param        transaction  body  domain.TransactionUpdateRequest  true  "Fields to update"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/{id} [put]
 func (h *TransactionHandler) Update(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -58,6 +84,27 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Search godoc
+// @Summary      List transactions for a period
+// @Tags         transactions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        month              query  int       true   "Month (1-12)"
+// @Param        year               query  int       true   "Year"
+// @Param        account_id[]       query  []int     false  "Filter by account IDs"    collectionFormat(multi)
+// @Param        category_id[]      query  []int     false  "Filter by category IDs"   collectionFormat(multi)
+// @Param        tag_id[]           query  []int     false  "Filter by tag IDs"        collectionFormat(multi)
+// @Param        type[]             query  []string  false  "Filter by type"           collectionFormat(multi) Enums(expense, income, transfer)
+// @Param        description.query  query  string    false  "Search description text"
+// @Param        description.exact  query  bool      false  "Exact description match"
+// @Param        with_settlements   query  bool      false  "Include settlements"
+// @Param        limit              query  int       false  "Limit"
+// @Param        offset             query  int       false  "Offset"
+// @Success      200  {array}   domain.Transaction
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions [get]
 func (h *TransactionHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -106,6 +153,18 @@ func (h *TransactionHandler) Search(c echo.Context) error {
 	return c.JSON(http.StatusOK, transactions)
 }
 
+// GetByID godoc
+// @Summary      Get transaction by ID
+// @Tags         transactions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path      int  true  "Transaction ID"
+// @Success      200  {object}  domain.Transaction
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/{id} [get]
 func (h *TransactionHandler) GetByID(c echo.Context) error {
 	ctx := c.Request().Context()
 	userID := appcontext.GetUserIDFromContext(ctx)
@@ -132,6 +191,23 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, t[0])
 }
 
+// GetBalance godoc
+// @Summary      Get balance for a period
+// @Description  Returns net balance (income − expenses) for the given month/year. Set accumulated=true to include all prior periods.
+// @Tags         transactions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        month          query  int    true   "Month (1-12)"
+// @Param        year           query  int    true   "Year"
+// @Param        account_id[]   query  []int  false  "Filter by account IDs"   collectionFormat(multi)
+// @Param        category_id[]  query  []int  false  "Filter by category IDs"  collectionFormat(multi)
+// @Param        tag_id[]       query  []int  false  "Filter by tag IDs"       collectionFormat(multi)
+// @Param        accumulated    query  bool   false  "Include all prior periods"
+// @Success      200  {object}  domain.BalanceResult
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/balance [get]
 func (h *TransactionHandler) GetBalance(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -163,6 +239,18 @@ func (h *TransactionHandler) GetBalance(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// Delete godoc
+// @Summary      Delete transaction
+// @Tags         transactions
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id                    path   int     true   "Transaction ID"
+// @Param        propagation_settings  query  string  false  "How to handle recurring installments"  Enums(all, current, current_and_future)
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/{id} [delete]
 func (h *TransactionHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 

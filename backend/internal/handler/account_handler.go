@@ -20,6 +20,18 @@ func NewAccountHandler(services *service.Services) *AccountHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Create account
+// @Tags         accounts
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        account  body      domain.Account  true  "Account data"
+// @Success      201      {object}  domain.Account
+// @Failure      400      {object}  middleware.ErrorResponse
+// @Failure      401      {object}  middleware.ErrorResponse
+// @Router       /api/accounts [post]
 func (h *AccountHandler) Create(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -52,6 +64,17 @@ func (h *AccountHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, account)
 }
 
+// Search godoc
+// @Summary      List accounts
+// @Tags         accounts
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        limit   query  int    false  "Limit"
+// @Param        offset  query  int    false  "Offset"
+// @Success      200  {array}   domain.Account
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/accounts [get]
 func (h *AccountHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -70,6 +93,19 @@ func (h *AccountHandler) Search(c echo.Context) error {
 	return c.JSON(http.StatusOK, accounts)
 }
 
+// Update godoc
+// @Summary      Update account
+// @Tags         accounts
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id       path  int             true  "Account ID"
+// @Param        account  body  domain.Account  true  "Account data"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/accounts/{id} [put]
 func (h *AccountHandler) Update(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
@@ -91,6 +127,16 @@ func (h *AccountHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Delete godoc
+// @Summary      Delete account
+// @Tags         accounts
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Account ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/accounts/{id} [delete]
 func (h *AccountHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
