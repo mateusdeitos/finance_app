@@ -96,6 +96,9 @@ func main() {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
 
+	// API docs (Swagger UI + OpenAPI spec)
+	handler.RegisterDocsRoutes(e)
+
 	// Auth routes (public)
 	auth := e.Group("/auth")
 	auth.GET("/:provider", authHandler.OAuthStart)
