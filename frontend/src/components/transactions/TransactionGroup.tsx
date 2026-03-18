@@ -1,5 +1,7 @@
 import { Box, Text } from '@mantine/core'
+import { Fragment } from 'react'
 import { Transactions } from '@/types/transactions'
+import { SettlementRow } from './SettlementRow'
 import { TransactionRow } from './TransactionRow'
 import classes from './TransactionGroup.module.css'
 
@@ -25,14 +27,23 @@ export function TransactionGroup({
       </Text>
       <div className={classes.rows}>
         {group.transactions.map((tx) => (
-          <TransactionRow
-            key={tx.id}
-            transaction={tx}
-            groupBy={groupBy}
-            accounts={accounts}
-            categories={categories}
-            currentUserId={currentUserId}
-          />
+          <Fragment key={tx.id}>
+            <TransactionRow
+              transaction={tx}
+              groupBy={groupBy}
+              accounts={accounts}
+              categories={categories}
+              currentUserId={currentUserId}
+            />
+            {(tx.settlements_from_source ?? []).map((s) => (
+              <SettlementRow
+                key={`settlement-${s.id}`}
+                settlement={s}
+                groupBy={groupBy}
+                accounts={accounts}
+              />
+            ))}
+          </Fragment>
         ))}
       </div>
     </Box>
