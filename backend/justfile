@@ -89,6 +89,11 @@ generate-mocks:
 	echo "Generating mocks..."
 	mockery || (echo "Error generating mocks. Try running: go mod tidy && go mod download" && exit 1)
 
+# Seed the local database with test data for a given user email
+# Usage: just seed your@email.com
+seed email:
+	go run cmd/scripts/seed/main.go {{email}}
+
 # Clean build artifacts
 clean:
 	rm -rf bin/ mocks/
