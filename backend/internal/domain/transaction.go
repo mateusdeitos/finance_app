@@ -204,7 +204,7 @@ type TransactionFilter struct {
 	SortBy            *SortBy                      `query:"sort_by,omitempty"`
 	Limit             *int                         `query:"limit,omitempty"`
 	Offset            *int                         `query:"offset,omitempty"`
-	WithSettlements   bool                         `query:"with_settlements,omitempty"`
+	WithSettlements   bool                         `query:"with_settlements"`
 }
 
 type TextSearch struct {
