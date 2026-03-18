@@ -1,0 +1,17 @@
+.group {
+  margin-bottom: 1rem;
+}
+
+.header {
+  padding: 0.375rem 0.75rem;
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  border-radius: var(--mantine-radius-sm);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.04em;
+}
+
+.rows {
+  border: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+}
