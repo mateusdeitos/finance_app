@@ -90,7 +90,7 @@ export function AppLayout() {
         ))}
       </AppShell.Navbar>
 
-      <AppShell.Main>
+      <AppShell.Main style={{ height: '100dvh', overflow: 'hidden auto', boxSizing: 'border-box' }}>
         <Outlet />
       </AppShell.Main>
     </AppShell>
