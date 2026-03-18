@@ -1,9 +1,10 @@
 import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, Box } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconReceipt2, IconChevronDown } from '@tabler/icons-react'
+import { IconReceipt2, IconChevronDown, IconUsers } from '@tabler/icons-react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
+import { InviteDrawer } from '@/components/InviteDrawer'
 
 const navLinks = [
   { label: 'Transações', icon: IconReceipt2, to: '/transactions' },
@@ -11,6 +12,7 @@ const navLinks = [
 
 export function AppLayout() {
   const [opened, { toggle }] = useDisclosure()
+  const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure()
   const { query: meQuery } = useMe()
   const user = meQuery.data
   const routerState = useRouterState()
@@ -66,6 +68,13 @@ export function AppLayout() {
               <Menu.Dropdown>
                 <Menu.Label>{user.email}</Menu.Label>
                 <Menu.Item
+                  leftSection={<IconUsers size={16} />}
+                  onClick={openInvite}
+                >
+                  Criar Conexão
+                </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
                 >
@@ -93,6 +102,8 @@ export function AppLayout() {
       <AppShell.Main>
         <Outlet />
       </AppShell.Main>
+
+      <InviteDrawer opened={inviteOpened} onClose={closeInvite} />
     </AppShell>
   )
 }

@@ -1,8 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Title, Text, Stack } from '@mantine/core'
-import { authenticatedPath } from '@/utils/createAuthenticatedRoute'
 
-export const Route = createFileRoute(authenticatedPath('/transactions'))({
+export const Route = createFileRoute('/_authenticated/transactions')({
   component: TransactionsPage,
 })
 
