@@ -55,7 +55,7 @@ export function AppLayout() {
           </Group>
 
           {user && (
-            <Menu shadow="md" width={180} position="bottom-end">
+            <Menu shadow="md" position="bottom-end">
               <Menu.Target>
                 <Group gap={4} wrap="nowrap" align="center" style={{ cursor: 'pointer' }}>
                   <Avatar color="blue" radius="xl" size="sm">{initials}</Avatar>
