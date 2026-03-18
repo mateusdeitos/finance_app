@@ -92,6 +92,70 @@ func (s *userConnectionService) Create(ctx context.Context, fromUserID, toUserID
 	return userConnection, nil
 }
 
+func (s *userConnectionService) AcceptInviteByExternalID(ctx context.Context, currentUserID int, inviterExternalID string, fromDefaultSplitPercentage int) (*domain.UserConnection, error) {
+	ctx, err := s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return nil, apperrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
+	inviter, err := s.userRepo.GetByExternalID(ctx, inviterExternalID)
+	if err != nil {
+		return nil, apperrors.Internal("failed to get inviter", err)
+	}
+	if inviter == nil {
+		return nil, apperrors.NotFound("inviter user")
+	}
+
+	currentUser, err := s.userRepo.GetByID(ctx, currentUserID)
+	if err != nil {
+		return nil, apperrors.Internal("failed to get current user", err)
+	}
+	if currentUser == nil {
+		return nil, apperrors.NotFound("current user")
+	}
+
+	// create account for the inviter (representing the current user)
+	inviterAccount, err := s.services.Account.Create(ctx, inviter.ID, &domain.Account{
+		Name:   currentUser.Name,
+		UserID: inviter.ID,
+	})
+	if err != nil {
+		return nil, apperrors.Internal("failed to create inviter account", err)
+	}
+
+	// create account for the current user (representing the inviter)
+	currentUserAccount, err := s.services.Account.Create(ctx, currentUserID, &domain.Account{
+		Name:   inviter.Name,
+		UserID: currentUserID,
+	})
+	if err != nil {
+		return nil, apperrors.Internal("failed to create current user account", err)
+	}
+
+	userConnection, err := s.userConnectionRepo.Create(ctx, &domain.UserConnection{
+		FromUserID:                 inviter.ID,
+		FromAccountID:              inviterAccount.ID,
+		FromDefaultSplitPercentage: fromDefaultSplitPercentage,
+		ToUserID:                   currentUserID,
+		ToAccountID:                currentUserAccount.ID,
+		ToDefaultSplitPercentage:   fromDefaultSplitPercentage,
+		ConnectionStatus:           domain.UserConnectionStatusAccepted,
+	})
+	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, apperrors.AlreadyExists("user connection")
+		}
+		return nil, apperrors.Internal("failed to create user connection", err)
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return nil, apperrors.Internal("failed to commit transaction", err)
+	}
+
+	return userConnection, nil
+}
+
 func (s *userConnectionService) UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error {
 	ctx, err := s.dbTransaction.Begin(ctx)
 	if err != nil {

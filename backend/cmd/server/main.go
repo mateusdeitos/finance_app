@@ -75,6 +75,7 @@ func main() {
 	// Initialize services
 	services := &service.Services{
 		Auth:       service.NewAuthService(repos, cfg),
+		User:       service.NewUserService(repos),
 		Account:    service.NewAccountService(repos),
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
@@ -137,6 +138,8 @@ func main() {
 	// User connections
 	userConnections := api.Group("/user-connections")
 	userConnections.POST("", userConnectionHandler.Create)
+	userConnections.POST("/accept-invite", userConnectionHandler.AcceptInvite)
+	userConnections.GET("/invite-info/:external_id", userConnectionHandler.GetInviteInfo)
 	userConnections.PATCH("/:id/:status", userConnectionHandler.UpdateStatus)
 	userConnections.DELETE("/:id", userConnectionHandler.Delete)
 	userConnections.GET("", userConnectionHandler.Search)
