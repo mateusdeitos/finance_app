@@ -1,15 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { Title, Text, Stack } from '@mantine/core'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
-  component: HelloWorldPage,
+  component: () => <Navigate to="/transactions" />,
 })
-
-function HelloWorldPage() {
-  return (
-    <Stack align="center" justify="center" h="100vh">
-      <Title>Hello World</Title>
-      <Text c="gray.9">Finance App is up and running.</Text>
-    </Stack>
-  )
-}
