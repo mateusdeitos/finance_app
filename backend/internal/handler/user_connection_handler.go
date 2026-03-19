@@ -166,7 +166,7 @@ func (h *UserConnectionHandler) GetInviteInfo(c echo.Context) error {
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        body  body  AcceptInviteRequest  true  "Invite data"
+// @Param        request  body  AcceptInviteRequest  true  "Invite data"
 // @Success      201  {object}  domain.UserConnection
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse

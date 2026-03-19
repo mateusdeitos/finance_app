@@ -10,7 +10,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
@@ -63,7 +62,7 @@ var descriptionsByType = map[domain.TransactionType][]string{
 		"Uber", "Plano de saúde", "Internet", "Condomínio", "Escola",
 	},
 	domain.TransactionTypeIncome: {
-		"Salário", "Freelance", "Dividendos", "Bônus", "Aluguel recebido",
+		"Salário", "Freelance", "Dividendos", "Bônus", "Aluguel recebido", //nolint:misspell
 	},
 	domain.TransactionTypeTransfer: {
 		"Transferência entre contas",
@@ -116,9 +115,9 @@ func main() {
 	// Resolve user
 	user, err := repos.User.GetByEmail(ctx, userEmail)
 	if err != nil {
-		log.Fatalf("user %q not found: %v", userEmail, err)
+		log.Fatalf("user %q not found: %v", userEmail, err) //nolint:gosec
 	}
-	fmt.Printf("Seeding data for user: %s (id=%d)\n", user.Name, user.ID)
+	log.Printf("Seeding data for user: %s (id=%d)\n", user.Name, user.ID) //nolint:gosec
 
 	// Accounts
 	accounts := seedAccounts(ctx, svcs, user.ID)
@@ -132,7 +131,7 @@ func main() {
 	// Transactions
 	seedTransactions(ctx, svcs, user.ID, accounts, categories, tags)
 
-	fmt.Println("Done.")
+	log.Println("Done.")
 }
 
 func seedAccounts(ctx context.Context, svcs *service.Services, userID int) []*domain.Account {
@@ -141,7 +140,7 @@ func seedAccounts(ctx context.Context, svcs *service.Services, userID int) []*do
 		log.Fatalf("failed to fetch existing accounts: %v", err)
 	}
 	missing := quantityOfAccounts - len(existing)
-	fmt.Printf("Accounts: %d existing, need %d more\n", len(existing), max(0, missing))
+	log.Printf("Accounts: %d existing, need %d more\n", len(existing), max(0, missing))
 
 	accounts := existing
 	for i := len(existing); i < quantityOfAccounts && i < len(accountNames); i++ {
@@ -154,7 +153,7 @@ func seedAccounts(ctx context.Context, svcs *service.Services, userID int) []*do
 			continue
 		}
 		accounts = append(accounts, acc)
-		fmt.Printf("  + %s\n", acc.Name)
+		log.Printf("  + %s\n", acc.Name) //nolint:gosec
 	}
 	return accounts
 }
@@ -172,7 +171,7 @@ func seedCategories(ctx context.Context, svcs *service.Services, userID int) []*
 			existingRoots++
 		}
 	}
-	fmt.Printf("Categories: %d existing root(s), need %d more\n", existingRoots, max(0, quantityOfCategories-existingRoots))
+	log.Printf("Categories: %d existing root(s), need %d more\n", existingRoots, max(0, quantityOfCategories-existingRoots))
 
 	all := existing
 	created := existingRoots
@@ -187,7 +186,7 @@ func seedCategories(ctx context.Context, svcs *service.Services, userID int) []*
 		}
 		all = append(all, root)
 		created++
-		fmt.Printf("  + %s\n", root.Name)
+		log.Printf("  + %s\n", root.Name) //nolint:gosec
 
 		for _, child := range entry.children {
 			sub, err := svcs.Category.Create(ctx, userID, &domain.Category{
@@ -199,7 +198,7 @@ func seedCategories(ctx context.Context, svcs *service.Services, userID int) []*
 				continue
 			}
 			all = append(all, sub)
-			fmt.Printf("    └─ %s\n", sub.Name)
+			log.Printf("    └─ %s\n", sub.Name) //nolint:gosec
 		}
 	}
 	return all
@@ -222,7 +221,7 @@ func seedTags(ctx context.Context, svcs *service.Services, userID int) []*domain
 			missing++
 		}
 	}
-	fmt.Printf("Tags: %d existing, need %d more\n", len(existing), missing)
+	log.Printf("Tags: %d existing, need %d more\n", len(existing), missing)
 
 	tags := existing
 	for _, name := range tagNames {
@@ -235,7 +234,7 @@ func seedTags(ctx context.Context, svcs *service.Services, userID int) []*domain
 			continue
 		}
 		tags = append(tags, tag)
-		fmt.Printf("  + %s\n", tag.Name)
+		log.Printf("  + %s\n", tag.Name) //nolint:gosec
 	}
 	return tags
 }
@@ -253,11 +252,11 @@ func seedTransactions(
 		return
 	}
 
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec
 
 	totalMonths := monthsBetween(startPeriod, endPeriod)
 	total := totalMonths * quantityOfTransactions
-	fmt.Printf("Creating ~%d transactions across %d months...\n", total, totalMonths)
+	log.Printf("Creating ~%d transactions across %d months...\n", total, totalMonths)
 
 	typeWeights := []domain.TransactionType{
 		domain.TransactionTypeExpense,
@@ -308,13 +307,14 @@ func seedTransactions(
 				}
 			}
 
-			if err := svcs.Transaction.Create(ctx, userID, req); err != nil {
+			err := svcs.Transaction.Create(ctx, userID, req)
+			if err != nil {
 				log.Printf("  skip transaction: %v", err)
 			}
 		}
 		current = current.AddDate(0, 1, 0)
 	}
-	fmt.Printf("  created transactions from %s to %s\n",
+	log.Printf("  created transactions from %s to %s\n",
 		startPeriod.Format("Jan 2006"), endPeriod.Format("Jan 2006"))
 }
 
@@ -342,8 +342,10 @@ func randomAmount(rng *rand.Rand, txType domain.TransactionType) int64 {
 	case domain.TransactionTypeTransfer:
 		// R$ 50 – R$ 2000
 		return int64(5000 + rng.Intn(195000))
-	default:
+	case domain.TransactionTypeExpense:
 		// R$ 5 – R$ 800
+		return int64(500 + rng.Intn(79500))
+	default:
 		return int64(500 + rng.Intn(79500))
 	}
 }
@@ -359,7 +361,7 @@ func pickN[T any](rng *rand.Rand, slice []*T, n int) []*T {
 	}
 	perm := rng.Perm(len(slice))
 	result := make([]*T, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		result[i] = slice[perm[i]]
 	}
 	return result
