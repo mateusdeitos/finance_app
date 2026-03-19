@@ -36,6 +36,9 @@ export async function acceptInvite(externalId: string): Promise<UserConnections.
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ external_id: externalId, from_default_split_percentage: 50 }),
   })
+  if (res.status === 409) {
+    return res.json().catch(() => ({}) as UserConnections.Connection)
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message ?? 'Failed to accept invite')
