@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Transactions {
   export type TransactionType = 'expense' | 'income' | 'transfer'
   export type OperationType = 'credit' | 'debit'

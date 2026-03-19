@@ -21,8 +21,8 @@ export function TransactionList({
 }: TransactionListProps) {
   const { query: accountsQuery } = useAccounts()
   const { query: categoriesQuery } = useCategories()
-  const accounts = accountsQuery.data ?? []
-  const categories = categoriesQuery.data ?? []
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data])
 
   const filtered = useMemo(() => {
     if (!textFilter) return transactions
