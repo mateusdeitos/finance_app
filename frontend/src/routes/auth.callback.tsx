@@ -4,18 +4,24 @@ import { useEffect } from 'react'
 import { useMe } from '@/hooks/useMe'
 
 export const Route = createFileRoute('/auth/callback')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const result: { redirect?: string } = {}
+    if (typeof search.redirect === 'string') result.redirect = search.redirect
+    return result
+  },
   component: AuthCallbackPage,
 })
 
 function AuthCallbackPage() {
   const navigate = useNavigate()
+  const { redirect: redirectTo } = Route.useSearch()
   const { query } = useMe()
 
   useEffect(() => {
     if (query.isSuccess) {
-      navigate({ to: '/' })
+      navigate({ to: redirectTo ?? '/' })
     }
-  }, [query.isSuccess, navigate])
+  }, [query.isSuccess, navigate, redirectTo])
 
   if (query.isError) {
     return (

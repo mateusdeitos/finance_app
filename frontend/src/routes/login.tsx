@@ -3,6 +3,11 @@ import { Stack, Title, Text, Button, Box } from '@mantine/core'
 import classes from './login.module.css'
 
 export const Route = createFileRoute('/login')({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const result: { redirect?: string } = {}
+    if (typeof search.redirect === 'string') result.redirect = search.redirect
+    return result
+  },
   component: LoginPage,
 })
 
@@ -30,9 +35,13 @@ function GoogleIcon() {
 }
 
 function LoginPage() {
+  const { redirect: redirectTo } = Route.useSearch()
+
   function handleGoogleLogin() {
     const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-    window.location.href = `${apiUrl}/auth/google`
+    const url = new URL(`${apiUrl}/auth/google`)
+    if (redirectTo) url.searchParams.set('redirect', redirectTo)
+    window.location.href = url.toString()
   }
 
   return (
