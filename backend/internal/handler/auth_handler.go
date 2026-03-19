@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/finance_app/backend/internal/config"
@@ -45,6 +46,18 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 	_, err := goth.GetProvider(provider)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "unsupported provider")
+	}
+
+	if redirectTo := c.QueryParam("redirect"); redirectTo != "" {
+		c.SetCookie(&http.Cookie{
+			Name:     "oauth_redirect",
+			Value:    redirectTo,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   h.cfg.App.Env == "production",
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   300,
+		})
 	}
 
 	req := c.Request().WithContext(context.WithValue(c.Request().Context(), gothic.ProviderParamKey, provider))
@@ -95,7 +108,21 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 	c.SetCookie(cookie)
 
-	return c.Redirect(http.StatusTemporaryRedirect, h.cfg.App.FrontendURL+"/auth/callback")
+	callbackURL := h.cfg.App.FrontendURL + "/auth/callback"
+	if oauthRedirect, err := c.Cookie("oauth_redirect"); err == nil && oauthRedirect.Value != "" {
+		callbackURL += "?redirect=" + url.QueryEscape(oauthRedirect.Value)
+		c.SetCookie(&http.Cookie{
+			Name:     "oauth_redirect",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   h.cfg.App.Env == "production",
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+	}
+
+	return c.Redirect(http.StatusTemporaryRedirect, callbackURL)
 }
 
 func (h *AuthHandler) Logout(c echo.Context) error {
