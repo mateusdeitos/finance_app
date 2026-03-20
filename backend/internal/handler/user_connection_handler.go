@@ -12,11 +12,13 @@ import (
 
 type UserConnectionHandler struct {
 	userConnectionService service.UserConnectionService
+	userService           service.UserService
 }
 
 func NewUserConnectionHandler(services *service.Services) *UserConnectionHandler {
 	return &UserConnectionHandler{
 		userConnectionService: services.UserConnection,
+		userService:           services.User,
 	}
 }
 
@@ -130,4 +132,67 @@ func (h *UserConnectionHandler) Search(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, userConnections)
+}
+
+// GetInviteInfo godoc
+// @Summary      Get user info by external ID (for invite preview)
+// @Tags         user-connections
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        external_id  path  string  true  "User external ID"
+// @Success      200  {object}  domain.User
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/user-connections/invite-info/{external_id} [get]
+func (h *UserConnectionHandler) GetInviteInfo(c echo.Context) error {
+	externalID := c.Param("external_id")
+	if externalID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "external_id is required")
+	}
+
+	user, err := h.userService.GetByExternalID(c.Request().Context(), externalID)
+	if err != nil {
+		return HandleServiceError(err)
+	}
+
+	return c.JSON(http.StatusOK, user)
+}
+
+// AcceptInvite godoc
+// @Summary      Accept an invite using the inviter's external ID
+// @Tags         user-connections
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        request  body  AcceptInviteRequest  true  "Invite data"
+// @Success      201  {object}  domain.UserConnection
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/user-connections/accept-invite [post]
+func (h *UserConnectionHandler) AcceptInvite(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	var req AcceptInviteRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if req.ExternalID == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "external_id is required")
+	}
+
+	conn, err := h.userConnectionService.AcceptInviteByExternalID(c.Request().Context(), userID, req.ExternalID, req.FromDefaultSplitPercentage)
+	if err != nil {
+		return HandleServiceError(err)
+	}
+
+	return c.JSON(http.StatusCreated, conn)
+}
+
+type AcceptInviteRequest struct {
+	ExternalID                 string `json:"external_id"`
+	FromDefaultSplitPercentage int    `json:"from_default_split_percentage"`
 }

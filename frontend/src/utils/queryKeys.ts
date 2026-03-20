@@ -4,4 +4,5 @@ export const QueryKeys = {
   Accounts: 'accounts',
   Categories: 'categories',
   Tags: 'tags',
+  InviteInfo: 'invite-info',
 } as const
