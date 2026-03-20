@@ -22,6 +22,67 @@ func (_m *MockUserConnectionService) EXPECT() *MockUserConnectionService_Expecte
 	return &MockUserConnectionService_Expecter{mock: &_m.Mock}
 }
 
+// AcceptInviteByExternalID provides a mock function with given fields: ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage
+func (_m *MockUserConnectionService) AcceptInviteByExternalID(ctx context.Context, currentUserID int, inviterExternalID string, fromDefaultSplitPercentage int) (*domain.UserConnection, error) {
+	ret := _m.Called(ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AcceptInviteByExternalID")
+	}
+
+	var r0 *domain.UserConnection
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, int) (*domain.UserConnection, error)); ok {
+		return rf(ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, int) *domain.UserConnection); ok {
+		r0 = rf(ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.UserConnection)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, string, int) error); ok {
+		r1 = rf(ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserConnectionService_AcceptInviteByExternalID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AcceptInviteByExternalID'
+type MockUserConnectionService_AcceptInviteByExternalID_Call struct {
+	*mock.Call
+}
+
+// AcceptInviteByExternalID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - currentUserID int
+//   - inviterExternalID string
+//   - fromDefaultSplitPercentage int
+func (_e *MockUserConnectionService_Expecter) AcceptInviteByExternalID(ctx interface{}, currentUserID interface{}, inviterExternalID interface{}, fromDefaultSplitPercentage interface{}) *MockUserConnectionService_AcceptInviteByExternalID_Call {
+	return &MockUserConnectionService_AcceptInviteByExternalID_Call{Call: _e.mock.On("AcceptInviteByExternalID", ctx, currentUserID, inviterExternalID, fromDefaultSplitPercentage)}
+}
+
+func (_c *MockUserConnectionService_AcceptInviteByExternalID_Call) Run(run func(ctx context.Context, currentUserID int, inviterExternalID string, fromDefaultSplitPercentage int)) *MockUserConnectionService_AcceptInviteByExternalID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockUserConnectionService_AcceptInviteByExternalID_Call) Return(_a0 *domain.UserConnection, _a1 error) *MockUserConnectionService_AcceptInviteByExternalID_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserConnectionService_AcceptInviteByExternalID_Call) RunAndReturn(run func(context.Context, int, string, int) (*domain.UserConnection, error)) *MockUserConnectionService_AcceptInviteByExternalID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: ctx, fromUserID, toUserID, fromDefaultSplitPercentage
 func (_m *MockUserConnectionService) Create(ctx context.Context, fromUserID int, toUserID int, fromDefaultSplitPercentage int) (*domain.UserConnection, error) {
 	ret := _m.Called(ctx, fromUserID, toUserID, fromDefaultSplitPercentage)

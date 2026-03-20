@@ -2,6 +2,7 @@ const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 export type Me = {
   id: number
+  external_id: string
   name: string
   email: string
 }

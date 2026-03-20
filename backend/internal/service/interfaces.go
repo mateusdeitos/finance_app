@@ -6,6 +6,10 @@ import (
 	"github.com/finance_app/backend/internal/domain"
 )
 
+type UserService interface {
+	GetByExternalID(ctx context.Context, externalID string) (*domain.User, error)
+}
+
 type AuthService interface {
 	OAuthCallback(ctx context.Context, provider string, user *domain.User, providerID string) (*domain.User, string, error)
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
@@ -45,6 +49,7 @@ type TagService interface {
 
 type UserConnectionService interface {
 	Create(ctx context.Context, fromUserID, toUserID, fromDefaultSplitPercentage int) (*domain.UserConnection, error)
+	AcceptInviteByExternalID(ctx context.Context, currentUserID int, inviterExternalID string, fromDefaultSplitPercentage int) (*domain.UserConnection, error)
 	UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error
 	Delete(ctx context.Context, userID, id int) error
 	Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error)
@@ -62,6 +67,7 @@ type SettlementService interface {
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
+	User           UserService
 	Account        AccountService
 	Category       CategoryService
 	Tag            TagService
