@@ -1,11 +1,11 @@
 // Seed script: populates the local database with realistic test data for a given user.
 // Configure the variables below, then run:
 //
-//	just seed <user-email>
+//	just seed <user-email> [partner-email]
 //
 // or directly:
 //
-//	go run cmd/scripts/seed/main.go <user-email>
+//	go run cmd/scripts/seed/main.go <user-email> [partner-email]
 package main
 
 import (
@@ -28,9 +28,10 @@ var (
 	startPeriod = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	endPeriod   = time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 
-	quantityOfTransactions = 30 // transactions per month
-	quantityOfAccounts     = 3
-	quantityOfCategories   = 8
+	quantityOfTransactions       = 30 // transactions per month
+	quantityOfLinkedTransactions = 5  // linked (split) transactions per month, requires partner email
+	quantityOfAccounts           = 3
+	quantityOfCategories         = 8
 
 	tagNames = []string{"fixo", "supermercado", "lazer", "viagem", "saúde", "assinatura"}
 )
@@ -69,13 +70,22 @@ var descriptionsByType = map[domain.TransactionType][]string{
 	},
 }
 
+var linkedDescriptions = []string{
+	"Jantar fora", "Mercado", "Conta de água", "Netflix compartilhado",
+	"Aluguel", "Condomínio", "Viagem", "Supermercado", "Restaurante",
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("usage: seed <user-email>")
+		log.Fatal("usage: seed <user-email> [partner-email]")
 	}
 	userEmail := os.Args[1]
+	var partnerEmail string
+	if len(os.Args) >= 3 {
+		partnerEmail = os.Args[2]
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -112,7 +122,7 @@ func main() {
 
 	ctx := context.Background()
 
-	// Resolve user
+	// Resolve primary user
 	user, err := repos.User.GetByEmail(ctx, userEmail)
 	if err != nil {
 		log.Fatalf("user %q not found: %v", userEmail, err) //nolint:gosec
@@ -128,8 +138,19 @@ func main() {
 	// Tags
 	tags := seedTags(ctx, svcs, user.ID)
 
+	// Optional: user connection for linked transactions
+	var conn *domain.UserConnection
+	if partnerEmail != "" {
+		partner, err := repos.User.GetByEmail(ctx, partnerEmail)
+		if err != nil {
+			log.Fatalf("partner %q not found: %v", partnerEmail, err)
+		}
+		fmt.Printf("Partner user: %s (id=%d)\n", partner.Name, partner.ID)
+		conn = seedUserConnection(ctx, svcs, user.ID, partner.ID)
+	}
+
 	// Transactions
-	seedTransactions(ctx, svcs, user.ID, accounts, categories, tags)
+	seedTransactions(ctx, svcs, user.ID, accounts, categories, tags, conn)
 
 	log.Println("Done.")
 }
@@ -239,6 +260,45 @@ func seedTags(ctx context.Context, svcs *service.Services, userID int) []*domain
 	return tags
 }
 
+// seedUserConnection finds an existing accepted connection between the two users,
+// or creates one and accepts it on behalf of the partner.
+func seedUserConnection(ctx context.Context, svcs *service.Services, userID, partnerID int) *domain.UserConnection {
+	// Search for an existing accepted connection in either direction
+	for _, from := range []int{userID, partnerID} {
+		to := partnerID
+		if from == partnerID {
+			to = userID
+		}
+		conns, err := svcs.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+			FromUserIDs:      []int{from},
+			ToUserIDs:        []int{to},
+			ConnectionStatus: domain.UserConnectionStatusAccepted,
+		})
+		if err != nil {
+			log.Fatalf("failed to search user connections: %v", err)
+		}
+		if len(conns) > 0 {
+			fmt.Printf("User connection: using existing (id=%d)\n", conns[0].ID)
+			return conns[0]
+		}
+	}
+
+	// Create a new connection (user → partner, 50/50 split)
+	splitPct := 50
+	conn, err := svcs.UserConnection.Create(ctx, userID, partnerID, splitPct)
+	if err != nil {
+		log.Fatalf("failed to create user connection: %v", err)
+	}
+
+	// Accept it on behalf of the partner
+	if err := svcs.UserConnection.UpdateStatus(ctx, partnerID, conn.ID, domain.UserConnectionStatusAccepted); err != nil {
+		log.Fatalf("failed to accept user connection: %v", err)
+	}
+
+	fmt.Printf("User connection: created and accepted (id=%d)\n", conn.ID)
+	return conn
+}
+
 func seedTransactions(
 	ctx context.Context,
 	svcs *service.Services,
@@ -246,6 +306,7 @@ func seedTransactions(
 	accounts []*domain.Account,
 	categories []*domain.Category,
 	tags []*domain.Tag,
+	conn *domain.UserConnection,
 ) {
 	if len(accounts) == 0 {
 		log.Println("no accounts available, skipping transactions")
@@ -256,7 +317,10 @@ func seedTransactions(
 
 	totalMonths := monthsBetween(startPeriod, endPeriod)
 	total := totalMonths * quantityOfTransactions
-	log.Printf("Creating ~%d transactions across %d months...\n", total, totalMonths)
+	if conn != nil {
+		total += totalMonths * quantityOfLinkedTransactions
+	}
+	fmt.Printf("Creating ~%d transactions across %d months...\n", total, totalMonths)
 
 	typeWeights := []domain.TransactionType{
 		domain.TransactionTypeExpense,
@@ -269,6 +333,7 @@ func seedTransactions(
 
 	current := startPeriod
 	for !current.After(endPeriod) {
+		// Regular transactions
 		for range quantityOfTransactions {
 			txType := typeWeights[rng.Intn(len(typeWeights))]
 			account := accounts[rng.Intn(len(accounts))]
@@ -312,6 +377,38 @@ func seedTransactions(
 				log.Printf("  skip transaction: %v", err)
 			}
 		}
+
+		// Linked (split) transactions
+		if conn != nil {
+			pct := 50
+			for range quantityOfLinkedTransactions {
+				account := accounts[rng.Intn(len(accounts))]
+				date := randomDayInMonth(rng, current)
+				amount := randomAmount(rng, domain.TransactionTypeExpense)
+				description := linkedDescriptions[rng.Intn(len(linkedDescriptions))]
+
+				req := &domain.TransactionCreateRequest{
+					TransactionType: domain.TransactionTypeExpense,
+					AccountID:       account.ID,
+					Amount:          amount,
+					Date:            date,
+					Description:     description,
+					SplitSettings: []domain.SplitSettings{
+						{ConnectionID: conn.ID, Percentage: &pct},
+					},
+				}
+
+				if len(categories) > 0 && rng.Float32() > 0.2 {
+					cat := categories[rng.Intn(len(categories))]
+					req.CategoryID = cat.ID
+				}
+
+				if err := svcs.Transaction.Create(ctx, userID, req); err != nil {
+					log.Printf("  skip linked transaction: %v", err)
+				}
+			}
+		}
+
 		current = current.AddDate(0, 1, 0)
 	}
 	log.Printf("  created transactions from %s to %s\n",
@@ -366,4 +463,3 @@ func pickN[T any](rng *rand.Rand, slice []*T, n int) []*T {
 	}
 	return result
 }
-
