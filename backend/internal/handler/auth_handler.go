@@ -15,7 +15,10 @@ import (
 	"github.com/markbates/goth/gothic"
 )
 
-const AuthCookieName = "auth_token"
+const (
+	AuthCookieName = "auth_token"
+	envProduction  = "production"
+)
 
 type AuthHandler struct {
 	authService service.AuthService
@@ -54,7 +57,7 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 			Value:    redirectTo,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.cfg.App.Env == "production",
+			Secure:   h.cfg.App.Env == envProduction,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   300,
 		})
@@ -102,7 +105,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.cfg.App.Env == "production",
+		Secure:   h.cfg.App.Env == envProduction,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
 	}
@@ -116,7 +119,7 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 			Value:    "",
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.cfg.App.Env == "production",
+			Secure:   h.cfg.App.Env == envProduction,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   -1,
 		})
@@ -131,7 +134,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.cfg.App.Env == "production",
+		Secure:   h.cfg.App.Env == envProduction,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
