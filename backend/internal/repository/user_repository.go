@@ -47,6 +47,17 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	return ent.ToDomain(), nil
 }
 
+func (r *userRepository) GetByExternalID(ctx context.Context, externalID string) (*domain.User, error) {
+	var ent entity.User
+	if err := GetTxFromContext(ctx, r.db).Where("external_id = ?", externalID).First(&ent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return ent.ToDomain(), nil
+}
+
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	ent := entity.UserFromDomain(user)
 	return GetTxFromContext(ctx, r.db).Save(ent).Error

@@ -1,0 +1,9 @@
+.root {
+  justify-content: center;
+}
+
+.input {
+  width: 7rem;
+  text-align: center;
+  cursor: pointer;
+}

@@ -1,0 +1,50 @@
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 0.5rem 1rem;
+  align-items: start;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.main {
+  min-width: 0;
+}
+
+.category {
+  min-width: 8rem;
+  max-width: 10rem;
+}
+
+.account {
+  min-width: 8rem;
+  max-width: 10rem;
+}
+
+.amount {
+  min-width: 7rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 48em) {
+  .row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .category,
+  .account {
+    display: none;
+  }
+
+  .amount {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: start;
+  }
+}

@@ -60,6 +60,8 @@ linters:
     - unparam            # 1 issue: always-nil error return in normalizeInstallments
     - recvcheck          # 10 issues: GORM entities intentionally mix pointer/value receivers
   exclusions:
+    paths:
+      - cmd/scripts/  # dev-only scripts, lint rules relaxed intentionally
     rules:
       # Auto-generated mocks — never edit manually
       - path: mocks/
