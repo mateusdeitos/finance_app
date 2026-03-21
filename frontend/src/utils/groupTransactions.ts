@@ -25,8 +25,13 @@ export function groupTransactions(
         : null
       label = category ? category.name : 'Sem categoria'
     } else {
-      const account = accounts.find((a) => a.id === tx.account_id)
-      label = account ? account.name : `Conta ${tx.account_id}`
+      // For transfers, always group by the from_account (debit side)
+      const fromAccountId =
+        tx.type === 'transfer' && tx.operation_type === 'credit' && (tx.linked_transactions ?? []).length > 0
+          ? tx.linked_transactions![0].account_id
+          : tx.account_id
+      const account = accounts.find((a) => a.id === fromAccountId)
+      label = account ? account.name : `Conta ${fromAccountId}`
     }
 
     if (!groups.has(label)) {

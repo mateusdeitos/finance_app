@@ -1,5 +1,5 @@
-import { Badge, Group, Text, Tooltip } from '@mantine/core'
-import { IconLink, IconRepeat, IconUsers } from '@tabler/icons-react'
+import { Badge, Group, Stack, Text, Tooltip } from '@mantine/core'
+import { IconArrowDown, IconLink, IconRepeat, IconUsers } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatCents } from '@/utils/formatCents'
 import classes from './TransactionRow.module.css'
@@ -22,6 +22,11 @@ export function TransactionRow({
   currentUserId,
 }: TransactionRowProps) {
   const account = accounts.find((a) => a.id === tx.account_id)
+  const linkedAccount = tx.type === 'transfer' && (tx.linked_transactions ?? []).length > 0
+    ? accounts.find((a) => a.id === tx.linked_transactions![0].account_id)
+    : null
+  const fromAccount = tx.operation_type === 'debit' ? account : linkedAccount
+  const toAccount = tx.operation_type === 'debit' ? linkedAccount : account
   const category = tx.category_id ? categories.find((c) => c.id === tx.category_id) : null
   const tags = tx.tags ?? []
   const visibleTags = tags.slice(0, MAX_TAGS)
@@ -93,11 +98,23 @@ export function TransactionRow({
       )}
 
       {/* Col 3: account */}
-      {groupBy !== 'account' && (
+      {(groupBy !== 'account' || tx.type === 'transfer') && (
         <div className={classes.account}>
-          <Text size="sm" c="dimmed" lineClamp={1}>
-            {account?.name ?? '—'}
-          </Text>
+          {tx.type === 'transfer' ? (
+            groupBy === 'account' ? (
+              <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
+            ) : (
+              <Stack gap={0}>
+                <Text size="sm" c="dimmed" lineClamp={1}>{fromAccount?.name ?? '—'}</Text>
+                <IconArrowDown size={12} style={{ opacity: 0.5 }} />
+                <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
+              </Stack>
+            )
+          ) : (
+            <Text size="sm" c="dimmed" lineClamp={1}>
+              {account?.name ?? '—'}
+            </Text>
+          )}
         </div>
       )}
 
