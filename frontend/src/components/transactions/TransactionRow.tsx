@@ -1,7 +1,8 @@
 import { Badge, Group, Stack, Text, Tooltip } from '@mantine/core'
-import { IconArrowDown, IconLink, IconRepeat, IconUsers } from '@tabler/icons-react'
+import { IconArrowDown, IconUsers } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatCents } from '@/utils/formatCents'
+import { RecurrenceBadge } from './RecurrenceBadge'
 import classes from './TransactionRow.module.css'
 
 const MAX_TAGS = 3
@@ -32,7 +33,6 @@ export function TransactionRow({
   const visibleTags = tags.slice(0, MAX_TAGS)
   const extraTags = tags.length - MAX_TAGS
 
-  const hasRecurrence = !!tx.transaction_recurrence_id
   const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId)
   const hasSettlement = (tx.settlements_from_source ?? []).length > 0
 
@@ -56,19 +56,10 @@ export function TransactionRow({
           <Text size="sm" fw={500} lineClamp={1}>
             {tx.description}
           </Text>
-          {hasRecurrence && (
-            <Tooltip label="Recorrente">
-              <IconRepeat size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
-            </Tooltip>
-          )}
+          <RecurrenceBadge transaction={tx} />
           {hasLinkedUser && (
             <Tooltip label="Compartilhada">
               <IconUsers size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
-            </Tooltip>
-          )}
-          {hasSettlement && (
-            <Tooltip label="Origem de acerto">
-              <IconLink size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
             </Tooltip>
           )}
         </Group>
@@ -91,9 +82,11 @@ export function TransactionRow({
       {/* Col 2: category */}
       {groupBy !== 'category' && (
         <div className={classes.category}>
-          <Text size="sm" c="dimmed" lineClamp={1}>
-            {category?.name ?? '—'}
-          </Text>
+          {tx.type !== 'transfer' && !hasSettlement && (
+            <Text size="sm" c="dimmed" lineClamp={1}>
+              {category?.name ?? '—'}
+            </Text>
+          )}
         </div>
       )}
 

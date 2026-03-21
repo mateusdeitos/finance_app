@@ -35,9 +35,7 @@ export function SettlementRow({ settlement, groupBy, accounts }: SettlementRowPr
       </div>
 
       {groupBy !== 'category' && (
-        <div className={classes.category}>
-          <Text size="sm" c="dimmed">—</Text>
-        </div>
+        <div className={classes.category} />
       )}
 
       {groupBy !== 'account' && (
