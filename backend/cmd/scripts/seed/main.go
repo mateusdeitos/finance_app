@@ -26,11 +26,14 @@ import (
 // ── Configuration ────────────────────────────────────────────────────────────
 
 var (
-	startPeriod = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	endPeriod   = time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
+	startPeriod = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	endPeriod   = time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
 
 	quantityOfTransactions       = 30 // transactions per month
 	quantityOfLinkedTransactions = 5  // linked (split) transactions per month, requires partner email
+	quantityOfRecurringTx        = 8  // recurring transactions to seed (created once, installments span forward)
+	recurringInstallmentsMin     = 2  // min installments per recurring transaction
+	recurringInstallmentsMax     = 12 // max installments per recurring transaction
 	quantityOfAccounts           = 3
 	quantityOfCategories         = 8
 
@@ -149,6 +152,9 @@ func main() {
 		fmt.Printf("Partner user: %s (id=%d)\n", partner.Name, partner.ID)
 		conn = seedUserConnection(ctx, svcs, user.ID, partner.ID)
 	}
+
+	// Recurring transactions
+	seedRecurringTransactions(ctx, svcs, user.ID, accounts, categories, tags)
 
 	// Transactions
 	seedTransactions(ctx, svcs, user.ID, accounts, categories, tags, conn)
@@ -414,6 +420,70 @@ func seedTransactions(
 	}
 	log.Printf("  created transactions from %s to %s\n",
 		startPeriod.Format("Jan 2006"), endPeriod.Format("Jan 2006"))
+}
+
+func seedRecurringTransactions(
+	ctx context.Context,
+	svcs *service.Services,
+	userID int,
+	accounts []*domain.Account,
+	categories []*domain.Category,
+	tags []*domain.Tag,
+) {
+	if len(accounts) == 0 {
+		log.Println("no accounts available, skipping recurring transactions")
+		return
+	}
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano() + 1)) //nolint:gosec
+	fmt.Printf("Creating %d recurring transactions starting from %s...\n", quantityOfRecurringTx, startPeriod.Format("Jan 2006"))
+
+	recurringTypes := []domain.TransactionType{
+		domain.TransactionTypeExpense,
+		domain.TransactionTypeExpense,
+		domain.TransactionTypeExpense,
+		domain.TransactionTypeIncome,
+	}
+
+	for range quantityOfRecurringTx {
+		txType := recurringTypes[rng.Intn(len(recurringTypes))]
+		account := accounts[rng.Intn(len(accounts))]
+		date := randomDayInMonth(rng, startPeriod)
+		amount := randomAmount(rng, txType)
+		description := randomDescription(rng, txType)
+		installments := recurringInstallmentsMin + rng.Intn(recurringInstallmentsMax-recurringInstallmentsMin+1)
+
+		req := &domain.TransactionCreateRequest{
+			TransactionType: txType,
+			AccountID:       account.ID,
+			Amount:          amount,
+			Date:            date,
+			Description:     description,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:        domain.RecurrenceTypeMonthly,
+				Repetitions: &installments,
+			},
+		}
+
+		if len(categories) > 0 && rng.Float32() > 0.1 {
+			cat := categories[rng.Intn(len(categories))]
+			req.CategoryID = cat.ID
+		}
+		if len(tags) > 0 && rng.Float32() > 0.5 {
+			n := rng.Intn(min(3, len(tags))) + 1
+			picked := pickN(rng, tags, n)
+			req.Tags = make([]domain.Tag, len(picked))
+			for j, t := range picked {
+				req.Tags[j] = *t
+			}
+		}
+
+		if err := svcs.Transaction.Create(ctx, userID, req); err != nil {
+			log.Printf("  skip recurring transaction: %v", err)
+			continue
+		}
+		log.Printf("  + recurring %s %q (%d installments)\n", txType, description, installments) //nolint:gosec
+	}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
