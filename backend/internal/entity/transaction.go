@@ -30,6 +30,7 @@ type Transaction struct {
 	TransactionRecurrence   *TransactionRecurrence `gorm:"<-:false"`
 	Tags                    []Tag                  `gorm:"many2many:transaction_tags;joinForeignKey:transaction_id;joinReferences:tag_id"`
 	LinkedTransactions      []Transaction          `gorm:"many2many:linked_transactions;joinForeignKey:transaction_id;joinReferences:linked_transaction_id"`
+	SourceTransactions      []Transaction          `gorm:"many2many:linked_transactions;joinForeignKey:linked_transaction_id;joinReferences:transaction_id"`
 	SettlementsFromSource   []Settlement           `gorm:"foreignKey:SourceTransactionID;<-:false"`
 }
 
@@ -56,9 +57,10 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		deletedAt = &t.DeletedAt.Time
 	}
 
+	allLinked := append(t.LinkedTransactions, t.SourceTransactions...)
 	var linkedTransactions []domain.Transaction
-	if len(t.LinkedTransactions) > 0 {
-		linkedTransactions = lo.Map(t.LinkedTransactions, func(lt Transaction, _ int) domain.Transaction {
+	if len(allLinked) > 0 {
+		linkedTransactions = lo.Map(allLinked, func(lt Transaction, _ int) domain.Transaction {
 			return *lt.ToDomain()
 		})
 	}
