@@ -16,7 +16,12 @@ interface TransactionListProps {
 
 function groupNetTotal(group: Transactions.TransactionGroup): number {
   return group.transactions.reduce((sum, tx) => {
-    return sum + (tx.operation_type === 'credit' ? tx.amount : -tx.amount)
+    const txAmount = tx.operation_type === 'credit' ? tx.amount : -tx.amount
+    const settlementsAmount = (tx.settlements_from_source ?? []).reduce(
+      (s, settlement) => s + (settlement.type === 'credit' ? settlement.amount : -settlement.amount),
+      0,
+    )
+    return sum + txAmount + settlementsAmount
   }, 0)
 }
 

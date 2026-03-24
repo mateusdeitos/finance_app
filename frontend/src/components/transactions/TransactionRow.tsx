@@ -2,6 +2,7 @@ import { Badge, Group, Stack, Text, Tooltip } from '@mantine/core'
 import { IconArrowDown, IconUsers } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatCents } from '@/utils/formatCents'
+import { parseDate } from '@/utils/parseDate'
 import { RecurrenceBadge } from './RecurrenceBadge'
 import classes from './TransactionRow.module.css'
 
@@ -64,7 +65,7 @@ export function TransactionRow({
 
   const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId)
 
-  const date = new Date(tx.date)
+  const date = parseDate(tx.date)
   const dateLabel = date.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',

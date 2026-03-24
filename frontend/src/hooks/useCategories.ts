@@ -7,6 +7,7 @@ export function useCategories() {
   const query = useQuery({
     queryKey: [QueryKeys.Categories],
     queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
   })
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [QueryKeys.Categories] })

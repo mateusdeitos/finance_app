@@ -7,6 +7,7 @@ export function useAccounts() {
   const query = useQuery({
     queryKey: [QueryKeys.Accounts],
     queryFn: fetchAccounts,
+    staleTime: 5 * 60 * 1000,
   })
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [QueryKeys.Accounts] })
