@@ -57,7 +57,9 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		deletedAt = &t.DeletedAt.Time
 	}
 
-	allLinked := append(t.LinkedTransactions, t.SourceTransactions...)
+	allLinked := make([]Transaction, len(t.LinkedTransactions), len(t.LinkedTransactions)+len(t.SourceTransactions))
+	copy(allLinked, t.LinkedTransactions)
+	allLinked = append(allLinked, t.SourceTransactions...)
 	var linkedTransactions []domain.Transaction
 	if len(allLinked) > 0 {
 		linkedTransactions = lo.Map(allLinked, func(lt Transaction, _ int) domain.Transaction {

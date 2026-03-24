@@ -241,7 +241,8 @@ func AsServiceError(err error) (*ServiceError, bool) {
 // For ServiceErrors, tags from all errors are merged into a TaggedHTTPError.
 func ToHTTPError(err error) error {
 	// Handle ServiceErrors (slice of *ServiceError) first
-	if serviceErrs, ok := err.(ServiceErrors); ok && len(serviceErrs) > 0 {
+	serviceErrs, ok := err.(ServiceErrors)
+	if ok && len(serviceErrs) > 0 {
 		first := serviceErrs[0]
 		code := serviceErrHTTPCode(first.Code)
 		// Collect all tags, deduplicated

@@ -832,7 +832,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 
 	txs, err := suite.Services.Transaction.Search(ctx, user.ID, period, domain.TransactionFilter{UserID: &user.ID})
 	suite.Require().NoError(err)
-	suite.Require().Len(txs, 1)
+	suite.Require().Len(txs, 2)
 
 	err = suite.Services.Transaction.Update(ctx, txs[0].ID, user.ID, &domain.TransactionUpdateRequest{
 		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
@@ -938,7 +938,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 
 	txs, err := suite.Services.Transaction.Search(ctx, user.ID, period, domain.TransactionFilter{UserID: &user.ID})
 	suite.Require().NoError(err)
-	suite.Require().Len(txs, 1)
+	suite.Require().Len(txs, 2)
 
 	err = suite.Services.Transaction.Update(ctx, txs[0].ID, user.ID, &domain.TransactionUpdateRequest{
 		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
@@ -1007,7 +1007,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 
 	txs, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{UserID: &user1.ID})
 	suite.Require().NoError(err)
-	suite.Require().Len(txs, 1)
+	suite.Require().Len(txs, 2)
 
 	// redirect destination to user2's connection account
 	err = suite.Services.Transaction.Update(ctx, txs[0].ID, user1.ID, &domain.TransactionUpdateRequest{

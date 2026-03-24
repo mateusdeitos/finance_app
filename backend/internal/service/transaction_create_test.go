@@ -205,11 +205,11 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactions, 1)
+	suite.Assert().Len(transactions, 2)
 
 	suite.Assert().NoError(err)
 
-	// Primeira transação é o débito (conta origem), segunda é o crédito (conta destino)
+	// transactions[0] é o débito (conta origem), transactions[1] é o crédito (conta destino)
 	suite.Assert().Greater(transactions[0].ID, 0, "transactions[0].ID should be greater than 0")
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID, "transactions[0].AccountID should be equal to transaction.AccountID")
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount, "transactions[0].Amount should be equal to transaction.Amount")
@@ -298,37 +298,40 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactions, 3)
+	suite.Assert().Len(transactions, 6)
 
 	suite.Assert().NoError(err)
 
+	debitTransactions := lo.Filter(transactions, func(t *domain.Transaction, _ int) bool {
+		return t.OperationType == domain.OperationTypeDebit
+	})
+	suite.Assert().Len(debitTransactions, 3)
+
 	expectedInstallmentNumber := 1
 
-	for i := range transactions {
-		suite.Assert().NotNil(transactions[i].TransactionRecurrenceID, fmt.Sprintf("transactions[%d].TransactionRecurrenceID should not be nil", i))
-		suite.Assert().NotNil(transactions[i].InstallmentNumber, fmt.Sprintf("transactions[%d].InstallmentNumber should not be nil", i))
-		suite.Assert().Nil(transactions[i].CategoryID, fmt.Sprintf("transactions[%d].CategoryID should be nil", i))
-		suite.Assert().Equal(user.ID, transactions[i].UserID, fmt.Sprintf("transactions[%d].UserID should be %d", i, user.ID))
-		suite.Assert().Equal(user.ID, lo.FromPtr(transactions[i].OriginalUserID), fmt.Sprintf("transactions[%d].OriginalUserID should be %d", i, user.ID))
-		suite.Assert().Equal(int64(100), int64(transactions[i].Amount), fmt.Sprintf("transactions[%d].Amount should be %d", i, 100))
-		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), transactions[i].Date, fmt.Sprintf("transactions[%d].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
-		suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[i].Type, fmt.Sprintf("transactions[%d].Type should be %s", i, domain.TransactionTypeTransfer))
-		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
-		suite.Assert().Equal(account1.ID, transactions[i].AccountID, fmt.Sprintf("transactions[%d].AccountID should be %d", i, account1.ID))
-		suite.Assert().Len(transactions[i].LinkedTransactions, 1, fmt.Sprintf("transactions[%d].LinkedTransactions should have 1", i))
-		suite.Assert().Equal(domain.OperationTypeDebit, transactions[i].OperationType, fmt.Sprintf("transactions[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+	for i := range debitTransactions {
+		suite.Assert().NotNil(debitTransactions[i].TransactionRecurrenceID, fmt.Sprintf("debitTransactions[%d].TransactionRecurrenceID should not be nil", i))
+		suite.Assert().NotNil(debitTransactions[i].InstallmentNumber, fmt.Sprintf("debitTransactions[%d].InstallmentNumber should not be nil", i))
+		suite.Assert().Nil(debitTransactions[i].CategoryID, fmt.Sprintf("debitTransactions[%d].CategoryID should be nil", i))
+		suite.Assert().Equal(user.ID, debitTransactions[i].UserID, fmt.Sprintf("debitTransactions[%d].UserID should be %d", i, user.ID))
+		suite.Assert().Equal(user.ID, lo.FromPtr(debitTransactions[i].OriginalUserID), fmt.Sprintf("debitTransactions[%d].OriginalUserID should be %d", i, user.ID))
+		suite.Assert().Equal(int64(100), int64(debitTransactions[i].Amount), fmt.Sprintf("debitTransactions[%d].Amount should be %d", i, 100))
+		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), debitTransactions[i].Date, fmt.Sprintf("debitTransactions[%d].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
+		suite.Assert().Equal(domain.TransactionTypeTransfer, debitTransactions[i].Type, fmt.Sprintf("debitTransactions[%d].Type should be %s", i, domain.TransactionTypeTransfer))
+		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(debitTransactions[i].InstallmentNumber), fmt.Sprintf("debitTransactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
+		suite.Assert().Equal(account1.ID, debitTransactions[i].AccountID, fmt.Sprintf("debitTransactions[%d].AccountID should be %d", i, account1.ID))
+		suite.Assert().Len(debitTransactions[i].LinkedTransactions, 1, fmt.Sprintf("debitTransactions[%d].LinkedTransactions should have 1", i))
+		suite.Assert().Equal(domain.OperationTypeDebit, debitTransactions[i].OperationType, fmt.Sprintf("debitTransactions[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 
-		suite.Assert().Len(transactions[i].LinkedTransactions, 1, fmt.Sprintf("transactions[%d].LinkedTransactions should have 1", i))
-
-		suite.Assert().Equal(account2.ID, transactions[i].LinkedTransactions[0].AccountID, fmt.Sprintf("transactions[%d].LinkedTransactions[0].AccountID should be %d", i, account2.ID))
-		suite.Assert().Equal(int64(100), int64(transactions[i].LinkedTransactions[0].Amount), fmt.Sprintf("transactions[%d].LinkedTransactions[0].Amount should be %d", i, 100))
-		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), transactions[i].LinkedTransactions[0].Date, fmt.Sprintf("transactions[%d].LinkedTransactions[0].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
-		suite.Assert().Equal(transaction.Description, transactions[i].LinkedTransactions[0].Description, fmt.Sprintf("transactions[%d].LinkedTransactions[0].Description should be %s", i, transaction.Description))
-		suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[i].LinkedTransactions[0].Type, fmt.Sprintf("transactions[%d].LinkedTransactions[0].Type should be %s", i, domain.TransactionTypeTransfer))
-		suite.Assert().Equal(user.ID, transactions[i].LinkedTransactions[0].UserID, fmt.Sprintf("transactions[%d].LinkedTransactions[0].UserID should be %d", i, user.ID))
-		suite.Assert().Equal(user.ID, lo.FromPtr(transactions[i].LinkedTransactions[0].OriginalUserID), fmt.Sprintf("transactions[%d].LinkedTransactions[0].OriginalUserID should be %d", i, user.ID))
-		suite.Assert().Len(transactions[i].LinkedTransactions[0].Tags, 1, fmt.Sprintf("transactions[%d].LinkedTransactions[0].Tags should have 1 tag", i))
-		suite.Assert().Equal(tag.ID, transactions[i].LinkedTransactions[0].Tags[0].ID, fmt.Sprintf("transactions[%d].LinkedTransactions[0].Tags[0].ID should be %d", i, tag.ID))
+		suite.Assert().Equal(account2.ID, debitTransactions[i].LinkedTransactions[0].AccountID, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].AccountID should be %d", i, account2.ID))
+		suite.Assert().Equal(int64(100), int64(debitTransactions[i].LinkedTransactions[0].Amount), fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Amount should be %d", i, 100))
+		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), debitTransactions[i].LinkedTransactions[0].Date, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
+		suite.Assert().Equal(transaction.Description, debitTransactions[i].LinkedTransactions[0].Description, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Description should be %s", i, transaction.Description))
+		suite.Assert().Equal(domain.TransactionTypeTransfer, debitTransactions[i].LinkedTransactions[0].Type, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Type should be %s", i, domain.TransactionTypeTransfer))
+		suite.Assert().Equal(user.ID, debitTransactions[i].LinkedTransactions[0].UserID, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].UserID should be %d", i, user.ID))
+		suite.Assert().Equal(user.ID, lo.FromPtr(debitTransactions[i].LinkedTransactions[0].OriginalUserID), fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].OriginalUserID should be %d", i, user.ID))
+		suite.Assert().Len(debitTransactions[i].LinkedTransactions[0].Tags, 1, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Tags should have 1 tag", i))
+		suite.Assert().Equal(tag.ID, debitTransactions[i].LinkedTransactions[0].Tags[0].ID, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Tags[0].ID should be %d", i, tag.ID))
 
 		expectedInstallmentNumber++
 	}
@@ -423,7 +426,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 0", i))
+			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -460,7 +463,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 0", i))
+			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -577,7 +580,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 0", i))
+			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -614,7 +617,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 0, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 0", i))
+			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
