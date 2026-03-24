@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Drawer } from '@mantine/core'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
+import { useMe } from '@/hooks/useMe'
 import { useTransactionPrefill } from '@/hooks/useTransactionPrefill'
 import { Transactions } from '@/types/transactions'
 import { TransactionForm, TransactionFormHandle } from './form/TransactionForm'
@@ -9,7 +10,6 @@ import { TransactionForm, TransactionFormHandle } from './form/TransactionForm'
 interface Props {
   opened: boolean
   onClose: () => void
-  currentUserId: number
 }
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
@@ -18,10 +18,13 @@ const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
   transfer: 'Nova Transferência',
 }
 
-export function CreateTransactionDrawer({ opened, onClose, currentUserId }: Props) {
+export function CreateTransactionDrawer({ opened, onClose }: Props) {
   const [transactionType, setTransactionType] = useState<Transactions.TransactionType>('expense')
   const formRef = useRef<TransactionFormHandle>(null)
   const hasFocused = useRef(false)
+
+  const { query: meQuery } = useMe((me) => me.id)
+  const currentUserId = meQuery.data ?? 0
 
   useEffect(() => {
     if (opened) hasFocused.current = false

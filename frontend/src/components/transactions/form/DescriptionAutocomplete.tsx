@@ -10,18 +10,19 @@ interface Props {
   required?: boolean
 }
 
-export function DescriptionAutocomplete({ value, onChange, onSuggestionSelect, error, required }: Props) {
-  const { data: suggestions = [] } = useTransactionSuggestions(value)
-
-  // Deduplicate by description and build autocomplete options
+function selectUniqueDescriptions(suggestions: Transactions.TransactionSuggestion[]) {
   const seen = new Set<string>()
-  const options = suggestions
-    .filter((s) => {
-      if (seen.has(s.description)) return false
-      seen.add(s.description)
-      return true
-    })
-    .map((s) => s.description)
+  return suggestions.filter((s) => {
+    if (seen.has(s.description)) return false
+    seen.add(s.description)
+    return true
+  })
+}
+
+export function DescriptionAutocomplete({ value, onChange, onSuggestionSelect, error, required }: Props) {
+  const { data: suggestions = [] } = useTransactionSuggestions(value, selectUniqueDescriptions)
+
+  const options = suggestions.map((s) => s.description)
 
   function handleOptionSubmit(val: string) {
     const match = suggestions.find((s) => s.description === val)
