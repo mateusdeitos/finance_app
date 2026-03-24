@@ -1,6 +1,7 @@
 import { AccountFilter } from './filters/AccountFilter'
 import { AdvancedFilter } from './filters/AdvancedFilter'
 import { CategoryFilter } from './filters/CategoryFilter'
+import { ClearFiltersButton } from './ClearFiltersButton'
 import { GroupBySelector } from './filters/GroupBySelector'
 import { TagFilter } from './filters/TagFilter'
 import { TextSearch } from './filters/TextSearch'
@@ -21,6 +22,7 @@ export function TransactionFilters({ orientation = 'row', hideTextSearch }: Tran
       <AccountFilter inline={inline} />
       <AdvancedFilter inline={inline} />
       <GroupBySelector />
+      <ClearFiltersButton />
     </div>
   )
 }

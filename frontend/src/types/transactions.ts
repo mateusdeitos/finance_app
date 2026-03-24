@@ -104,4 +104,24 @@ export namespace Transactions {
     types?: TransactionType[]
     query?: string
   }
+
+  export interface ActiveFilters {
+    accountIds: number[]
+    categoryIds: number[]
+    tagIds: number[]
+    types: TransactionType[]
+  }
+
+  export interface FetchBalanceParams {
+    month: number
+    year: number
+    accumulated: boolean
+    accountIds?: number[]
+    categoryIds?: number[]
+    tagIds?: number[]
+  }
+
+  export interface BalanceResult {
+    balance: number
+  }
 }

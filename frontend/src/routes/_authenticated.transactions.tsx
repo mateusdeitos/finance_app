@@ -1,12 +1,12 @@
-import { ActionIcon, Box, Drawer, Group, Stack } from '@mantine/core'
+import { ActionIcon, Box, Drawer, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconFilter } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { z } from 'zod'
-import { useTransactions } from '@/hooks/useTransactions'
 import { useMe } from '@/hooks/useMe'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
@@ -24,6 +24,7 @@ const transactionSearchSchema = z.object({
   accountIds: z.array(z.number()).default([]),
   types: z.array(z.enum(['expense', 'income', 'transfer'])).default([]),
   groupBy: z.enum(['date', 'category', 'account']).default('date'),
+  accumulated: z.coerce.boolean().default(false),
 })
 
 export const Route = createFileRoute('/_authenticated/transactions')({
@@ -39,17 +40,6 @@ function TransactionsPage() {
   const { query: meQuery } = useMe()
   const currentUserId = meQuery.data?.id ?? 0
 
-  const { query: txQuery } = useTransactions({
-    month: search.month,
-    year: search.year,
-    accountIds: search.accountIds,
-    categoryIds: search.categoryIds,
-    tagIds: search.tagIds,
-    types: search.types,
-  })
-
-  const transactions = txQuery.data ?? []
-
   if (isMobile) {
     return (
       <Stack gap="sm" pb="5rem">
@@ -64,20 +54,16 @@ function TransactionsPage() {
             paddingBottom: 'var(--mantine-spacing-xs)',
           }}
         >
-          <Group gap="xs" wrap="nowrap">
+          <Stack gap="xs">
             <PeriodNavigator month={search.month} year={search.year} />
-            <TextSearch style={{ flex: 1, minWidth: 0 }} />
-          </Group>
+            <TextSearch />
+          </Stack>
         </Box>
 
-        <TransactionList
-          transactions={transactions}
-          groupBy={search.groupBy}
-          currentUserId={currentUserId}
-          textFilter={search.query}
-        />
+        <TransactionList currentUserId={currentUserId} />
 
         <MobileBottomBar>
+          <ClearFiltersButton variant="icon" />
           <ActionIcon
             size="xl"
             radius="xl"
@@ -123,12 +109,7 @@ function TransactionsPage() {
           <TransactionFilters orientation="row" />
         </Stack>
       </Box>
-      <TransactionList
-        transactions={transactions}
-        groupBy={search.groupBy}
-        currentUserId={currentUserId}
-        textFilter={search.query}
-      />
+      <TransactionList currentUserId={currentUserId} />
     </Stack>
   )
 }

@@ -1,0 +1,26 @@
+import { useQuery } from '@tanstack/react-query'
+import { fetchBalance } from '@/api/transactions'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
+import { QueryKeys } from '@/utils/queryKeys'
+
+interface UseOpeningBalanceParams {
+  month: number
+  year: number
+  accumulated: boolean
+}
+
+export function useOpeningBalance({ month, year, accumulated }: UseOpeningBalanceParams) {
+  const filters = useActiveFilters()
+
+  const prevMonth = month === 1 ? 12 : month - 1
+  const prevYear = month === 1 ? year - 1 : year
+
+  const query = useQuery({
+    queryKey: [QueryKeys.Balance, { month: prevMonth, year: prevYear, accumulated, ...filters }],
+    queryFn: () =>
+      fetchBalance({ month: prevMonth, year: prevYear, accumulated, ...filters }),
+    enabled: accumulated,
+  })
+
+  return { query }
+}
