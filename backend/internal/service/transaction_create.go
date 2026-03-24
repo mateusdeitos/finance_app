@@ -114,7 +114,7 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 				errs = append(errs, pkgErrors.ErrSplitSettingPercentageAndAmountCannotBeUsedTogether(i))
 			}
 
-			if splitSetting.Percentage != nil && *splitSetting.Percentage < 1 || *splitSetting.Percentage > 100 {
+			if splitSetting.Percentage != nil && (*splitSetting.Percentage < 1 || *splitSetting.Percentage > 100) {
 				errs = append(errs, pkgErrors.ErrSplitSettingPercentageMustBeBetween1And100(i))
 			}
 
