@@ -7,6 +7,35 @@ import classes from './TransactionRow.module.css'
 
 const MAX_TAGS = 3
 
+interface CategoryCellProps {
+  tx: Transactions.Transaction
+  groupBy: Transactions.GroupBy
+  category: Transactions.Category | null | undefined
+  fromAccount: Transactions.Account | null | undefined
+  toAccount: Transactions.Account | null | undefined
+}
+
+function CategoryCell({ tx, groupBy, category, fromAccount, toAccount }: CategoryCellProps) {
+  if (groupBy === 'category') return null
+
+  if (tx.type !== 'transfer') {
+    return <Text size="sm" c="dimmed" lineClamp={1}>{category?.name ?? '—'}</Text>
+  }
+
+  if (groupBy === 'account') {
+    return <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
+  }
+
+  return (
+    <Stack gap={0}>
+      <Text size="sm" c="dimmed" lineClamp={1}>{fromAccount?.name ?? '—'}</Text>
+      <IconArrowDown size={12} style={{ opacity: 0.5 }} />
+      <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
+    </Stack>
+  )
+
+}
+
 interface TransactionRowProps {
   transaction: Transactions.Transaction
   groupBy: Transactions.GroupBy
@@ -34,7 +63,6 @@ export function TransactionRow({
   const extraTags = tags.length - MAX_TAGS
 
   const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId)
-  const hasSettlement = (tx.settlements_from_source ?? []).length > 0
 
   const date = new Date(tx.date)
   const dateLabel = date.toLocaleDateString('pt-BR', {
@@ -79,37 +107,25 @@ export function TransactionRow({
         )}
       </div>
 
-      {/* Col 2: category */}
-      {groupBy !== 'category' && (
-        <div className={classes.category}>
-          {tx.type !== 'transfer' && !hasSettlement && (
-            <Text size="sm" c="dimmed" lineClamp={1}>
-              {category?.name ?? '—'}
-            </Text>
-          )}
-        </div>
-      )}
+      {/* Col 2: category OR transfer accounts */}
+      <div className={classes.category}>
+        <CategoryCell
+          tx={tx}
+          groupBy={groupBy}
+          category={category}
+          fromAccount={fromAccount}
+          toAccount={toAccount}
+        />
+      </div>
 
       {/* Col 3: account */}
-      {(groupBy !== 'account' || tx.type === 'transfer') && (
-        <div className={classes.account}>
-          {tx.type === 'transfer' ? (
-            groupBy === 'account' ? (
-              <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
-            ) : (
-              <Stack gap={0}>
-                <Text size="sm" c="dimmed" lineClamp={1}>{fromAccount?.name ?? '—'}</Text>
-                <IconArrowDown size={12} style={{ opacity: 0.5 }} />
-                <Text size="sm" c="dimmed" lineClamp={1}>{toAccount?.name ?? '—'}</Text>
-              </Stack>
-            )
-          ) : (
-            <Text size="sm" c="dimmed" lineClamp={1}>
-              {account?.name ?? '—'}
-            </Text>
-          )}
-        </div>
-      )}
+      <div className={classes.account}>
+        {groupBy !== 'account' && tx.type !== 'transfer' && (
+          <Text size="sm" c="dimmed" lineClamp={1}>
+            {account?.name ?? '—'}
+          </Text>
+        )}
+      </div>
 
       {/* Col 4: amount */}
       <div className={classes.amount}>
