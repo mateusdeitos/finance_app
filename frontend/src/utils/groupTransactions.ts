@@ -1,4 +1,5 @@
 import { Transactions } from '@/types/transactions'
+import { parseDate } from './parseDate'
 
 export function groupTransactions(
   transactions: Transactions.Transaction[],
@@ -12,7 +13,7 @@ export function groupTransactions(
     let label: string
 
     if (groupBy === 'date') {
-      const date = new Date(tx.date)
+      const date = parseDate(tx.date)
       label = date.toLocaleDateString('pt-BR', {
         weekday: 'long',
         day: '2-digit',
@@ -44,9 +45,7 @@ export function groupTransactions(
 
   if (groupBy === 'date') {
     result.sort((a, b) => {
-      const dateA = new Date(a.transactions[0].date)
-      const dateB = new Date(b.transactions[0].date)
-      return dateB.getTime() - dateA.getTime()
+      return parseDate(b.transactions[0].date).getTime() - parseDate(a.transactions[0].date).getTime()
     })
   } else {
     result.sort((a, b) => a.label.localeCompare(b.label))
