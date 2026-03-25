@@ -1,5 +1,5 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Stack,
@@ -58,7 +58,6 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
   const {
     control,
     handleSubmit,
-    watch,
     setValue,
     setError,
     getValues,
@@ -84,7 +83,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
     },
   })
 
-  const transactionType = watch('transaction_type')
+  const transactionType = useWatch({ control, name: 'transaction_type' })
   const isTransfer = transactionType === 'transfer'
 
   const { mutation } = useCreateTransaction({
@@ -162,7 +161,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
 
   const categoryOptions = categories
     .filter((c) => !c.parent_id)
-    .map((c) => ({ value: String(c.id), label: c.name }))
+    .map((c) => ({ value: String(c.id), label: c.emoji ? `${c.emoji} ${c.name}` : c.name }))
 
   const tagNames = existingTags.map((t) => t.name)
 
@@ -217,7 +216,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                 required
                 value={field.value ? new Date(field.value) : null}
                 onChange={(date) =>
-                  field.onChange(date ? date.toISOString().split('T')[0] : '')
+                  field.onChange(date ? String(date).split('T')[0] : '')
                 }
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"

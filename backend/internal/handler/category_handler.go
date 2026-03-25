@@ -107,12 +107,15 @@ func (h *CategoryHandler) Update(c echo.Context) error {
 // Delete godoc
 // @Summary      Delete category
 // @Tags         categories
+// @Accept       json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        id  path  int  true  "Category ID"
+// @Param        id   path  int                        true  "Category ID"
+// @Param        request body  domain.DeleteCategoryRequest  false  "Optional replacement category"
 // @Success      204
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
 // @Router       /api/categories/{id} [delete]
 func (h *CategoryHandler) Delete(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
@@ -122,7 +125,11 @@ func (h *CategoryHandler) Delete(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid category ID")
 	}
 
-	if err := h.categoryService.Delete(c.Request().Context(), userID, id); err != nil {
+	var req domain.DeleteCategoryRequest
+	// Body is optional; ignore bind error for empty body
+	_ = c.Bind(&req)
+
+	if err := h.categoryService.Delete(c.Request().Context(), userID, id, req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 

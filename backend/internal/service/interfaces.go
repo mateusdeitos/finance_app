@@ -39,7 +39,7 @@ type CategoryService interface {
 	GetByID(ctx context.Context, userID, id int) (domain.Category, error)
 	Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error)
 	Update(ctx context.Context, userID int, category *domain.Category) error
-	Delete(ctx context.Context, userID, id int) error
+	Delete(ctx context.Context, userID, id int, req domain.DeleteCategoryRequest) error
 }
 
 type TagService interface {

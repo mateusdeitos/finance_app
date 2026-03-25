@@ -301,3 +301,17 @@ func (r *transactionRepository) GetGroupedByRecurrences(ctx context.Context, use
 
 	return result, nil
 }
+
+func (r *transactionRepository) NullifyCategory(ctx context.Context, categoryID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Transaction{}).
+		Where("category_id = ?", categoryID).
+		Update("category_id", nil).Error
+}
+
+func (r *transactionRepository) ReassignCategory(ctx context.Context, fromID, toID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Transaction{}).
+		Where("category_id = ?", fromID).
+		Update("category_id", toID).Error
+}

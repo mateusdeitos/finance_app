@@ -11,6 +11,7 @@ type Category struct {
 	ID        int
 	UserID    int
 	Name      string
+	Emoji     *string
 	ParentID  *int
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
@@ -23,6 +24,7 @@ func (c *Category) ToDomain() *domain.Category {
 		ID:        c.ID,
 		UserID:    c.UserID,
 		Name:      c.Name,
+		Emoji:     c.Emoji,
 		ParentID:  c.ParentID,
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
@@ -40,6 +42,7 @@ func CategoryFromDomain(d *domain.Category) *Category {
 		ID:        d.ID,
 		UserID:    d.UserID,
 		Name:      d.Name,
+		Emoji:     d.Emoji,
 		ParentID:  d.ParentID,
 		CreatedAt: d.CreatedAt,
 		UpdatedAt: d.UpdatedAt,

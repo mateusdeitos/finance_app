@@ -30,7 +30,12 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
           <span style={{ width: 14 }} />
         )}
         <Checkbox
-          label={category.name}
+          label={
+            <Group gap={6} wrap="nowrap">
+              {category.emoji && <Text size="sm" lh={1}>{category.emoji}</Text>}
+              <Text size="sm">{category.name}</Text>
+            </Group>
+          }
           checked={selected.includes(category.id)}
           onChange={() => onToggle(category.id)}
         />
@@ -41,7 +46,12 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
             {category.children!.map((child) => (
               <Checkbox
                 key={child.id}
-                label={child.name}
+                label={
+                  <Group gap={6} wrap="nowrap">
+                    {child.emoji && <Text size="sm" lh={1}>{child.emoji}</Text>}
+                    <Text size="sm">{child.name}</Text>
+                  </Group>
+                }
                 checked={selected.includes(child.id)}
                 onChange={() => onToggle(child.id)}
               />

@@ -41,6 +41,7 @@ export namespace Transactions {
     id: number
     user_id: number
     name: string
+    emoji?: string
     parent_id?: number
     parent?: Category
     children?: Category[]
