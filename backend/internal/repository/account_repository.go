@@ -67,11 +67,28 @@ func (r *accountRepository) GetSharedAccounts(ctx context.Context, userID int) (
 
 func (r *accountRepository) Update(ctx context.Context, account *domain.Account) error {
 	ent := entity.AccountFromDomain(account)
-	return GetTxFromContext(ctx, r.db).Save(ent).Error
+	return GetTxFromContext(ctx, r.db).
+		Model(ent).
+		Select("name", "description", "initial_balance", "updated_at").
+		Updates(ent).Error
 }
 
 func (r *accountRepository) Delete(ctx context.Context, id int) error {
 	return GetTxFromContext(ctx, r.db).Delete(&entity.Account{}, id).Error
+}
+
+func (r *accountRepository) Deactivate(ctx context.Context, id int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Account{}).
+		Where("id = ?", id).
+		Updates(map[string]any{"is_active": false}).Error
+}
+
+func (r *accountRepository) Activate(ctx context.Context, id int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Account{}).
+		Where("id = ?", id).
+		Updates(map[string]any{"is_active": true}).Error
 }
 
 func (r *accountRepository) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
@@ -119,6 +136,10 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 
 	if len(options.IDs) > 0 {
 		query = query.Where("accounts.id IN ?", options.IDs)
+	}
+
+	if options.ActiveOnly != nil {
+		query = query.Where("accounts.is_active = ?", *options.ActiveOnly)
 	}
 
 	if err := query.Find(&ents).Error; err != nil {

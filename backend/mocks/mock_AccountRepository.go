@@ -128,6 +128,97 @@ func (_c *MockAccountRepository_Delete_Call) RunAndReturn(run func(context.Conte
 	return _c
 }
 
+// Activate provides a mock function with given fields: ctx, id
+func (_m *MockAccountRepository) Activate(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Activate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAccountRepository_Activate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Activate'
+type MockAccountRepository_Activate_Call struct {
+	*mock.Call
+}
+
+func (_e *MockAccountRepository_Expecter) Activate(ctx interface{}, id interface{}) *MockAccountRepository_Activate_Call {
+	return &MockAccountRepository_Activate_Call{Call: _e.mock.On("Activate", ctx, id)}
+}
+
+func (_c *MockAccountRepository_Activate_Call) Run(run func(ctx context.Context, id int)) *MockAccountRepository_Activate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockAccountRepository_Activate_Call) Return(_a0 error) *MockAccountRepository_Activate_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAccountRepository_Activate_Call) RunAndReturn(run func(context.Context, int) error) *MockAccountRepository_Activate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Deactivate provides a mock function with given fields: ctx, id
+func (_m *MockAccountRepository) Deactivate(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Deactivate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAccountRepository_Deactivate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Deactivate'
+type MockAccountRepository_Deactivate_Call struct {
+	*mock.Call
+}
+
+// Deactivate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int
+func (_e *MockAccountRepository_Expecter) Deactivate(ctx interface{}, id interface{}) *MockAccountRepository_Deactivate_Call {
+	return &MockAccountRepository_Deactivate_Call{Call: _e.mock.On("Deactivate", ctx, id)}
+}
+
+func (_c *MockAccountRepository_Deactivate_Call) Run(run func(ctx context.Context, id int)) *MockAccountRepository_Deactivate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockAccountRepository_Deactivate_Call) Return(_a0 error) *MockAccountRepository_Deactivate_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAccountRepository_Deactivate_Call) RunAndReturn(run func(context.Context, int) error) *MockAccountRepository_Deactivate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByID provides a mock function with given fields: ctx, id
 func (_m *MockAccountRepository) GetByID(ctx context.Context, id int) (*domain.Account, error) {
 	ret := _m.Called(ctx, id)

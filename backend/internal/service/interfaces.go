@@ -31,6 +31,7 @@ type AccountService interface {
 	SearchOne(ctx context.Context, options domain.AccountSearchOptions) (*domain.Account, error)
 	Update(ctx context.Context, userID int, account *domain.Account) error
 	Delete(ctx context.Context, userID, id int) error
+	Activate(ctx context.Context, userID, id int) error
 }
 
 type CategoryService interface {
