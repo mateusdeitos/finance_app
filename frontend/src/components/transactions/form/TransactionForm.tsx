@@ -162,7 +162,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
 
   const categoryOptions = categories
     .filter((c) => !c.parent_id)
-    .map((c) => ({ value: String(c.id), label: c.name }))
+    .map((c) => ({ value: String(c.id), label: c.emoji ? `${c.emoji} ${c.name}` : c.name }))
 
   const tagNames = existingTags.map((t) => t.name)
 
