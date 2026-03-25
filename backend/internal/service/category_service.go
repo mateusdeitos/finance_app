@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
@@ -11,14 +12,16 @@ import (
 )
 
 type categoryService struct {
-	dbTransaction repository.DBTransaction
-	categoryRepo  repository.CategoryRepository
+	dbTransaction   repository.DBTransaction
+	categoryRepo    repository.CategoryRepository
+	transactionRepo repository.TransactionRepository
 }
 
 func NewCategoryService(repos *repository.Repositories) CategoryService {
 	return &categoryService{
-		dbTransaction: repos.DBTransaction,
-		categoryRepo:  repos.Category,
+		dbTransaction:   repos.DBTransaction,
+		categoryRepo:    repos.Category,
+		transactionRepo: repos.Transaction,
 	}
 }
 
@@ -35,6 +38,11 @@ func (s *categoryService) Create(ctx context.Context, userID int, category *doma
 		if err != nil {
 			return nil, fmt.Errorf("failed to get parent category: %w", err)
 		}
+	}
+
+	// Sibling uniqueness check
+	if err := s.checkSiblingUniqueness(ctx, userID, category.ParentID, category.Name, 0); err != nil {
+		return nil, err
 	}
 
 	category.UserID = userID
@@ -122,7 +130,17 @@ func (s *categoryService) Update(ctx context.Context, userID int, category *doma
 		}
 	}
 
+	// Sibling uniqueness check (exclude current category from check)
+	parentID := category.ParentID
+	if parentID == nil {
+		parentID = existing.ParentID
+	}
+	if err := s.checkSiblingUniqueness(ctx, userID, parentID, category.Name, category.ID); err != nil {
+		return err
+	}
+
 	existing.Name = category.Name
+	existing.Emoji = category.Emoji
 	existing.ParentID = category.ParentID
 	if err := s.categoryRepo.Update(ctx, &existing); err != nil {
 		return pkgErrors.Internal("failed to update category", err)
@@ -135,12 +153,86 @@ func (s *categoryService) Update(ctx context.Context, userID int, category *doma
 	return nil
 }
 
-func (s *categoryService) Delete(ctx context.Context, userID, id int) error {
+func (s *categoryService) Delete(ctx context.Context, userID, id int, req domain.DeleteCategoryRequest) error {
+	ctx, err := s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return pkgErrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
 	// Verify ownership
-	_, err := s.GetByID(ctx, userID, id)
+	_, err = s.GetByID(ctx, userID, id)
 	if err != nil {
 		return err
 	}
 
-	return s.categoryRepo.Delete(ctx, id)
+	// Validate replacement category if provided
+	if req.ReplaceWithID != nil {
+		if *req.ReplaceWithID == id {
+			return pkgErrors.NewWithTag(
+				pkgErrors.ErrCodeValidation,
+				[]string{string(pkgErrors.ErrorTagInvalidReplacementCategory)},
+				"replacement category must be different from the category being deleted",
+			)
+		}
+		_, err := s.GetByID(ctx, userID, *req.ReplaceWithID)
+		if err != nil {
+			return pkgErrors.NewWithTag(
+				pkgErrors.ErrCodeValidation,
+				[]string{string(pkgErrors.ErrorTagInvalidReplacementCategory)},
+				"replacement category not found",
+			)
+		}
+	}
+
+	// Reassign or nullify transactions
+	if req.ReplaceWithID != nil {
+		if err := s.transactionRepo.ReassignCategory(ctx, id, *req.ReplaceWithID); err != nil {
+			return pkgErrors.Internal("failed to reassign transactions", err)
+		}
+	} else {
+		if err := s.transactionRepo.NullifyCategory(ctx, id); err != nil {
+			return pkgErrors.Internal("failed to nullify transactions", err)
+		}
+	}
+
+	if err := s.categoryRepo.Delete(ctx, id); err != nil {
+		return pkgErrors.Internal("failed to delete category", err)
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return pkgErrors.Internal("failed to commit transaction", err)
+	}
+
+	return nil
+}
+
+// checkSiblingUniqueness returns an error if a sibling with the same trimmed, case-insensitive name exists.
+// excludeID = 0 means no exclusion (create case); pass the category's own ID for update.
+func (s *categoryService) checkSiblingUniqueness(ctx context.Context, userID int, parentID *int, name string, excludeID int) error {
+	siblings, err := s.categoryRepo.Search(ctx, domain.CategorySearchOptions{
+		UserIDs: []int{userID},
+	})
+	if err != nil {
+		return pkgErrors.Internal("failed to check sibling categories", err)
+	}
+
+	trimmed := strings.ToLower(strings.TrimSpace(name))
+	for _, sibling := range siblings {
+		if excludeID != 0 && sibling.ID == excludeID {
+			continue
+		}
+		// Same parent level check
+		if lo.FromPtr(sibling.ParentID) != lo.FromPtr(parentID) {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(sibling.Name)) == trimmed {
+			return pkgErrors.NewWithTag(
+				pkgErrors.ErrCodeValidation,
+				[]string{string(pkgErrors.ErrorTagDuplicateCategoryName)},
+				"a category with this name already exists at this level",
+			)
+		}
+	}
+	return nil
 }

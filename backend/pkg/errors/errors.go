@@ -63,6 +63,9 @@ const (
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
+
+	ErrorTagDuplicateCategoryName        ErrorTag = "CATEGORY.DUPLICATE_NAME"
+	ErrorTagInvalidReplacementCategory   ErrorTag = "CATEGORY.INVALID_REPLACEMENT"
 )
 
 var (
