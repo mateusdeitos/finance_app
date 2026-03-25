@@ -99,11 +99,11 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	}
 
 	if len(filter.IDs) > 0 {
-		query = query.Where("id IN ?", filter.IDs)
+		query = query.Where("transactions.id IN ?", filter.IDs)
 	}
 
 	if len(filter.IDsNotIn) > 0 {
-		query = query.Where("id NOT IN ?", filter.IDsNotIn)
+		query = query.Where("transactions.id NOT IN ?", filter.IDsNotIn)
 	}
 
 	if filter.StartDate != nil {

@@ -158,8 +158,9 @@ func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domai
 func (suite *ServiceTestWithDBSuite) createTestAccount(ctx context.Context, user *domain.User) (*domain.Account, error) {
 	randomInt := rand.IntN(1000000)
 	return suite.Repos.Account.Create(ctx, &domain.Account{
-		Name:   fmt.Sprintf("Test Account %d (User: %s)", randomInt, user.Name),
-		UserID: user.ID,
+		Name:     fmt.Sprintf("Test Account %d (User: %s)", randomInt, user.Name),
+		UserID:   user.ID,
+		IsActive: true,
 	})
 }
 
