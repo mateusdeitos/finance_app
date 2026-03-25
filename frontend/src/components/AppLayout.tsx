@@ -1,6 +1,6 @@
 import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, Box } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconReceipt2, IconChevronDown, IconUsers, IconWallet } from '@tabler/icons-react'
+import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTag } from '@tabler/icons-react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
@@ -9,6 +9,7 @@ import { InviteDrawer } from '@/components/InviteDrawer'
 const navLinks = [
   { label: 'Transações', icon: IconReceipt2, to: '/transactions' },
   { label: 'Contas', icon: IconWallet, to: '/accounts' },
+  { label: 'Categorias', icon: IconTag, to: '/categories' },
 ]
 
 export function AppLayout() {
