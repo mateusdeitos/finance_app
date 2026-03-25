@@ -6,6 +6,7 @@ type Category struct {
 	ID        int        `json:"id"`
 	UserID    int        `json:"user_id"`
 	Name      string     `json:"name"`
+	Emoji     *string    `json:"emoji,omitempty"`
 	ParentID  *int       `json:"parent_id"`
 	Parent    *Category  `json:"parent,omitempty"`
 	Children  []Category `json:"children,omitempty"`
@@ -17,4 +18,8 @@ type CategorySearchOptions struct {
 	IDs      []int `json:"ids"`
 	UserIDs  []int `json:"user_ids"`
 	ParentID *int  `json:"parent_id,omitempty"`
+}
+
+type DeleteCategoryRequest struct {
+	ReplaceWithID *int `json:"replace_with_id"`
 }
