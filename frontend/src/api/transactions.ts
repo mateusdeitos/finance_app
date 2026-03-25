@@ -2,6 +2,18 @@ import { Transactions } from '@/types/transactions'
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+/** Converts a YYYY-MM-DD string to an RFC3339 string at local midnight, preserving the calendar date. */
+function localMidnightISO(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year, month - 1, day, 0, 0, 0)
+  const offsetMin = -d.getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const absMin = Math.abs(offsetMin)
+  const hh = String(Math.floor(absMin / 60)).padStart(2, '0')
+  const mm = String(absMin % 60).padStart(2, '0')
+  return `${dateStr}T00:00:00${sign}${hh}:${mm}`
+}
+
 export async function fetchBalance(
   params: Transactions.FetchBalanceParams,
 ): Promise<Transactions.BalanceResult> {
@@ -54,4 +66,36 @@ export async function fetchTransactions(
   const res = await fetch(url.toString(), { credentials: 'include' })
   if (!res.ok) throw new Error('Failed to fetch transactions')
   return res.json()
+}
+
+export async function fetchTransactionSuggestions(
+  q: string,
+  limit = 10,
+): Promise<Transactions.TransactionSuggestion[]> {
+  const url = new URL(`${apiUrl}/api/transactions/suggestions`)
+  url.searchParams.set('q', q)
+  url.searchParams.set('limit', String(limit))
+
+  const res = await fetch(url.toString(), { credentials: 'include' })
+  if (!res.ok) throw new Error('Failed to fetch suggestions')
+  return res.json()
+}
+
+export async function createTransaction(
+  payload: Transactions.CreateTransactionPayload,
+): Promise<Response> {
+  const body = {
+    ...payload,
+    // Backend expects time.Time (RFC3339); DatePickerInput gives YYYY-MM-DD.
+    // Send local midnight with timezone offset so the backend stores the correct day.
+    date: payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
+  }
+  const res = await fetch(`${apiUrl}/api/transactions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw res
+  return res
 }

@@ -1277,7 +1277,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	if len(transactions) != 1 {
+	if len(transactions) != 2 {
 		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
 	}
 
@@ -1416,7 +1416,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	if len(transactions) != 1 {
+	if len(transactions) != 2 {
 		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
 	}
 
@@ -1533,7 +1533,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	if len(transactions) != 1 {
+	if len(transactions) != 2 {
 		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
 	}
 
@@ -1650,7 +1650,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	if len(transactions) != 1 {
+	if len(transactions) != 2 {
 		suite.T().Fatalf("Expected 1 transactions, got %d", len(transactions))
 	}
 

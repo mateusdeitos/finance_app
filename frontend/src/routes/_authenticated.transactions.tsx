@@ -1,12 +1,13 @@
-import { ActionIcon, Box, Drawer, Stack } from '@mantine/core'
+import { ActionIcon, Box, Button, Drawer, Group, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconFilter } from '@tabler/icons-react'
+import { IconFilter, IconPlus } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { z } from 'zod'
 import { useMe } from '@/hooks/useMe'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
+import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
@@ -35,10 +36,11 @@ export const Route = createFileRoute('/_authenticated/transactions')({
 function TransactionsPage() {
   const search = Route.useSearch()
   const isMobile = useIsMobile()
-  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
+  const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
+  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false)
 
-  const { query: meQuery } = useMe()
-  const currentUserId = meQuery.data?.id ?? 0
+  const { query: meQuery } = useMe((me) => me.id)
+  const currentUserId = meQuery.data ?? 0
 
   if (isMobile) {
     return (
@@ -55,7 +57,16 @@ function TransactionsPage() {
           }}
         >
           <Stack gap="xs">
-            <PeriodNavigator month={search.month} year={search.year} />
+            <Group justify="space-between" align="center">
+              <PeriodNavigator month={search.month} year={search.year} />
+              <Button
+                size="xs"
+                leftSection={<IconPlus size={14} />}
+                onClick={openCreate}
+              >
+                Nova Transação
+              </Button>
+            </Group>
             <TextSearch />
           </Stack>
         </Box>
@@ -68,7 +79,7 @@ function TransactionsPage() {
             size="xl"
             radius="xl"
             variant="filled"
-            onClick={openDrawer}
+            onClick={openFilters}
             aria-label="Abrir filtros"
           >
             <IconFilter size={20} />
@@ -76,8 +87,8 @@ function TransactionsPage() {
         </MobileBottomBar>
 
         <Drawer
-          opened={drawerOpened}
-          onClose={closeDrawer}
+          opened={filtersOpened}
+          onClose={closeFilters}
           position="bottom"
           title="Filtros"
           size="auto"
@@ -87,6 +98,11 @@ function TransactionsPage() {
         >
           <TransactionFilters orientation="column" hideTextSearch />
         </Drawer>
+
+        <CreateTransactionDrawer
+          opened={createOpened}
+          onClose={closeCreate}
+        />
       </Stack>
     )
   }
@@ -105,11 +121,22 @@ function TransactionsPage() {
         }}
       >
         <Stack gap="sm">
-          <PeriodNavigator month={search.month} year={search.year} />
+          <Group justify="space-between" align="center">
+            <PeriodNavigator month={search.month} year={search.year} />
+            <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
+              Nova Transação
+            </Button>
+          </Group>
           <TransactionFilters orientation="row" />
         </Stack>
       </Box>
+
       <TransactionList currentUserId={currentUserId} />
+
+      <CreateTransactionDrawer
+        opened={createOpened}
+        onClose={closeCreate}
+      />
     </Stack>
   )
 }

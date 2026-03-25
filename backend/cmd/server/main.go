@@ -163,6 +163,7 @@ func main() {
 	transactions.GET("", transactionHandler.Search)
 	transactions.POST("", transactionHandler.Create)
 	transactions.GET("/balance", transactionHandler.GetBalance)
+	transactions.GET("/suggestions", transactionHandler.Suggestions)
 	transactions.DELETE("/:id", transactionHandler.Delete)
 	transactions.GET("/:id", transactionHandler.GetByID)
 	transactions.PUT("/:id", transactionHandler.Update)

@@ -43,7 +43,7 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 
 	err := h.transactionService.Create(c.Request().Context(), userID, &transaction)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return pkgErrors.ToHTTPError(err)
 	}
 
 	return c.NoContent(http.StatusCreated)
@@ -237,6 +237,52 @@ func (h *TransactionHandler) GetBalance(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, result)
+}
+
+// Suggestions godoc
+// @Summary      Suggest transactions by description
+// @Description  Returns up to `limit` transactions whose description matches the query string (PostgreSQL text search). Used for autocomplete when creating a new transaction.
+// @Tags         transactions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        q      query  string  true   "Description search query"
+// @Param        limit  query  int     false  "Maximum results (default 10, max 50)"
+// @Success      200  {array}   domain.Transaction
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/suggestions [get]
+func (h *TransactionHandler) Suggestions(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	q := c.QueryParam("q")
+	if q == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "q is required")
+	}
+
+	limit := 10
+	if l := c.QueryParam("limit"); l != "" {
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed < 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, "invalid limit")
+		}
+		if parsed > 50 {
+			parsed = 50
+		}
+		limit = parsed
+	}
+
+	filter := domain.TransactionFilter{
+		Description: &domain.TextSearch{Query: q},
+		Limit:       &limit,
+	}
+
+	results, err := h.transactionService.Suggestions(c.Request().Context(), userID, filter)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, results)
 }
 
 // Delete godoc

@@ -19,6 +19,7 @@ type TransactionService interface {
 	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error
 	Update(ctx context.Context, userID, id int, transaction *domain.TransactionUpdateRequest) error
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
+	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 }

@@ -173,8 +173,20 @@ func (e *ServiceError) Unwrap() error {
 	return e.Err
 }
 
-func (e *ServiceError) ToHTTPError() *echo.HTTPError {
+func (e *ServiceError) ToHTTPError() error {
 	return ToHTTPError(e)
+}
+
+// TaggedHTTPError is an HTTP error that also carries structured error tags
+// so the error handler can serialize them in the response.
+type TaggedHTTPError struct {
+	Code    int
+	Message string
+	Tags    []string
+}
+
+func (e *TaggedHTTPError) Error() string {
+	return fmt.Sprintf("code=%d, message=%s", e.Code, e.Message)
 }
 
 func (e *ServiceError) AddTag(tag string) *ServiceError {
@@ -224,32 +236,61 @@ func AsServiceError(err error) (*ServiceError, bool) {
 	return serviceErr, ok
 }
 
-// ToHTTPError converts a service error to an HTTP error
-// Returns the HTTP status code and error message
-func ToHTTPError(err error) *echo.HTTPError {
+// ToHTTPError converts a service error to an HTTP error.
+// Handles both *ServiceError and ServiceErrors (slice).
+// For ServiceErrors, tags from all errors are merged into a TaggedHTTPError.
+func ToHTTPError(err error) error {
+	// Handle ServiceErrors (slice of *ServiceError) first
+	serviceErrs, ok := err.(ServiceErrors)
+	if ok && len(serviceErrs) > 0 {
+		first := serviceErrs[0]
+		code := serviceErrHTTPCode(first.Code)
+		// Collect all tags, deduplicated
+		seen := make(map[string]struct{})
+		var tags []string
+		for _, se := range serviceErrs {
+			for _, t := range se.Tags {
+				if _, exists := seen[t]; !exists {
+					seen[t] = struct{}{}
+					tags = append(tags, t)
+				}
+			}
+		}
+		return &TaggedHTTPError{Code: code, Message: first.Message, Tags: tags}
+	}
+
 	serviceErr, ok := AsServiceError(err)
 	if !ok {
-		// If it's not a ServiceError, treat it as internal error
 		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
 	}
 
-	switch serviceErr.Code {
+	if len(serviceErr.Tags) > 0 {
+		return &TaggedHTTPError{
+			Code:    serviceErrHTTPCode(serviceErr.Code),
+			Message: serviceErr.Message,
+			Tags:    serviceErr.Tags,
+		}
+	}
+
+	return echo.NewHTTPError(serviceErrHTTPCode(serviceErr.Code), serviceErr.Message)
+}
+
+func serviceErrHTTPCode(code ErrorCode) int {
+	switch code {
 	case ErrCodeNotFound:
-		return echo.NewHTTPError(http.StatusNotFound, serviceErr.Message)
+		return http.StatusNotFound
 	case ErrCodeAlreadyExists:
-		return echo.NewHTTPError(http.StatusConflict, serviceErr.Message)
+		return http.StatusConflict
 	case ErrCodeUnauthorized:
-		return echo.NewHTTPError(http.StatusUnauthorized, serviceErr.Message)
+		return http.StatusUnauthorized
 	case ErrCodeForbidden:
-		return echo.NewHTTPError(http.StatusForbidden, serviceErr.Message)
-	case ErrCodeValidation:
-		return echo.NewHTTPError(http.StatusBadRequest, serviceErr.Message)
-	case ErrCodeBadRequest:
-		return echo.NewHTTPError(http.StatusBadRequest, serviceErr.Message)
+		return http.StatusForbidden
+	case ErrCodeValidation, ErrCodeBadRequest:
+		return http.StatusBadRequest
 	case ErrCodeInternal:
-		return echo.NewHTTPError(http.StatusInternalServerError, serviceErr.Message)
+		return http.StatusInternalServerError
 	default:
-		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+		return http.StatusInternalServerError
 	}
 }
 

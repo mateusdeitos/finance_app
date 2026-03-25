@@ -43,3 +43,9 @@ func (s *transactionService) Search(ctx context.Context, userID int, period doma
 
 	return s.transactionRepo.Search(ctx, filter)
 }
+
+// Suggestions searches transactions across all time periods for autocomplete purposes.
+func (s *transactionService) Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	filter.UserID = &userID
+	return s.transactionRepo.Search(ctx, filter)
+}

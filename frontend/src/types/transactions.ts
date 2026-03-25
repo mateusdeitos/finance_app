@@ -124,4 +124,39 @@ export namespace Transactions {
   export interface BalanceResult {
     balance: number
   }
+
+  export interface TransactionSuggestion {
+    id: number
+    description: string
+    type: TransactionType
+    amount: number
+    account_id: number
+    category_id?: number
+    tags?: Tag[]
+  }
+
+  export interface RecurrenceSettings {
+    type: RecurrenceType
+    repetitions?: number
+    end_date?: string
+  }
+
+  export interface SplitSetting {
+    connection_id: number
+    percentage?: number
+    amount?: number
+  }
+
+  export interface CreateTransactionPayload {
+    transaction_type: TransactionType
+    account_id: number
+    category_id?: number
+    amount: number
+    date: string
+    description: string
+    destination_account_id?: number
+    tags?: { id?: number; name: string }[]
+    recurrence_settings?: RecurrenceSettings
+    split_settings?: SplitSetting[]
+  }
 }
