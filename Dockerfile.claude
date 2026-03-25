@@ -21,8 +21,8 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 # Install just (task runner)
 RUN curl -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 
-# Install Claude Code
-RUN npm install -g @anthropic-ai/claude-code
+# Install Claude Code and openspec CLI
+RUN npm install -g @anthropic-ai/claude-code @fission-ai/openspec
 
 USER node
 WORKDIR /workspace
