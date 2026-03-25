@@ -70,6 +70,8 @@ type TransactionRepository interface {
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
+	NullifyCategory(ctx context.Context, categoryID int) error
+	ReassignCategory(ctx context.Context, fromID, toID int) error
 }
 
 type TransactionRecurrenceRepository interface {
