@@ -491,11 +491,24 @@ func (s *transactionService) incrementInstallmentDate(baseDate time.Time, recurr
 	case domain.RecurrenceTypeWeekly:
 		return baseDate.AddDate(0, 0, increment*7)
 	case domain.RecurrenceTypeMonthly:
-		return baseDate.AddDate(0, increment, 0)
+		return clampToEndOfMonth(baseDate, baseDate.Year(), baseDate.Month()+time.Month(increment))
 	case domain.RecurrenceTypeYearly:
-		return baseDate.AddDate(increment, 0, 0)
+		return clampToEndOfMonth(baseDate, baseDate.Year()+increment, baseDate.Month())
 	}
 	return baseDate
+}
+
+// clampToEndOfMonth builds a date in the target year/month using the original day from
+// baseDate, clamping it to the last day of the target month when needed.
+// This prevents Go's AddDate overflow behaviour (e.g. Jan 31 + 1 month → Mar 3 instead of Feb 28).
+func clampToEndOfMonth(baseDate time.Time, targetYear int, targetMonth time.Month) time.Time {
+	// Normalise month (handles values outside 1–12 produced by arithmetic)
+	normalised := time.Date(targetYear, targetMonth, 1, 0, 0, 0, 0, baseDate.Location())
+	// Last day of the normalised month: day 0 of the following month
+	lastDay := time.Date(normalised.Year(), normalised.Month()+1, 0, 0, 0, 0, 0, baseDate.Location()).Day()
+	day := min(baseDate.Day(), lastDay)
+	return time.Date(normalised.Year(), normalised.Month(), day,
+		baseDate.Hour(), baseDate.Minute(), baseDate.Second(), baseDate.Nanosecond(), baseDate.Location())
 }
 
 func (s *transactionService) createTags(ctx context.Context, userID int, tags []domain.Tag) pkgErrors.ServiceErrors {
