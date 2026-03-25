@@ -45,7 +45,7 @@ export function groupTransactions(
 
   if (groupBy === 'date') {
     result.sort((a, b) => {
-      return parseDate(b.transactions[0].date).getTime() - parseDate(a.transactions[0].date).getTime()
+      return parseDate(a.transactions[0].date).getTime() - parseDate(b.transactions[0].date).getTime()
     })
   } else {
     result.sort((a, b) => a.label.localeCompare(b.label))
