@@ -4,6 +4,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute } from '@tanstack/react-router'
 import { IconPlus } from '@tabler/icons-react'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useActivateAccount } from '@/hooks/useActivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
 import { AccountCard } from '@/components/accounts/AccountCard'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
@@ -13,12 +14,40 @@ export const Route = createFileRoute('/_authenticated/accounts')({
   component: AccountsPage,
 })
 
+function AccountSection({
+  label,
+  accounts,
+  onEdit,
+  onAction,
+}: {
+  label: string
+  accounts: Transactions.Account[]
+  onEdit: (a: Transactions.Account) => void
+  onAction: (a: Transactions.Account) => void
+}) {
+  if (accounts.length === 0) return null
+  return (
+    <Stack gap="sm">
+      <Text size="sm" fw={600} c="dimmed" tt="uppercase">{label}</Text>
+      {accounts.map((account) => (
+        <AccountCard
+          key={account.id}
+          account={account}
+          onEdit={onEdit}
+          onDelete={onAction}
+        />
+      ))}
+    </Stack>
+  )
+}
+
 function AccountsPage() {
   const { query, invalidate } = useAccounts()
   const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
   const [editing, setEditing] = useState<Transactions.Account | undefined>()
 
-  const { mutation: deleteMutation } = useDeleteAccount({ onSuccess: invalidate })
+  const { mutation: deactivateMutation } = useDeleteAccount({ onSuccess: invalidate })
+  const { mutation: activateMutation } = useActivateAccount({ onSuccess: invalidate })
 
   function handleEdit(account: Transactions.Account) {
     setEditing(account)
@@ -36,8 +65,10 @@ function AccountsPage() {
   }
 
   const accounts = query.data ?? []
-  const ownAccounts = accounts.filter((a) => !a.user_connection)
-  const sharedAccounts = accounts.filter((a) => !!a.user_connection)
+  const activeOwn      = accounts.filter((a) => a.is_active && !a.user_connection)
+  const activeShared   = accounts.filter((a) => a.is_active && !!a.user_connection)
+  const inactiveOwn    = accounts.filter((a) => !a.is_active && !a.user_connection)
+  const inactiveShared = accounts.filter((a) => !a.is_active && !!a.user_connection)
 
   return (
     <Stack gap="md">
@@ -56,34 +87,26 @@ function AccountsPage() {
         </Stack>
       ) : (
         <Stack gap="xl">
-          <Stack gap="sm">
-            <Text size="sm" fw={600} c="dimmed" tt="uppercase">Minhas contas</Text>
-            {ownAccounts.length === 0 ? (
-              <Text c="dimmed" ta="center" py="md">Nenhuma conta cadastrada</Text>
-            ) : (
-              ownAccounts.map((account) => (
-                <AccountCard
-                  key={account.id}
-                  account={account}
-                  onEdit={handleEdit}
-                  onDelete={(a) => deleteMutation.mutate(a.id)}
-                />
-              ))
-            )}
-          </Stack>
-
-          {sharedAccounts.length > 0 && (
-            <Stack gap="sm">
-              <Text size="sm" fw={600} c="dimmed" tt="uppercase">Contas compartilhadas</Text>
-              {sharedAccounts.map((account) => (
-                <AccountCard
-                  key={account.id}
-                  account={account}
-                  onEdit={handleEdit}
-                  onDelete={(a) => deleteMutation.mutate(a.id)}
-                />
-              ))}
-            </Stack>
+          <AccountSection
+            label="Minhas contas"
+            accounts={activeOwn}
+            onEdit={handleEdit}
+            onAction={(a) => deactivateMutation.mutate(a.id)}
+          />
+          <AccountSection
+            label="Contas compartilhadas"
+            accounts={activeShared}
+            onEdit={handleEdit}
+            onAction={(a) => deactivateMutation.mutate(a.id)}
+          />
+          <AccountSection
+            label="Inativas"
+            accounts={[...inactiveOwn, ...inactiveShared]}
+            onEdit={handleEdit}
+            onAction={(a) => activateMutation.mutate(a.id)}
+          />
+          {accounts.length === 0 && (
+            <Text c="dimmed" ta="center" py="md">Nenhuma conta cadastrada</Text>
           )}
         </Stack>
       )}

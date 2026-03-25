@@ -42,3 +42,11 @@ export async function deleteAccount(id: number): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to delete account')
 }
+
+export async function activateAccount(id: number): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/accounts/${id}/activate`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Failed to activate account')
+}

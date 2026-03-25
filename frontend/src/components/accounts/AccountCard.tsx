@@ -1,5 +1,5 @@
 import { Card, Group, Text, ActionIcon, Badge, Stack } from '@mantine/core'
-import { IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconPencil, IconTrash, IconRefresh } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatBalance } from '@/utils/formatCents'
 
@@ -30,11 +30,17 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
 
         {!isShared && (
           <Group gap="xs" wrap="nowrap">
-            <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)}>
-              <IconPencil size={16} />
-            </ActionIcon>
-            <ActionIcon variant="subtle" color="red" onClick={() => onDelete(account)}>
-              <IconTrash size={16} />
+            {account.is_active && (
+              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)}>
+                <IconPencil size={16} />
+              </ActionIcon>
+            )}
+            <ActionIcon
+              variant="subtle"
+              color={account.is_active ? 'red' : 'teal'}
+              onClick={() => onDelete(account)}
+            >
+              {account.is_active ? <IconTrash size={16} /> : <IconRefresh size={16} />}
             </ActionIcon>
           </Group>
         )}

@@ -1,4 +1,4 @@
-import { Switch, Select, NumberInput, Stack, Group, Text, Alert } from '@mantine/core'
+import { Switch, Select, NumberInput, Stack, Group, Alert } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { Controller, Control, useWatch } from 'react-hook-form'
 import type { TransactionFormValues } from './TransactionForm'
@@ -81,8 +81,10 @@ export function RecurrenceFields({ control, errors }: Props) {
               render={({ field }) => (
                 <DatePickerInput
                   label="Data de término"
-                  value={field.value || null}
-                  onChange={(date) => field.onChange(date ?? null)}
+                  value={field.value ? new Date(field.value) : null}
+                  onChange={(date) =>
+                    field.onChange(date ? date.toISOString().split('T')[0] : null)
+                  }
                   error={errors?.end_date}
                   valueFormat="DD/MM/YYYY"
                 />
@@ -105,11 +107,6 @@ export function RecurrenceFields({ control, errors }: Props) {
             />
           )}
 
-          <Text size="xs" c="dimmed">
-            {endDateMode
-              ? 'A recorrência terminará na data selecionada'
-              : 'Deixe em branco para repetir indefinidamente'}
-          </Text>
         </Stack>
       )}
     </Stack>

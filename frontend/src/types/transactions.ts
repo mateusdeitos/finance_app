@@ -31,6 +31,7 @@ export namespace Transactions {
     name: string
     description?: string
     initial_balance: number
+    is_active: boolean
     created_at?: string
     updated_at?: string
     user_connection?: UserConnection

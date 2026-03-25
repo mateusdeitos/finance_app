@@ -167,10 +167,8 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
   const tagNames = existingTags.map((t) => t.name)
 
   const recurrenceErrors = {
-    type: (errors as Record<string, { message?: string }>)['recurrence_settings.type']?.message,
-    repetitions: (errors as Record<string, { message?: string }>)['recurrence_settings.repetitions']?.message,
-    end_date: (errors as Record<string, { message?: string }>)['recurrence_settings.end_date']?.message,
-    _general: (errors as Record<string, { message?: string }>)['recurrence_settings']?.message,
+    repetitions: errors.recurrenceRepetitions?.message,
+    end_date: errors.recurrenceEndDate?.message,
   }
 
   const splitErrors = Object.fromEntries(
@@ -180,7 +178,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Stack gap="md">
         {generalError && (
           <Alert color="red" title="Erro" variant="light">
@@ -217,8 +215,10 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
               <DatePickerInput
                 label="Data"
                 required
-                value={field.value || null}
-                onChange={(date) => field.onChange(date ?? '')}
+                value={field.value ? new Date(field.value) : null}
+                onChange={(date) =>
+                  field.onChange(date ? date.toISOString().split('T')[0] : '')
+                }
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"
               />

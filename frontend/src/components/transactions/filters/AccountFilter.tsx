@@ -9,13 +9,45 @@ interface AccountFilterProps {
   inline?: boolean
 }
 
+function AccountGroup({
+  label,
+  accounts,
+  selected,
+  toggle,
+}: {
+  label: string
+  accounts: Transactions.Account[]
+  selected: number[]
+  toggle: (id: number) => void
+}) {
+  if (accounts.length === 0) return null
+  return (
+    <>
+      <Text size="xs" fw={600} c="dimmed" tt="uppercase">{label}</Text>
+      {accounts.map((acc) => (
+        <Checkbox
+          key={acc.id}
+          label={acc.name}
+          checked={selected.includes(acc.id)}
+          onChange={() => toggle(acc.id)}
+        />
+      ))}
+    </>
+  )
+}
+
 function AccountOptions({ accounts, selected, toggle }: {
   accounts: Transactions.Account[]
   selected: number[]
   toggle: (id: number) => void
 }) {
-  const ownAccounts = accounts.filter((a) => !a.user_connection)
-  const sharedAccounts = accounts.filter((a) => !!a.user_connection)
+  const activeOwn      = accounts.filter((a) => a.is_active && !a.user_connection)
+  const activeShared   = accounts.filter((a) => a.is_active && !!a.user_connection)
+  const inactiveOwn    = accounts.filter((a) => !a.is_active && !a.user_connection)
+  const inactiveShared = accounts.filter((a) => !a.is_active && !!a.user_connection)
+
+  const hasActive   = activeOwn.length > 0 || activeShared.length > 0
+  const hasInactive = inactiveOwn.length > 0 || inactiveShared.length > 0
 
   if (accounts.length === 0) {
     return <Text size="sm" c="dimmed">Nenhuma conta</Text>
@@ -23,33 +55,13 @@ function AccountOptions({ accounts, selected, toggle }: {
 
   return (
     <>
-      {ownAccounts.length > 0 && (
-        <>
-          <Text size="xs" fw={600} c="dimmed" tt="uppercase">Minhas contas</Text>
-          {ownAccounts.map((acc) => (
-            <Checkbox
-              key={acc.id}
-              label={acc.name}
-              checked={selected.includes(acc.id)}
-              onChange={() => toggle(acc.id)}
-            />
-          ))}
-        </>
-      )}
-      {sharedAccounts.length > 0 && (
-        <>
-          {ownAccounts.length > 0 && <Divider />}
-          <Text size="xs" fw={600} c="dimmed" tt="uppercase">Contas compartilhadas</Text>
-          {sharedAccounts.map((acc) => (
-            <Checkbox
-              key={acc.id}
-              label={acc.name}
-              checked={selected.includes(acc.id)}
-              onChange={() => toggle(acc.id)}
-            />
-          ))}
-        </>
-      )}
+      <AccountGroup label="Minhas contas" accounts={activeOwn} selected={selected} toggle={toggle} />
+      {activeOwn.length > 0 && activeShared.length > 0 && <Divider />}
+      <AccountGroup label="Contas compartilhadas" accounts={activeShared} selected={selected} toggle={toggle} />
+
+      {hasActive && hasInactive && <Divider />}
+
+      <AccountGroup label="Inativas" accounts={[...inactiveOwn, ...inactiveShared]} selected={selected} toggle={toggle} />
     </>
   )
 }

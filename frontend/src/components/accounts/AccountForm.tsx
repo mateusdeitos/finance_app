@@ -47,7 +47,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
   const initialBalance = watch('initial_balance')
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Stack gap="md">
         {error && (
           <Alert color="red" title="Erro" variant="light">

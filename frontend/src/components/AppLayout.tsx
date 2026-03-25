@@ -12,7 +12,7 @@ const navLinks = [
 ]
 
 export function AppLayout() {
-  const [opened, { toggle }] = useDisclosure()
+  const [opened, { toggle, close }] = useDisclosure()
   const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure()
   const { query: meQuery } = useMe()
   const user = meQuery.data
@@ -96,6 +96,7 @@ export function AppLayout() {
             label={label}
             leftSection={<Icon size={18} />}
             active={currentPath === to}
+            onClick={close}
           />
         ))}
       </AppShell.Navbar>

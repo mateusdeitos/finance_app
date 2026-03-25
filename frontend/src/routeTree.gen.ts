@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated.transactions'
+import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated.accounts'
 import { Route as AuthenticatedConnectWithExternalIdRouteImport } from './routes/_authenticated.connect-with.$externalId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -41,6 +42,11 @@ const AuthenticatedTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedConnectWithExternalIdRoute =
   AuthenticatedConnectWithExternalIdRouteImport.update({
     id: '/connect-with/$externalId',
@@ -51,6 +57,7 @@ const AuthenticatedConnectWithExternalIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
@@ -76,6 +85,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/accounts'
     | '/transactions'
     | '/auth/callback'
     | '/connect-with/$externalId'
@@ -83,6 +93,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/accounts'
     | '/transactions'
     | '/auth/callback'
     | '/connect-with/$externalId'
@@ -91,6 +102,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/accounts'
     | '/_authenticated/transactions'
     | '/auth/callback'
     | '/_authenticated/connect-with/$externalId'
@@ -140,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/accounts': {
+      id: '/_authenticated/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AuthenticatedAccountsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/connect-with/$externalId': {
       id: '/_authenticated/connect-with/$externalId'
       path: '/connect-with/$externalId'
@@ -151,11 +170,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedConnectWithExternalIdRoute: typeof AuthenticatedConnectWithExternalIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedConnectWithExternalIdRoute:
     AuthenticatedConnectWithExternalIdRoute,
