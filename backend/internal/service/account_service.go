@@ -38,6 +38,7 @@ func (s *accountService) isConnectionAccount(ctx context.Context, accountID int)
 
 func (s *accountService) Create(ctx context.Context, userID int, account *domain.Account) (*domain.Account, error) {
 	account.UserID = userID
+	account.IsActive = true
 
 	if account.InitialBalance != 0 {
 		isConn, err := s.isConnectionAccount(ctx, account.ID)
@@ -130,19 +131,44 @@ func (s *accountService) Update(ctx context.Context, userID int, account *domain
 	return nil
 }
 
-func (s *accountService) Delete(ctx context.Context, userID, id int) error {
-	// TODO: block if there are user_connections associated with the account
-
-	// Verify ownership
+func (s *accountService) Activate(ctx context.Context, userID, id int) error {
 	existing, err := s.GetByID(ctx, userID, id)
 	if err != nil {
 		return err
 	}
 
-	// Only owner can delete
+	if existing.UserID != userID {
+		return pkgErrors.Forbidden("only account owner can activate")
+	}
+
+	if existing.IsActive {
+		return nil
+	}
+
+	if err := s.accountRepo.Activate(ctx, id); err != nil {
+		return pkgErrors.Internal("failed to activate account", err)
+	}
+
+	return nil
+}
+
+func (s *accountService) Delete(ctx context.Context, userID, id int) error {
+	existing, err := s.GetByID(ctx, userID, id)
+	if err != nil {
+		return err
+	}
+
 	if existing.UserID != userID {
 		return pkgErrors.Forbidden("only account owner can delete")
 	}
 
-	return s.accountRepo.Delete(ctx, id)
+	if !existing.IsActive {
+		return nil
+	}
+
+	if err := s.accountRepo.Deactivate(ctx, id); err != nil {
+		return pkgErrors.Internal("failed to deactivate account", err)
+	}
+
+	return nil
 }

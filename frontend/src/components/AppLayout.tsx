@@ -1,6 +1,6 @@
 import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu, Box } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconReceipt2, IconChevronDown, IconUsers } from '@tabler/icons-react'
+import { IconReceipt2, IconChevronDown, IconUsers, IconWallet } from '@tabler/icons-react'
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
@@ -8,10 +8,11 @@ import { InviteDrawer } from '@/components/InviteDrawer'
 
 const navLinks = [
   { label: 'Transações', icon: IconReceipt2, to: '/transactions' },
+  { label: 'Contas', icon: IconWallet, to: '/accounts' },
 ]
 
 export function AppLayout() {
-  const [opened, { toggle }] = useDisclosure()
+  const [opened, { toggle, close }] = useDisclosure()
   const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure()
   const { query: meQuery } = useMe()
   const user = meQuery.data
@@ -95,6 +96,7 @@ export function AppLayout() {
             label={label}
             leftSection={<Icon size={18} />}
             active={currentPath === to}
+            onClick={close}
           />
         ))}
       </AppShell.Navbar>

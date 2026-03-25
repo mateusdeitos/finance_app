@@ -127,6 +127,31 @@ func (h *AccountHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Activate godoc
+// @Summary      Activate account
+// @Tags         accounts
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Account ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/accounts/{id}/activate [post]
+func (h *AccountHandler) Activate(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid account ID")
+	}
+
+	if err := h.accountService.Activate(c.Request().Context(), userID, id); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Delete godoc
 // @Summary      Delete account
 // @Tags         accounts

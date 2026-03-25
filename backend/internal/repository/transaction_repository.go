@@ -95,15 +95,15 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	}
 
 	if filter.UserID != nil {
-		query = query.Where("user_id = ?", *filter.UserID)
+		query = query.Where("transactions.user_id = ?", *filter.UserID)
 	}
 
 	if len(filter.IDs) > 0 {
-		query = query.Where("id IN ?", filter.IDs)
+		query = query.Where("transactions.id IN ?", filter.IDs)
 	}
 
 	if len(filter.IDsNotIn) > 0 {
-		query = query.Where("id NOT IN ?", filter.IDsNotIn)
+		query = query.Where("transactions.id NOT IN ?", filter.IDsNotIn)
 	}
 
 	if filter.StartDate != nil {
@@ -114,8 +114,13 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		query = query.Where(filter.EndDate.ToSQL("date"))
 	}
 
+	query = query.Select("transactions.*").
+		Joins("JOIN accounts ON accounts.id = transactions.account_id")
+
 	if len(filter.AccountIDs) > 0 {
-		query = query.Where("account_id IN ?", filter.AccountIDs)
+		query = query.Where("accounts.id IN ?", filter.AccountIDs)
+	} else {
+		query = query.Where("accounts.is_active = true")
 	}
 
 	if len(filter.CategoryIDs) > 0 {
