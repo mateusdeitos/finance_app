@@ -83,7 +83,7 @@ export function RecurrenceFields({ control, errors }: Props) {
                   label="Data de término"
                   value={field.value ? new Date(field.value) : null}
                   onChange={(date) =>
-                    field.onChange(date ? date.toISOString().split('T')[0] : null)
+                    field.onChange(date ? String(date).split('T')[0] : null)
                   }
                   error={errors?.end_date}
                   valueFormat="DD/MM/YYYY"

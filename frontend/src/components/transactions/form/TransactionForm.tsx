@@ -217,7 +217,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                 required
                 value={field.value ? new Date(field.value) : null}
                 onChange={(date) =>
-                  field.onChange(date ? date.toISOString().split('T')[0] : '')
+                  field.onChange(date ? String(date).split('T')[0] : '')
                 }
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"

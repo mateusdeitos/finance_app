@@ -111,7 +111,7 @@ func (h *CategoryHandler) Update(c echo.Context) error {
 // @Security     CookieAuth
 // @Security     BearerAuth
 // @Param        id   path  int                        true  "Category ID"
-// @Param        body body  domain.DeleteCategoryRequest  false  "Optional replacement category"
+// @Param        request body  domain.DeleteCategoryRequest  false  "Optional replacement category"
 // @Success      204
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
