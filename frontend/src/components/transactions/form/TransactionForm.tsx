@@ -1,5 +1,5 @@
 import { useRef, forwardRef, useImperativeHandle } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Stack,
@@ -58,7 +58,6 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
   const {
     control,
     handleSubmit,
-    watch,
     setValue,
     setError,
     getValues,
@@ -84,7 +83,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
     },
   })
 
-  const transactionType = watch('transaction_type')
+  const transactionType = useWatch({ control, name: 'transaction_type' })
   const isTransfer = transactionType === 'transfer'
 
   const { mutation } = useCreateTransaction({

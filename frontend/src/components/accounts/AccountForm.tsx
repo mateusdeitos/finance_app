@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stack, TextInput, Textarea, Button, Group, Alert } from '@mantine/core'
@@ -27,7 +27,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<AccountFormValues>({
@@ -44,7 +44,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
     if (initialValues) reset({ name: '', description: '', initial_balance: 0, ...initialValues })
   }, [initialValues, reset])
 
-  const initialBalance = watch('initial_balance')
+  const initialBalance = useWatch({ control, name: 'initial_balance' })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>

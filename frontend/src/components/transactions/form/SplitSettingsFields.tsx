@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Group, Avatar, ActionIcon, Text, Alert, Stack, Divider, Box, NumberInput, Tooltip, Switch } from '@mantine/core'
 import { CurrencyInput } from './CurrencyInput'
 import { Controller, Control, useWatch } from 'react-hook-form'
@@ -51,7 +51,9 @@ function SplitRow({ account, currentUserId, totalAmount, enabled, onToggle, amou
   const calculatedAmount = Math.round((totalAmount * percentage) / 100)
 
   const onChangeRef = useRef(onChange)
-  onChangeRef.current = onChange
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange
+  })
 
   useEffect(() => {
     if (enabled && mode === 'percentage') {
