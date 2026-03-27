@@ -120,6 +120,9 @@ func main() {
 	auth.GET("/:provider", authHandler.OAuthStart)
 	auth.GET("/:provider/callback", authHandler.OAuthCallback)
 	auth.POST("/logout", authHandler.Logout)
+	if cfg.App.Env != "production" {
+		auth.POST("/test-login", authHandler.TestLogin)
+	}
 
 	// Protected routes
 	api := e.Group("/api")

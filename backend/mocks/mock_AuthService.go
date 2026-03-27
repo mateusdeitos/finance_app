@@ -149,6 +149,63 @@ func (_c *MockAuthService_ValidateToken_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// TestLogin provides a mock function with given fields: ctx, email
+func (_m *MockAuthService) TestLogin(ctx context.Context, email string) (string, error) {
+	ret := _m.Called(ctx, email)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TestLogin")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (string, error)); ok {
+		return rf(ctx, email)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) string); ok {
+		r0 = rf(ctx, email)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, email)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAuthService_TestLogin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TestLogin'
+type MockAuthService_TestLogin_Call struct {
+	*mock.Call
+}
+
+// TestLogin is a helper method to define mock.On call
+//   - ctx context.Context
+//   - email string
+func (_e *MockAuthService_Expecter) TestLogin(ctx interface{}, email interface{}) *MockAuthService_TestLogin_Call {
+	return &MockAuthService_TestLogin_Call{Call: _e.mock.On("TestLogin", ctx, email)}
+}
+
+func (_c *MockAuthService_TestLogin_Call) Run(run func(ctx context.Context, email string)) *MockAuthService_TestLogin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockAuthService_TestLogin_Call) Return(_a0 string, _a1 error) *MockAuthService_TestLogin_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAuthService_TestLogin_Call) RunAndReturn(run func(context.Context, string) (string, error)) *MockAuthService_TestLogin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockAuthService creates a new instance of MockAuthService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockAuthService(t interface {

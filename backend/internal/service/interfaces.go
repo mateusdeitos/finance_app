@@ -13,6 +13,8 @@ type UserService interface {
 type AuthService interface {
 	OAuthCallback(ctx context.Context, provider string, user *domain.User, providerID string) (*domain.User, string, error)
 	ValidateToken(ctx context.Context, token string) (*domain.User, error)
+	// TestLogin upserts a user by email and returns a JWT. Only for non-production use.
+	TestLogin(ctx context.Context, email string) (string, error)
 }
 
 type TransactionService interface {

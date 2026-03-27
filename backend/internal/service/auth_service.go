@@ -101,6 +101,33 @@ func (s *authService) OAuthCallback(ctx context.Context, provider string, user *
 	return dbUser, token, nil
 }
 
+func (s *authService) TestLogin(ctx context.Context, email string) (string, error) {
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return "", apperrors.Internal("failed to look up user", err)
+	}
+
+	if user == nil {
+		user = &domain.User{
+			Name:      "Test User",
+			Email:     email,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		user, err = s.userRepo.Create(ctx, user)
+		if err != nil {
+			return "", apperrors.Internal("failed to create test user", err)
+		}
+	}
+
+	token, err := s.generateToken(user)
+	if err != nil {
+		return "", apperrors.Internal("failed to generate token", err)
+	}
+
+	return token, nil
+}
+
 func (s *authService) ValidateToken(ctx context.Context, tokenString string) (*domain.User, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

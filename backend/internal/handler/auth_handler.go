@@ -158,3 +158,41 @@ func (h *AuthHandler) Me(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, user)
 }
+
+// TestLogin godoc
+// @Summary      Test login (non-production only)
+// @Description  Issues a JWT auth cookie for the given email without OAuth. Only available when ENV != production.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      testLoginRequest  true  "Login request"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  middleware.ErrorResponse
+// @Router       /auth/test-login [post]
+func (h *AuthHandler) TestLogin(c echo.Context) error {
+	var req testLoginRequest
+	if err := c.Bind(&req); err != nil || req.Email == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "email is required")
+	}
+
+	token, err := h.authService.TestLogin(c.Request().Context(), req.Email)
+	if err != nil {
+		return HandleServiceError(err)
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     AuthCookieName,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
+	})
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+type testLoginRequest struct {
+	Email string `json:"email"`
+}
