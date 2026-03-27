@@ -1,0 +1,35 @@
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+# Build the server binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
+
+# Build goose for migrations
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates tzdata wget
+
+WORKDIR /app
+
+COPY --from=builder /app/server .
+COPY --from=builder /go/bin/goose /usr/local/bin/goose
+COPY migrations ./migrations
+
+ENV TZ=UTC
+
+EXPOSE 8080
+
+# Entrypoint: run migrations then start server
+COPY docker/e2e-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+CMD ["/entrypoint.sh"]

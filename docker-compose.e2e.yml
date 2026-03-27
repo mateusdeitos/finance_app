@@ -1,0 +1,59 @@
+services:
+  postgres:
+    container_name: finance_app_e2e_db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: finance_app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.e2e
+    ports:
+      - "8090:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: finance_app
+      DB_SSLMODE: disable
+      ENV: development
+      JWT_SECRET: e2e-test-secret-do-not-use-in-production
+      FRONTEND_URL: http://localhost:3100
+      APP_URL: http://localhost:8090
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.e2e
+      args:
+        VITE_API_URL: http://localhost:8090
+    ports:
+      - "3100:3100"
+    environment:
+      VITE_API_URL: http://localhost:8090
+      PORT: 3100
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
