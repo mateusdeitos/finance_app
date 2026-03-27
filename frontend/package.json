@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "e2e": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:ci": "playwright test --reporter=github",
+    "e2e:docker-up": "docker compose -f ../docker-compose.e2e.yml up -d --wait",
+    "e2e:docker-down": "docker compose -f ../docker-compose.e2e.yml down -v"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -26,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/router-devtools": "^1.166.9",
     "@tanstack/router-plugin": "^1.166.13",
@@ -33,6 +39,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv": "^17.3.1",
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-unused-imports": "^4.4.1",
