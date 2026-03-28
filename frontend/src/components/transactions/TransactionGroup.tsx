@@ -2,9 +2,11 @@ import { Box, Group, Text } from '@mantine/core'
 import { Fragment } from 'react'
 import { Transactions } from '@/types/transactions'
 import { formatBalance, formatSignedCents } from '@/utils/formatCents'
+import { renderDrawer } from '@/utils/renderDrawer'
 import { OpeningBalanceRow } from './OpeningBalanceRow'
 import { SettlementRow } from './SettlementRow'
 import { TransactionRow } from './TransactionRow'
+import { UpdateTransactionDrawer } from './UpdateTransactionDrawer'
 import classes from './TransactionGroup.module.css'
 
 interface TransactionGroupProps {
@@ -32,6 +34,14 @@ export function TransactionGroup({
   selectedIds,
   onSelectTransaction,
 }: TransactionGroupProps) {
+  const isSelectionActive = (selectedIds?.size ?? 0) > 0
+
+  function openEditDrawer(tx: Transactions.Transaction, focusField?: 'split_amount') {
+    void renderDrawer(() => (
+      <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
+    ))
+  }
+
   return (
     <Box className={classes.group}>
       <Group justify="space-between" align="center" className={classes.header}>
@@ -41,7 +51,9 @@ export function TransactionGroup({
       </Group>
       <div className={classes.rows}>
         {isFirst && <OpeningBalanceRow />}
-        {group.transactions.map((tx) => (
+        {group.transactions.map((tx) => {
+          const isOwner = tx.original_user_id === currentUserId || tx.user_id === currentUserId
+          return (
           <Fragment key={tx.id}>
             <TransactionRow
               transaction={tx}
@@ -50,7 +62,9 @@ export function TransactionGroup({
               categories={categories}
               currentUserId={currentUserId}
               isSelected={selectedIds?.has(tx.id)}
+              isSelectionMode={isSelectionActive}
               onSelect={onSelectTransaction}
+              onEdit={!isSelectionActive && isOwner ? () => openEditDrawer(tx) : undefined}
             />
             {(tx.settlements_from_source ?? []).map((s) => (
               <SettlementRow
@@ -58,10 +72,12 @@ export function TransactionGroup({
                 settlement={s}
                 groupBy={groupBy}
                 accounts={accounts}
+                onEdit={!isSelectionActive && isOwner ? () => openEditDrawer(tx, 'split_amount') : undefined}
               />
             ))}
           </Fragment>
-        ))}
+          )
+        })}
         {groupTotal !== undefined && runningBalance !== undefined && (
           <div className={classes.footerRow}>
             <Text size="xs" c="dimmed">Subtotal</Text>

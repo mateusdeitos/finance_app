@@ -20,6 +20,14 @@
   user-select: none;
 }
 
+.editable {
+  cursor: pointer;
+}
+
+.editable:hover {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
 .selectable:hover {
   background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
 }

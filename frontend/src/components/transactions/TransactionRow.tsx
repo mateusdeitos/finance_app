@@ -61,7 +61,9 @@ interface TransactionRowProps {
   categories: Transactions.Category[];
   currentUserId: number;
   isSelected?: boolean;
+  isSelectionMode?: boolean;
   onSelect?: (id: number) => void;
+  onEdit?: () => void;
 }
 
 export function TransactionRow({
@@ -71,7 +73,9 @@ export function TransactionRow({
   categories,
   currentUserId,
   isSelected,
+  isSelectionMode,
   onSelect,
+  onEdit,
 }: TransactionRowProps) {
   const account = accounts.find((a) => a.id === tx.account_id);
   const linkedAccount =
@@ -98,12 +102,13 @@ export function TransactionRow({
     year: "numeric",
   });
 
-  const selectionMode = onSelect !== undefined;
+  const selectionMode = isSelectionMode ?? false;
 
   return (
     <div
-      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}`}
-      onClick={selectionMode ? () => onSelect(tx.id) : undefined}
+      data-transaction-id={tx.id}
+      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`}
+      onClick={selectionMode ? () => onSelect?.(tx.id) : (onEdit ?? undefined)}
     >
       {/* Col 1 (selection mode only): checkbox */}
       {selectionMode && (

@@ -9,9 +9,10 @@ interface SettlementRowProps {
   settlement: Transactions.Settlement
   groupBy: Transactions.GroupBy
   accounts: Transactions.Account[]
+  onEdit?: () => void
 }
 
-export function SettlementRow({ settlement, groupBy, accounts }: SettlementRowProps) {
+export function SettlementRow({ settlement, groupBy, accounts, onEdit }: SettlementRowProps) {
   const account = accounts.find((a) => a.id === settlement.account_id)
 
   const date = settlement.created_at ? new Date(settlement.created_at) : null
@@ -22,7 +23,10 @@ export function SettlementRow({ settlement, groupBy, accounts }: SettlementRowPr
   })
 
   return (
-    <div className={`${classes.row} ${settlementClasses.row}`}>
+    <div
+      className={`${classes.row} ${settlementClasses.row}${onEdit ? ` ${classes.editable}` : ''}`}
+      onClick={onEdit}
+    >
       <div className={classes.main}>
         {groupBy !== 'date' && dateLabel && (
           <Text size="xs" c="dimmed">{dateLabel}</Text>
