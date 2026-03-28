@@ -3,15 +3,63 @@ import { type Page, type Locator, expect } from '@playwright/test'
 export class TransactionsPage {
   readonly page: Page
   readonly formDrawer: Locator
+  readonly updateDrawer: Locator
 
   constructor(page: Page) {
     this.page = page
     this.formDrawer = page.getByRole('dialog')
+    this.updateDrawer = page.getByRole('dialog', { name: 'Editar transação' })
   }
 
   async goto() {
     await this.page.goto('/transactions')
     await this.page.waitForLoadState('networkidle')
+  }
+
+  async gotoMonth(month: number, year: number) {
+    await this.page.goto(`/transactions?month=${month}&year=${year}`)
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  /** Click the transaction row for the given transaction ID to open the update drawer. */
+  async clickTransactionRow(transactionId: number) {
+    await this.page.locator(`[data-transaction-id="${transactionId}"]`).click()
+    await this.waitForUpdateDrawer()
+  }
+
+  async waitForUpdateDrawer() {
+    await expect(this.updateDrawer).toBeVisible({ timeout: 8000 })
+  }
+
+  /** Clear the description input and type a new value. */
+  async clearAndFillDescription(description: string) {
+    const input = this.updateDrawer.getByTestId('input_description')
+    await input.fill(description)
+  }
+
+  /** Replace amount in the update form by selecting all and pressing digits. */
+  async clearAndFillAmount(amountCents: number) {
+    const input = this.updateDrawer.getByTestId('input_amount')
+    await input.click()
+    await input.press('Control+a')
+    for (const digit of String(amountCents)) {
+      await input.press(digit)
+    }
+  }
+
+  /** Click save in the update drawer and wait for it to close. */
+  async submitUpdate() {
+    await this.updateDrawer.getByTestId('btn_save_transaction').click()
+    await expect(this.updateDrawer).not.toBeVisible({ timeout: 10000 })
+  }
+
+  /** Select a propagation option in the update drawer. */
+  async selectUpdatePropagation(option: 'current' | 'current_and_future' | 'all') {
+    await this.updateDrawer.getByTestId(`propagation_update_option_${option}`).click()
+  }
+
+  async isUpdatePropagationVisible(): Promise<boolean> {
+    return this.updateDrawer.getByTestId('propagation_update_option_current').isVisible()
   }
 
   async openCreateForm() {
