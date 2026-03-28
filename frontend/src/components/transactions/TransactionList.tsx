@@ -12,6 +12,8 @@ import { TransactionGroup } from './TransactionGroup'
 
 interface TransactionListProps {
   currentUserId: number
+  selectedIds?: Set<number>
+  onSelectTransaction?: (id: number) => void
 }
 
 function groupNetTotal(group: Transactions.TransactionGroup): number {
@@ -25,7 +27,7 @@ function groupNetTotal(group: Transactions.TransactionGroup): number {
   }, 0)
 }
 
-export function TransactionList({ currentUserId }: TransactionListProps) {
+export function TransactionList({ currentUserId, selectedIds, onSelectTransaction }: TransactionListProps) {
   const search = useSearch({ from: '/_authenticated/transactions' })
   const filters = useActiveFilters()
 
@@ -104,6 +106,8 @@ export function TransactionList({ currentUserId }: TransactionListProps) {
           groupTotal={groupTotals[i]}
           runningBalance={runningBalances[i]}
           isFirst={i === 0}
+          selectedIds={selectedIds}
+          onSelectTransaction={onSelectTransaction}
         />
       ))}
     </Stack>

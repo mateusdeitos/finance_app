@@ -3,15 +3,22 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconFilter, IconPlus } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { useCallback, useState } from 'react'
 import { z } from 'zod'
 import { useMe } from '@/hooks/useMe'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
+import { useTransactions } from '@/hooks/useTransactions'
+import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
 import { TransactionList } from '@/components/transactions/TransactionList'
+import { SelectionActionBar } from '@/components/transactions/SelectionActionBar'
+import { PropagationSettingsDrawer, PropagationSetting } from '@/components/transactions/PropagationSettingsDrawer'
+import { BulkDeleteProgressDrawer } from '@/components/transactions/BulkDeleteProgressDrawer'
 import { TextSearch } from '@/components/transactions/filters/TextSearch'
 
 const now = new Date()
@@ -37,10 +44,66 @@ function TransactionsPage() {
   const search = Route.useSearch()
   const isMobile = useIsMobile()
   const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
-  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false)
 
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data ?? 0
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const toggleSelection = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+
+  // Transactions data (needed to find full transaction objects for selected IDs)
+  // Uses same params as TransactionList so they share the same query cache entry
+  const filters = useActiveFilters()
+  const { query: txQuery, invalidate: invalidateTransactions } = useTransactions({
+    month: search.month,
+    year: search.year,
+    ...filters,
+  })
+  const allTransactions = txQuery.data ?? []
+
+  const hasRecurring = [...selectedIds].some((id) => {
+    const tx = allTransactions.find((t) => t.id === id)
+    return tx?.transaction_recurrence_id != null
+  })
+
+  async function handleDeleteClick() {
+    try {
+      let propagation: PropagationSetting | undefined
+      if (hasRecurring) {
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />)
+      }
+
+      const txsToDelete = [...selectedIds].map((id) => {
+        const tx = allTransactions.find((t) => t.id === id)
+        return {
+          id,
+          description: tx?.description ?? String(id),
+          propagationSettings: tx?.transaction_recurrence_id != null ? propagation : undefined,
+        }
+      })
+
+      void renderDrawer(() => (
+        <BulkDeleteProgressDrawer
+          transactions={txsToDelete}
+          onInvalidate={invalidateTransactions}
+          onSuccess={clearSelection}
+        />
+      ))
+    } catch {
+      // User dismissed the propagation drawer without confirming
+    }
+  }
+
+  const isSelecting = selectedIds.size > 0
 
   if (isMobile) {
     return (
@@ -56,13 +119,13 @@ function TransactionsPage() {
             paddingBottom: 'var(--mantine-spacing-xs)',
           }}
         >
-          <Stack gap="xs">
+          <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
             <Group justify="space-between" align="center">
               <PeriodNavigator month={search.month} year={search.year} />
               <Button
                 size="xs"
                 leftSection={<IconPlus size={14} />}
-                onClick={openCreate}
+                onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
               >
                 Nova Transação
               </Button>
@@ -71,20 +134,32 @@ function TransactionsPage() {
           </Stack>
         </Box>
 
-        <TransactionList currentUserId={currentUserId} />
+        <TransactionList
+          currentUserId={currentUserId}
+          selectedIds={selectedIds}
+          onSelectTransaction={toggleSelection}
+        />
 
-        <MobileBottomBar>
-          <ClearFiltersButton variant="icon" />
-          <ActionIcon
-            size="xl"
-            radius="xl"
-            variant="filled"
-            onClick={openFilters}
-            aria-label="Abrir filtros"
-          >
-            <IconFilter size={20} />
-          </ActionIcon>
-        </MobileBottomBar>
+        {isSelecting ? (
+          <SelectionActionBar
+            count={selectedIds.size}
+            onClearSelection={clearSelection}
+            onDelete={handleDeleteClick}
+          />
+        ) : (
+          <MobileBottomBar>
+            <ClearFiltersButton variant="icon" />
+            <ActionIcon
+              size="xl"
+              radius="xl"
+              variant="filled"
+              onClick={openFilters}
+              aria-label="Abrir filtros"
+            >
+              <IconFilter size={20} />
+            </ActionIcon>
+          </MobileBottomBar>
+        )}
 
         <Drawer
           opened={filtersOpened}
@@ -99,10 +174,6 @@ function TransactionsPage() {
           <TransactionFilters orientation="column" hideTextSearch />
         </Drawer>
 
-        <CreateTransactionDrawer
-          opened={createOpened}
-          onClose={closeCreate}
-        />
       </Stack>
     )
   }
@@ -120,10 +191,10 @@ function TransactionsPage() {
           paddingBottom: 'var(--mantine-spacing-xs)',
         }}
       >
-        <Stack gap="sm">
+        <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
           <Group justify="space-between" align="center">
             <PeriodNavigator month={search.month} year={search.year} />
-            <Button leftSection={<IconPlus size={16} />} onClick={openCreate}>
+            <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}>
               Nova Transação
             </Button>
           </Group>
@@ -131,12 +202,20 @@ function TransactionsPage() {
         </Stack>
       </Box>
 
-      <TransactionList currentUserId={currentUserId} />
-
-      <CreateTransactionDrawer
-        opened={createOpened}
-        onClose={closeCreate}
+      <TransactionList
+        currentUserId={currentUserId}
+        selectedIds={selectedIds}
+        onSelectTransaction={toggleSelection}
       />
+
+      {isSelecting && (
+        <SelectionActionBar
+          count={selectedIds.size}
+          onClearSelection={clearSelection}
+          onDelete={handleDeleteClick}
+        />
+      )}
+
     </Stack>
   )
 }

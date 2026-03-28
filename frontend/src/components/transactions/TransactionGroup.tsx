@@ -16,6 +16,8 @@ interface TransactionGroupProps {
   groupTotal?: number
   runningBalance?: number
   isFirst?: boolean
+  selectedIds?: Set<number>
+  onSelectTransaction?: (id: number) => void
 }
 
 export function TransactionGroup({
@@ -27,6 +29,8 @@ export function TransactionGroup({
   groupTotal,
   runningBalance,
   isFirst = false,
+  selectedIds,
+  onSelectTransaction,
 }: TransactionGroupProps) {
   return (
     <Box className={classes.group}>
@@ -45,6 +49,8 @@ export function TransactionGroup({
               accounts={accounts}
               categories={categories}
               currentUserId={currentUserId}
+              isSelected={selectedIds?.has(tx.id)}
+              onSelect={onSelectTransaction}
             />
             {(tx.settlements_from_source ?? []).map((s) => (
               <SettlementRow

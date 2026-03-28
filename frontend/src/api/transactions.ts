@@ -81,6 +81,20 @@ export async function fetchTransactionSuggestions(
   return res.json()
 }
 
+export async function deleteTransaction(
+  id: number,
+  propagationSettings: 'current' | 'current_and_future' | 'all' = 'current',
+): Promise<void> {
+  const url = new URL(`${apiUrl}/api/transactions/${id}`)
+  url.searchParams.set('propagation_settings', propagationSettings)
+  const res = await fetch(url.toString(), {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (res.status === 404) return
+  if (!res.ok) throw res
+}
+
 export async function createTransaction(
   payload: Transactions.CreateTransactionPayload,
 ): Promise<Response> {
