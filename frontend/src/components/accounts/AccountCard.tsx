@@ -13,7 +13,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
   const isShared = !!account.user_connection
 
   return (
-    <Card withBorder radius="md" p="md">
+    <Card withBorder radius="md" p="md" data-account-name={account.name} data-testid="account_card">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={4}>
           <Group gap="xs">
@@ -31,7 +31,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
         {!isShared && (
           <Group gap="xs" wrap="nowrap">
             {account.is_active && (
-              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)}>
+              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid="btn_account_edit">
                 <IconPencil size={16} />
               </ActionIcon>
             )}
@@ -39,6 +39,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
               variant="subtle"
               color={account.is_active ? 'red' : 'teal'}
               onClick={() => onDelete(account)}
+              data-testid="btn_account_action"
             >
               {account.is_active ? <IconTrash size={16} /> : <IconRefresh size={16} />}
             </ActionIcon>

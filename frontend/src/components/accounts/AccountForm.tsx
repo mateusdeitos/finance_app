@@ -47,7 +47,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
   const initialBalance = useWatch({ control, name: 'initial_balance' })
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate data-testid="account_form">
       <Stack gap="md">
         {error && (
           <Alert color="red" title="Erro" variant="light">
@@ -60,6 +60,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
           required
           {...register('name')}
           error={errors.name?.message}
+          data-testid="input_account_name"
         />
 
         <Textarea
@@ -78,7 +79,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
         />
 
         <Group justify="flex-end" mt="sm">
-          <Button type="submit" loading={isPending}>
+          <Button type="submit" loading={isPending} data-testid="btn_account_save">
             Salvar
           </Button>
         </Group>

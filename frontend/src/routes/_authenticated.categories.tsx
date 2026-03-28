@@ -77,6 +77,7 @@ function DeleteCategoryModal({ opened, onClose, category, allCategories, onSucce
             color="red"
             loading={mutation.isPending}
             onClick={() => mutation.mutate({ id: category.id, replaceWithId: replaceWithId ? Number(replaceWithId) : undefined })}
+            data-testid="btn_confirm_delete_category"
           >
             Excluir
           </Button>
@@ -138,6 +139,7 @@ function CategoriesPage() {
             leftSection={<IconPlus size={16} />}
             onClick={() => setPendingParentId('root')}
             size="sm"
+            data-testid="btn_new_category"
           >
             Nova Categoria
           </Button>
@@ -153,7 +155,7 @@ function CategoriesPage() {
       ) : categories.length === 0 && pendingParentId === null ? (
         <Stack align="center" py="xl" gap="sm">
           <Text c="dimmed">Nenhuma categoria cadastrada</Text>
-          <Button leftSection={<IconPlus size={16} />} onClick={() => setPendingParentId('root')}>
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setPendingParentId('root')} data-testid="btn_create_first_category">
             Criar primeira categoria
           </Button>
         </Stack>

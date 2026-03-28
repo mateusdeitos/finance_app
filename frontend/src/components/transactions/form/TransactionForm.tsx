@@ -202,6 +202,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                 onTypeChange?.(val as Transactions.TransactionType)
               }}
               fullWidth
+              data-testid="segmented_transaction_type"
             />
           )}
         />
@@ -235,6 +236,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.amount?.message}
+                data-testid="input_amount"
               />
             )}
           />
@@ -268,6 +270,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
                   error={errors.account_id?.message}
                   searchable
+                  data-testid="select_account"
                 />
               )}
             />
@@ -302,6 +305,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                     error={errors.category_id?.message}
                     searchable
                     clearable
+                    data-testid="select_category"
                   />
                 )}
               />
@@ -317,6 +321,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
                     error={errors.account_id?.message}
                     searchable
+                    data-testid="select_account"
                   />
                 )}
               />
@@ -353,7 +358,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
         />
 
         <Group justify="flex-end" mt="sm">
-          <Button type="submit" loading={isSubmitting || mutation.isPending}>
+          <Button type="submit" loading={isSubmitting || mutation.isPending} data-testid="btn_save_transaction">
             Salvar
           </Button>
         </Group>

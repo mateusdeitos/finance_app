@@ -40,6 +40,7 @@ export function DescriptionAutocomplete({ value, onChange, onSuggestionSelect, e
       onOptionSubmit={handleOptionSubmit}
       data={options}
       error={error}
+      data-testid="input_description"
     />
   )
 }
