@@ -100,6 +100,38 @@ export class TransactionsPage {
     await this.selectCategory(categoryName)
   }
 
+  async selectTransaction(transactionId: number) {
+    await this.page.getByTestId(`checkbox_${transactionId}`).first().click()
+  }
+
+  async getSelectedCount(): Promise<number> {
+    const text = await this.page.getByTestId('selection_count').textContent()
+    const match = text?.match(/(\d+)/)
+    return match ? parseInt(match[1]) : 0
+  }
+
+  async confirmBulkDelete() {
+    await this.page.getByTestId('btn_bulk_delete').click()
+    await expect(this.page.getByTestId('bulk_delete_success')).toBeVisible({ timeout: 15000 })
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  async selectPropagation(option: 'Somente esta' | 'Esta e as próximas' | 'Todas') {
+    const valueMap: Record<string, string> = {
+      'Somente esta': 'current',
+      'Esta e as próximas': 'current_and_future',
+      'Todas': 'all',
+    }
+    await this.page.getByTestId(`propagation_option_${valueMap[option]}`).click()
+    await this.page.getByTestId('btn_propagation_confirm').click()
+    await expect(this.page.getByTestId('bulk_delete_success')).toBeVisible({ timeout: 15000 })
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  async closeBulkDeleteDrawer() {
+    await this.page.getByTestId('btn_bulk_delete_done').click()
+  }
+
   async deleteTransaction(description: string) {
     const transactionRow = this.page.locator('[class*="Group"], [class*="Stack"]').filter({ hasText: description }).first()
     await transactionRow.click()

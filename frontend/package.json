@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint src",
     "e2e": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test",
-    "e2e:ui": "playwright test --ui",
-    "e2e:ci": "playwright test --reporter=github",
+    "e2e:ui": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test --ui",
+    "e2e:ci": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test --reporter=github",
     "e2e:docker-up": "docker compose -f ../docker-compose.e2e.yml up -d --wait",
     "e2e:docker-down": "docker compose -f ../docker-compose.e2e.yml down -v"
   },

@@ -55,19 +55,4 @@ test.describe('Transactions', () => {
     await expect(transactionsPage.page.getByText(description)).toBeVisible()
   })
 
-  // ── 6.4 ──────────────────────────────────────────────────────────────────
-  // test('delete a transaction', async () => {
-  //   const description = `Transação Deletar ${Date.now()}`
-
-  //   // Create via UI to get a visible transaction
-  //   await transactionsPage.openCreateForm()
-  //   await transactionsPage.fillExpense(1000, description, testAccountName, testCategoryName)
-  //   await transactionsPage.submitForm()
-
-  //   await expect(transactionsPage.page.getByText(description)).toBeVisible()
-
-  //   await transactionsPage.deleteTransaction(description)
-
-  //   await expect(transactionsPage.page.getByText(description)).not.toBeVisible()
-  // })
 })

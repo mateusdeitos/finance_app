@@ -6,6 +6,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
+import type { Transactions } from '../../src/types/transactions'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -72,17 +73,25 @@ export async function apiDeleteCategory(id: number, replaceWithId?: number): Pro
   })
 }
 
-export async function apiCreateTransaction(payload: {
-  transaction_type: 'expense' | 'income' | 'transfer'
-  account_id: number
-  amount: number
-  date: string
-  description: string
-  category_id?: number
-}): Promise<{ id: number }> {
+function localMidnightISO(dateStr: string): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const d = new Date(year, month - 1, day, 0, 0, 0)
+  const offsetMin = -d.getTimezoneOffset()
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const absMin = Math.abs(offsetMin)
+  const hh = String(Math.floor(absMin / 60)).padStart(2, '0')
+  const mm = String(absMin % 60).padStart(2, '0')
+  return `${dateStr}T00:00:00${sign}${hh}:${mm}`
+}
+
+export async function apiCreateTransaction(payload: Transactions.CreateTransactionPayload): Promise<{ id: number }> {
+  const body = {
+    ...payload,
+    date: payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
+  }
   const res = await apiFetch('/api/transactions', {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   })
   return res.json()
 }
