@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Group, Avatar, ActionIcon, Text, Alert, Stack, Divider, Box, NumberInput, Tooltip, Switch } from '@mantine/core'
-import { CurrencyInput } from './CurrencyInput'
+import { CurrencyInput, CurrencyInputHandle } from './CurrencyInput'
 import { Controller, Control, useWatch } from 'react-hook-form'
 import { Transactions } from '@/types/transactions'
 import type { TransactionFormValues } from './TransactionForm'
@@ -10,6 +10,8 @@ interface Props {
   accounts: Transactions.Account[]
   currentUserId: number
   errors?: Record<string, string>
+  focusSplitAmount?: boolean
+  initialSplitSettings?: TransactionFormValues['split_settings']
 }
 
 function formatCurrency(cents: number): string {
@@ -36,16 +38,24 @@ interface SplitRowProps {
   amount: number
   onChange: (cents: number) => void
   error?: string
+  focusOnMount?: boolean
+  initialMode?: 'percentage' | 'amount'
 }
 
-function SplitRow({ account, currentUserId, totalAmount, enabled, onToggle, amount, onChange, error }: SplitRowProps) {
+function SplitRow({ account, currentUserId, totalAmount, enabled, onToggle, amount, onChange, error, focusOnMount, initialMode }: SplitRowProps) {
+  const localAmountRef = useRef<CurrencyInputHandle>(null)
+
+  useEffect(() => {
+    if (focusOnMount) localAmountRef.current?.focus()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const conn = account.user_connection!
   const isFrom = conn.from_user_id === currentUserId
   const defaultPercentage = isFrom
     ? conn.from_default_split_percentage
     : conn.to_default_split_percentage
 
-  const [mode, setMode] = useState<'percentage' | 'amount'>('percentage')
+  const [mode, setMode] = useState<'percentage' | 'amount'>(initialMode ?? 'percentage')
   const [percentage, setPercentage] = useState(defaultPercentage)
 
   const calculatedAmount = Math.round((totalAmount * percentage) / 100)
@@ -114,7 +124,13 @@ function SplitRow({ account, currentUserId, totalAmount, enabled, onToggle, amou
               </Group>
             ) : (
               <Box style={{ flex: 1 }}>
-                <CurrencyInput value={amount} onChange={onChange} error={error} />
+                <CurrencyInput
+                  ref={localAmountRef}
+                  value={amount}
+                  onChange={onChange}
+                  error={error}
+                  data-testid="input_split_amount"
+                />
               </Box>
             )}
           </>
@@ -128,14 +144,20 @@ function SplitRow({ account, currentUserId, totalAmount, enabled, onToggle, amou
   )
 }
 
-export function SplitSettingsFields({ control, accounts, currentUserId, errors }: Props) {
+export function SplitSettingsFields({ control, accounts, currentUserId, errors, focusSplitAmount, initialSplitSettings }: Props) {
   const totalAmount = useWatch({ control, name: 'amount' }) ?? 0
 
   const connectedAccounts = accounts.filter(
     (a) => a.user_connection && a.user_connection.connection_status === 'accepted',
   )
 
-  const [enabledMap, setEnabledMap] = useState<Record<number, boolean>>({})
+  const [enabledMap, setEnabledMap] = useState<Record<number, boolean>>(() => {
+    const initial: Record<number, boolean> = {}
+    for (const s of (initialSplitSettings ?? [])) {
+      initial[s.connection_id] = true
+    }
+    return initial
+  })
 
   if (connectedAccounts.length === 0) return null
 
@@ -158,7 +180,7 @@ export function SplitSettingsFields({ control, accounts, currentUserId, errors }
         name="split_settings"
         render={({ field }) => (
           <Stack gap="sm">
-            {connectedAccounts.map((account) => {
+            {connectedAccounts.map((account, rowIndex) => {
               const conn = account.user_connection!
               const connectionId = conn.id
               const enabled = enabledMap[connectionId] ?? false
@@ -174,6 +196,9 @@ export function SplitSettingsFields({ control, accounts, currentUserId, errors }
                       .map(([k, v]) => [k.replace(`split_settings.${entryIndex}.`, ''), v]),
                   )
                 : {}
+
+              const initSplit = (initialSplitSettings ?? []).find(s => s.connection_id === connectionId)
+              const initialMode = initSplit?.amount !== undefined ? 'amount' : 'percentage'
 
               function handleToggle(on: boolean) {
                 setEnabledMap((prev) => ({ ...prev, [connectionId]: on }))
@@ -199,6 +224,8 @@ export function SplitSettingsFields({ control, accounts, currentUserId, errors }
                   amount={currentAmount}
                   onChange={handleChange}
                   error={indexErrors['amount'] ?? errors?.[`split_settings.${entryIndex}`]}
+                  focusOnMount={rowIndex === 0 && !!focusSplitAmount}
+                  initialMode={initialMode}
                 />
               )
             })}
