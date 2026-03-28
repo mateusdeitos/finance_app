@@ -161,4 +161,18 @@ export namespace Transactions {
     recurrence_settings?: RecurrenceSettings
     split_settings?: SplitSetting[]
   }
+
+  export interface UpdateTransactionPayload {
+    transaction_type?: TransactionType
+    account_id?: number
+    category_id?: number | null
+    amount?: number
+    date?: string
+    description?: string
+    destination_account_id?: number
+    tags?: { id?: number; name: string }[]
+    recurrence_settings?: RecurrenceSettings
+    split_settings?: SplitSetting[]
+    propagation?: 'current' | 'current_and_future' | 'all'
+  }
 }

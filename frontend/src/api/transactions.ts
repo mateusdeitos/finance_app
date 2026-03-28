@@ -95,6 +95,23 @@ export async function deleteTransaction(
   if (!res.ok) throw res
 }
 
+export async function updateTransaction(
+  id: number,
+  payload: Transactions.UpdateTransactionPayload,
+): Promise<void> {
+  const body = {
+    ...payload,
+    date: payload.date && payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
+  }
+  const res = await fetch(`${apiUrl}/api/transactions/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw res
+}
+
 export async function createTransaction(
   payload: Transactions.CreateTransactionPayload,
 ): Promise<Response> {
