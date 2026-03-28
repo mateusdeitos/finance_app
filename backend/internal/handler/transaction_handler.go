@@ -41,12 +41,12 @@ func (h *TransactionHandler) Create(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	err := h.transactionService.Create(c.Request().Context(), userID, &transaction)
+	id, err := h.transactionService.Create(c.Request().Context(), userID, &transaction)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}
 
-	return c.NoContent(http.StatusCreated)
+	return c.JSON(http.StatusCreated, map[string]int{"id": id})
 }
 
 // Update godoc

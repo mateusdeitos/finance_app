@@ -18,7 +18,7 @@ type AuthService interface {
 }
 
 type TransactionService interface {
-	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error
+	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) (int, error)
 	Update(ctx context.Context, userID, id int, transaction *domain.TransactionUpdateRequest) error
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)

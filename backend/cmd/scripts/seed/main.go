@@ -379,7 +379,7 @@ func seedTransactions(
 				}
 			}
 
-			err := svcs.Transaction.Create(ctx, userID, req)
+			_, err := svcs.Transaction.Create(ctx, userID, req)
 			if err != nil {
 				log.Printf("  skip transaction: %v", err)
 			}
@@ -410,7 +410,7 @@ func seedTransactions(
 					req.CategoryID = cat.ID
 				}
 
-				if err := svcs.Transaction.Create(ctx, userID, req); err != nil {
+				if _, err := svcs.Transaction.Create(ctx, userID, req); err != nil {
 					log.Printf("  skip linked transaction: %v", err)
 				}
 			}
@@ -478,7 +478,7 @@ func seedRecurringTransactions(
 			}
 		}
 
-		if err := svcs.Transaction.Create(ctx, userID, req); err != nil {
+		if _, err := svcs.Transaction.Create(ctx, userID, req); err != nil {
 			log.Printf("  skip recurring transaction: %v", err)
 			continue
 		}

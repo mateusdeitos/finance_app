@@ -11,40 +11,40 @@ import (
 	"github.com/samber/lo"
 )
 
-func (s *transactionService) Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) error {
+func (s *transactionService) Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) (int, error) {
 	errs := s.validateCreateTransactionRequest(transaction)
 	if len(errs) > 0 {
-		return pkgErrors.ServiceErrors(errs)
+		return 0, pkgErrors.ServiceErrors(errs)
 	}
 
 	ctx, err := s.dbTransaction.Begin(ctx)
 	if err != nil {
-		return pkgErrors.Internal("failed to begin transaction", err)
+		return 0, pkgErrors.Internal("failed to begin transaction", err)
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
 	_, err = s.services.Account.GetByID(ctx, userID, transaction.AccountID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if transaction.CategoryID > 0 {
 		_, err = s.services.Category.GetByID(ctx, userID, transaction.CategoryID)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 
-	err = s.createTransactions(ctx, userID, transaction)
+	id, err := s.createTransactions(ctx, userID, transaction)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := s.dbTransaction.Commit(ctx); err != nil {
-		return pkgErrors.Internal("failed to commit transaction", err)
+		return 0, pkgErrors.Internal("failed to commit transaction", err)
 	}
 
-	return nil
+	return id, nil
 }
 
 func (s *transactionService) validateCreateTransactionRequest(transaction *domain.TransactionCreateRequest) []*pkgErrors.ServiceError {
@@ -171,18 +171,18 @@ func (s *transactionService) validateRecurrenceSettings(
 	return errs
 }
 
-func (s *transactionService) createTransactions(ctx context.Context, userID int, req *domain.TransactionCreateRequest) error {
+func (s *transactionService) createTransactions(ctx context.Context, userID int, req *domain.TransactionCreateRequest) (int, error) {
 	transactions := []domain.Transaction{}
 
 	errs := s.createTags(ctx, userID, req.Tags)
 	if len(errs) > 0 {
-		return pkgErrors.ServiceErrors(errs)
+		return 0, pkgErrors.ServiceErrors(errs)
 	}
 
 	hasRecurrence := req.RecurrenceSettings != nil
 
 	if err := s.injectUserConnectionsOnSplitSettings(ctx, userID, req.SplitSettings); err != nil {
-		return err
+		return 0, err
 	}
 
 	// transfer ou expense = debit
@@ -195,7 +195,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	if hasRecurrence {
 		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings, req.Date)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		for i := 1; i <= recurrence.Installments; i++ {
@@ -233,29 +233,34 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		})
 	}
 
+	firstID := 0
 	for i := range transactions {
 		tr := &transactions[i]
 		if err := s.injectLinkedTransactions(ctx, userID, tr, req, req.SplitSettings, req.RecurrenceSettings); err != nil {
-			return err
+			return 0, err
 		}
 
 		t, err := s.transactionRepo.Create(ctx, &transactions[i])
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		transactions[i].ID = t.ID
 		transactions[i].CreatedAt = t.CreatedAt
 		transactions[i].UpdatedAt = t.UpdatedAt
 
+		if i == 0 {
+			firstID = t.ID
+		}
+
 		if req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
 			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType, req.SplitSettings); err != nil {
-				return err
+				return 0, err
 			}
 		}
 	}
 
-	return nil
+	return firstID, nil
 }
 
 func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType, splitSettings []domain.SplitSettings) error {
