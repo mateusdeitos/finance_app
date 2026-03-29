@@ -29,7 +29,7 @@ export type FocusField = FieldPath<TransactionFormValues>;
 interface Props {
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
-  onSubmitPayload: (payload: Transactions.CreateTransactionPayload) => void;
+  onSubmitPayload: (values: TransactionFormValues) => void;
   isPending?: boolean;
   submitError?: string;
 }
@@ -75,43 +75,7 @@ export const TransactionForm = ({
     (errors as Record<string, { message?: string }>)["_general"]?.message;
 
   const onSubmit = (values: TransactionFormValues) => {
-    const resolvedTags = values.tags.map((name) => {
-      const existing = existingTags.find((t) => t.name === name);
-      return existing ? { id: existing.id, name } : { name };
-    });
-
-    const payload: Transactions.CreateTransactionPayload = {
-      transaction_type: values.transaction_type,
-      date: values.date,
-      description: values.description,
-      amount: values.amount,
-      account_id: values.account_id!,
-      category_id:
-        isTransfer || !values.category_id ? undefined : values.category_id,
-      destination_account_id: isTransfer
-        ? (values.destination_account_id ?? undefined)
-        : undefined,
-      tags: resolvedTags.length > 0 ? resolvedTags : undefined,
-      split_settings:
-        !isTransfer && values.split_settings.length > 0
-          ? values.split_settings
-          : undefined,
-      recurrence_settings: values.recurrenceEnabled
-        ? {
-            type: values.recurrenceType,
-            repetitions:
-              !values.recurrenceEndDateMode && values.recurrenceRepetitions
-                ? values.recurrenceRepetitions
-                : undefined,
-            end_date:
-              values.recurrenceEndDateMode && values.recurrenceEndDate
-                ? values.recurrenceEndDate
-                : undefined,
-          }
-        : undefined,
-    };
-
-    onSubmitPayload(payload);
+    onSubmitPayload(values);
   };
 
   function handleSuggestionSelect(

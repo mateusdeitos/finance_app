@@ -7,7 +7,9 @@ import { useMe } from "@/hooks/useMe";
 import { useTransactionPrefill } from "@/hooks/useTransactionPrefill";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
+import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import {
@@ -63,10 +65,14 @@ export function CreateTransactionDrawer() {
 
   const transactionType = useWatch({ control: methods.control, name: "transaction_type" });
 
+  const { query: tagsQuery } = useTags();
+  const existingTags = tagsQuery.data ?? [];
+
   const { mutation } = useCreateTransaction();
 
-  function handleSubmitPayload(payload: Transactions.CreateTransactionPayload) {
+  function handleSubmitPayload(values: TransactionFormValues) {
     setSubmitError(undefined);
+    const payload = buildTransactionPayload(values, existingTags);
     mutation.mutate(payload, {
       onSuccess: () => {
         savePrefill(

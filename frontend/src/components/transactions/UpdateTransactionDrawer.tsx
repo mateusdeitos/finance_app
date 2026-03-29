@@ -5,9 +5,11 @@ import { Divider, Drawer, Stack } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUpdateTransaction } from '@/hooks/useUpdateTransaction'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useTags } from '@/hooks/useTags'
 import { Transactions } from '@/types/transactions'
 import { QueryKeys } from '@/utils/queryKeys'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { buildTransactionPayload } from '@/utils/buildTransactionPayload'
 import {
   transactionFormSchema,
   TransactionFormValues,
@@ -27,6 +29,9 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
 
   const { query: accountsQuery } = useAccounts()
   const accounts = accountsQuery.data ?? []
+
+  const { query: tagsQuery } = useTags()
+  const existingTags = tagsQuery.data ?? []
 
   const initialSplitSettings = (transaction.linked_transactions ?? [])
     .filter((lt) => lt.user_id !== transaction.user_id)
@@ -61,8 +66,9 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
 
   const isRecurring = transaction.transaction_recurrence_id != null
 
-  function handleSubmitPayload(payload: Transactions.CreateTransactionPayload) {
+  function handleSubmitPayload(values: TransactionFormValues) {
     setSubmitError(undefined)
+    const payload = buildTransactionPayload(values, existingTags)
     mutation.mutate(
       {
         id: transaction.id,
