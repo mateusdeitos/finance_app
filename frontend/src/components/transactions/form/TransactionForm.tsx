@@ -36,10 +36,8 @@ interface Props {
   initialValues?: Partial<TransactionFormValues>;
   /** Pre-populate all fields from an existing transaction (update mode). */
   transaction?: Transactions.Transaction;
-  /** Field to focus on mount. */
+  /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
-  /** Focus the split amount input on mount. */
-  focusSplitAmount?: boolean;
   onSuccess: () => void;
   onSavePrefill: (
     date: string,
@@ -58,7 +56,6 @@ export const TransactionForm = ({
   initialValues,
   transaction,
   focusField,
-  focusSplitAmount,
   onSuccess,
   onSavePrefill,
   onTypeChange,
@@ -423,7 +420,6 @@ export const TransactionForm = ({
               accounts={accounts}
               currentUserId={currentUserId}
               errors={splitErrors}
-              focusSplitAmount={focusSplitAmount}
               initialSplitSettings={initialSplitSettings}
             />
           </>

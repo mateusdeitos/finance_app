@@ -7,6 +7,7 @@ import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { SettlementRow } from "./SettlementRow";
 import { TransactionRow } from "./TransactionRow";
 import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
+import { FocusField } from "./form/TransactionForm";
 import classes from "./TransactionGroup.module.css";
 
 interface TransactionGroupProps {
@@ -38,10 +39,10 @@ export function TransactionGroup({
 
   function openEditDrawer(
     tx: Transactions.Transaction,
-    focusSplitAmount = false
+    focusField?: FocusField
   ) {
     void renderDrawer(() => (
-      <UpdateTransactionDrawer transaction={tx} focusSplitAmount={focusSplitAmount} />
+      <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
     ));
   }
 
@@ -83,7 +84,7 @@ export function TransactionGroup({
                   accounts={accounts}
                   onEdit={
                     !isSelectionActive && isOwner
-                      ? () => openEditDrawer(tx, true)
+                      ? () => openEditDrawer(tx, "split_settings.0.amount")
                       : undefined
                   }
                 />
