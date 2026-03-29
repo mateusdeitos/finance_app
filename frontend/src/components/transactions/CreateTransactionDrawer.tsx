@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Drawer } from "@mantine/core";
 import { useCategories } from "@/hooks/useCategories";
@@ -24,8 +24,6 @@ const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
 
 export function CreateTransactionDrawer() {
   const { opened, close } = useDrawerContext<void>();
-  const [transactionType, setTransactionType] =
-    useState<Transactions.TransactionType>("expense");
   const [submitError, setSubmitError] = useState<string | undefined>();
   const [fieldErrors, setFieldErrors] = useState<
     Record<string, string> | undefined
@@ -66,6 +64,8 @@ export function CreateTransactionDrawer() {
     },
   });
 
+  const transactionType = useWatch({ control: methods.control, name: "transaction_type" });
+
   const { mutation } = useCreateTransaction();
 
   function handleSubmitPayload(payload: Transactions.CreateTransactionPayload) {
@@ -103,7 +103,6 @@ export function CreateTransactionDrawer() {
     >
       <FormProvider {...methods}>
         <TransactionForm
-          onTypeChange={setTransactionType}
           focusField="amount"
           onSubmitPayload={handleSubmitPayload}
           isPending={mutation.isPending}

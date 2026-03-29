@@ -29,7 +29,6 @@ export type FocusField = FieldPath<TransactionFormValues>;
 interface Props {
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
-  onTypeChange?: (type: Transactions.TransactionType) => void;
   onSubmitPayload: (payload: Transactions.CreateTransactionPayload) => void;
   isPending?: boolean;
   submitError?: string;
@@ -39,7 +38,6 @@ interface Props {
 
 export const TransactionForm = ({
   focusField,
-  onTypeChange,
   onSubmitPayload,
   isPending,
   submitError,
@@ -200,7 +198,6 @@ export const TransactionForm = ({
               onChange={(val) => {
                 field.onChange(val);
                 if (val === "transfer") setValue("split_settings", []);
-                onTypeChange?.(val as Transactions.TransactionType);
               }}
               fullWidth
               data-testid="segmented_transaction_type"
