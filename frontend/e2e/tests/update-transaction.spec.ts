@@ -83,9 +83,9 @@ test.describe('Transaction Update', () => {
     const amountInput = transactionsPage.updateDrawer.getByTestId('input_amount')
     await expect(amountInput).toHaveValue('1.500,00')
 
-    // Expense type selected
+    // Expense type selected (data-active is on the label element, not the inner span)
     const segmented = transactionsPage.updateDrawer.getByTestId('segmented_transaction_type')
-    await expect(segmented.getByText('Despesa')).toHaveAttribute('data-active', 'true')
+    await expect(segmented.locator('[data-active]').first()).toContainText('Despesa')
   })
 
   // ── Test 2: Update description ─────────────────────────────────────────────
@@ -138,8 +138,11 @@ test.describe('Transaction Update', () => {
     await transactionsPage.clearAndFillAmount(9900)
     await transactionsPage.submitUpdate()
 
-    // Updated amount visible in list
-    await expect(page.getByText('-R$ 99,00')).toBeVisible({ timeout: 8000 })
+    // Updated amount visible in the specific transaction row
+    // (currency format uses non-breaking space: R$\u00a099,00)
+    await expect(
+      page.locator(`[data-transaction-id="${tx.id}"]`).getByText(/99,00/)
+    ).toBeVisible({ timeout: 8000 })
   })
 
   // ── Test 4: Selection mode suppresses row click ────────────────────────────
