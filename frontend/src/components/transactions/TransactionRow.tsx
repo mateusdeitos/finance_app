@@ -107,21 +107,19 @@ export function TransactionRow({
   return (
     <div
       data-transaction-id={tx.id}
-      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`}
+      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
       onClick={selectionMode ? () => onSelect?.(tx.id) : (onEdit ?? undefined)}
     >
-      {/* Col 1 (selection mode only): checkbox */}
-      {selectionMode && (
-        <div className={classes.checkbox}>
-          <Checkbox
-            checked={isSelected ?? false}
-            onChange={() => onSelect!(tx.id)}
-            onClick={(e) => e.stopPropagation()}
-            size="sm"
-            data-testid={`checkbox_${tx.id}`}
-          />
-        </div>
-      )}
+      {/* Col 1: checkbox (always rendered; CSS shows on hover / selection mode) */}
+      <div className={classes.checkbox}>
+        <Checkbox
+          checked={isSelected ?? false}
+          onChange={() => onSelect?.(tx.id)}
+          onClick={(e) => e.stopPropagation()}
+          size="sm"
+          data-testid={`checkbox_${tx.id}`}
+        />
+      </div>
 
       {/* Col 2: date + description + tags */}
       <div className={classes.main}>

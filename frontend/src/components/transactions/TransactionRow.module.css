@@ -1,14 +1,10 @@
 .row {
   display: grid;
-  grid-template-columns: 1fr 10rem 10rem 7rem;
+  grid-template-columns: 1.25rem 1fr 10rem 10rem 7rem;
   gap: 0.5rem 1rem;
   align-items: start;
   padding: 0.625rem 0.75rem;
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
-}
-
-.selectionMode {
-  grid-template-columns: 1.25rem 1fr 10rem 10rem 7rem;
 }
 
 .row:last-child {
@@ -39,6 +35,14 @@
 
 .checkbox {
   align-self: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.row:hover .checkbox,
+.selectionMode .checkbox,
+.selected .checkbox {
+  opacity: 1;
 }
 
 .main {
@@ -63,13 +67,11 @@
 
 @media (max-width: 48em) {
   .row {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1.25rem 1fr auto;
     grid-template-rows: auto auto;
   }
 
-  .selectionMode {
-    grid-template-columns: 1.25rem 1fr auto;
-  }
+
 
   .category,
   .account {
