@@ -1,13 +1,19 @@
 import { useState } from "react";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Drawer } from "@mantine/core";
-import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useMe } from "@/hooks/useMe";
 import { useTransactionPrefill } from "@/hooks/useTransactionPrefill";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
+import { useAccounts } from "@/hooks/useAccounts";
 import { Transactions } from "@/types/transactions";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { useDrawerContext } from "@/utils/renderDrawer";
+import {
+  transactionFormSchema,
+  TransactionFormValues,
+} from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
@@ -40,12 +46,27 @@ export function CreateTransactionDrawer() {
     categories,
   });
 
-  const { mutation } = useCreateTransaction();
+  const methods = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionFormSchema),
+    defaultValues: {
+      transaction_type: "expense",
+      date: prefill.date ?? new Date().toISOString().split("T")[0],
+      description: "",
+      amount: 0,
+      account_id: prefill.accountId ?? null,
+      category_id: prefill.categoryId ?? null,
+      destination_account_id: null,
+      tags: [],
+      split_settings: [],
+      recurrenceEnabled: false,
+      recurrenceType: "monthly",
+      recurrenceEndDateMode: false,
+      recurrenceEndDate: null,
+      recurrenceRepetitions: null,
+    },
+  });
 
-  const initialValues: Record<string, unknown> = {};
-  if (prefill.date) initialValues.date = prefill.date;
-  if (prefill.accountId) initialValues.account_id = prefill.accountId;
-  if (prefill.categoryId) initialValues.category_id = prefill.categoryId;
+  const { mutation } = useCreateTransaction();
 
   function handleSubmitPayload(payload: Transactions.CreateTransactionPayload) {
     setSubmitError(undefined);
@@ -80,18 +101,16 @@ export function CreateTransactionDrawer() {
       position="right"
       size="md"
     >
-      <TransactionForm
-        currentUserId={currentUserId}
-        initialValues={initialValues}
-        onSuccess={close}
-        onSavePrefill={() => {}}
-        onTypeChange={setTransactionType}
-        focusField="amount"
-        onSubmitPayload={handleSubmitPayload}
-        isPending={mutation.isPending}
-        submitError={submitError}
-        fieldErrors={fieldErrors}
-      />
+      <FormProvider {...methods}>
+        <TransactionForm
+          onTypeChange={setTransactionType}
+          focusField="amount"
+          onSubmitPayload={handleSubmitPayload}
+          isPending={mutation.isPending}
+          submitError={submitError}
+          fieldErrors={fieldErrors}
+        />
+      </FormProvider>
     </Drawer>
   );
 }

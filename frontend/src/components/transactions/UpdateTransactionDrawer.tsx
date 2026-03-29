@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { useForm, FormProvider } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Divider, Drawer, Stack } from '@mantine/core'
 import { useQueryClient } from '@tanstack/react-query'
 import { useUpdateTransaction } from '@/hooks/useUpdateTransaction'
-import { useMe } from '@/hooks/useMe'
+import { useAccounts } from '@/hooks/useAccounts'
 import { Transactions } from '@/types/transactions'
 import { QueryKeys } from '@/utils/queryKeys'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import {
+  transactionFormSchema,
+  TransactionFormValues,
+} from './form/transactionFormSchema'
 import { TransactionForm, FocusField } from './form/TransactionForm'
 import { UpdatePropagationSelector, PropagationValue } from './UpdatePropagationSelector'
 
@@ -19,8 +25,36 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const [propagation, setPropagation] = useState<PropagationValue>('current')
   const [submitError, setSubmitError] = useState<string | undefined>()
 
-  const { query: meQuery } = useMe((me) => me.id)
-  const currentUserId = meQuery.data ?? 0
+  const { query: accountsQuery } = useAccounts()
+  const accounts = accountsQuery.data ?? []
+
+  const initialSplitSettings = (transaction.linked_transactions ?? [])
+    .filter((lt) => lt.user_id !== transaction.user_id)
+    .flatMap((lt) => {
+      const acc = accounts.find((a) => a.id === lt.account_id)
+      if (!acc?.user_connection) return []
+      return [{ connection_id: acc.user_connection.id, amount: lt.amount }]
+    })
+
+  const methods = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionFormSchema),
+    defaultValues: {
+      transaction_type: transaction.type,
+      date: transaction.date.slice(0, 10),
+      description: transaction.description,
+      amount: transaction.amount,
+      account_id: transaction.account_id,
+      category_id: transaction.category_id ?? null,
+      destination_account_id: null,
+      tags: (transaction.tags ?? []).map((t) => t.name),
+      split_settings: initialSplitSettings,
+      recurrenceEnabled: !!transaction.transaction_recurrence?.id,
+      recurrenceType: transaction.transaction_recurrence?.type ?? 'monthly',
+      recurrenceEndDateMode: false,
+      recurrenceEndDate: null,
+      recurrenceRepetitions: transaction.transaction_recurrence?.installments ?? null,
+    },
+  })
 
   const queryClient = useQueryClient()
   const { mutation } = useUpdateTransaction()
@@ -58,17 +92,14 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       size="md"
     >
       <Stack gap="md">
-        <TransactionForm
-          key={transaction.id}
-          currentUserId={currentUserId}
-          transaction={transaction}
-          focusField={focusField}
-          onSuccess={close}
-          onSavePrefill={() => {}}
-          onSubmitPayload={handleSubmitPayload}
-          isPending={mutation.isPending}
-          submitError={submitError}
-        />
+        <FormProvider {...methods}>
+          <TransactionForm
+            focusField={focusField}
+            onSubmitPayload={handleSubmitPayload}
+            isPending={mutation.isPending}
+            submitError={submitError}
+          />
+        </FormProvider>
 
         {isRecurring && (
           <>

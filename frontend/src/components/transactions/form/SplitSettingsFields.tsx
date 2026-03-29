@@ -14,21 +14,15 @@ import {
 } from "@mantine/core";
 import { CurrencyInput } from "./CurrencyInput";
 import {
-  Control,
   useWatch,
   useFieldArray,
   useController,
+  useFormContext,
 } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
-import type { TransactionFormValues } from "./TransactionForm";
-
-interface Props {
-  control: Control<TransactionFormValues>;
-  accounts: Transactions.Account[];
-  currentUserId: number;
-  errors?: Record<string, string>;
-  initialSplitSettings?: TransactionFormValues["split_settings"];
-}
+import { useAccounts } from "@/hooks/useAccounts";
+import { useMe } from "@/hooks/useMe";
+import type { TransactionFormValues } from "./transactionFormSchema";
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -45,18 +39,14 @@ function getInitials(text: string): string {
     .join("");
 }
 
-// ─── SplitRowControls ────────────────────────────────────────────────────────
-// Rendered only when the row is enabled. Uses useController so the amount
-// field is individually registered with react-hook-form, enabling setFocus.
+// ─── SplitRowControls ─────────────────────────────────────────────────────────
 
 interface SplitRowControlsProps {
   account: Transactions.Account;
   currentUserId: number;
   totalAmount: number;
   fieldIndex: number;
-  control: Control<TransactionFormValues>;
   error?: string;
-  initialMode?: "percentage" | "amount";
 }
 
 function SplitRowControls({
@@ -64,10 +54,9 @@ function SplitRowControls({
   currentUserId,
   totalAmount,
   fieldIndex,
-  control,
   error,
-  initialMode,
 }: SplitRowControlsProps) {
+  const { control } = useFormContext<TransactionFormValues>();
   const { field } = useController({
     control,
     name: `split_settings.${fieldIndex}.amount` as `split_settings.0.amount`,
@@ -79,8 +68,9 @@ function SplitRowControls({
     ? conn.from_default_split_percentage
     : conn.to_default_split_percentage;
 
-  const [mode, setMode] = useState<"percentage" | "amount">(
-    initialMode ?? "percentage"
+  // If the field is pre-populated (amount > 0), start in fixed-amount mode.
+  const [mode, setMode] = useState<"percentage" | "amount">(() =>
+    (field.value ?? 0) > 0 ? "amount" : "percentage"
   );
   const [percentage, setPercentage] = useState(defaultPercentage);
 
@@ -161,9 +151,7 @@ interface SplitRowProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   fieldIndex: number;
-  control: Control<TransactionFormValues>;
   error?: string;
-  initialMode?: "percentage" | "amount";
 }
 
 function SplitRow({
@@ -173,9 +161,7 @@ function SplitRow({
   enabled,
   onToggle,
   fieldIndex,
-  control,
   error,
-  initialMode,
 }: SplitRowProps) {
   const label = account.description || account.name;
   const initials = getInitials(label);
@@ -206,9 +192,7 @@ function SplitRow({
             currentUserId={currentUserId}
             totalAmount={totalAmount}
             fieldIndex={fieldIndex}
-            control={control}
             error={error}
-            initialMode={initialMode}
           />
         )}
       </Group>
@@ -224,18 +208,19 @@ function SplitRow({
 
 // ─── SplitSettingsFields ─────────────────────────────────────────────────────
 
-export function SplitSettingsFields({
-  control,
-  accounts,
-  currentUserId,
-  errors,
-  initialSplitSettings,
-}: Props) {
+export function SplitSettingsFields() {
+  const { control, formState: { errors } } = useFormContext<TransactionFormValues>();
   const totalAmount = useWatch({ control, name: "amount" }) ?? 0;
   const { fields, append, remove } = useFieldArray({
     control,
     name: "split_settings",
   });
+
+  const { query: meQuery } = useMe((me) => me.id);
+  const currentUserId = meQuery.data ?? 0;
+
+  const { query: accountsQuery } = useAccounts();
+  const accounts = accountsQuery.data ?? [];
 
   const connectedAccounts = accounts.filter(
     (a) =>
@@ -244,7 +229,12 @@ export function SplitSettingsFields({
 
   if (connectedAccounts.length === 0) return null;
 
-  const generalError = errors?.["split_settings"];
+  const splitErrors = Object.fromEntries(
+    Object.entries(errors as Record<string, { message?: string }>)
+      .filter(([k]) => k.startsWith("split_settings"))
+      .map(([k, v]) => [k, v?.message ?? ""])
+  );
+  const generalError = splitErrors["split_settings"];
 
   return (
     <Stack gap="xs">
@@ -272,7 +262,7 @@ export function SplitSettingsFields({
           const indexErrors =
             fieldIndex >= 0
               ? Object.fromEntries(
-                  Object.entries(errors ?? {})
+                  Object.entries(splitErrors)
                     .filter(([k]) =>
                       k.startsWith(`split_settings.${fieldIndex}.`)
                     )
@@ -282,12 +272,6 @@ export function SplitSettingsFields({
                     ])
                 )
               : {};
-
-          const initSplit = (initialSplitSettings ?? []).find(
-            (s) => s.connection_id === connectionId
-          );
-          const initialMode =
-            initSplit?.amount !== undefined ? "amount" : "percentage";
 
           function handleToggle(on: boolean) {
             if (on) {
@@ -306,12 +290,10 @@ export function SplitSettingsFields({
               enabled={enabled}
               onToggle={handleToggle}
               fieldIndex={fieldIndex}
-              control={control}
               error={
                 indexErrors["amount"] ??
-                errors?.[`split_settings.${fieldIndex}`]
+                splitErrors[`split_settings.${fieldIndex}`]
               }
-              initialMode={enabled ? initialMode : "percentage"}
             />
           );
         })}

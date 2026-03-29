@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useForm, Controller, useWatch, FieldPath } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
 import {
   Stack,
   SegmentedControl,
@@ -20,10 +19,7 @@ import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { RecurrenceFields } from "./RecurrenceFields";
 import { SplitSettingsFields } from "./SplitSettingsFields";
-import {
-  transactionFormSchema,
-  TransactionFormValues,
-} from "./transactionFormSchema";
+import { TransactionFormValues } from "./transactionFormSchema";
 
 export type { TransactionFormValues };
 
@@ -31,18 +27,8 @@ export type { TransactionFormValues };
 export type FocusField = FieldPath<TransactionFormValues>;
 
 interface Props {
-  currentUserId: number;
-  initialValues?: Partial<TransactionFormValues>;
-  /** Pre-populate all fields from an existing transaction (update mode). */
-  transaction?: Transactions.Transaction;
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
-  onSuccess?: () => void;
-  onSavePrefill?: (
-    date: string,
-    categoryId: number | null,
-    accountId: number | null
-  ) => void;
   onTypeChange?: (type: Transactions.TransactionType) => void;
   onSubmitPayload: (payload: Transactions.CreateTransactionPayload) => void;
   isPending?: boolean;
@@ -52,9 +38,6 @@ interface Props {
 }
 
 export const TransactionForm = ({
-  currentUserId,
-  initialValues,
-  transaction,
   focusField,
   onTypeChange,
   onSubmitPayload,
@@ -70,35 +53,6 @@ export const TransactionForm = ({
   const categories = categoriesQuery.data ?? [];
   const existingTags = tagsQuery.data ?? [];
 
-  // Compute initial split settings from transaction (requires accounts to be loaded)
-  const initialSplitSettings = transaction
-    ? (transaction.linked_transactions ?? [])
-        .filter((lt) => lt.user_id !== transaction.user_id)
-        .flatMap((lt) => {
-          const acc = accounts.find((a) => a.id === lt.account_id);
-          if (!acc?.user_connection) return [];
-          return [{ connection_id: acc.user_connection.id, amount: lt.amount }];
-        })
-    : undefined;
-
-  const transactionDefaults: Partial<TransactionFormValues> = transaction
-    ? {
-        transaction_type: transaction.type,
-        date: transaction.date.slice(0, 10),
-        description: transaction.description,
-        amount: transaction.amount,
-        account_id: transaction.account_id,
-        category_id: transaction.category_id ?? null,
-        tags: (transaction.tags ?? []).map((t) => t.name),
-        split_settings: initialSplitSettings ?? [],
-        recurrenceEndDateMode: false,
-        recurrenceEnabled: !!transaction?.transaction_recurrence?.id,
-        recurrenceType: transaction?.transaction_recurrence?.type,
-        recurrenceRepetitions:
-          transaction?.transaction_recurrence?.installments,
-      }
-    : {};
-
   const {
     control,
     handleSubmit,
@@ -106,27 +60,7 @@ export const TransactionForm = ({
     setError,
     setFocus,
     formState: { errors, isSubmitting },
-  } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionFormSchema),
-    defaultValues: {
-      transaction_type: "expense",
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-      amount: 0,
-      account_id: null,
-      category_id: null,
-      destination_account_id: null,
-      tags: [],
-      split_settings: [],
-      recurrenceEnabled: false,
-      recurrenceType: "monthly",
-      recurrenceEndDateMode: false,
-      recurrenceEndDate: null,
-      recurrenceRepetitions: null,
-      ...transactionDefaults,
-      ...initialValues,
-    },
-  });
+  } = useFormContext<TransactionFormValues>();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -242,17 +176,6 @@ export const TransactionForm = ({
     }));
 
   const tagNames = existingTags.map((t) => t.name);
-
-  const recurrenceErrors = {
-    repetitions: errors.recurrenceRepetitions?.message,
-    end_date: errors.recurrenceEndDate?.message,
-  };
-
-  const splitErrors = Object.fromEntries(
-    Object.entries(errors as Record<string, { message?: string }>)
-      .filter(([k]) => k.startsWith("split_settings"))
-      .map(([k, v]) => [k, v?.message ?? ""])
-  );
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -405,13 +328,7 @@ export const TransactionForm = ({
               />
             </SimpleGrid>
 
-            <SplitSettingsFields
-              control={control}
-              accounts={accounts}
-              currentUserId={currentUserId}
-              errors={splitErrors}
-              initialSplitSettings={initialSplitSettings}
-            />
+            <SplitSettingsFields />
           </>
         )}
 
@@ -431,7 +348,7 @@ export const TransactionForm = ({
           )}
         />
 
-        <RecurrenceFields control={control} errors={recurrenceErrors} />
+        <RecurrenceFields />
 
         <Group justify="flex-end" mt="sm">
           <Button

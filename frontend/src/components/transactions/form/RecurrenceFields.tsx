@@ -1,21 +1,10 @@
-import { Switch, Select, NumberInput, Stack, Group, Alert } from '@mantine/core'
+import { Switch, Select, NumberInput, Stack, Group } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
-import { Controller, Control, useWatch } from 'react-hook-form'
-import type { TransactionFormValues } from './TransactionForm'
+import { Controller, useWatch, useFormContext } from 'react-hook-form'
+import type { TransactionFormValues } from './transactionFormSchema'
 
-interface RecurrenceErrors {
-  type?: string
-  repetitions?: string
-  end_date?: string
-  _general?: string
-}
-
-interface Props {
-  control: Control<TransactionFormValues>
-  errors?: RecurrenceErrors
-}
-
-export function RecurrenceFields({ control, errors }: Props) {
+export function RecurrenceFields() {
+  const { control, formState: { errors } } = useFormContext<TransactionFormValues>()
   const enabled = useWatch({ control, name: 'recurrenceEnabled' })
   const endDateMode = useWatch({ control, name: 'recurrenceEndDateMode' })
 
@@ -35,12 +24,6 @@ export function RecurrenceFields({ control, errors }: Props) {
 
       {enabled && (
         <Stack gap="sm" pl="md">
-          {errors?._general && (
-            <Alert color="red" variant="light" p="xs">
-              {errors._general}
-            </Alert>
-          )}
-
           <Controller
             control={control}
             name="recurrenceType"
@@ -55,7 +38,7 @@ export function RecurrenceFields({ control, errors }: Props) {
                 ]}
                 value={field.value}
                 onChange={field.onChange}
-                error={errors?.type}
+                error={errors.recurrenceType?.message}
               />
             )}
           />
@@ -85,7 +68,7 @@ export function RecurrenceFields({ control, errors }: Props) {
                   onChange={(date) =>
                     field.onChange(date ? String(date).split('T')[0] : null)
                   }
-                  error={errors?.end_date}
+                  error={errors.recurrenceEndDate?.message}
                   valueFormat="DD/MM/YYYY"
                 />
               )}
@@ -101,12 +84,11 @@ export function RecurrenceFields({ control, errors }: Props) {
                   min={1}
                   value={field.value ?? ''}
                   onChange={(val) => field.onChange(val === '' ? null : Number(val))}
-                  error={errors?.repetitions}
+                  error={errors.recurrenceRepetitions?.message}
                 />
               )}
             />
           )}
-
         </Stack>
       )}
     </Stack>
