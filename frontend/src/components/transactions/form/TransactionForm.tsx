@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
 import {
   Stack,
@@ -32,8 +32,6 @@ interface Props {
   onSubmitPayload: (payload: Transactions.CreateTransactionPayload) => void;
   isPending?: boolean;
   submitError?: string;
-  /** Field-level errors from the parent's mutation (applied via setError). */
-  fieldErrors?: Record<string, string>;
 }
 
 export const TransactionForm = ({
@@ -41,7 +39,6 @@ export const TransactionForm = ({
   onSubmitPayload,
   isPending,
   submitError,
-  fieldErrors,
 }: Props) => {
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useCategories();
@@ -55,7 +52,6 @@ export const TransactionForm = ({
     control,
     handleSubmit,
     setValue,
-    setError,
     setFocus,
     formState: { errors, isSubmitting },
   } = useFormContext<TransactionFormValues>();
@@ -73,17 +69,6 @@ export const TransactionForm = ({
 
   const transactionType = useWatch({ control, name: "transaction_type" });
   const isTransfer = transactionType === "transfer";
-
-  // Apply field-level errors surfaced by the parent mutation.
-  const prevFieldErrors = useRef<Record<string, string> | undefined>(undefined);
-  useEffect(() => {
-    if (!fieldErrors || fieldErrors === prevFieldErrors.current) return;
-    prevFieldErrors.current = fieldErrors;
-    for (const [field, message] of Object.entries(fieldErrors)) {
-      if (field === "_general") continue;
-      setError(field as keyof TransactionFormValues, { message });
-    }
-  }, [fieldErrors, setError]);
 
   const generalError =
     submitError ??

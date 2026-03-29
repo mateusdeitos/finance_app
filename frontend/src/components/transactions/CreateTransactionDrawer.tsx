@@ -25,9 +25,6 @@ const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
 export function CreateTransactionDrawer() {
   const { opened, close } = useDrawerContext<void>();
   const [submitError, setSubmitError] = useState<string | undefined>();
-  const [fieldErrors, setFieldErrors] = useState<
-    Record<string, string> | undefined
-  >();
 
   const { query: meQuery } = useMe((me) => me.id);
   const currentUserId = meQuery.data ?? 0;
@@ -70,7 +67,6 @@ export function CreateTransactionDrawer() {
 
   function handleSubmitPayload(payload: Transactions.CreateTransactionPayload) {
     setSubmitError(undefined);
-    setFieldErrors(undefined);
     mutation.mutate(payload, {
       onSuccess: () => {
         savePrefill(
@@ -84,8 +80,13 @@ export function CreateTransactionDrawer() {
         if (err instanceof Response) {
           const apiError = await parseApiError(err);
           const errors = mapTagsToFieldErrors(apiError.tags, apiError.message);
-          setFieldErrors(errors);
-          if (errors._general) setSubmitError(errors._general);
+          for (const [field, message] of Object.entries(errors)) {
+            if (field === "_general") {
+              setSubmitError(message);
+            } else {
+              methods.setError(field as keyof TransactionFormValues, { message });
+            }
+          }
         } else {
           setSubmitError("Erro ao salvar transação");
         }
@@ -107,7 +108,6 @@ export function CreateTransactionDrawer() {
           onSubmitPayload={handleSubmitPayload}
           isPending={mutation.isPending}
           submitError={submitError}
-          fieldErrors={fieldErrors}
         />
       </FormProvider>
     </Drawer>
