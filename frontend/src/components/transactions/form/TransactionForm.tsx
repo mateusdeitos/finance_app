@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, Controller, useWatch, FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -15,7 +15,6 @@ import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCategories } from "@/hooks/useCategories";
 import { useTags } from "@/hooks/useTags";
-import { useCreateTransaction } from "@/hooks/useCreateTransaction";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
@@ -38,17 +37,18 @@ interface Props {
   transaction?: Transactions.Transaction;
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
-  onSuccess: () => void;
-  onSavePrefill: (
+  onSuccess?: () => void;
+  onSavePrefill?: (
     date: string,
     categoryId: number | null,
     accountId: number | null
   ) => void;
   onTypeChange?: (type: Transactions.TransactionType) => void;
-  /** When provided, replaces the internal create mutation on submit. */
-  onSubmitPayload?: (payload: Transactions.CreateTransactionPayload) => void;
+  onSubmitPayload: (payload: Transactions.CreateTransactionPayload) => void;
   isPending?: boolean;
   submitError?: string;
+  /** Field-level errors from the parent's mutation (applied via setError). */
+  fieldErrors?: Record<string, string>;
 }
 
 export const TransactionForm = ({
@@ -56,12 +56,11 @@ export const TransactionForm = ({
   initialValues,
   transaction,
   focusField,
-  onSuccess,
-  onSavePrefill,
   onTypeChange,
   onSubmitPayload,
   isPending,
   submitError,
+  fieldErrors,
 }: Props) => {
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useCategories();
@@ -106,7 +105,6 @@ export const TransactionForm = ({
     setValue,
     setError,
     setFocus,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -144,19 +142,16 @@ export const TransactionForm = ({
   const transactionType = useWatch({ control, name: "transaction_type" });
   const isTransfer = transactionType === "transfer";
 
-  const { mutation } = useCreateTransaction({
-    onFieldErrors: (fieldErrors) => {
-      for (const [field, message] of Object.entries(fieldErrors)) {
-        if (field === "_general") continue;
-        setError(field as keyof TransactionFormValues, { message });
-      }
-    },
-    onSuccess: () => {
-      const values = getValues();
-      onSavePrefill(values.date, values.category_id, values.account_id);
-      onSuccess();
-    },
-  });
+  // Apply field-level errors surfaced by the parent mutation.
+  const prevFieldErrors = useRef<Record<string, string> | undefined>(undefined);
+  useEffect(() => {
+    if (!fieldErrors || fieldErrors === prevFieldErrors.current) return;
+    prevFieldErrors.current = fieldErrors;
+    for (const [field, message] of Object.entries(fieldErrors)) {
+      if (field === "_general") continue;
+      setError(field as keyof TransactionFormValues, { message });
+    }
+  }, [fieldErrors, setError]);
 
   const generalError =
     submitError ??
@@ -199,12 +194,7 @@ export const TransactionForm = ({
         : undefined,
     };
 
-    if (onSubmitPayload) {
-      onSubmitPayload(payload);
-      return;
-    }
-
-    mutation.mutate(payload);
+    onSubmitPayload(payload);
   };
 
   function handleSuggestionSelect(
@@ -446,7 +436,7 @@ export const TransactionForm = ({
         <Group justify="flex-end" mt="sm">
           <Button
             type="submit"
-            loading={isSubmitting || mutation.isPending || isPending}
+            loading={isSubmitting || isPending}
             data-testid="btn_save_transaction"
           >
             Salvar
