@@ -12,9 +12,10 @@ import { UpdatePropagationSelector, PropagationValue } from './UpdatePropagation
 interface Props {
   transaction: Transactions.Transaction
   focusField?: FocusField
+  focusSplitAmount?: boolean
 }
 
-export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
+export function UpdateTransactionDrawer({ transaction, focusField, focusSplitAmount }: Props) {
   const { opened, close } = useDrawerContext<void>()
   const [propagation, setPropagation] = useState<PropagationValue>('current')
   const [submitError, setSubmitError] = useState<string | undefined>()
@@ -34,7 +35,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
         id: transaction.id,
         payload: {
           ...payload,
-          propagation: isRecurring ? propagation : undefined,
+          propagation_settings: isRecurring ? propagation : undefined,
         },
       },
       {
@@ -63,6 +64,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           currentUserId={currentUserId}
           transaction={transaction}
           focusField={focusField}
+          focusSplitAmount={focusSplitAmount}
           onSuccess={close}
           onSavePrefill={() => {}}
           onSubmitPayload={handleSubmitPayload}
