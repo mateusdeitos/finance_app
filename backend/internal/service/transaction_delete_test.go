@@ -90,7 +90,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
 		suite.T().Fatalf("Failed to create test category: %v", err)
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -166,7 +166,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() 
 
 	installments := 4
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -230,7 +230,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAll() {
 
 	installments := 4
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -298,7 +298,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 
 	installments := 4
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -384,7 +384,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -477,7 +477,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -561,7 +561,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 
 	installments := 12
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
@@ -654,7 +654,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	installments := 12
 	installmentsToDelete := 6
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
