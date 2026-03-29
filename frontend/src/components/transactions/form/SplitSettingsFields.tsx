@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Group,
   Avatar,
@@ -16,7 +16,6 @@ import { CurrencyInput } from "./CurrencyInput";
 import {
   useWatch,
   useFieldArray,
-  useController,
   useFormContext,
 } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
@@ -56,11 +55,10 @@ function SplitRowControls({
   fieldIndex,
   error,
 }: SplitRowControlsProps) {
-  const { control } = useFormContext<TransactionFormValues>();
-  const { field } = useController({
-    control,
-    name: `split_settings.${fieldIndex}.amount` as `split_settings.0.amount`,
-  });
+  const { control, register, setValue } = useFormContext<TransactionFormValues>();
+  const fieldName = `split_settings.${fieldIndex}.amount` as `split_settings.0.amount`;
+  const { ref: inputRef } = register(fieldName);
+  const fieldValue = (useWatch({ control, name: fieldName }) as number | undefined) ?? 0;
 
   const conn = account.user_connection!;
   const isFrom = conn.from_user_id === currentUserId;
@@ -70,26 +68,21 @@ function SplitRowControls({
 
   // If the field is pre-populated (amount > 0), start in fixed-amount mode.
   const [mode, setMode] = useState<"percentage" | "amount">(() =>
-    (field.value ?? 0) > 0 ? "amount" : "percentage"
+    fieldValue > 0 ? "amount" : "percentage"
   );
   const [percentage, setPercentage] = useState(defaultPercentage);
 
   const calculatedAmount = Math.round((totalAmount * percentage) / 100);
 
-  const onChangeRef = useRef(field.onChange);
-  useLayoutEffect(() => {
-    onChangeRef.current = field.onChange;
-  });
-
   useEffect(() => {
     if (mode === "percentage") {
-      onChangeRef.current(calculatedAmount);
+      setValue(fieldName, calculatedAmount);
     }
-  }, [calculatedAmount, mode]);
+  }, [calculatedAmount, mode, fieldName, setValue]);
 
   function toggleMode() {
     const next = mode === "percentage" ? "amount" : "percentage";
-    if (next === "amount") field.onChange(calculatedAmount);
+    if (next === "amount") setValue(fieldName, calculatedAmount);
     setMode(next);
   }
 
@@ -130,9 +123,9 @@ function SplitRowControls({
       ) : (
         <Box style={{ flex: 1 }}>
           <CurrencyInput
-            ref={field.ref}
-            value={field.value ?? 0}
-            onChange={field.onChange}
+            ref={inputRef}
+            value={fieldValue}
+            onChange={(v) => setValue(fieldName, v)}
             error={error}
             data-testid="input_split_amount"
           />

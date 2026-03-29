@@ -81,6 +81,7 @@ export function BulkDeleteProgressDrawer({
     }
 
     run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isProcessing = state === "processing";
