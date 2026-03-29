@@ -27,6 +27,9 @@ export function SettlementRow({ settlement, groupBy, accounts, onEdit }: Settlem
       className={`${classes.row} ${settlementClasses.row}${onEdit ? ` ${classes.editable}` : ''}`}
       onClick={onEdit}
     >
+      {/* Col 1: empty checkbox placeholder to align with TransactionRow grid */}
+      <div className={classes.checkbox} />
+
       <div className={classes.main}>
         {groupBy !== 'date' && dateLabel && (
           <Text size="xs" c="dimmed">{dateLabel}</Text>

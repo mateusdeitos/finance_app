@@ -20,37 +20,46 @@ function CategoryCell({
   tx,
   groupBy,
   category,
-  fromAccount,
-  toAccount,
 }: CategoryCellProps) {
   if (groupBy === "category") return null;
+  if (tx.type === "transfer") return null;
 
-  if (tx.type !== "transfer") {
-    return (
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {category?.name ?? "—"}
-      </Text>
-    );
-  }
+  return (
+    <Text size="sm" c="dimmed" lineClamp={1}>
+      {category?.name ?? "—"}
+    </Text>
+  );
+}
 
-  if (groupBy === "account") {
+interface AccountCellProps {
+  tx: Transactions.Transaction;
+  groupBy: Transactions.GroupBy;
+  account: Transactions.Account | null | undefined;
+  fromAccount: Transactions.Account | null | undefined;
+  toAccount: Transactions.Account | null | undefined;
+}
+
+function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCellProps) {
+  if (groupBy === "account") return null;
+
+  if (tx.type === "transfer") {
     return (
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {toAccount?.name ?? "—"}
-      </Text>
+      <Stack gap={0}>
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {fromAccount?.name ?? "—"}
+        </Text>
+        <IconArrowDown size={12} style={{ opacity: 0.5 }} />
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {toAccount?.name ?? "—"}
+        </Text>
+      </Stack>
     );
   }
 
   return (
-    <Stack gap={0}>
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {fromAccount?.name ?? "—"}
-      </Text>
-      <IconArrowDown size={12} style={{ opacity: 0.5 }} />
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {toAccount?.name ?? "—"}
-      </Text>
-    </Stack>
+    <Text size="sm" c="dimmed" lineClamp={1}>
+      {account?.name ?? "—"}
+    </Text>
   );
 }
 
@@ -155,7 +164,7 @@ export function TransactionRow({
         )}
       </div>
 
-      {/* Col 2: category OR transfer accounts */}
+      {/* Col 3: category */}
       <div className={classes.category}>
         <CategoryCell
           tx={tx}
@@ -166,13 +175,15 @@ export function TransactionRow({
         />
       </div>
 
-      {/* Col 3: account */}
+      {/* Col 4: account (or from→to for transfers) */}
       <div className={classes.account}>
-        {groupBy !== "account" && tx.type !== "transfer" && (
-          <Text size="sm" c="dimmed" lineClamp={1}>
-            {account?.name ?? "—"}
-          </Text>
-        )}
+        <AccountCell
+          tx={tx}
+          groupBy={groupBy}
+          account={account}
+          fromAccount={fromAccount}
+          toAccount={toAccount}
+        />
       </div>
 
       {/* Col 4: amount */}
