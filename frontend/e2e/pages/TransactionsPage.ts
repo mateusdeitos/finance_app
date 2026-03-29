@@ -89,14 +89,14 @@ export class TransactionsPage {
   }
 
   async selectAccount(accountName: string) {
-    const input = this.page.getByTestId('select_account').locator('input')
+    const input = this.page.getByTestId('select_account')
     await input.click()
     await input.fill(accountName)
     await this.page.getByRole('option', { name: accountName }).click()
   }
 
   async selectCategory(categoryName: string) {
-    const input = this.page.getByTestId('select_category').locator('input')
+    const input = this.page.getByTestId('select_category')
     await input.click()
     await input.fill(categoryName)
     await this.page.getByRole('option', { name: new RegExp(categoryName) }).click()

@@ -99,14 +99,10 @@ export async function updateTransaction(
   id: number,
   payload: Transactions.UpdateTransactionPayload,
 ): Promise<void> {
-  const { propagation_settings, ...rest } = payload
   const url = new URL(`${apiUrl}/api/transactions/${id}`)
-  if (propagation_settings) {
-    url.searchParams.set('propagation_settings', propagation_settings)
-  }
   const body = {
-    ...rest,
-    date: rest.date && rest.date.length === 10 ? localMidnightISO(rest.date) : rest.date,
+    ...payload,
+    date: payload.date && payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
   }
   const res = await fetch(url.toString(), {
     method: 'PUT',

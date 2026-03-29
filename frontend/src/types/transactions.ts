@@ -162,6 +162,8 @@ export namespace Transactions {
     split_settings?: SplitSetting[]
   }
 
+  type PropagationSettings = 'current' | 'current_and_future' | 'all'
+
   export interface UpdateTransactionPayload {
     transaction_type?: TransactionType
     account_id?: number
@@ -173,6 +175,6 @@ export namespace Transactions {
     tags?: { id?: number; name: string }[]
     recurrence_settings?: RecurrenceSettings
     split_settings?: SplitSetting[]
-    propagation?: 'current' | 'current_and_future' | 'all'
+    propagation_settings?: PropagationSettings
   }
 }
