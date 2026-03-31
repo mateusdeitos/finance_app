@@ -11,6 +11,7 @@ import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
 import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
+import { localDateStr } from "@/utils/parseDate";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import {
   transactionFormSchema,
@@ -47,7 +48,7 @@ export function CreateTransactionDrawer() {
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       transaction_type: "expense",
-      date: prefill.date ?? new Date().toISOString().split("T")[0],
+      date: prefill.date ?? localDateStr(new Date()),
       description: "",
       amount: 0,
       account_id: prefill.accountId ?? null,
@@ -70,7 +71,7 @@ export function CreateTransactionDrawer() {
 
   const { mutation } = useCreateTransaction();
 
-  function handleSubmitPayload(values: TransactionFormValues) {
+  function submitTransaction(values: TransactionFormValues, onSuccess: () => void) {
     setSubmitError(undefined);
     const payload = buildTransactionPayload(values, existingTags);
     mutation.mutate(payload, {
@@ -80,7 +81,7 @@ export function CreateTransactionDrawer() {
           payload.category_id ?? null,
           payload.account_id
         );
-        close();
+        onSuccess();
       },
       onError: async (err: unknown) => {
         if (err instanceof Response) {
@@ -100,6 +101,14 @@ export function CreateTransactionDrawer() {
     });
   }
 
+  function handleSubmitPayload(values: TransactionFormValues) {
+    submitTransaction(values, close);
+  }
+
+  function handleSaveAndCreateAnother(values: TransactionFormValues) {
+    submitTransaction(values, () => methods.reset());
+  }
+
   return (
     <Drawer
       opened={opened}
@@ -112,6 +121,7 @@ export function CreateTransactionDrawer() {
         <TransactionForm
           focusField="amount"
           onSubmitPayload={handleSubmitPayload}
+          onSaveAndCreateAnother={handleSaveAndCreateAnother}
           isPending={mutation.isPending}
           submitError={submitError}
         />
