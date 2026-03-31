@@ -72,7 +72,7 @@ export function TransactionGroup({
                 onSelect={onSelectTransaction}
                 onEdit={
                   !isSelectionActive && isOwner
-                    ? () => openEditDrawer(tx)
+                    ? (fieldClicked: FocusField) => openEditDrawer(tx, fieldClicked)
                     : undefined
                 }
               />

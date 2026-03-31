@@ -5,6 +5,8 @@ import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
 import { RecurrenceBadge } from "./RecurrenceBadge";
 import classes from "./TransactionRow.module.css";
+import { FocusField } from "./form/TransactionForm";
+import { MouseEventHandler } from "react";
 
 const MAX_TAGS = 3;
 
@@ -16,11 +18,7 @@ interface CategoryCellProps {
   toAccount: Transactions.Account | null | undefined;
 }
 
-function CategoryCell({
-  tx,
-  groupBy,
-  category,
-}: CategoryCellProps) {
+function CategoryCell({ tx, groupBy, category }: CategoryCellProps) {
   if (groupBy === "category") return null;
   if (tx.type === "transfer") return null;
 
@@ -39,16 +37,22 @@ interface AccountCellProps {
   toAccount: Transactions.Account | null | undefined;
 }
 
-function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCellProps) {
+function AccountCell({
+  tx,
+  groupBy,
+  account,
+  fromAccount,
+  toAccount,
+}: AccountCellProps) {
   if (groupBy === "account") return null;
 
   if (tx.type === "transfer") {
     return (
-      <Stack gap={0}>
+      <Stack gap={0} className={classes.transferAccounts}>
         <Text size="sm" c="dimmed" lineClamp={1}>
           {fromAccount?.name ?? "—"}
         </Text>
-        <IconArrowDown size={12} style={{ opacity: 0.5 }} />
+        <IconArrowDown size={12} style={{ opacity: 0.5 }} className={classes.transferArrow} />
         <Text size="sm" c="dimmed" lineClamp={1}>
           {toAccount?.name ?? "—"}
         </Text>
@@ -72,7 +76,7 @@ interface TransactionRowProps {
   isSelected?: boolean;
   isSelectionMode?: boolean;
   onSelect?: (id: number) => void;
-  onEdit?: () => void;
+  onEdit?: (fieldClicked: FocusField) => void;
 }
 
 export function TransactionRow({
@@ -113,11 +117,21 @@ export function TransactionRow({
 
   const selectionMode = isSelectionMode ?? false;
 
+  function colClick(
+    field: FocusField
+  ): MouseEventHandler<HTMLDivElement> | undefined {
+    if (selectionMode) return undefined;
+    return (e) => {
+      e.stopPropagation();
+      onEdit?.(field);
+    };
+  }
+
   return (
     <div
       data-transaction-id={tx.id}
       className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
-      onClick={selectionMode ? () => onSelect?.(tx.id) : (onEdit ?? undefined)}
+      onClick={selectionMode ? () => onSelect?.(tx.id) : undefined}
     >
       {/* Col 1: checkbox (always rendered; CSS shows on hover / selection mode) */}
       <div className={classes.checkbox}>
@@ -131,7 +145,7 @@ export function TransactionRow({
       </div>
 
       {/* Col 2: date + description + tags */}
-      <div className={classes.main}>
+      <div className={classes.main} onClick={colClick("description")}>
         {groupBy !== "date" && (
           <Text size="xs" c="dimmed">
             {dateLabel}
@@ -165,7 +179,7 @@ export function TransactionRow({
       </div>
 
       {/* Col 3: category */}
-      <div className={classes.category}>
+      <div className={classes.category} onClick={colClick("category_id")}>
         <CategoryCell
           tx={tx}
           groupBy={groupBy}
@@ -176,7 +190,7 @@ export function TransactionRow({
       </div>
 
       {/* Col 4: account (or from→to for transfers) */}
-      <div className={classes.account}>
+      <div className={classes.account} onClick={colClick("account_id")}>
         <AccountCell
           tx={tx}
           groupBy={groupBy}
@@ -186,8 +200,8 @@ export function TransactionRow({
         />
       </div>
 
-      {/* Col 4: amount */}
-      <div className={classes.amount}>
+      {/* Col 5: amount */}
+      <div className={classes.amount} onClick={colClick("amount")}>
         <Text
           size="sm"
           fw={600}
