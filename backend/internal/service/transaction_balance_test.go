@@ -252,7 +252,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesOtherMont
 	suite.Require().NoError(err)
 
 	thisMonth := now()
-	lastMonth := thisMonth.AddDate(0, -1, 0)
+	lastMonth := clampToEndOfMonth(thisMonth, thisMonth.Year(), thisMonth.Month()-1)
 
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
@@ -1048,7 +1048,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 	category, err := suite.createTestCategory(ctx, user)
 	suite.Require().NoError(err)
 
-	prevMonth := now().AddDate(0, -1, 0)
+	prevMonth := clampToEndOfMonth(now(), now().Year(), now().Month()-1)
 	thisMonth := now()
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
@@ -1210,8 +1210,8 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 	})
 	suite.Require().NoError(err)
 
-	twoMonthsAgo := now().AddDate(0, -2, 0)
-	lastMonth := now().AddDate(0, -1, 0)
+	twoMonthsAgo := clampToEndOfMonth(now(), now().Year(), now().Month()-2)
+	lastMonth := clampToEndOfMonth(now(), now().Year(), now().Month()-1)
 	thisMonth := now()
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 

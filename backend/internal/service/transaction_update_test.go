@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
@@ -2091,7 +2092,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 
 	// check dates: installment N should be d + (N-1) months
 	for i, t := range installmentsAfter {
-		expected := d.AddDate(0, i, 0)
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
 		suite.Assert().Equal(expected, t.Date, "installment %d date should be d + %d months", i+1, i)
 	}
 
