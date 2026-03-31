@@ -1,5 +1,10 @@
-import { useEffect } from "react";
-import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
+import { useEffect, type FocusEvent } from "react";
+import {
+  useFormContext,
+  Controller,
+  useWatch,
+  FieldPath,
+} from "react-hook-form";
 import {
   Stack,
   SegmentedControl,
@@ -9,6 +14,7 @@ import {
   Alert,
   Group,
   SimpleGrid,
+  Box,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -30,6 +36,7 @@ interface Props {
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
   onSubmitPayload: (values: TransactionFormValues) => void;
+  onSaveAndCreateAnother?: (values: TransactionFormValues) => void;
   isPending?: boolean;
   submitError?: string;
 }
@@ -37,6 +44,7 @@ interface Props {
 export const TransactionForm = ({
   focusField,
   onSubmitPayload,
+  onSaveAndCreateAnother,
   isPending,
   submitError,
 }: Props) => {
@@ -75,7 +83,7 @@ export const TransactionForm = ({
     (errors as Record<string, { message?: string }>)["_general"]?.message;
 
   const onSubmit = (values: TransactionFormValues) => {
-    onSubmitPayload(values);
+    onSubmitPayload({ ...values, date: values.date });
   };
 
   function handleSuggestionSelect(
@@ -124,6 +132,18 @@ export const TransactionForm = ({
 
   const tagNames = existingTags.map((t) => t.name);
 
+  function makeSelectBlurHandler(
+    options: { value: string; label: string }[],
+    onChange: (val: number | null) => void
+  ) {
+    return (e: FocusEvent<HTMLInputElement>) => {
+      const typed = e.target.value.trim().toLowerCase();
+      if (!typed) return;
+      const match = options.find((o) => o.label.toLowerCase() === typed);
+      if (match) onChange(Number(match.value));
+    };
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Stack gap="md">
@@ -160,12 +180,11 @@ export const TransactionForm = ({
             name="date"
             render={({ field }) => (
               <DatePickerInput
+                ref={field.ref}
                 label="Data"
                 required
-                value={field.value ? new Date(field.value) : null}
-                onChange={(date) =>
-                  field.onChange(date ? String(date).split("T")[0] : "")
-                }
+                value={field.value}
+                onChange={(date) => field.onChange(date)}
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"
               />
@@ -194,6 +213,7 @@ export const TransactionForm = ({
           name="description"
           render={({ field }) => (
             <DescriptionAutocomplete
+              ref={field.ref}
               value={field.value}
               onChange={field.onChange}
               onSuggestionSelect={handleSuggestionSelect}
@@ -210,11 +230,15 @@ export const TransactionForm = ({
               name="account_id"
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   label="Conta"
                   required
                   data={accountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onBlur={makeSelectBlurHandler(accountOptions, (val) =>
+                    field.onChange(val)
+                  )}
                   error={errors.account_id?.message}
                   searchable
                   data-testid="select_account"
@@ -226,11 +250,16 @@ export const TransactionForm = ({
               name="destination_account_id"
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   label="Conta de destino"
                   required
                   data={destinationAccountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onBlur={makeSelectBlurHandler(
+                    destinationAccountOptions,
+                    (val) => field.onChange(val)
+                  )}
                   error={errors.destination_account_id?.message}
                   searchable
                 />
@@ -245,10 +274,14 @@ export const TransactionForm = ({
                 name="category_id"
                 render={({ field }) => (
                   <Select
+                    ref={field.ref}
                     label="Categoria"
                     data={categoryOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(categoryOptions, (val) =>
+                      field.onChange(val)
+                    )}
                     error={errors.category_id?.message}
                     searchable
                     clearable
@@ -266,6 +299,9 @@ export const TransactionForm = ({
                     data={accountOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(accountOptions, (val) =>
+                      field.onChange(val)
+                    )}
                     error={errors.account_id?.message}
                     searchable
                     data-testid="select_account"
@@ -295,8 +331,30 @@ export const TransactionForm = ({
         />
 
         <RecurrenceFields />
+      </Stack>
 
-        <Group justify="flex-end" mt="sm">
+      <Box
+        style={{
+          position: "sticky",
+          bottom: 0,
+          background: "var(--mantine-color-body)",
+          borderTop: "1px solid var(--mantine-color-default-border)",
+          paddingTop: "var(--mantine-spacing-md)",
+          paddingBottom: "var(--mantine-spacing-md)",
+          marginTop: "var(--mantine-spacing-md)",
+        }}
+      >
+        <Group justify="flex-end">
+          {onSaveAndCreateAnother && (
+            <Button
+              variant="default"
+              type="button"
+              loading={isSubmitting || isPending}
+              onClick={handleSubmit(onSaveAndCreateAnother)}
+            >
+              Salvar e criar outra
+            </Button>
+          )}
           <Button
             type="submit"
             loading={isSubmitting || isPending}
@@ -305,7 +363,7 @@ export const TransactionForm = ({
             Salvar
           </Button>
         </Group>
-      </Stack>
+      </Box>
     </form>
   );
 };
