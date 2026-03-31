@@ -36,7 +36,11 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const initialSplitSettings = (transaction.linked_transactions ?? [])
     .filter((lt) => lt.user_id !== transaction.user_id)
     .flatMap((lt) => {
-      const acc = accounts.find((a) => a.id === lt.account_id)
+      const acc = accounts.find(
+        (a) =>
+          a.user_connection?.from_account_id === lt.account_id ||
+          a.user_connection?.to_account_id === lt.account_id,
+      )
       if (!acc?.user_connection) return []
       return [{ connection_id: acc.user_connection.id, amount: lt.amount }]
     })
@@ -66,7 +70,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
 
   const isRecurring = transaction.transaction_recurrence_id != null
 
-  function handleSubmitPayload(values: TransactionFormValues) {
+  function submitTransaction(values: TransactionFormValues, onSuccess: () => void) {
     setSubmitError(undefined)
     const payload = buildTransactionPayload(values, existingTags)
     mutation.mutate(
@@ -80,13 +84,21 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
-          close()
+          onSuccess()
         },
         onError: () => {
           setSubmitError('Erro ao salvar transação')
         },
       },
     )
+  }
+
+  function handleSubmitPayload(values: TransactionFormValues) {
+    submitTransaction(values, close)
+  }
+
+  function handleSaveAndCreateAnother(values: TransactionFormValues) {
+    submitTransaction(values, () => methods.reset())
   }
 
   return (
@@ -102,6 +114,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           <TransactionForm
             focusField={focusField}
             onSubmitPayload={handleSubmitPayload}
+            onSaveAndCreateAnother={handleSaveAndCreateAnother}
             isPending={mutation.isPending}
             submitError={submitError}
           />
