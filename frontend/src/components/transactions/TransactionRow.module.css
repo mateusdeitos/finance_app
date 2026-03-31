@@ -65,14 +65,31 @@
 
 
 
-  .category,
-  .account {
-    display: none;
-  }
-
   .amount {
     grid-row: 1;
-    grid-column: 2;
+    grid-column: 3;
     align-self: start;
+  }
+
+  .category {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .account {
+    grid-row: 2;
+    grid-column: 3;
+    text-align: right;
+  }
+
+  .transferAccounts {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.25rem !important;
+  }
+
+  .transferArrow {
+    transform: rotate(-90deg);
+    flex-shrink: 0;
   }
 }
