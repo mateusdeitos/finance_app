@@ -19,15 +19,17 @@ function AccountSection({
   accounts,
   onEdit,
   onAction,
+  testId,
 }: {
   label: string
   accounts: Transactions.Account[]
   onEdit: (a: Transactions.Account) => void
   onAction: (a: Transactions.Account) => void
+  testId?: string
 }) {
   if (accounts.length === 0) return null
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" data-testid={testId}>
       <Text size="sm" fw={600} c="dimmed" tt="uppercase">{label}</Text>
       {accounts.map((account) => (
         <AccountCard
@@ -74,7 +76,7 @@ function AccountsPage() {
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Contas</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleAdd}>
+        <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid="btn_new_account">
           Nova Conta
         </Button>
       </Group>
@@ -92,6 +94,7 @@ function AccountsPage() {
             accounts={activeOwn}
             onEdit={handleEdit}
             onAction={(a) => deactivateMutation.mutate(a.id)}
+            testId="section_active"
           />
           <AccountSection
             label="Contas compartilhadas"
@@ -104,6 +107,7 @@ function AccountsPage() {
             accounts={[...inactiveOwn, ...inactiveShared]}
             onEdit={handleEdit}
             onAction={(a) => activateMutation.mutate(a.id)}
+            testId="section_inactive"
           />
           {accounts.length === 0 && (
             <Text c="dimmed" ta="center" py="md">Nenhuma conta cadastrada</Text>

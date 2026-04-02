@@ -97,7 +97,7 @@ export function CategoryCard({
 
   return (
     <Stack gap={2}>
-      <Group gap={4} align="center" style={{ paddingLeft: depth * 20 }} wrap="nowrap">
+      <Group gap={4} align="center" style={{ paddingLeft: depth * 20 }} wrap="nowrap" data-category-name={category.name}>
         {/* fold/unfold toggle */}
         {depth === 0 ? (
           <ActionIcon
@@ -134,9 +134,10 @@ export function CategoryCard({
             error={nameError}
             style={{ minWidth: 140 }}
             rightSection={nameSaving ? <Loader size={14} /> : null}
+            data-testid="input_category_name"
           />
         ) : (
-          <UnstyledButton onClick={startEdit}>
+          <UnstyledButton onClick={startEdit} data-testid="btn_category_name">
             <Text fw={depth === 0 ? 600 : 400} size="md" style={{ cursor: 'text' }}>
               {category.name}
             </Text>
@@ -144,7 +145,7 @@ export function CategoryCard({
         )}
 
         {/* delete */}
-        <ActionIcon variant="subtle" color="red" size="md" onClick={() => onDelete(category)}>
+        <ActionIcon variant="subtle" color="red" size="md" onClick={() => onDelete(category)} data-testid="btn_category_delete">
           <IconTrash size={18} />
         </ActionIcon>
 
@@ -156,6 +157,7 @@ export function CategoryCard({
             size="md"
             onClick={handleAddChild}
             title="Adicionar subcategoria"
+            data-testid="btn_add_subcategory"
           >
             <IconPlus size={18} />
           </ActionIcon>

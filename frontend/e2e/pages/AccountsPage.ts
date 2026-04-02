@@ -2,15 +2,11 @@ import { type Page, type Locator, expect } from '@playwright/test'
 
 export class AccountsPage {
   readonly page: Page
-  readonly heading: Locator
   readonly newAccountButton: Locator
-  readonly drawer: Locator
 
   constructor(page: Page) {
     this.page = page
-    this.heading = page.locator('p, h1, h2').filter({ hasText: /^Contas$/ }).first()
-    this.newAccountButton = page.getByRole('button', { name: 'Nova Conta' })
-    this.drawer = page.getByRole('dialog')
+    this.newAccountButton = page.getByTestId('btn_new_account')
   }
 
   async goto() {
@@ -20,36 +16,37 @@ export class AccountsPage {
 
   async openCreateForm() {
     await this.newAccountButton.click()
-    await expect(this.drawer).toBeVisible()
+    await expect(this.page.getByTestId('account_form')).toBeVisible()
   }
 
   async fillForm(name: string, balanceCents = 0) {
-    await this.drawer.getByLabel('Nome').fill(name)
-    // Balance field uses a custom currency input — type the value directly
+    const form = this.page.getByTestId('account_form')
+    await form.getByTestId('input_account_name').fill(name)
     if (balanceCents !== 0) {
-      const balanceInput = this.drawer.locator('input[type="text"]').last()
-      await balanceInput.clear()
-      await balanceInput.fill(String(balanceCents / 100))
+      const balanceInput = form.locator('input[inputmode="numeric"]')
+      await balanceInput.click()
+      for (const digit of String(balanceCents)) {
+        await balanceInput.press(digit)
+      }
     }
   }
 
   async submitForm() {
-    await this.drawer.getByRole('button', { name: 'Salvar' }).click()
-    // Wait for drawer to close
-    await expect(this.drawer).not.toBeVisible({ timeout: 5000 })
+    await this.page.getByTestId('btn_account_save').click()
+    await expect(this.page.getByTestId('account_form')).not.toBeVisible({ timeout: 5000 })
+  }
+
+  private getCardByName(name: string): Locator {
+    return this.page.locator(`[data-account-name="${name}"]`)
   }
 
   async editAccount(accountName: string) {
-    const card = this.page.locator('[data-radix-scroll-area-viewport]').or(this.page.locator('main')).locator(`text=${accountName}`).locator('..').locator('..')
-    await card.getByRole('button').first().click()
-    await expect(this.drawer).toBeVisible()
+    await this.getCardByName(accountName).getByTestId('btn_account_edit').click()
+    await expect(this.page.getByTestId('account_form')).toBeVisible()
   }
 
-  /** Click the action button (deactivate for active, activate for inactive) */
   async clickAccountAction(accountName: string) {
-    const card = this.getCardByName(accountName)
-    // Last action button on the card (delete/deactivate/activate)
-    await card.getByRole('button').last().click()
+    await this.getCardByName(accountName).getByTestId('btn_account_action').click()
   }
 
   async deactivateAccount(accountName: string) {
@@ -58,21 +55,5 @@ export class AccountsPage {
 
   async deleteAccount(accountName: string) {
     await this.clickAccountAction(accountName)
-  }
-
-  async getAccountNames(): Promise<string[]> {
-    await this.page.waitForLoadState('networkidle')
-    const cards = this.page.locator('[class*="mantine-Card"]')
-    const count = await cards.count()
-    const names: string[] = []
-    for (let i = 0; i < count; i++) {
-      const text = await cards.nth(i).locator('[style*="font-weight"]').first().textContent()
-      if (text) names.push(text.trim())
-    }
-    return names
-  }
-
-  private getCardByName(name: string): Locator {
-    return this.page.locator('[class*="mantine-Card"]').filter({ hasText: name })
   }
 }

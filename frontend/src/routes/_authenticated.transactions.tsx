@@ -24,8 +24,8 @@ import { TextSearch } from '@/components/transactions/filters/TextSearch'
 const now = new Date()
 
 const transactionSearchSchema = z.object({
-  month: z.number().int().min(1).max(12).default(now.getMonth() + 1),
-  year: z.number().int().default(now.getFullYear()),
+  month: z.coerce.number().int().min(1).max(12).default(now.getMonth() + 1),
+  year: z.coerce.number().int().default(now.getFullYear()),
   query: z.string().default(''),
   tagIds: z.array(z.number()).default([]),
   categoryIds: z.array(z.number()).default([]),
@@ -126,6 +126,7 @@ function TransactionsPage() {
                 size="xs"
                 leftSection={<IconPlus size={14} />}
                 onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
+                data-testid="btn_new_transaction"
               >
                 Nova Transação
               </Button>
@@ -194,7 +195,7 @@ function TransactionsPage() {
         <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
           <Group justify="space-between" align="center">
             <PeriodNavigator month={search.month} year={search.year} />
-            <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}>
+            <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
               Nova Transação
             </Button>
           </Group>

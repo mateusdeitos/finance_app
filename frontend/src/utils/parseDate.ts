@@ -9,3 +9,8 @@ export function parseDate(isoString: string): Date {
   const [year, month, day] = isoString.substring(0, 10).split('-').map(Number)
   return new Date(year, month - 1, day)
 }
+
+/** Returns a YYYY-MM-DD string for the given Date using local calendar date. */
+export function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}

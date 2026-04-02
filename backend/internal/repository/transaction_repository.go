@@ -142,10 +142,10 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if filter.Description != nil {
 		if filter.Description.Exact {
-			query = query.Where("description = ?", filter.Description.Query)
+			query = query.Where("transactions.description = ?", filter.Description.Query)
 		} else {
-			query = query.Where("description % ?", filter.Description.Query)
-			query = query.Order(fmt.Sprintf("description <-> '%s' DESC", filter.Description.Query))
+			query = query.Where("transactions.description % ?", filter.Description.Query)
+			query = query.Order(fmt.Sprintf("transactions.description <-> '%s' DESC", filter.Description.Query))
 		}
 	}
 

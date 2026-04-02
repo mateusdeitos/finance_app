@@ -41,7 +41,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CreditsAndDebits(
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
 	// income: +10000
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -52,7 +52,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CreditsAndDebits(
 	suite.Require().NoError(err)
 
 	// expense: -6000
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -84,7 +84,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
 	// User1 creates a 1000-cent expense split 50% with user2 → settlement credit of 500 for user1
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       conn.FromAccountID,
 		CategoryID:      category.ID,
@@ -119,7 +119,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter()
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account1.ID,
 		CategoryID:      category.ID,
@@ -129,7 +129,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter()
 	})
 	suite.Require().NoError(err)
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account2.ID,
 		CategoryID:      category.ID,
@@ -161,7 +161,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CategoryIDFilter(
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category1.ID,
@@ -171,7 +171,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CategoryIDFilter(
 	})
 	suite.Require().NoError(err)
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category2.ID,
@@ -203,7 +203,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_TagIDFilter() {
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -214,7 +214,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_TagIDFilter() {
 	})
 	suite.Require().NoError(err)
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -252,11 +252,11 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesOtherMont
 	suite.Require().NoError(err)
 
 	thisMonth := now()
-	lastMonth := thisMonth.AddDate(0, -1, 0)
+	lastMonth := clampToEndOfMonth(thisMonth, thisMonth.Year(), thisMonth.Month()-1)
 
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -266,7 +266,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesOtherMont
 	})
 	suite.Require().NoError(err)
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -307,7 +307,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitBothDirectio
 	// user1 pays 1000 from personal account, splits 50% with user2
 	// → user1: expense -1000 (personal1), settlement credit +500 (conn.FromAccountID)
 	// → user2: linked expense -500 (conn.ToAccountID)
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal1.ID,
 		CategoryID:      category1.ID,
@@ -321,7 +321,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitBothDirectio
 	// user2 pays 800 from personal account, splits 50% with user1
 	// → user2: expense -800 (personal2), settlement credit +400 (conn.ToAccountID)
 	// → user1: linked expense -400 (conn.FromAccountID)
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal2.ID,
 		CategoryID:      category2.ID,
@@ -378,7 +378,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 
 	// user1 pays 1000 from personal account, splits 50% with user2
 	// → expense -1000 on personal1, settlement credit +500 on conn.FromAccountID
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal1.ID,
 		CategoryID:      category.ID,
@@ -463,7 +463,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	// after SwapIfNeeded(user2): FromAccountID=conn.ToAccountID, ToAccountID=conn.FromAccountID
 	// → user2: expense -1000 (personal2), settlement credit +500 (conn.ToAccountID)
 	// → user1: linked expense -500 (conn.FromAccountID)
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
@@ -524,7 +524,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
@@ -588,7 +588,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
@@ -662,7 +662,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
 	// create: 2000, split 50% → linked=1000, settlement credit=1000
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
@@ -725,7 +725,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
@@ -772,7 +772,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
 	// user1 transfers 3000 to user2's connection account
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
@@ -820,7 +820,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
@@ -877,7 +877,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
@@ -926,7 +926,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
@@ -990,7 +990,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
 	// initially same-user transfer: account1 → account2
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType:      domain.TransactionTypeTransfer,
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
@@ -1048,28 +1048,30 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 	category, err := suite.createTestCategory(ctx, user)
 	suite.Require().NoError(err)
 
-	prevMonth := now().AddDate(0, -1, 0)
+	prevMonth := clampToEndOfMonth(now(), now().Year(), now().Month()-1)
 	thisMonth := now()
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
 	// expense in previous month
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          3000,
 		Date:            prevMonth,
 		Description:     "prev month",
-	}))
+	})
+	suite.Require().NoError(err)
 	// income in current month
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          2000,
 		Date:            thisMonth,
 		Description:     "this month",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	// non-accumulated: only this month → +2000
 	resultPeriod, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{})
@@ -1100,14 +1102,15 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_WithI
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1500,
 		Date:            date,
 		Description:     "expense",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	// accumulated: 5000 (initial) - 1500 (expense) = 3500
 	result, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{Accumulated: true})
@@ -1138,14 +1141,15 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Accou
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account1.ID,
 		CategoryID:      category.ID,
 		Amount:          500,
 		Date:            date,
 		Description:     "income account1",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	// accumulated for account1 only: 2000 + 500 = 2500
 	result, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{
@@ -1176,14 +1180,15 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_False
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
 		Date:            date,
 		Description:     "income",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	// accumulated=false: initial balance is NOT included
 	result, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{Accumulated: false})
@@ -1205,35 +1210,38 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 	})
 	suite.Require().NoError(err)
 
-	twoMonthsAgo := now().AddDate(0, -2, 0)
-	lastMonth := now().AddDate(0, -1, 0)
+	twoMonthsAgo := clampToEndOfMonth(now(), now().Year(), now().Month()-2)
+	lastMonth := clampToEndOfMonth(now(), now().Year(), now().Month()-1)
 	thisMonth := now()
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          2000,
 		Date:            twoMonthsAgo,
 		Description:     "two months ago",
-	}))
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	})
+	suite.Require().NoError(err)
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          3000,
 		Date:            lastMonth,
 		Description:     "last month",
-	}))
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	})
+	suite.Require().NoError(err)
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
 		Date:            thisMonth,
 		Description:     "this month",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	// single period: only +1000
 	resultPeriod, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{})

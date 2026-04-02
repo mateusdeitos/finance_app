@@ -47,7 +47,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 		Tags:            []domain.Tag{*tag},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -122,7 +122,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 		Tags:            []domain.Tag{*tag},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -192,7 +192,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -282,7 +282,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -374,7 +374,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &transferUser1ToUser2)
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &transferUser1ToUser2)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -389,7 +389,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &transferUser2ToUser1)
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &transferUser2ToUser1)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -524,7 +524,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &transferUser1ToUser2)
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &transferUser1ToUser2)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -543,7 +543,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &transferUser2ToUser1)
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &transferUser2ToUser1)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -703,7 +703,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 	}
 
 	for _, transaction := range transactions {
-		err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 		if err != nil {
 			suite.T().Fatalf("Failed to create transaction: %v", err)
 		}
@@ -868,7 +868,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithEnd
 	}
 
 	for _, transaction := range transactions {
-		err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 		if err != nil {
 			suite.T().Fatalf("Failed to create transaction: %v", err)
 		}
@@ -982,7 +982,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
@@ -1098,7 +1098,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,

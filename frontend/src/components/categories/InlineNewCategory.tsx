@@ -53,6 +53,7 @@ export function InlineNewCategory({ depth, onSave, onCancel }: Props) {
         size="sm"
         style={{ minWidth: 160 }}
         rightSection={saving ? <Loader size={14} /> : null}
+        data-testid="input_new_category_name"
       />
     </Group>
   )

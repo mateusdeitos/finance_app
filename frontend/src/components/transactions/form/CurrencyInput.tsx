@@ -7,6 +7,7 @@ interface Props {
   error?: string
   label?: string
   required?: boolean
+  'data-testid'?: string
 }
 
 export interface CurrencyInputHandle {
@@ -23,7 +24,7 @@ function formatCents(cents: number): string {
 }
 
 export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function CurrencyInput(
-  { value, onChange, error, label, required }: Props,
+  { value, onChange, error, label, required, 'data-testid': dataTestId }: Props,
   ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -68,6 +69,7 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
       onFocus={(e) => e.currentTarget.select()}
       error={error}
       inputMode="numeric"
+      data-testid={dataTestId}
     />
   )
 })

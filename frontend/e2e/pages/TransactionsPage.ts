@@ -2,17 +2,13 @@ import { type Page, type Locator, expect } from '@playwright/test'
 
 export class TransactionsPage {
   readonly page: Page
-  readonly heading: Locator
-  readonly addButton: Locator
   readonly formDrawer: Locator
+  readonly updateDrawer: Locator
 
   constructor(page: Page) {
     this.page = page
-    // Transactions page doesn't have an h1, but has a "+" button
-    this.addButton = page.getByRole('button', { name: 'Nova transação' }).or(
-      page.locator('button[aria-label*="nova"], button[aria-label*="add"]')
-    ).first()
     this.formDrawer = page.getByRole('dialog')
+    this.updateDrawer = page.getByRole('dialog', { name: 'Editar transação' })
   }
 
   async goto() {
@@ -20,67 +16,94 @@ export class TransactionsPage {
     await this.page.waitForLoadState('networkidle')
   }
 
-  async openCreateForm() {
-    // The "+" FAB button on mobile or desktop button
-    const plusButton = this.page.locator('button').filter({
-      has: this.page.locator('svg'),
-    }).last()
-    // Try the labeled button first
-    const namedButton = this.page.getByRole('button', { name: /Nova transação|Nova Transação|\+/i })
-    if (await namedButton.isVisible()) {
-      await namedButton.first().click()
-    } else {
-      await plusButton.click()
+  async gotoMonth(month: number, year: number) {
+    await this.page.goto(`/transactions?month=${month}&year=${year}`)
+    await this.page.waitForLoadState('networkidle')
+  }
+
+  /** Click the transaction row for the given transaction ID to open the update drawer. */
+  async clickTransactionRow(transactionId: number) {
+    await this.page.locator(`[data-transaction-id="${transactionId}"]`).click()
+    await this.waitForUpdateDrawer()
+  }
+
+  async waitForUpdateDrawer() {
+    await expect(this.updateDrawer).toBeVisible({ timeout: 8000 })
+  }
+
+  /** Clear the description input and type a new value. */
+  async clearAndFillDescription(description: string) {
+    const input = this.updateDrawer.getByTestId('input_description')
+    await input.fill(description)
+  }
+
+  /** Replace amount in the update form by selecting all and pressing digits. */
+  async clearAndFillAmount(amountCents: number) {
+    const input = this.updateDrawer.getByTestId('input_amount')
+    await input.click()
+    await input.press('Control+a')
+    for (const digit of String(amountCents)) {
+      await input.press(digit)
     }
+  }
+
+  /** Click save in the update drawer and wait for it to close. */
+  async submitUpdate() {
+    await this.updateDrawer.getByTestId('btn_save_transaction').click()
+    await expect(this.updateDrawer).not.toBeVisible({ timeout: 10000 })
+  }
+
+  /** Select a propagation option in the update drawer. */
+  async selectUpdatePropagation(option: 'current' | 'current_and_future' | 'all') {
+    await this.updateDrawer.getByTestId(`propagation_update_option_${option}`).click()
+  }
+
+  async isUpdatePropagationVisible(): Promise<boolean> {
+    return this.updateDrawer.getByTestId('propagation_update_option_current').isVisible()
+  }
+
+  async openCreateForm() {
+    await this.page.getByTestId('btn_new_transaction').first().click()
     await expect(this.formDrawer).toBeVisible()
   }
 
   async selectType(type: 'expense' | 'income' | 'transfer') {
-    // 'expense' is the form default — skip the click to avoid a redundant re-render.
     if (type === 'expense') return
     const labels: Record<string, string> = {
       income: 'Receita',
       transfer: 'Transferência',
     }
-    // Mantine SegmentedControl hides radio inputs off-screen.
-    // Click the visible <label> element that wraps the hidden radio + visible span.
-    await this.formDrawer.locator('label').filter({ hasText: new RegExp(`^${labels[type]}$`) }).click()
+    await this.page.getByTestId('segmented_transaction_type').getByText(labels[type]).click()
   }
 
   async fillAmount(amountCents: number) {
-    // CurrencyInput builds value digit-by-digit via onKeyDown (not onChange).
-    // fill() doesn't trigger keydown events. We use press() for each digit
-    // with a delay so React flushes state between each keypress.
-    // Typing "5000" (digit-by-digit) builds: 5 → 50 → 500 → 5000 cents.
-
-    const amountInput = this.formDrawer.getByLabel(/Valor/)
-    await amountInput.click() // focus; onFocus selects all text
+    const amountInput = this.page.getByTestId('input_amount')
+    await amountInput.click()
     for (const digit of String(amountCents)) {
       await amountInput.press(digit)
     }
   }
 
   async fillDescription(description: string) {
-    await this.formDrawer.getByLabel(/Descrição/).fill(description)
+    await this.page.getByTestId('input_description').fill(description)
   }
 
   async selectAccount(accountName: string) {
-    const accountSelect = this.formDrawer.getByLabel('Conta')
-    await accountSelect.click()
-    // The Select is searchable — type the name to filter, then click the option.
-    await accountSelect.fill(accountName)
+    const input = this.page.getByTestId('select_account')
+    await input.click()
+    await input.fill(accountName)
     await this.page.getByRole('option', { name: accountName }).click()
   }
 
   async selectCategory(categoryName: string) {
-    const categorySelect = this.formDrawer.getByLabel('Categoria')
-    await categorySelect.click()
-    await categorySelect.fill(categoryName)
+    const input = this.page.getByTestId('select_category')
+    await input.click()
+    await input.fill(categoryName)
     await this.page.getByRole('option', { name: new RegExp(categoryName) }).click()
   }
 
   async submitForm() {
-    await this.formDrawer.getByRole('button', { name: 'Salvar' }).click()
+    await this.page.getByTestId('btn_save_transaction').click()
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 })
   }
 
