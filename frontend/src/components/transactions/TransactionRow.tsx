@@ -5,6 +5,8 @@ import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
 import { RecurrenceBadge } from "./RecurrenceBadge";
 import classes from "./TransactionRow.module.css";
+import { FocusField } from "./form/TransactionForm";
+import { MouseEventHandler } from "react";
 
 const MAX_TAGS = 3;
 
@@ -16,41 +18,52 @@ interface CategoryCellProps {
   toAccount: Transactions.Account | null | undefined;
 }
 
-function CategoryCell({
+function CategoryCell({ tx, groupBy, category }: CategoryCellProps) {
+  if (groupBy === "category") return null;
+  if (tx.type === "transfer") return null;
+
+  return (
+    <Text size="sm" c="dimmed" lineClamp={1}>
+      {category?.name ?? "—"}
+    </Text>
+  );
+}
+
+interface AccountCellProps {
+  tx: Transactions.Transaction;
+  groupBy: Transactions.GroupBy;
+  account: Transactions.Account | null | undefined;
+  fromAccount: Transactions.Account | null | undefined;
+  toAccount: Transactions.Account | null | undefined;
+}
+
+function AccountCell({
   tx,
   groupBy,
-  category,
+  account,
   fromAccount,
   toAccount,
-}: CategoryCellProps) {
-  if (groupBy === "category") return null;
+}: AccountCellProps) {
+  if (groupBy === "account") return null;
 
-  if (tx.type !== "transfer") {
+  if (tx.type === "transfer") {
     return (
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {category?.name ?? "—"}
-      </Text>
-    );
-  }
-
-  if (groupBy === "account") {
-    return (
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {toAccount?.name ?? "—"}
-      </Text>
+      <Stack gap={0} className={classes.transferAccounts}>
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {fromAccount?.name ?? "—"}
+        </Text>
+        <IconArrowDown size={12} style={{ opacity: 0.5 }} className={classes.transferArrow} />
+        <Text size="sm" c="dimmed" lineClamp={1}>
+          {toAccount?.name ?? "—"}
+        </Text>
+      </Stack>
     );
   }
 
   return (
-    <Stack gap={0}>
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {fromAccount?.name ?? "—"}
-      </Text>
-      <IconArrowDown size={12} style={{ opacity: 0.5 }} />
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {toAccount?.name ?? "—"}
-      </Text>
-    </Stack>
+    <Text size="sm" c="dimmed" lineClamp={1}>
+      {account?.name ?? "—"}
+    </Text>
   );
 }
 
@@ -61,7 +74,9 @@ interface TransactionRowProps {
   categories: Transactions.Category[];
   currentUserId: number;
   isSelected?: boolean;
+  isSelectionMode?: boolean;
   onSelect?: (id: number) => void;
+  onEdit?: (fieldClicked: FocusField) => void;
 }
 
 export function TransactionRow({
@@ -71,7 +86,9 @@ export function TransactionRow({
   categories,
   currentUserId,
   isSelected,
+  isSelectionMode,
   onSelect,
+  onEdit,
 }: TransactionRowProps) {
   const account = accounts.find((a) => a.id === tx.account_id);
   const linkedAccount =
@@ -98,28 +115,37 @@ export function TransactionRow({
     year: "numeric",
   });
 
-  const selectionMode = onSelect !== undefined;
+  const selectionMode = isSelectionMode ?? false;
+
+  function colClick(
+    field: FocusField
+  ): MouseEventHandler<HTMLDivElement> | undefined {
+    if (selectionMode) return undefined;
+    return (e) => {
+      e.stopPropagation();
+      onEdit?.(field);
+    };
+  }
 
   return (
     <div
-      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}`}
-      onClick={selectionMode ? () => onSelect(tx.id) : undefined}
+      data-transaction-id={tx.id}
+      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
+      onClick={selectionMode ? () => onSelect?.(tx.id) : undefined}
     >
-      {/* Col 1 (selection mode only): checkbox */}
-      {selectionMode && (
-        <div className={classes.checkbox}>
-          <Checkbox
-            checked={isSelected ?? false}
-            onChange={() => onSelect!(tx.id)}
-            onClick={(e) => e.stopPropagation()}
-            size="sm"
-            data-testid={`checkbox_${tx.id}`}
-          />
-        </div>
-      )}
+      {/* Col 1: checkbox (always rendered; CSS shows on hover / selection mode) */}
+      <div className={classes.checkbox}>
+        <Checkbox
+          checked={isSelected ?? false}
+          onChange={() => onSelect?.(tx.id)}
+          onClick={(e) => e.stopPropagation()}
+          size="sm"
+          data-testid={`checkbox_${tx.id}`}
+        />
+      </div>
 
       {/* Col 2: date + description + tags */}
-      <div className={classes.main}>
+      <div className={classes.main} onClick={colClick("description")}>
         {groupBy !== "date" && (
           <Text size="xs" c="dimmed">
             {dateLabel}
@@ -152,8 +178,8 @@ export function TransactionRow({
         )}
       </div>
 
-      {/* Col 2: category OR transfer accounts */}
-      <div className={classes.category}>
+      {/* Col 3: category */}
+      <div className={classes.category} onClick={colClick("category_id")}>
         <CategoryCell
           tx={tx}
           groupBy={groupBy}
@@ -163,17 +189,19 @@ export function TransactionRow({
         />
       </div>
 
-      {/* Col 3: account */}
-      <div className={classes.account}>
-        {groupBy !== "account" && tx.type !== "transfer" && (
-          <Text size="sm" c="dimmed" lineClamp={1}>
-            {account?.name ?? "—"}
-          </Text>
-        )}
+      {/* Col 4: account (or from→to for transfers) */}
+      <div className={classes.account} onClick={colClick("account_id")}>
+        <AccountCell
+          tx={tx}
+          groupBy={groupBy}
+          account={account}
+          fromAccount={fromAccount}
+          toAccount={toAccount}
+        />
       </div>
 
-      {/* Col 4: amount */}
-      <div className={classes.amount}>
+      {/* Col 5: amount */}
+      <div className={classes.amount} onClick={colClick("amount")}>
         <Text
           size="sm"
           fw={600}

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
@@ -63,7 +64,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateOwnExpense() {
 		Tags:            []domain.Tag{*tag},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -148,7 +149,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnOtherUsersTrans
 		Description:     "Test transaction",
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -200,7 +201,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -313,7 +314,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -474,7 +475,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -621,7 +622,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -804,7 +805,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario5_OwnExpenseToOwnTran
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -944,7 +945,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		}),
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1114,7 +1115,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		}),
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1265,7 +1266,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1404,7 +1405,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1521,7 +1522,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1638,7 +1639,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
 	if err != nil {
 		suite.T().Fatalf("Failed to create transaction: %v", err)
 	}
@@ -1770,7 +1771,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario1_NoRecurr
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -1838,7 +1839,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario2_WithRecu
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -1898,7 +1899,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario3_WithRecu
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -1967,7 +1968,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario4_WithRecu
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2042,7 +2043,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2091,7 +2092,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 
 	// check dates: installment N should be d + (N-1) months
 	for i, t := range installmentsAfter {
-		expected := d.AddDate(0, i, 0)
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
 		suite.Assert().Equal(expected, t.Date, "installment %d date should be d + %d months", i+1, i)
 	}
 
@@ -2113,7 +2114,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_Decrease
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2184,7 +2185,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario7_Decrease
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2281,7 +2282,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario8_AddSplit
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2368,7 +2369,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2448,7 +2449,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10_AddSpli
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2532,7 +2533,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario11_AddSpli
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2633,7 +2634,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario12_RemoveR
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2723,7 +2724,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2809,7 +2810,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2900,7 +2901,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -2978,7 +2979,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 
 	d := now()
 
-	err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3127,14 +3128,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange()
 	d := now()
 
 	// Create without split
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          200,
 		Date:            d,
 		Description:     "test",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3168,7 +3170,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3176,7 +3178,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 		Date:            d,
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3212,7 +3215,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToEx
 	d := now()
 
 	// Create expense with split → credit settlement
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3220,7 +3223,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToEx
 		Date:            d,
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3260,14 +3264,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AddSplit() {
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
 		Date:            d,
 		Description:     "test",
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3298,7 +3303,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3306,7 +3311,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 		Date:            d,
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3336,7 +3342,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3344,7 +3350,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 		Date:            d,
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
@@ -3380,7 +3387,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3392,7 +3399,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 			Repetitions: lo.ToPtr(3),
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &userA.ID,
@@ -3440,7 +3448,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3452,7 +3460,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 			Repetitions: lo.ToPtr(3),
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &userA.ID,
@@ -3513,7 +3522,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	suite.Require().NoError(err)
 	d := now()
 
-	suite.Require().NoError(suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
@@ -3525,7 +3534,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 			Repetitions: lo.ToPtr(3),
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
-	}))
+	})
+	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &userA.ID,

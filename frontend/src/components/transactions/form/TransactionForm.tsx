@@ -1,6 +1,10 @@
-import { useRef, forwardRef, useImperativeHandle } from 'react'
-import { useForm, Controller, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, type FocusEvent } from "react";
+import {
+  useFormContext,
+  Controller,
+  useWatch,
+  FieldPath,
+} from "react-hook-form";
 import {
   Stack,
   SegmentedControl,
@@ -10,171 +14,135 @@ import {
   Alert,
   Group,
   SimpleGrid,
-} from '@mantine/core'
-import { DatePickerInput } from '@mantine/dates'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useCategories } from '@/hooks/useCategories'
-import { useTags } from '@/hooks/useTags'
-import { useCreateTransaction } from '@/hooks/useCreateTransaction'
-import { Transactions } from '@/types/transactions'
-import { CurrencyInput, CurrencyInputHandle } from './CurrencyInput'
-import { DescriptionAutocomplete } from './DescriptionAutocomplete'
-import { RecurrenceFields } from './RecurrenceFields'
-import { SplitSettingsFields } from './SplitSettingsFields'
-import { transactionFormSchema, TransactionFormValues } from './transactionFormSchema'
+  Box,
+} from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { useTags } from "@/hooks/useTags";
+import { Transactions } from "@/types/transactions";
+import { CurrencyInput } from "./CurrencyInput";
+import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
+import { RecurrenceFields } from "./RecurrenceFields";
+import { SplitSettingsFields } from "./SplitSettingsFields";
+import { TransactionFormValues } from "./transactionFormSchema";
 
-export type { TransactionFormValues }
+export type { TransactionFormValues };
 
-export interface TransactionFormHandle {
-  focusAmount: () => void
-}
+/** Which field to auto-focus after the form mounts. */
+export type FocusField = FieldPath<TransactionFormValues>;
 
 interface Props {
-  currentUserId: number
-  initialValues?: Partial<TransactionFormValues>
-  onSuccess: () => void
-  onSavePrefill: (date: string, categoryId: number | null, accountId: number | null) => void
-  onTypeChange?: (type: Transactions.TransactionType) => void
+  /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
+  focusField?: FocusField;
+  onSubmitPayload: (values: TransactionFormValues) => void;
+  onSaveAndCreateAnother?: (values: TransactionFormValues) => void;
+  isPending?: boolean;
+  submitError?: string;
 }
 
-export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function TransactionForm(
-  { currentUserId, initialValues, onSuccess, onSavePrefill, onTypeChange }: Props,
-  ref,
-) {
-  const amountRef = useRef<CurrencyInputHandle>(null)
+export const TransactionForm = ({
+  focusField,
+  onSubmitPayload,
+  onSaveAndCreateAnother,
+  isPending,
+  submitError,
+}: Props) => {
+  const { query: accountsQuery } = useAccounts();
+  const { query: categoriesQuery } = useCategories();
+  const { query: tagsQuery } = useTags();
 
-  useImperativeHandle(ref, () => ({
-    focusAmount: () => amountRef.current?.focus(),
-  }))
-
-  const { query: accountsQuery } = useAccounts()
-  const { query: categoriesQuery } = useCategories()
-  const { query: tagsQuery } = useTags()
-
-  const accounts = accountsQuery.data ?? []
-  const categories = categoriesQuery.data ?? []
-  const existingTags = tagsQuery.data ?? []
+  const accounts = accountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const existingTags = tagsQuery.data ?? [];
 
   const {
     control,
     handleSubmit,
     setValue,
-    setError,
-    getValues,
+    setFocus,
     formState: { errors, isSubmitting },
-  } = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionFormSchema),
-    defaultValues: {
-      transaction_type: 'expense',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      amount: 0,
-      account_id: null,
-      category_id: null,
-      destination_account_id: null,
-      tags: [],
-      split_settings: [],
-      recurrenceEnabled: false,
-      recurrenceType: 'monthly',
-      recurrenceEndDateMode: false,
-      recurrenceEndDate: null,
-      recurrenceRepetitions: null,
-      ...initialValues,
-    },
-  })
+  } = useFormContext<TransactionFormValues>();
 
-  const transactionType = useWatch({ control, name: 'transaction_type' })
-  const isTransfer = transactionType === 'transfer'
-
-  const { mutation } = useCreateTransaction({
-    onFieldErrors: (fieldErrors) => {
-      for (const [field, message] of Object.entries(fieldErrors)) {
-        if (field === '_general') continue
-        setError(field as keyof TransactionFormValues, { message })
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (focusField) {
+        setFocus(focusField);
       }
-    },
-    onSuccess: () => {
-      const values = getValues()
-      onSavePrefill(values.date, values.category_id, values.account_id)
-      onSuccess()
-    },
-  })
+    }, 0);
+
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const transactionType = useWatch({ control, name: "transaction_type" });
+  const isTransfer = transactionType === "transfer";
 
   const generalError =
-    (errors as Record<string, { message?: string }>)['_general']?.message
+    submitError ??
+    (errors as Record<string, { message?: string }>)["_general"]?.message;
 
   const onSubmit = (values: TransactionFormValues) => {
-    const resolvedTags = values.tags.map((name) => {
-      const existing = existingTags.find((t) => t.name === name)
-      return existing ? { id: existing.id, name } : { name }
-    })
+    onSubmitPayload({ ...values, date: values.date });
+  };
 
-    const payload: Transactions.CreateTransactionPayload = {
-      transaction_type: values.transaction_type,
-      date: values.date,
-      description: values.description,
-      amount: values.amount,
-      account_id: values.account_id!,
-      category_id: isTransfer || !values.category_id ? undefined : values.category_id,
-      destination_account_id: isTransfer ? values.destination_account_id ?? undefined : undefined,
-      tags: resolvedTags.length > 0 ? resolvedTags : undefined,
-      split_settings:
-        !isTransfer && values.split_settings.length > 0 ? values.split_settings : undefined,
-      recurrence_settings: values.recurrenceEnabled
-        ? {
-            type: values.recurrenceType,
-            repetitions: !values.recurrenceEndDateMode && values.recurrenceRepetitions
-              ? values.recurrenceRepetitions
-              : undefined,
-            end_date: values.recurrenceEndDateMode && values.recurrenceEndDate
-              ? values.recurrenceEndDate
-              : undefined,
-          }
-        : undefined,
-    }
-
-    mutation.mutate(payload)
-  }
-
-  function handleSuggestionSelect(suggestion: Transactions.TransactionSuggestion) {
-    setValue('transaction_type', suggestion.type)
-    setValue('amount', suggestion.amount)
-    if (suggestion.account_id) setValue('account_id', suggestion.account_id)
-    if (suggestion.category_id) setValue('category_id', suggestion.category_id)
-    if (suggestion.tags) setValue('tags', suggestion.tags.map((t) => t.name))
+  function handleSuggestionSelect(
+    suggestion: Transactions.TransactionSuggestion
+  ) {
+    setValue("transaction_type", suggestion.type);
+    setValue("amount", suggestion.amount);
+    if (suggestion.account_id) setValue("account_id", suggestion.account_id);
+    if (suggestion.category_id) setValue("category_id", suggestion.category_id);
+    if (suggestion.tags)
+      setValue(
+        "tags",
+        suggestion.tags.map((t) => t.name)
+      );
     // Clear split settings on autocomplete to avoid stale data
-    setValue('split_settings', [])
+    setValue("split_settings", []);
   }
 
   const accountOptions = accounts
     .filter((a) => !a.user_connection)
-    .map((a) => ({ value: String(a.id), label: a.name }))
+    .map((a) => ({ value: String(a.id), label: a.name }));
 
   const destinationAccountOptions = [
     ...accounts
       .filter((a) => !a.user_connection)
-      .map((a) => ({ value: String(a.id), label: a.name, group: 'Minhas contas' })),
+      .map((a) => ({
+        value: String(a.id),
+        label: a.name,
+        group: "Minhas contas",
+      })),
     ...accounts
-      .filter((a) => a.user_connection?.connection_status === 'accepted')
-      .map((a) => ({ value: String(a.id), label: a.description || a.name, group: 'Contas compartilhadas' })),
-  ]
+      .filter((a) => a.user_connection?.connection_status === "accepted")
+      .map((a) => ({
+        value: String(a.id),
+        label: a.description || a.name,
+        group: "Contas compartilhadas",
+      })),
+  ];
 
   const categoryOptions = categories
     .filter((c) => !c.parent_id)
-    .map((c) => ({ value: String(c.id), label: c.emoji ? `${c.emoji} ${c.name}` : c.name }))
+    .map((c) => ({
+      value: String(c.id),
+      label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+    }));
 
-  const tagNames = existingTags.map((t) => t.name)
+  const tagNames = existingTags.map((t) => t.name);
 
-  const recurrenceErrors = {
-    repetitions: errors.recurrenceRepetitions?.message,
-    end_date: errors.recurrenceEndDate?.message,
+  function makeSelectBlurHandler(
+    options: { value: string; label: string }[],
+    onChange: (val: number | null) => void
+  ) {
+    return (e: FocusEvent<HTMLInputElement>) => {
+      const typed = e.target.value.trim().toLowerCase();
+      if (!typed) return;
+      const match = options.find((o) => o.label.toLowerCase() === typed);
+      if (match) onChange(Number(match.value));
+    };
   }
-
-  const splitErrors = Object.fromEntries(
-    Object.entries(errors as Record<string, { message?: string }>)
-      .filter(([k]) => k.startsWith('split_settings'))
-      .map(([k, v]) => [k, v?.message ?? '']),
-  )
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -191,15 +159,14 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
           render={({ field }) => (
             <SegmentedControl
               data={[
-                { value: 'expense', label: 'Despesa' },
-                { value: 'income', label: 'Receita' },
-                { value: 'transfer', label: 'Transferência' },
+                { value: "expense", label: "Despesa" },
+                { value: "income", label: "Receita" },
+                { value: "transfer", label: "Transferência" },
               ]}
               value={field.value}
               onChange={(val) => {
-                field.onChange(val)
-                if (val === 'transfer') setValue('split_settings', [])
-                onTypeChange?.(val as Transactions.TransactionType)
+                field.onChange(val);
+                if (val === "transfer") setValue("split_settings", []);
               }}
               fullWidth
               data-testid="segmented_transaction_type"
@@ -213,12 +180,11 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
             name="date"
             render={({ field }) => (
               <DatePickerInput
+                ref={field.ref}
                 label="Data"
                 required
-                value={field.value ? new Date(field.value) : null}
-                onChange={(date) =>
-                  field.onChange(date ? String(date).split('T')[0] : '')
-                }
+                value={field.value}
+                onChange={(date) => field.onChange(date)}
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"
               />
@@ -230,7 +196,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
             name="amount"
             render={({ field }) => (
               <CurrencyInput
-                ref={amountRef}
+                ref={field.ref}
                 label="Valor (R$)"
                 required
                 value={field.value}
@@ -247,6 +213,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
           name="description"
           render={({ field }) => (
             <DescriptionAutocomplete
+              ref={field.ref}
               value={field.value}
               onChange={field.onChange}
               onSuggestionSelect={handleSuggestionSelect}
@@ -263,11 +230,15 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
               name="account_id"
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   label="Conta"
                   required
                   data={accountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onBlur={makeSelectBlurHandler(accountOptions, (val) =>
+                    field.onChange(val)
+                  )}
                   error={errors.account_id?.message}
                   searchable
                   data-testid="select_account"
@@ -279,11 +250,16 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
               name="destination_account_id"
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   label="Conta de destino"
                   required
                   data={destinationAccountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onBlur={makeSelectBlurHandler(
+                    destinationAccountOptions,
+                    (val) => field.onChange(val)
+                  )}
                   error={errors.destination_account_id?.message}
                   searchable
                 />
@@ -298,10 +274,14 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                 name="category_id"
                 render={({ field }) => (
                   <Select
+                    ref={field.ref}
                     label="Categoria"
                     data={categoryOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(categoryOptions, (val) =>
+                      field.onChange(val)
+                    )}
                     error={errors.category_id?.message}
                     searchable
                     clearable
@@ -319,6 +299,9 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
                     data={accountOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(accountOptions, (val) =>
+                      field.onChange(val)
+                    )}
                     error={errors.account_id?.message}
                     searchable
                     data-testid="select_account"
@@ -327,12 +310,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
               />
             </SimpleGrid>
 
-            <SplitSettingsFields
-              control={control}
-              accounts={accounts}
-              currentUserId={currentUserId}
-              errors={splitErrors}
-            />
+            <SplitSettingsFields />
           </>
         )}
 
@@ -352,17 +330,40 @@ export const TransactionForm = forwardRef<TransactionFormHandle, Props>(function
           )}
         />
 
-        <RecurrenceFields
-          control={control}
-          errors={recurrenceErrors}
-        />
+        <RecurrenceFields />
+      </Stack>
 
-        <Group justify="flex-end" mt="sm">
-          <Button type="submit" loading={isSubmitting || mutation.isPending} data-testid="btn_save_transaction">
+      <Box
+        style={{
+          position: "sticky",
+          bottom: 0,
+          background: "var(--mantine-color-body)",
+          borderTop: "1px solid var(--mantine-color-default-border)",
+          paddingTop: "var(--mantine-spacing-md)",
+          paddingBottom: "var(--mantine-spacing-md)",
+          marginTop: "var(--mantine-spacing-md)",
+        }}
+      >
+        <Group justify="flex-end">
+          {onSaveAndCreateAnother && (
+            <Button
+              variant="default"
+              type="button"
+              loading={isSubmitting || isPending}
+              onClick={handleSubmit(onSaveAndCreateAnother)}
+            >
+              Salvar e criar outra
+            </Button>
+          )}
+          <Button
+            type="submit"
+            loading={isSubmitting || isPending}
+            data-testid="btn_save_transaction"
+          >
             Salvar
           </Button>
         </Group>
-      </Stack>
+      </Box>
     </form>
-  )
-})
+  );
+};

@@ -1,7 +1,7 @@
 import { MantineProvider } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useTimeout } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createContext, ReactElement, useContext, useEffect } from "react";
+import { createContext, ReactElement, useContext } from "react";
 import { createRoot } from "react-dom/client";
 import { queryClient } from "@/queryClient";
 import { theme } from "@/theme";
@@ -54,21 +54,20 @@ export function renderDrawer<T>(factory: () => ReactElement): Promise<T> {
 
   return new Promise<T>((resolve, reject) => {
     const Provider = () => {
-      const [opened, { close }] = useDisclosure(true);
+      const [opened, { close, open }] = useDisclosure(false);
+      useTimeout(open, 100, { autoInvoke: true });
 
       const ctxClose = (value: T) => {
         close();
+        teardown();
         setTimeout(() => resolve(value), TRANSITION_MS);
       };
 
       const ctxReject = (error?: unknown) => {
         close();
+        teardown();
         setTimeout(() => reject(error), TRANSITION_MS);
       };
-
-      useEffect(() => {
-        if (!opened) teardown();
-      }, [opened]);
 
       return (
         <DrawerContext.Provider

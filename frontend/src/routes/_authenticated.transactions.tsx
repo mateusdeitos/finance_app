@@ -24,8 +24,8 @@ import { TextSearch } from '@/components/transactions/filters/TextSearch'
 const now = new Date()
 
 const transactionSearchSchema = z.object({
-  month: z.number().int().min(1).max(12).default(now.getMonth() + 1),
-  year: z.number().int().default(now.getFullYear()),
+  month: z.coerce.number().int().min(1).max(12).default(now.getMonth() + 1),
+  year: z.coerce.number().int().default(now.getFullYear()),
   query: z.string().default(''),
   tagIds: z.array(z.number()).default([]),
   categoryIds: z.array(z.number()).default([]),

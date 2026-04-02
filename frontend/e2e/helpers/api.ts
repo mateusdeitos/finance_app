@@ -96,6 +96,28 @@ export async function apiCreateTransaction(payload: Transactions.CreateTransacti
   return res.json()
 }
 
-export async function apiDeleteTransaction(id: number): Promise<void> {
-  await apiFetch(`/api/transactions/${id}`, { method: 'DELETE' })
+export async function apiDeleteTransaction(
+  id: number,
+  propagation?: 'current' | 'current_and_future' | 'all',
+): Promise<void> {
+  const url = propagation
+    ? `/api/transactions/${id}?propagation_settings=${propagation}`
+    : `/api/transactions/${id}`
+  await apiFetch(url, { method: 'DELETE' })
+}
+
+export async function apiUpdateTransaction(
+  id: number,
+  payload: Partial<Transactions.CreateTransactionPayload>,
+): Promise<void> {
+  const body = {
+    ...payload,
+    date: payload.date && payload.date.length === 10
+      ? localMidnightISO(payload.date)
+      : payload.date,
+  }
+  await apiFetch(`/api/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
 }

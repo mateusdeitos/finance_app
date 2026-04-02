@@ -1,44 +1,113 @@
-import { useState, useRef } from 'react'
-import { Drawer } from '@mantine/core'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useCategories } from '@/hooks/useCategories'
-import { useMe } from '@/hooks/useMe'
-import { useTransactionPrefill } from '@/hooks/useTransactionPrefill'
-import { Transactions } from '@/types/transactions'
-import { useDrawerContext } from '@/utils/renderDrawer'
-import { TransactionForm, TransactionFormHandle } from './form/TransactionForm'
+import { useState } from "react";
+import { useForm, FormProvider, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Drawer } from "@mantine/core";
+import { useCategories } from "@/hooks/useCategories";
+import { useMe } from "@/hooks/useMe";
+import { useTransactionPrefill } from "@/hooks/useTransactionPrefill";
+import { useCreateTransaction } from "@/hooks/useCreateTransaction";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useTags } from "@/hooks/useTags";
+import { Transactions } from "@/types/transactions";
+import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
+import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
+import { localDateStr } from "@/utils/parseDate";
+import { useDrawerContext } from "@/utils/renderDrawer";
+import {
+  transactionFormSchema,
+  TransactionFormValues,
+} from "./form/transactionFormSchema";
+import { TransactionForm } from "./form/TransactionForm";
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
-  expense: 'Nova Despesa',
-  income: 'Nova Receita',
-  transfer: 'Nova Transferência',
-}
+  expense: "Nova Despesa",
+  income: "Nova Receita",
+  transfer: "Nova Transferência",
+};
 
 export function CreateTransactionDrawer() {
-  const { opened, close } = useDrawerContext<void>()
-  const [transactionType, setTransactionType] = useState<Transactions.TransactionType>('expense')
-  const formRef = useRef<TransactionFormHandle>(null)
-  const hasFocused = useRef(false)
+  const { opened, close } = useDrawerContext<void>();
+  const [submitError, setSubmitError] = useState<string | undefined>();
 
-  const { query: meQuery } = useMe((me) => me.id)
-  const currentUserId = meQuery.data ?? 0
+  const { query: meQuery } = useMe((me) => me.id);
+  const currentUserId = meQuery.data ?? 0;
 
-  const { query: accountsQuery } = useAccounts()
-  const { query: categoriesQuery } = useCategories()
+  const { query: accountsQuery } = useAccounts();
+  const { query: categoriesQuery } = useCategories();
 
-  const accounts = accountsQuery.data ?? []
-  const categories = categoriesQuery.data ?? []
+  const accounts = accountsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
 
   const { prefill, savePrefill } = useTransactionPrefill({
     userId: currentUserId,
     accounts,
     categories,
-  })
+  });
 
-  const initialValues: Record<string, unknown> = {}
-  if (prefill.date) initialValues.date = prefill.date
-  if (prefill.accountId) initialValues.account_id = prefill.accountId
-  if (prefill.categoryId) initialValues.category_id = prefill.categoryId
+  const methods = useForm<TransactionFormValues>({
+    resolver: zodResolver(transactionFormSchema),
+    defaultValues: {
+      transaction_type: "expense",
+      date: prefill.date ?? localDateStr(new Date()),
+      description: "",
+      amount: 0,
+      account_id: prefill.accountId ?? null,
+      category_id: prefill.categoryId ?? null,
+      destination_account_id: null,
+      tags: [],
+      split_settings: [],
+      recurrenceEnabled: false,
+      recurrenceType: "monthly",
+      recurrenceEndDateMode: false,
+      recurrenceEndDate: null,
+      recurrenceRepetitions: null,
+    },
+  });
+
+  const transactionType = useWatch({ control: methods.control, name: "transaction_type" });
+
+  const { query: tagsQuery } = useTags();
+  const existingTags = tagsQuery.data ?? [];
+
+  const { mutation } = useCreateTransaction();
+
+  function submitTransaction(values: TransactionFormValues, onSuccess: () => void) {
+    setSubmitError(undefined);
+    const payload = buildTransactionPayload(values, existingTags);
+    mutation.mutate(payload, {
+      onSuccess: () => {
+        savePrefill(
+          payload.date,
+          payload.category_id ?? null,
+          payload.account_id
+        );
+        onSuccess();
+      },
+      onError: async (err: unknown) => {
+        if (err instanceof Response) {
+          const apiError = await parseApiError(err);
+          const errors = mapTagsToFieldErrors(apiError.tags, apiError.message);
+          for (const [field, message] of Object.entries(errors)) {
+            if (field === "_general") {
+              setSubmitError(message);
+            } else {
+              methods.setError(field as keyof TransactionFormValues, { message });
+            }
+          }
+        } else {
+          setSubmitError("Erro ao salvar transação");
+        }
+      },
+    });
+  }
+
+  function handleSubmitPayload(values: TransactionFormValues) {
+    submitTransaction(values, close);
+  }
+
+  function handleSaveAndCreateAnother(values: TransactionFormValues) {
+    submitTransaction(values, () => methods.reset());
+  }
 
   return (
     <Drawer
@@ -47,21 +116,16 @@ export function CreateTransactionDrawer() {
       title={TYPE_LABELS[transactionType]}
       position="right"
       size="md"
-      onTransitionEnd={() => {
-        if (opened && !hasFocused.current) {
-          hasFocused.current = true
-          formRef.current?.focusAmount()
-        }
-      }}
     >
-      <TransactionForm
-        ref={formRef}
-        currentUserId={currentUserId}
-        initialValues={initialValues}
-        onSuccess={close}
-        onSavePrefill={savePrefill}
-        onTypeChange={setTransactionType}
-      />
+      <FormProvider {...methods}>
+        <TransactionForm
+          focusField="amount"
+          onSubmitPayload={handleSubmitPayload}
+          onSaveAndCreateAnother={handleSaveAndCreateAnother}
+          isPending={mutation.isPending}
+          submitError={submitError}
+        />
+      </FormProvider>
     </Drawer>
-  )
+  );
 }
