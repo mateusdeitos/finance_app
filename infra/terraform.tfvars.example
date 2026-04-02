@@ -1,0 +1,45 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it.
+
+# ── GCP Project ───────────────────────────────────────────────────────────────
+gcp_project_id = "my-gcp-project-id"   # GCP project ID (find in GCP Console → Home)
+gcp_region     = "us-central1"          # Region for Cloud Run and Artifact Registry
+
+# ── Artifact Registry ─────────────────────────────────────────────────────────
+gar_repository = "backend"              # Docker repo name in Artifact Registry
+                                        # → used as GAR_REPOSITORY GitHub variable
+
+# ── Cloud Run ─────────────────────────────────────────────────────────────────
+cloud_run_service_name = "backend"      # Cloud Run service name
+                                        # → used as CLOUD_RUN_SERVICE_NAME GitHub variable
+
+# ── Database (non-sensitive) ──────────────────────────────────────────────────
+db_host    = "10.0.0.2"                # Cloud SQL private IP or Cloud SQL Proxy address
+db_port    = "5432"
+db_user    = "finance_user"
+db_name    = "finance_app"
+db_sslmode = "require"
+
+# ── OAuth – Google (optional, non-sensitive) ──────────────────────────────────
+google_client_id    = ""               # Leave empty to disable Google OAuth
+google_callback_url = "https://api.example.com/auth/google/callback"
+
+# ── OAuth – Microsoft (optional, non-sensitive) ───────────────────────────────
+microsoft_client_id    = ""            # Leave empty to disable Microsoft OAuth
+microsoft_callback_url = "https://api.example.com/auth/microsoft/callback"
+
+# ── Application ───────────────────────────────────────────────────────────────
+app_url      = "https://api.finance-app.mateusdeitos.dev"
+frontend_url = "https://finance-app.mateusdeitos.dev"
+
+# ── Secrets (gerenciados pelo Secret Manager, NÃO entram aqui) ────────────────
+#
+# Após rodar `terraform apply`, adicione os valores dos secrets com:
+#
+#   echo -n "VALUE" | gcloud secrets versions add backend-db-password        --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add backend-jwt-secret         --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add backend-oauth-session-secret --data-file=-
+#
+# OAuth (adicionar string vazia se o provider não for usado):
+#   echo -n "VALUE" | gcloud secrets versions add backend-google-client-secret    --data-file=-
+#   echo -n ""      | gcloud secrets versions add backend-microsoft-client-secret --data-file=-
