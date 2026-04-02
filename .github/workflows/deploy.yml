@@ -8,6 +8,7 @@ jobs:
   backend-deploy:
     name: Backend → Cloud Run
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - uses: actions/checkout@v4
