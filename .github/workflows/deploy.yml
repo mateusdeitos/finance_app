@@ -47,6 +47,7 @@ jobs:
   frontend-deploy:
     name: Frontend → Firebase Hosting
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - uses: actions/checkout@v4
