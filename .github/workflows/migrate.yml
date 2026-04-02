@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run — print pending migrations without applying (goose status)'
+        description: "Dry run — print pending migrations without applying (goose status)"
         type: boolean
         default: true
       direction:
-        description: 'Migration direction'
+        description: "Migration direction"
         type: choice
         options:
           - up
@@ -19,6 +19,7 @@ jobs:
   migrate:
     name: Run migrations (${{ inputs.direction }}${{ inputs.dry_run && ' — DRY RUN' || '' }})
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - uses: actions/checkout@v4
