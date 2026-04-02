@@ -5,12 +5,15 @@ import (
 	"fmt"
 
 	"github.com/finance_app/backend/internal/config"
+	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/google"
 	"github.com/markbates/goth/providers/microsoftonline"
 )
 
 func SetupProviders(cfg *config.Config) {
+	gothic.Store = sessions.NewCookieStore([]byte(cfg.OAuth.SessionSecret))
 	// Google OAuth
 	if cfg.OAuth.Google.ClientID != "" && cfg.OAuth.Google.ClientSecret != "" {
 		goth.UseProviders(

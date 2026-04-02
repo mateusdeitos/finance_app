@@ -1,0 +1,47 @@
+name: Run DB Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — print pending migrations without applying (goose status)'
+        type: boolean
+        default: true
+      direction:
+        description: 'Migration direction'
+        type: choice
+        options:
+          - up
+          - down
+        default: up
+
+jobs:
+  migrate:
+    name: Run migrations (${{ inputs.direction }}${{ inputs.dry_run && ' — DRY RUN' || '' }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
+
+      - name: Show pending migrations (dry run)
+        if: inputs.dry_run
+        working-directory: backend
+        env:
+          DB_DSN: ${{ secrets.DB_DSN_PROD }}
+        run: goose -dir migrations postgres "$DB_DSN" status
+
+      - name: Apply migrations
+        if: ${{ !inputs.dry_run }}
+        working-directory: backend
+        env:
+          DB_DSN: ${{ secrets.DB_DSN_PROD }}
+        run: goose -dir migrations postgres "$DB_DSN" ${{ inputs.direction }}
