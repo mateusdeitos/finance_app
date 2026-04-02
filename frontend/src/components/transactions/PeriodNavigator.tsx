@@ -1,5 +1,5 @@
 import { ActionIcon, Group } from '@mantine/core'
-import { MonthPickerInput } from '@mantine/dates'
+import { DateValue, MonthPickerInput } from '@mantine/dates'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import classes from './PeriodNavigator.module.css'
@@ -31,11 +31,11 @@ export function PeriodNavigator({ month, year }: PeriodNavigatorProps) {
     navigate({ search: { ...search, month: m, year: y } })
   }
 
-  function handleChange(date: string | null) {
+  function handleChange(date: DateValue) {
     if (!date) return
     // date is an ISO string like "2011-02-01T00:00:00.000Z"
     // Parse year/month directly to avoid UTC→local timezone shift
-    const [year, month] = date.split('-').map(Number)
+    const [year, month] = date.toISOString().split('-').map(Number)
     navigate({ search: { ...search, month, year } })
   }
 

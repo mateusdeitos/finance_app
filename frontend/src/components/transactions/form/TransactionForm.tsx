@@ -183,7 +183,7 @@ export const TransactionForm = ({
                 ref={field.ref}
                 label="Data"
                 required
-                value={field.value}
+                value={new Date(field.value)}
                 onChange={(date) => field.onChange(date)}
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"
