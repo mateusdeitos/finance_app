@@ -6,7 +6,6 @@ import {
   NavLink,
   Avatar,
   Menu,
-  Box,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
@@ -52,7 +51,7 @@ export function AppLayout() {
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
-      <AppShell.Header>
+      <AppShell.Header style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger
@@ -61,27 +60,14 @@ export function AppLayout() {
               hiddenFrom="sm"
               size="sm"
             />
-            <Group gap="xs">
-              <Box
-                w={36}
-                h={36}
-                style={(theme) => ({
-                  background: theme.colors.blue[7],
-                  borderRadius: theme.radius.sm,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontWeight: 700,
-                  fontSize: 14,
-                })}
-              >
-                F
-              </Box>
-              <Text fw={700} size="lg" c="blue.7">
-                FinanceApp
-              </Text>
-            </Group>
+            <Link to="/transactions" style={{ textDecoration: "none" }}>
+              <Group gap="xs">
+                <img src="/icon.svg" width={36} height={36} alt="FinanceApp" />
+                <Text fw={700} size="lg" c="blue.7">
+                  FinanceApp
+                </Text>
+              </Group>
+            </Link>
           </Group>
 
           {user && (
@@ -138,6 +124,7 @@ export function AppLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main
+        className="scroll-container"
         style={{
           height: "100dvh",
           overflow: "hidden auto",

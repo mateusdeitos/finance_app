@@ -1,0 +1,72 @@
+/* ─── Box model ─────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Touch behavior ────────────────────────────────────────────────────── */
+
+/* Remove browser tap highlight flash on all elements */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Eliminate 300ms tap delay on interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+[role='button'],
+[role='tab'],
+[role='link'] {
+  touch-action: manipulation;
+}
+
+/* Prevent accidental text selection on UI chrome */
+button,
+a,
+nav,
+[role='button'],
+[role='tab'] {
+  user-select: none;
+}
+
+/* ─── Input zoom prevention (iOS) ───────────────────────────────────────── */
+/* Minimum 16px prevents iOS Safari from auto-zooming on focus.
+   Mantine uses .mantine-Input-input with a class selector (0,1,0 specificity),
+   so we match that specificity here. Our stylesheet loads after Mantine's,
+   so last-declared wins. */
+input,
+textarea,
+select {
+  font-size: 1rem;
+}
+
+.mantine-Input-input {
+  font-size: 1rem;
+}
+
+/* ─── Momentum scroll ───────────────────────────────────────────────────── */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ─── GPU-composited active states ──────────────────────────────────────── */
+button:active,
+a:active,
+[role='button']:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
