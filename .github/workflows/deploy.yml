@@ -40,13 +40,13 @@ jobs:
             echo "Changed files:"
             echo "$CHANGED"
 
-            if echo "$CHANGED" | grep -qE '^(backend|infra)/'; then
+            if echo "$CHANGED" | grep -qE '^(backend|infra|\.github)/'; then
               echo "backend=true" >> $GITHUB_OUTPUT
             else
               echo "backend=false" >> $GITHUB_OUTPUT
             fi
 
-            if echo "$CHANGED" | grep -qE '^(frontend|infra)/'; then
+            if echo "$CHANGED" | grep -qE '^(frontend|infra|\.github)/'; then
               echo "frontend=true" >> $GITHUB_OUTPUT
             else
               echo "frontend=false" >> $GITHUB_OUTPUT
