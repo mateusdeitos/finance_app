@@ -51,7 +51,10 @@ export function AppLayout() {
       header={{ height: 60 }}
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
-      style={{ ['--app-shell-header-height' as string]: 'calc(60px + env(safe-area-inset-top))' }}
+      style={{
+        ['--app-shell-header-height' as string]: 'calc(60px + env(safe-area-inset-top))',
+        ['--app-shell-header-offset' as string]: 'calc(60px + env(safe-area-inset-top))',
+      }}
     >
       <AppShell.Header style={{ height: 'calc(60px + env(safe-area-inset-top))', paddingTop: "env(safe-area-inset-top)" }}>
         <Group h="100%" px="md" justify="space-between">
