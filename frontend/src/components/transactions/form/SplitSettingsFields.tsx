@@ -217,25 +217,21 @@ function SplitRow({
     );
   }
 
-  const label = selectedAccount
-    ? selectedAccount.description || selectedAccount.name
-    : String(connectionId);
-  const initials = getInitials(label);
-  const tooltipLabel = selectedAccount?.description ?? selectedAccount?.name ?? label;
-
   return (
     <Stack gap={4}>
       <Group gap="sm" align="center" wrap="nowrap">
-        <Tooltip label={tooltipLabel} withArrow>
-          <Avatar
-            size="sm"
-            radius="xl"
-            color="blue"
-            style={{ cursor: "default" }}
-          >
-            {initials}
-          </Avatar>
-        </Tooltip>
+        {selectedAccount && (
+          <Tooltip label={selectedAccount.description ?? selectedAccount.name} withArrow>
+            <Avatar
+              size="sm"
+              radius="xl"
+              color="blue"
+              style={{ cursor: "default" }}
+            >
+              {getInitials(selectedAccount.description || selectedAccount.name)}
+            </Avatar>
+          </Tooltip>
+        )}
 
         {selectedAccount && (
           <SplitRowControls
