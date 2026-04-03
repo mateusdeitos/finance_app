@@ -18,7 +18,8 @@ import {
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
-import { InviteDrawer } from "@/components/InviteDrawer";
+import { InviteDrawer } from "@/components/InviteDrawer"
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
 const navLinks = [
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
@@ -135,6 +136,7 @@ export function AppLayout() {
       </AppShell.Main>
 
       <InviteDrawer opened={inviteOpened} onClose={closeInvite} />
+      <PWAInstallBanner />
     </AppShell>
   );
 }

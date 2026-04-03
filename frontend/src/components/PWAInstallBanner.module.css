@@ -1,0 +1,22 @@
+.banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 12px 16px 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  background-color: var(--mantine-color-white);
+  border-top: 1px solid var(--mantine-color-gray-2);
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.icon {
+  border-radius: 8px;
+  flex-shrink: 0;
+}
