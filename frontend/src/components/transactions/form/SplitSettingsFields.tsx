@@ -11,7 +11,10 @@ import {
   NumberInput,
   Tooltip,
   Switch,
+  Select,
+  Anchor,
 } from "@mantine/core";
+import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
 import {
   useWatch,
@@ -88,20 +91,24 @@ function SplitRowControls({
 
   return (
     <>
-      <ActionIcon
-        size="md"
-        radius="xl"
-        variant="light"
-        onClick={toggleMode}
-        title={
-          mode === "percentage"
-            ? "Mudar para valor fixo"
-            : "Mudar para percentual"
-        }
-        style={{ flexShrink: 0, fontWeight: 700, fontSize: "0.7rem" }}
+      <Tooltip
+        label={mode === "percentage" ? "Mudar para valor fixo" : "Mudar para percentual"}
+        withArrow
       >
-        {mode === "percentage" ? "%" : "R$"}
-      </ActionIcon>
+        <Switch
+          size="md"
+          checked={mode === "amount"}
+          onChange={toggleMode}
+          thumbIcon={
+            mode === "percentage" ? (
+              <IconPercentage size={10} stroke={3} color="var(--mantine-color-blue-6)" />
+            ) : (
+              <IconCurrencyReal size={10} stroke={3} color="var(--mantine-color-teal-6)" />
+            )
+          }
+          styles={{ track: { cursor: "pointer" } }}
+        />
+      </Tooltip>
 
       {mode === "percentage" ? (
         <Group gap="xs" align="center" style={{ flex: 1 }}>
@@ -138,59 +145,117 @@ function SplitRowControls({
 // ─── SplitRow ─────────────────────────────────────────────────────────────────
 
 interface SplitRowProps {
-  account: Transactions.Account;
+  fieldIndex: number;
+  connectedAccounts: Transactions.Account[];
+  usedConnectionIds: number[];
   currentUserId: number;
   totalAmount: number;
-  enabled: boolean;
-  onToggle: (enabled: boolean) => void;
-  fieldIndex: number;
+  onRemove: () => void;
   error?: string;
 }
 
 function SplitRow({
-  account,
+  fieldIndex,
+  connectedAccounts,
+  usedConnectionIds,
   currentUserId,
   totalAmount,
-  enabled,
-  onToggle,
-  fieldIndex,
+  onRemove,
   error,
 }: SplitRowProps) {
-  const label = account.description || account.name;
-  const initials = getInitials(label);
-  const tooltipLabel = account.description ?? account.name;
+  const { control, setValue } = useFormContext<TransactionFormValues>();
+  const connectionId = useWatch({
+    control,
+    name: `split_settings.${fieldIndex}.connection_id` as `split_settings.0.connection_id`,
+  }) as number | undefined;
+
+  const selectedAccount = connectedAccounts.find(
+    (a) => a.user_connection?.id === connectionId
+  );
+
+  // Available accounts for selection: all connected accounts not used in OTHER rows
+  const selectData = connectedAccounts
+    .filter(
+      (a) =>
+        a.user_connection &&
+        (a.user_connection.id === connectionId ||
+          !usedConnectionIds.includes(a.user_connection.id))
+    )
+    .map((a) => ({
+      value: String(a.user_connection!.id),
+      label: a.description || a.name,
+    }));
+
+  // Row not yet assigned a connection — show a select
+  if (!connectionId || connectionId === 0) {
+    return (
+      <Group gap="sm" align="center" wrap="nowrap">
+        <Select
+          placeholder="Selecionar conta"
+          data={selectData}
+          size="sm"
+          style={{ flex: 1 }}
+          onChange={(val) => {
+            if (val) {
+              setValue(
+                `split_settings.${fieldIndex}.connection_id` as `split_settings.0.connection_id`,
+                Number(val)
+              );
+            }
+          }}
+        />
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="red"
+          onClick={onRemove}
+          title="Remover divisão"
+        >
+          <IconX size={14} />
+        </ActionIcon>
+      </Group>
+    );
+  }
 
   return (
     <Stack gap={4}>
       <Group gap="sm" align="center" wrap="nowrap">
-        <Tooltip label={tooltipLabel} withArrow>
-          <Avatar
-            size="sm"
-            radius="xl"
-            color="blue"
-            style={{ cursor: "default" }}
-          >
-            {initials}
-          </Avatar>
-        </Tooltip>
+        {selectedAccount && (
+          <Tooltip label={selectedAccount.description ?? selectedAccount.name} withArrow>
+            <Avatar
+              size="sm"
+              radius="xl"
+              color="blue"
+              style={{ cursor: "default" }}
+            >
+              {getInitials(selectedAccount.description || selectedAccount.name)}
+            </Avatar>
+          </Tooltip>
+        )}
 
-        <Switch
-          checked={enabled}
-          onChange={(e) => onToggle(e.currentTarget.checked)}
-        />
-
-        {enabled && (
+        {selectedAccount && (
           <SplitRowControls
-            account={account}
+            account={selectedAccount}
             currentUserId={currentUserId}
             totalAmount={totalAmount}
             fieldIndex={fieldIndex}
             error={error}
           />
         )}
+
+        <ActionIcon
+          size="sm"
+          variant="subtle"
+          color="red"
+          onClick={onRemove}
+          title="Remover divisão"
+          style={{ flexShrink: 0 }}
+        >
+          <IconX size={14} />
+        </ActionIcon>
       </Group>
 
-      {error && enabled && (
+      {error && (
         <Text size="xs" c="red">
           {error}
         </Text>
@@ -222,6 +287,17 @@ export function SplitSettingsFields() {
 
   if (connectedAccounts.length === 0) return null;
 
+  // Connection IDs already used across all rows
+  const usedConnectionIds = fields
+    .map((f) => f.connection_id)
+    .filter((id) => id > 0);
+
+  // Only show "add" button if there are still available connections
+  const hasAvailableConnections =
+    connectedAccounts.filter(
+      (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)
+    ).length > 0;
+
   const splitErrors = Object.fromEntries(
     Object.entries(errors as Record<string, { message?: string }>)
       .filter(([k]) => k.startsWith("split_settings"))
@@ -244,52 +320,52 @@ export function SplitSettingsFields() {
       <Divider />
 
       <Stack gap="sm">
-        {connectedAccounts.map((account) => {
-          const conn = account.user_connection!;
-          const connectionId = conn.id;
-          const fieldIndex = fields.findIndex(
-            (f) => f.connection_id === connectionId
-          );
-          const enabled = fieldIndex >= 0;
+        {fields.map((field, index) => {
+          // For this row, usedConnectionIds excluding its own
+          const othersUsed = fields
+            .filter((_, i) => i !== index)
+            .map((f) => f.connection_id)
+            .filter((id) => id > 0);
 
           const indexErrors =
-            fieldIndex >= 0
-              ? Object.fromEntries(
-                  Object.entries(splitErrors)
-                    .filter(([k]) =>
-                      k.startsWith(`split_settings.${fieldIndex}.`)
-                    )
-                    .map(([k, v]) => [
-                      k.replace(`split_settings.${fieldIndex}.`, ""),
-                      v,
-                    ])
-                )
-              : {};
-
-          function handleToggle(on: boolean) {
-            if (on) {
-              append({ connection_id: connectionId, amount: 0 });
-            } else {
-              remove(fieldIndex);
-            }
-          }
+            Object.fromEntries(
+              Object.entries(splitErrors)
+                .filter(([k]) => k.startsWith(`split_settings.${index}.`))
+                .map(([k, v]) => [
+                  k.replace(`split_settings.${index}.`, ""),
+                  v,
+                ])
+            );
 
           return (
             <SplitRow
-              key={connectionId}
-              account={account}
+              key={field.id}
+              fieldIndex={index}
+              connectedAccounts={connectedAccounts}
+              usedConnectionIds={othersUsed}
               currentUserId={currentUserId}
               totalAmount={totalAmount}
-              enabled={enabled}
-              onToggle={handleToggle}
-              fieldIndex={fieldIndex}
+              onRemove={() => remove(index)}
               error={
                 indexErrors["amount"] ??
-                splitErrors[`split_settings.${fieldIndex}`]
+                splitErrors[`split_settings.${index}`]
               }
             />
           );
         })}
+
+        {hasAvailableConnections && (
+          <Anchor
+            component="button"
+            type="button"
+            size="sm"
+            c="dimmed"
+            onClick={() => append({ connection_id: 0, amount: 0 })}
+            style={{ alignSelf: "flex-start" }}
+          >
+            + Adicionar divisão
+          </Anchor>
+        )}
       </Stack>
     </Stack>
   );
