@@ -5,10 +5,60 @@ on:
     types: [published]
 
 jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        id: prev-tag
+        run: |
+          CURRENT_TAG=${{ github.event.release.tag_name }}
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Check changed paths
+        id: filter
+        run: |
+          PREV_TAG=${{ steps.prev-tag.outputs.prev_tag }}
+          CURRENT_TAG=${{ steps.prev-tag.outputs.current_tag }}
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, deploying everything"
+            echo "backend=true" >> $GITHUB_OUTPUT
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            CHANGED=$(git diff --name-only "${PREV_TAG}..${CURRENT_TAG}")
+            echo "Changed files:"
+            echo "$CHANGED"
+
+            if echo "$CHANGED" | grep -qE '^(backend|infra|\.github)/'; then
+              echo "backend=true" >> $GITHUB_OUTPUT
+            else
+              echo "backend=false" >> $GITHUB_OUTPUT
+            fi
+
+            if echo "$CHANGED" | grep -qE '^(frontend|infra|\.github)/'; then
+              echo "frontend=true" >> $GITHUB_OUTPUT
+            else
+              echo "frontend=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   backend-deploy:
     name: Backend → Cloud Run
     runs-on: ubuntu-latest
     environment: prod
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
 
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +98,8 @@ jobs:
     name: Frontend → Firebase Hosting
     runs-on: ubuntu-latest
     environment: prod
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
 
     steps:
       - uses: actions/checkout@v4
