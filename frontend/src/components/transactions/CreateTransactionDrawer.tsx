@@ -116,7 +116,6 @@ export function CreateTransactionDrawer() {
       title={TYPE_LABELS[transactionType]}
       position="right"
       size="md"
-      styles={{ header: { paddingTop: 'env(safe-area-inset-top)' } }}
     >
       <FormProvider {...methods}>
         <TransactionForm

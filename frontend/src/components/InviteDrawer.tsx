@@ -22,7 +22,6 @@ export function InviteDrawer({ opened, onClose }: Props) {
       title="Criar Conexão"
       position="right"
       size="md"
-      styles={{ header: { paddingTop: 'env(safe-area-inset-top)' } }}
     >
       <Stack gap="lg">
         <Text size="sm" c="dimmed">

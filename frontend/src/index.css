@@ -62,6 +62,14 @@ select {
   overscroll-behavior: contain;
 }
 
+/* ─── PWA safe-area: drawer header ─────────────────────────────────────── */
+/* Pushes all Mantine drawer headers below the iOS notch/dynamic island
+   when running as a PWA (where env(safe-area-inset-top) > 0). No-op on
+   non-PWA browsers where the value resolves to 0. */
+.mantine-Drawer-header {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* ─── GPU-composited active states ──────────────────────────────────────── */
 button:active,
 a:active,
