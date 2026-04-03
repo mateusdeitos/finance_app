@@ -108,6 +108,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       title="Editar transação"
       position="right"
       size="md"
+      styles={{ header: { paddingTop: 'env(safe-area-inset-top)' } }}
     >
       <Stack gap="md">
         <FormProvider {...methods}>

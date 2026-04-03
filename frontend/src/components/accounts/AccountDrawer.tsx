@@ -49,6 +49,7 @@ export function AccountDrawer({ opened, onClose, account }: Props) {
       title={account ? 'Editar Conta' : 'Nova Conta'}
       position="right"
       size="md"
+      styles={{ header: { paddingTop: 'env(safe-area-inset-top)' } }}
     >
       {opened && (
         <AccountForm
