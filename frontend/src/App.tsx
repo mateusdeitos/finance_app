@@ -1,15 +1,32 @@
+import { Suspense, lazy } from 'react'
 import { RouterProvider } from '@tanstack/react-router'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { router } from './router'
 import { queryClient } from './queryClient'
+
+const ReactQueryDevtools = import.meta.env.PROD
+  ? () => null
+  : lazy(() =>
+      import('@tanstack/react-query-devtools').then((m) => ({
+        default: m.ReactQueryDevtools,
+      }))
+    )
+
+const TanStackRouterDevtools = import.meta.env.PROD
+  ? () => null
+  : lazy(() =>
+      import('@tanstack/router-devtools').then((m) => ({
+        default: m.TanStackRouterDevtools,
+      }))
+    )
 
 export default function App() {
   return (
     <>
       <RouterProvider router={router} context={{ queryClient }} />
-      <ReactQueryDevtools initialIsOpen={false} />
-      <TanStackRouterDevtools router={router} initialIsOpen={false} />
+      <Suspense>
+        <ReactQueryDevtools initialIsOpen={false} />
+        <TanStackRouterDevtools router={router} initialIsOpen={false} />
+      </Suspense>
     </>
   )
 }
