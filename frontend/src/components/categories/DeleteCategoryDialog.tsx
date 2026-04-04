@@ -78,6 +78,7 @@ export function DeleteCategoryDialog({
           value={replaceWithId}
           onChange={setReplaceWithId}
           clearable
+          data-testid="select_replace_category"
         />
 
         <Group justify="flex-end" mt="sm">

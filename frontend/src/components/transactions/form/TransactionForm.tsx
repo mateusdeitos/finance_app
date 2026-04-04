@@ -293,6 +293,7 @@ export const TransactionForm = ({
                   )}
                   error={errors.destination_account_id?.message}
                   searchable
+                  data-testid="select_destination_account"
                 />
               )}
             />

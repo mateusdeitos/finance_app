@@ -144,6 +144,26 @@ export class TransactionsPage {
     await this.selectCategory(categoryName);
   }
 
+  async selectDestinationAccount(accountName: string) {
+    const input = this.page.getByTestId("select_destination_account");
+    await input.click();
+    await input.fill(accountName);
+    await this.page.getByRole("option", { name: accountName }).click();
+  }
+
+  async fillTransfer(
+    amountCents: number,
+    description: string,
+    sourceAccountName: string,
+    destAccountName: string
+  ) {
+    await this.selectType("transfer");
+    await this.fillDescription(description);
+    await this.fillAmount(amountCents);
+    await this.selectAccount(sourceAccountName);
+    await this.selectDestinationAccount(destAccountName);
+  }
+
   async selectTransaction(transactionId: number) {
     await this.page.getByTestId(`checkbox_${transactionId}`).first().click();
   }

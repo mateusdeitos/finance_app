@@ -56,4 +56,8 @@ export class AccountsPage {
   async deleteAccount(accountName: string) {
     await this.clickAccountAction(accountName)
   }
+
+  async reactivateAccount(accountName: string) {
+    await this.clickAccountAction(accountName)
+  }
 }
