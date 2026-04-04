@@ -21,7 +21,6 @@ export function PropagationSettingsDrawer() {
       position="bottom"
       title="Excluir transações recorrentes"
       styles={{
-        inner: { left: '35vw', right: '35vw', width: '30vw' },
         content: {
           borderRadius: 'var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0',
           height: 'auto',
