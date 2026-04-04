@@ -150,7 +150,7 @@ export function TransactionRow({
           <Tooltip
             label={
               originalUserAccountName
-                ? `Essa transação não pode ser alterada pois foi criada pela conta "${originalUserAccountName}"`
+                ? `Essa transação não pode ser alterada pois foi criada pelo usuário"${originalUserAccountName}"`
                 : "Essa transação não pode ser alterada pois foi criada por outro usuário"
             }
             withArrow
