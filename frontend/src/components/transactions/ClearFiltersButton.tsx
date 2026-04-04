@@ -13,7 +13,8 @@ function useHasActiveFilters() {
     search.categoryIds.length > 0 ||
     search.accountIds.length > 0 ||
     search.types.length > 0 ||
-    search.query !== ''
+    search.query !== '' ||
+    search.hideSettlements === true
   )
 }
 
@@ -32,6 +33,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
         accountIds: [],
         types: [],
         query: '',
+        hideSettlements: false,
       }),
     })
   }
