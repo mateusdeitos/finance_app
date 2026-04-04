@@ -16,13 +16,15 @@ interface TransactionListProps {
   onSelectTransaction?: (id: number) => void
 }
 
-function groupNetTotal(group: Transactions.TransactionGroup): number {
+function groupNetTotal(group: Transactions.TransactionGroup, hideSettlements: boolean): number {
   return group.transactions.reduce((sum, tx) => {
     const txAmount = tx.operation_type === 'credit' ? tx.amount : -tx.amount
-    const settlementsAmount = (tx.settlements_from_source ?? []).reduce(
-      (s, settlement) => s + (settlement.type === 'credit' ? settlement.amount : -settlement.amount),
-      0,
-    )
+    const settlementsAmount = hideSettlements
+      ? 0
+      : (tx.settlements_from_source ?? []).reduce(
+          (s, settlement) => s + (settlement.type === 'credit' ? settlement.amount : -settlement.amount),
+          0,
+        )
     return sum + txAmount + settlementsAmount
   }, 0)
 }
@@ -61,7 +63,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
     [filtered, search.groupBy, accounts, categories],
   )
 
-  const groupTotals = useMemo(() => groups.map(groupNetTotal), [groups])
+  const groupTotals = useMemo(() => groups.map((g) => groupNetTotal(g, search.hideSettlements)), [groups, search.hideSettlements])
 
   const runningBalances = useMemo(() => {
     return groupTotals.reduce<number[]>((acc, total) => {
@@ -108,6 +110,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
           isFirst={i === 0}
           selectedIds={selectedIds}
           onSelectTransaction={onSelectTransaction}
+          hideSettlements={search.hideSettlements}
         />
       ))}
     </Stack>

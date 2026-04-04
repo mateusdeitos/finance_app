@@ -38,6 +38,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
   const [opened, setOpened] = useState(false)
 
   const selected: Transactions.TransactionType[] = search.types ?? []
+  const hideSettlements = search.hideSettlements ?? false
 
   function toggle(value: Transactions.TransactionType) {
     const next = selected.includes(value)
@@ -46,11 +47,22 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
     navigate({ search: (prev) => ({ ...prev, types: next.length ? next : undefined }) })
   }
 
+  function toggleHideSettlements() {
+    navigate({ search: (prev) => ({ ...prev, hideSettlements: !hideSettlements }) })
+  }
+
+  const advancedCount = selected.length + (hideSettlements ? 1 : 0)
+
   if (inline) {
     return (
       <Stack gap="xs">
         <Text size="sm" fw={500}>Tipo</Text>
         <TypeOptions selected={selected} toggle={toggle} />
+        <Switch
+          label="Ocultar acertos"
+          checked={hideSettlements}
+          onChange={toggleHideSettlements}
+        />
       </Stack>
     )
   }
@@ -58,7 +70,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
   return (
     <Popover opened={opened} onChange={setOpened} position="bottom-start" shadow="md">
       <Popover.Target>
-        <Indicator label={selected.length} size={16} disabled={!selected.length}>
+        <Indicator label={advancedCount} size={16} disabled={!advancedCount}>
           <Button
             variant="default"
             leftSection={<IconAdjustments size={16} />}
@@ -71,6 +83,11 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
       <Popover.Dropdown>
         <Stack gap="xs">
           <TypeOptions selected={selected} toggle={toggle} />
+          <Switch
+            label="Ocultar acertos"
+            checked={hideSettlements}
+            onChange={toggleHideSettlements}
+          />
         </Stack>
       </Popover.Dropdown>
     </Popover>

@@ -33,6 +33,7 @@ const transactionSearchSchema = z.object({
   types: z.array(z.enum(['expense', 'income', 'transfer'])).default([]),
   groupBy: z.enum(['date', 'category', 'account']).default('date'),
   accumulated: z.coerce.boolean().default(false),
+  hideSettlements: z.coerce.boolean().default(false),
 })
 
 export const Route = createFileRoute('/_authenticated/transactions')({

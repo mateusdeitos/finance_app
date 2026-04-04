@@ -21,6 +21,7 @@ interface TransactionGroupProps {
   isFirst?: boolean;
   selectedIds?: Set<number>;
   onSelectTransaction?: (id: number) => void;
+  hideSettlements?: boolean;
 }
 
 export function TransactionGroup({
@@ -34,6 +35,7 @@ export function TransactionGroup({
   isFirst = false,
   selectedIds,
   onSelectTransaction,
+  hideSettlements,
 }: TransactionGroupProps) {
   const isSelectionActive = (selectedIds?.size ?? 0) > 0;
 
@@ -76,7 +78,7 @@ export function TransactionGroup({
                     : undefined
                 }
               />
-              {(tx.settlements_from_source ?? []).map((s) => (
+              {!hideSettlements && (tx.settlements_from_source ?? []).map((s) => (
                 <SettlementRow
                   key={`settlement-${s.id}`}
                   settlement={s}
