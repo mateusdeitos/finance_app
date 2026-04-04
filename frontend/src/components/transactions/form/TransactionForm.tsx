@@ -15,6 +15,8 @@ import {
   Group,
   SimpleGrid,
   Box,
+  ComboboxItemGroup,
+  ComboboxItem,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -106,22 +108,39 @@ export const TransactionForm = ({
     .filter((a) => !a.user_connection)
     .map((a) => ({ value: String(a.id), label: a.name }));
 
-  const destinationAccountOptions = [
-    ...accounts
-      .filter((a) => !a.user_connection)
-      .map((a) => ({
-        value: String(a.id),
-        label: a.name,
-        group: "Minhas contas",
-      })),
-    ...accounts
-      .filter((a) => a.user_connection?.connection_status === "accepted")
-      .map((a) => ({
-        value: String(a.id),
-        label: a.description || a.name,
-        group: "Contas compartilhadas",
-      })),
-  ];
+  const destinationAccountOptions: ComboboxItemGroup<ComboboxItem>[] =
+    accounts.reduce<ComboboxItemGroup<ComboboxItem>[]>(
+      (acc, a) => {
+        const item = { label: a.name, value: String(a.id) };
+        if (a.user_connection) {
+          return [
+            acc[0],
+            {
+              ...acc[1],
+              items: [...acc[1].items, item],
+            },
+          ];
+        }
+
+        return [
+          {
+            ...acc[0],
+            items: [...acc[0].items, item],
+          },
+          acc[1],
+        ];
+      },
+      [
+        {
+          group: "Minhas contas",
+          items: [],
+        },
+        {
+          group: "Contas Compartilhadas",
+          items: [],
+        },
+      ]
+    );
 
   const categoryOptions = categories
     .filter((c) => !c.parent_id)
@@ -133,13 +152,25 @@ export const TransactionForm = ({
   const tagNames = existingTags.map((t) => t.name);
 
   function makeSelectBlurHandler(
-    options: { value: string; label: string }[],
+    options: ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[],
     onChange: (val: number | null) => void
   ) {
+    const isItemGroup = (
+      o: ComboboxItem | ComboboxItemGroup<ComboboxItem>
+    ): o is ComboboxItemGroup<ComboboxItem> => "group" in o;
+
     return (e: FocusEvent<HTMLInputElement>) => {
       const typed = e.target.value.trim().toLowerCase();
       if (!typed) return;
-      const match = options.find((o) => o.label.toLowerCase() === typed);
+      const items: ComboboxItem[] = [];
+      options.forEach((o) => {
+        if (isItemGroup(o)) {
+          items.push(...o.items);
+        } else {
+          items.push(o);
+        }
+      });
+      const match = items.find((o) => o.label.toLowerCase() === typed);
       if (match) onChange(Number(match.value));
     };
   }
