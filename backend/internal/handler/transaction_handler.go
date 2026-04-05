@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 
@@ -312,4 +313,52 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// ImportCSV godoc
+// @Summary      Parse and enrich a CSV file for import
+// @Description  Accepts a multipart CSV file and an account_id. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
+// @Tags         transactions
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        account_id  formData  int   true  "Destination account ID"
+// @Param        file        formData  file  true  "CSV file"
+// @Success      200  {object}  domain.ImportCSVResponse
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/import-csv [post]
+func (h *TransactionHandler) ImportCSV(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	accountIDStr := c.FormValue("account_id")
+	accountID, err := strconv.Atoi(accountIDStr)
+	if err != nil || accountID <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid account_id")
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "file is required")
+	}
+
+	src, err := fileHeader.Open()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to open file")
+	}
+	defer src.Close()
+
+	// Limit file to 1 MB
+	data, err := io.ReadAll(io.LimitReader(src, 1<<20))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to read file")
+	}
+
+	result, err := h.transactionService.ParseImportCSV(c.Request().Context(), userID, accountID, data)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, result)
 }

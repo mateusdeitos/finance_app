@@ -177,4 +177,57 @@ export namespace Transactions {
     split_settings?: SplitSetting[]
     propagation_settings?: PropagationSettings
   }
+
+  // --- CSV Import ---
+
+  export type ImportRowStatus = 'pending' | 'duplicate'
+  export type ImportRowAction = 'import' | 'skip' | 'duplicate'
+
+  export interface ParsedImportRow {
+    row_index: number
+    status: ImportRowStatus
+    date?: string // ISO string (backend sends time.Time serialised)
+    description: string
+    type: TransactionType
+    amount: number // cents
+    category_id?: number
+    category_inferred: boolean
+    destination_account_id?: number
+    recurrence_type?: RecurrenceType
+    recurrence_count?: number
+    parse_errors: string[]
+  }
+
+  export interface ImportCSVResponse {
+    rows: ParsedImportRow[]
+    total_rows: number
+    duplicate_count: number
+    error_count: number
+  }
+
+  export interface ImportRowState {
+    row_index: number
+    action: ImportRowAction
+    date: string // YYYY-MM-DD
+    description: string
+    type: TransactionType
+    amount: number // cents
+    account_id: number
+    category_id: number | null
+    destination_account_id: number | null
+    recurrence_type: RecurrenceType | null
+    recurrence_count: number | null
+    parse_errors: string[]
+    import_status: 'idle' | 'loading' | 'success' | 'error'
+    import_error?: string
+  }
+
+  /** Maps backend error tags to user-facing Portuguese messages. */
+  export const IMPORT_ERROR_MESSAGES: Record<string, string> = {
+    'IMPORT.EMPTY_FILE': 'O arquivo está vazio.',
+    'IMPORT.INVALID_LAYOUT':
+      'Layout inválido: verifique se o cabeçalho contém as colunas obrigatórias (Data, Descrição, Tipo, Valor).',
+    'IMPORT.MAX_ROWS_EXCEEDED': 'O arquivo não pode ter mais de 100 linhas de dados.',
+    'IMPORT.NO_ROWS': 'O arquivo não contém nenhuma linha de dados.',
+  }
 }

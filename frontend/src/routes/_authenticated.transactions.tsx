@@ -1,7 +1,7 @@
-import { ActionIcon, Box, Button, Drawer, Group, Stack } from '@mantine/core'
+import { ActionIcon, Box, Button, Drawer, Group, Menu, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconFilter, IconPlus } from '@tabler/icons-react'
-import { createFileRoute } from '@tanstack/react-router'
+import { IconDots, IconFilter, IconPlus, IconTableImport } from '@tabler/icons-react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useCallback, useState } from 'react'
 import { z } from 'zod'
@@ -12,6 +12,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
+import { ImportCSVDrawer, ImportCSVDrawerResult } from '@/components/transactions/ImportCSVDrawer'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
@@ -44,6 +45,7 @@ export const Route = createFileRoute('/_authenticated/transactions')({
 function TransactionsPage() {
   const search = Route.useSearch()
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
 
   const { query: meQuery } = useMe((me) => me.id)
@@ -104,6 +106,18 @@ function TransactionsPage() {
     }
   }
 
+  async function handleImportClick() {
+    try {
+      const result = await renderDrawer<ImportCSVDrawerResult>(() => <ImportCSVDrawer />)
+      void navigate({
+        to: '/transactions/import',
+        state: { parseResult: result.rows, accountId: result.accountId },
+      })
+    } catch {
+      // User dismissed the drawer
+    }
+  }
+
   const isSelecting = selectedIds.size > 0
 
   if (isMobile) {
@@ -123,14 +137,31 @@ function TransactionsPage() {
           <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
             <Group justify="space-between" align="center">
               <PeriodNavigator month={search.month} year={search.year} />
-              <Button
-                size="xs"
-                leftSection={<IconPlus size={14} />}
-                onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
-                data-testid="btn_new_transaction"
-              >
-                Nova Transação
-              </Button>
+              <Group gap="xs">
+                <Button
+                  size="xs"
+                  leftSection={<IconPlus size={14} />}
+                  onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
+                  data-testid="btn_new_transaction"
+                >
+                  Nova Transação
+                </Button>
+                <Menu shadow="md" width={200}>
+                  <Menu.Target>
+                    <ActionIcon size="sm" variant="default" aria-label="Mais opções">
+                      <IconDots size={14} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconTableImport size={14} />}
+                      onClick={() => void handleImportClick()}
+                    >
+                      Importar transações
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Group>
             </Group>
             <TextSearch />
           </Stack>
@@ -196,9 +227,26 @@ function TransactionsPage() {
         <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
           <Group justify="space-between" align="center">
             <PeriodNavigator month={search.month} year={search.year} />
-            <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
-              Nova Transação
-            </Button>
+            <Group gap="xs">
+              <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
+                Nova Transação
+              </Button>
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <ActionIcon variant="default" aria-label="Mais opções">
+                    <IconDots size={16} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconTableImport size={14} />}
+                    onClick={() => void handleImportClick()}
+                  >
+                    Importar transações
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            </Group>
           </Group>
           <TransactionFilters orientation="row" />
         </Stack>

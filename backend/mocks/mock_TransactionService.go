@@ -40,6 +40,7 @@ func (_m *MockTransactionService) Create(ctx context.Context, userID int, transa
 	} else {
 		r0 = ret.Get(0).(int)
 	}
+
 	if rf, ok := ret.Get(1).(func(context.Context, int, *domain.TransactionCreateRequest) error); ok {
 		r1 = rf(ctx, userID, transaction)
 	} else {
@@ -185,6 +186,67 @@ func (_c *MockTransactionService_GetBalance_Call) Return(_a0 *domain.BalanceResu
 }
 
 func (_c *MockTransactionService_GetBalance_Call) RunAndReturn(run func(context.Context, int, domain.Period, domain.BalanceFilter) (*domain.BalanceResult, error)) *MockTransactionService_GetBalance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ParseImportCSV provides a mock function with given fields: ctx, userID, accountID, csvData
+func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, csvData []byte) (*domain.ImportCSVResponse, error) {
+	ret := _m.Called(ctx, userID, accountID, csvData)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ParseImportCSV")
+	}
+
+	var r0 *domain.ImportCSVResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, []byte) (*domain.ImportCSVResponse, error)); ok {
+		return rf(ctx, userID, accountID, csvData)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, []byte) *domain.ImportCSVResponse); ok {
+		r0 = rf(ctx, userID, accountID, csvData)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.ImportCSVResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, []byte) error); ok {
+		r1 = rf(ctx, userID, accountID, csvData)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_ParseImportCSV_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ParseImportCSV'
+type MockTransactionService_ParseImportCSV_Call struct {
+	*mock.Call
+}
+
+// ParseImportCSV is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - accountID int
+//   - csvData []byte
+func (_e *MockTransactionService_Expecter) ParseImportCSV(ctx interface{}, userID interface{}, accountID interface{}, csvData interface{}) *MockTransactionService_ParseImportCSV_Call {
+	return &MockTransactionService_ParseImportCSV_Call{Call: _e.mock.On("ParseImportCSV", ctx, userID, accountID, csvData)}
+}
+
+func (_c *MockTransactionService_ParseImportCSV_Call) Run(run func(ctx context.Context, userID int, accountID int, csvData []byte)) *MockTransactionService_ParseImportCSV_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].([]byte))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_ParseImportCSV_Call) Return(_a0 *domain.ImportCSVResponse, _a1 error) *MockTransactionService_ParseImportCSV_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_ParseImportCSV_Call) RunAndReturn(run func(context.Context, int, int, []byte) (*domain.ImportCSVResponse, error)) *MockTransactionService_ParseImportCSV_Call {
 	_c.Call.Return(run)
 	return _c
 }

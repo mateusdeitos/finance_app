@@ -172,7 +172,7 @@ func main() {
 	transactions.GET("/:id", transactionHandler.GetByID)
 	transactions.PUT("/:id", transactionHandler.Update)
 	// transactions.POST("/bulk-update", transactionHandler.BulkUpdate)
-	// transactions.POST("/import-csv", transactionHandler.ImportCSV)
+	transactions.POST("/import-csv", transactionHandler.ImportCSV)
 	// transactions.GET("/suggest-category", transactionHandler.SuggestCategory)
 	// transactions.POST("/recurring", transactionHandler.CreateRecurring)
 
