@@ -222,11 +222,12 @@ func parseCSVRow(
 		row.ParseErrors = append(row.ParseErrors, "Valor é obrigatório")
 	} else {
 		amount, err := parseBRAmount(amountStr)
-		if err != nil {
+		switch {
+		case err != nil:
 			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Valor inválido: %q", amountStr))
-		} else if amount <= 0 {
+		case amount <= 0:
 			row.ParseErrors = append(row.ParseErrors, "Valor deve ser maior que zero")
-		} else {
+		default:
 			row.Amount = amount
 		}
 	}
