@@ -12,7 +12,6 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
-import { ImportCSVDrawer, ImportCSVDrawerResult } from '@/components/transactions/ImportCSVDrawer'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
@@ -106,18 +105,6 @@ function TransactionsPage() {
     }
   }
 
-  async function handleImportClick() {
-    try {
-      const result = await renderDrawer<ImportCSVDrawerResult>(() => <ImportCSVDrawer />)
-      void navigate({
-        to: '/transactions/import',
-        state: { parseResult: result.rows, accountId: result.accountId },
-      })
-    } catch {
-      // User dismissed the drawer
-    }
-  }
-
   const isSelecting = selectedIds.size > 0
 
   if (isMobile) {
@@ -155,7 +142,7 @@ function TransactionsPage() {
                   <Menu.Dropdown>
                     <Menu.Item
                       leftSection={<IconTableImport size={14} />}
-                      onClick={() => void handleImportClick()}
+                      onClick={() => void navigate({ to: '/transactions/import' })}
                     >
                       Importar transações
                     </Menu.Item>
@@ -240,7 +227,7 @@ function TransactionsPage() {
                 <Menu.Dropdown>
                   <Menu.Item
                     leftSection={<IconTableImport size={14} />}
-                    onClick={() => void handleImportClick()}
+                    onClick={() => void navigate({ to: '/transactions/import' })}
                   >
                     Importar transações
                   </Menu.Item>
