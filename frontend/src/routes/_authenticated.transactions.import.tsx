@@ -346,7 +346,7 @@ function ImportReviewPage() {
           {/* Navigation blocker modal */}
           <Modal
             opened={blockerStatus === 'blocked'}
-            onClose={resetBlocker}
+            onClose={() => resetBlocker?.()}
             title="Atenção"
             centered
             size="sm"
@@ -354,10 +354,10 @@ function ImportReviewPage() {
             <Stack gap="md">
               <Text fz="sm">{blockMessage}</Text>
               <Group justify="flex-end" gap="xs">
-                <Button variant="default" onClick={resetBlocker}>
+                <Button variant="default" onClick={() => resetBlocker?.()}>
                   Cancelar
                 </Button>
-                <Button color="red" onClick={proceed}>
+                <Button color="red" onClick={() => proceed?.()}>
                   Sair mesmo assim
                 </Button>
               </Group>

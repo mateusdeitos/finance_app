@@ -347,7 +347,7 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to open file")
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	// Limit file to 1 MB
 	data, err := io.ReadAll(io.LimitReader(src, 1<<20))

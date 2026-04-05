@@ -19,14 +19,14 @@ const importMaxRows = 100
 
 // csvColumnIndex holds the position of each expected column in the CSV header.
 type csvColumnIndex struct {
-	date              int
-	description       int
-	txType            int
-	amount            int
-	category          int
-	destinationAcct   int
-	recurrenceType    int
-	recurrenceCount   int
+	date            int
+	description     int
+	txType          int
+	amount          int
+	category        int
+	destinationAcct int
+	recurrenceType  int
+	recurrenceCount int
 }
 
 var requiredColumns = []string{"data", "descrição", "tipo", "valor"}
@@ -137,7 +137,7 @@ func parseCSVHeader(header []string) (csvColumnIndex, error) {
 	}
 
 	// Check required columns
-	missing := []string{}
+	missing := make([]string, 0, len(requiredColumns))
 	for _, req := range requiredColumns {
 		switch req {
 		case "data":
