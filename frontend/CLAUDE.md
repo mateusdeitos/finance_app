@@ -113,3 +113,40 @@ The app targets mobile devices as the primary experience. Always design and impl
 - Avoid large monolithic components; split into smaller pieces
 - Use **Mantine** for all UI components
 - Apply custom styles with **CSS Modules** (`.module.css` files colocated with the component)
+
+## Drawers
+
+All drawers must be opened using the `renderDrawer` helper from `src/utils/renderDrawer.tsx`. Do **not** manage drawer open/close state with `useState` or `useDisclosure` at the call site.
+
+`renderDrawer` renders the drawer component in an isolated React root (portal) and returns a `Promise` that resolves with the value passed to `ctx.close(value)`, or rejects when `ctx.reject(error)` is called (e.g. user dismisses).
+
+**Opening a drawer:**
+
+```ts
+// fire-and-forget
+void renderDrawer(() => <CreateTransactionDrawer />)
+
+// await a result
+const result = await renderDrawer<MyResultType>(() => <MyDrawer />)
+```
+
+**Inside the drawer component**, use `useDrawerContext` to get `opened`, `close`, and `reject`:
+
+```tsx
+import { useDrawerContext } from '@/utils/renderDrawer'
+
+export function MyDrawer() {
+  const { opened, close, reject } = useDrawerContext<MyResultType>()
+
+  return (
+    <Drawer opened={opened} onClose={reject} position="right" size="md">
+      {/* ... */}
+      <Button onClick={() => close(result)}>Confirm</Button>
+    </Drawer>
+  )
+}
+```
+
+- Pass the expected return type as the generic to both `renderDrawer<T>` and `useDrawerContext<T>`.
+- Call `close(value)` to resolve the promise (confirmed/submitted).
+- Call `reject()` (or pass it to `onClose`) to reject the promise (dismissed/cancelled).
