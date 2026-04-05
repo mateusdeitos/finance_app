@@ -485,7 +485,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
           Modelo de cabeçalho válido
         </Title>
         <Code block mb="xs">
-          {CSV_COLUMNS.map((c) => c.col).join(',')}
+          {CSV_COLUMNS.map((c) => c.col).join(';')}
         </Code>
         <Table withTableBorder withColumnBorders fz="xs">
           <Table.Thead>

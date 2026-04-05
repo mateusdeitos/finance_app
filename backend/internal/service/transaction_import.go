@@ -45,6 +45,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID int, acc
 	}
 
 	reader := csv.NewReader(bytes.NewReader(csvData))
+	reader.Comma = ';'
 	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = true
 
