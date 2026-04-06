@@ -372,7 +372,7 @@ func parseBRAmount(s string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return int64(math.Round(f * 100)), nil
+	return int64(math.Round(math.Abs(f) * 100)), nil
 }
 
 func parseTransactionType(s string) (domain.TransactionType, error) {
