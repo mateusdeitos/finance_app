@@ -30,7 +30,7 @@ import { ImportReviewRow } from '@/components/transactions/import/ImportReviewRo
 import { ImportCSVBulkToolbar } from '@/components/transactions/import/ImportCSVBulkToolbar'
 import { ImportConfirmButton } from '@/components/transactions/import/ImportConfirmButton'
 
-export const Route = createFileRoute('/_authenticated/transactions/import')({
+export const Route = createFileRoute('/_authenticated/transactions_/import')({
   component: ImportReviewPage,
 })
 
