@@ -1,4 +1,4 @@
-import { useCallback, useReducer, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   Alert,
   Box,
@@ -19,7 +19,7 @@ import {
 } from '@mantine/core'
 import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv } from '@tabler/icons-react'
 import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useForm, useFieldArray, FormProvider } from 'react-hook-form'
 import { createTransaction } from '@/api/transactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useParseImportCSV } from '@/hooks/useParseImportCSV'
@@ -49,29 +49,33 @@ const CSV_COLUMNS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hasBlockingError(row: Transactions.ImportRowState): boolean {
+function hasBlockingError(row: Transactions.ImportRowFormValues): boolean {
   if (row.action !== 'import') return false
   if (!row.date) return true
   if (!row.description) return true
   if (!row.amount || row.amount <= 0) return true
-  if (row.type === 'transfer' && !row.destination_account_id) return true
+  if (row.transaction_type === 'transfer' && !row.destination_account_id) return true
   return false
 }
 
-function buildPayload(row: Transactions.ImportRowState): Transactions.CreateTransactionPayload {
+function buildPayload(row: Transactions.ImportRowFormValues): Transactions.CreateTransactionPayload {
   const payload: Transactions.CreateTransactionPayload = {
-    transaction_type: row.type,
+    transaction_type: row.transaction_type,
     account_id: row.account_id,
     amount: row.amount,
     date: row.date,
     description: row.description,
   }
   if (row.category_id) payload.category_id = row.category_id
-  if (row.type === 'transfer' && row.destination_account_id) {
+  if (row.transaction_type === 'transfer' && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id
   }
-  if (row.recurrence_type && row.recurrence_count) {
-    payload.recurrence_settings = { type: row.recurrence_type, repetitions: row.recurrence_count }
+  if (row.recurrenceEnabled && row.recurrenceType) {
+    if (row.recurrenceEndDateMode && row.recurrenceEndDate) {
+      payload.recurrence_settings = { type: row.recurrenceType, end_date: row.recurrenceEndDate }
+    } else if (row.recurrenceRepetitions) {
+      payload.recurrence_settings = { type: row.recurrenceType, repetitions: row.recurrenceRepetitions }
+    }
   }
   if (row.split_settings?.length) {
     payload.split_settings = row.split_settings
@@ -79,163 +83,131 @@ function buildPayload(row: Transactions.ImportRowState): Transactions.CreateTran
   return payload
 }
 
-// ─── Reducer ──────────────────────────────────────────────────────────────────
-
-type PageStep = 'upload' | 'review'
-
-type ImportState = {
-  step: PageStep
-  rows: Transactions.ImportRowState[]
-  accountId: number
-  selected: Set<number>
-  importing: boolean
-  paused: boolean
-}
-
-type ImportAction =
-  | { type: 'INIT'; rows: Transactions.ParsedImportRow[]; accountId: number }
-  | { type: 'UPDATE_ROW'; index: number; patch: Partial<Transactions.ImportRowState> }
-  | { type: 'REMOVE_ROWS'; indices: Set<number> }
-  | { type: 'BULK_UPDATE'; indices: Set<number>; patch: Partial<Transactions.ImportRowState> }
-  | { type: 'TOGGLE_SELECT'; index: number }
-  | { type: 'SELECT_ALL' }
-  | { type: 'CLEAR_SELECTION' }
-  | { type: 'START_IMPORT' }
-  | { type: 'PAUSE_IMPORT' }
-  | { type: 'FINISH_IMPORT' }
-
-function importReducer(state: ImportState, action: ImportAction): ImportState {
-  switch (action.type) {
-    case 'INIT':
-      return {
-        step: 'review',
-        accountId: action.accountId,
-        rows: action.rows.map((r) => ({
-          ...r,
-          action: r.status === 'duplicate' ? 'duplicate' : 'import',
-          category_id: r.category_id ?? null,
-          destination_account_id: r.destination_account_id ?? null,
-          recurrence_type: r.recurrence_type ?? null,
-          recurrence_count: r.recurrence_count ?? null,
-          split_settings: null,
-          account_id: action.accountId,
-          import_status: 'idle',
-        })) as Transactions.ImportRowState[],
-        selected: new Set(),
-        importing: false,
-        paused: false,
-      }
-    case 'UPDATE_ROW':
-      return {
-        ...state,
-        rows: state.rows.map((r, i) => (i === action.index ? { ...r, ...action.patch } : r)),
-      }
-    case 'REMOVE_ROWS':
-      return {
-        ...state,
-        rows: state.rows.filter((_, i) => !action.indices.has(i)),
-        selected: new Set(),
-      }
-    case 'BULK_UPDATE':
-      // always clears selection after a bulk action
-      return {
-        ...state,
-        rows: state.rows.map((r, i) => action.indices.has(i) ? { ...r, ...action.patch } : r),
-        selected: new Set(),
-      }
-    case 'TOGGLE_SELECT': {
-      const next = new Set(state.selected)
-      if (next.has(action.index)) next.delete(action.index)
-      else next.add(action.index)
-      return { ...state, selected: next }
-    }
-    case 'SELECT_ALL':
-      return { ...state, selected: new Set(state.rows.map((_, i) => i)) }
-    case 'CLEAR_SELECTION':
-      return { ...state, selected: new Set() }
-    case 'START_IMPORT':
-      return { ...state, importing: true, paused: false }
-    case 'PAUSE_IMPORT':
-      return { ...state, importing: false, paused: true }
-    case 'FINISH_IMPORT':
-      return { ...state, importing: false, paused: false }
+function parsedRowToFormValues(
+  r: Transactions.ParsedImportRow,
+  accountId: number,
+): Transactions.ImportRowFormValues {
+  return {
+    row_index: r.row_index,
+    original_description: r.description,
+    status: r.status,
+    parse_errors: r.parse_errors ?? [],
+    action: r.status === 'duplicate' ? 'duplicate' : 'import',
+    import_status: 'idle',
+    import_error: '',
+    account_id: accountId,
+    date: r.date ?? '',
+    description: r.description,
+    amount: r.amount,
+    transaction_type: r.type,
+    category_id: r.category_id ?? null,
+    destination_account_id: r.destination_account_id ?? null,
+    recurrenceEnabled: !!r.recurrence_type,
+    recurrenceType: r.recurrence_type ?? null,
+    recurrenceEndDateMode: false,
+    recurrenceEndDate: null,
+    recurrenceRepetitions: r.recurrence_count ?? null,
+    split_settings: [],
   }
-}
-
-const initialState: ImportState = {
-  step: 'upload',
-  rows: [],
-  accountId: 0,
-  selected: new Set(),
-  importing: false,
-  paused: false,
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function ImportReviewPage() {
   const navigate = useNavigate()
+  const [step, setStep] = useState<'upload' | 'review'>('upload')
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [importing, setImporting] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const pauseRef = useRef(false)
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+
+  const form = useForm<Transactions.ImportFormValues>({
+    defaultValues: { accountId: 0, rows: [] },
+  })
+
+  const { fields, remove, update } = useFieldArray({
+    control: form.control,
+    name: 'rows',
+  })
 
   const { invalidate: invalidateTransactions } = useTransactions({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
   })
 
-  const pauseRef = useRef(false)
-  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const rows = form.watch('rows')
 
-  const [state, dispatch] = useReducer(importReducer, initialState)
-
-  const hasPendingRows = state.step === 'review' && state.rows.some(
-    (r) => r.action === 'import' && r.import_status !== 'success',
-  )
+  const hasPendingRows =
+    step === 'review' &&
+    rows.some((r) => r.action === 'import' && r.import_status !== 'success')
 
   const { status: blockerStatus, proceed, reset: resetBlocker } = useBlocker({
     blockerFn: () => true,
     condition: hasPendingRows,
   })
 
-  const blockMessage = state.importing
+  const blockMessage = importing
     ? 'A importação está em andamento. Ao sair ela será pausada e os dados serão perdidos. Deseja continuar?'
     : 'Você tem transações não importadas. Os dados serão perdidos ao sair. Deseja continuar?'
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
-
-  const handleUpdateRow = useCallback((index: number, patch: Partial<Transactions.ImportRowState>) => {
-    dispatch({ type: 'UPDATE_ROW', index, patch })
-  }, [])
+  // ─── Selection helpers ──────────────────────────────────────────────────────
 
   const handleToggleSelect = useCallback((index: number) => {
-    dispatch({ type: 'TOGGLE_SELECT', index })
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
   }, [])
 
-  const handleSelectAll = () => dispatch({ type: 'SELECT_ALL' })
-  const handleClearSelection = () => dispatch({ type: 'CLEAR_SELECTION' })
+  const handleSelectAll = () => setSelected(new Set(rows.map((_, i) => i)))
+  const handleClearSelection = () => setSelected(new Set())
+
+  // ─── Bulk actions ───────────────────────────────────────────────────────────
 
   const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
-    dispatch({ type: 'BULK_UPDATE', indices: state.selected, patch: { action } })
+    selected.forEach((i) => {
+      form.setValue(`rows.${i}.action`, action)
+    })
+    setSelected(new Set())
   }
 
   const handleBulkSetDate = (date: string) => {
-    dispatch({ type: 'BULK_UPDATE', indices: state.selected, patch: { date } })
+    selected.forEach((i) => {
+      form.setValue(`rows.${i}.date`, date)
+    })
+    setSelected(new Set())
   }
 
   const handleBulkSetCategory = (categoryId: number) => {
-    dispatch({ type: 'BULK_UPDATE', indices: state.selected, patch: { category_id: categoryId } })
+    selected.forEach((i) => {
+      form.setValue(`rows.${i}.category_id`, categoryId)
+    })
+    setSelected(new Set())
   }
+
+  const handleRemoveSelected = () => {
+    const sorted = [...selected].sort((a, b) => b - a)
+    sorted.forEach((i) => remove(i))
+    setSelected(new Set())
+  }
+
+  // ─── Import loop ────────────────────────────────────────────────────────────
 
   const handlePause = () => {
     pauseRef.current = true
   }
 
-  const toImportRows = state.rows.filter((r) => r.action === 'import')
+  const toImportRows = rows.filter((r) => r.action === 'import')
   const importedCount = toImportRows.filter((r) => r.import_status === 'success').length
   const errorCount = toImportRows.filter((r) => r.import_status === 'error').length
-  const isDone = !state.importing && !state.paused && (importedCount + errorCount) > 0
+  const isDone = !importing && !paused && (importedCount + errorCount) > 0
 
   async function handleConfirm() {
-    // Validate: block import if any 'import' row has missing required fields
-    const firstInvalidIndex = state.rows.findIndex(hasBlockingError)
+    const currentRows = form.getValues('rows')
+    const firstInvalidIndex = currentRows.findIndex(hasBlockingError)
     if (firstInvalidIndex !== -1) {
       const el = rowRefs.current.get(firstInvalidIndex)
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -243,172 +215,185 @@ function ImportReviewPage() {
     }
 
     pauseRef.current = false
-    dispatch({ type: 'START_IMPORT' })
+    setImporting(true)
+    setPaused(false)
 
-    for (let i = 0; i < state.rows.length; i++) {
+    for (let i = 0; i < currentRows.length; i++) {
       if (pauseRef.current) break
 
-      const row = state.rows[i]
+      const row = form.getValues(`rows.${i}`)
       if (row.action !== 'import' || row.import_status === 'success') continue
 
-      dispatch({ type: 'UPDATE_ROW', index: i, patch: { import_status: 'loading' } })
+      form.setValue(`rows.${i}.import_status`, 'loading')
 
       try {
         await createTransaction(buildPayload(row))
-        dispatch({ type: 'UPDATE_ROW', index: i, patch: { import_status: 'success' } })
+        form.setValue(`rows.${i}.import_status`, 'success')
       } catch (err: unknown) {
         let errorMsg = 'Erro ao importar'
         if (err instanceof Response) {
           const apiError = await parseApiError(err)
           errorMsg = apiError.message || errorMsg
         }
-        dispatch({ type: 'UPDATE_ROW', index: i, patch: { import_status: 'error', import_error: errorMsg } })
+        form.setValue(`rows.${i}.import_status`, 'error')
+        form.setValue(`rows.${i}.import_error`, errorMsg)
       }
     }
 
     if (pauseRef.current) {
-      dispatch({ type: 'PAUSE_IMPORT' })
+      setImporting(false)
+      setPaused(true)
     } else {
-      dispatch({ type: 'FINISH_IMPORT' })
+      setImporting(false)
+      setPaused(false)
       invalidateTransactions()
     }
   }
 
-  const allSelected = state.rows.length > 0 && state.selected.size === state.rows.length
-  const someSelected = state.selected.size > 0
+  const allSelected = fields.length > 0 && selected.size === fields.length
+  const someSelected = selected.size > 0
 
   return (
-    <Stack gap="md" pb="2rem">
-      {state.step === 'upload' ? (
-        <UploadStep
-          onParsed={(rows, accountId) => dispatch({ type: 'INIT', rows, accountId })}
-          onBack={() => void navigate({ to: '/transactions' })}
-        />
-      ) : (
-        <>
-          {/* Header */}
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="xs">
-              <Button
-                variant="subtle"
-                leftSection={<IconArrowLeft size={16} />}
-                onClick={() => void navigate({ to: '/transactions' })}
-                size="sm"
-                disabled={state.importing}
-              >
-                Voltar
-              </Button>
-              <Title order={4}>Revisão da importação</Title>
-            </Group>
-
-            <Group gap="xs">
-              <Text fz="sm" c="dimmed">
-                {state.rows.length} linha{state.rows.length !== 1 ? 's' : ''} · {toImportRows.length} para importar
-              </Text>
-              <ImportConfirmButton
-                importing={state.importing}
-                paused={state.paused}
-                toImportCount={toImportRows.filter((r) => r.import_status !== 'success').length}
-                onPause={handlePause}
-                onConfirm={() => void handleConfirm()}
-              />
-            </Group>
-          </Group>
-
-          {/* Summary after done */}
-          {isDone && (
-            <Alert
-              icon={<IconAlertCircle size={16} />}
-              color={errorCount > 0 ? 'yellow' : 'green'}
-              title="Importação concluída"
-            >
-              {importedCount} transaç{importedCount !== 1 ? 'ões importadas' : 'ão importada'}.
-              {errorCount > 0 && ` ${errorCount} com erro.`}
-            </Alert>
-          )}
-
-          {/* Bulk toolbar */}
-          {someSelected && !state.importing && (
-            <Paper p="xs" withBorder>
-              <ImportCSVBulkToolbar
-                selectedCount={state.selected.size}
-                onRemove={() => dispatch({ type: 'REMOVE_ROWS', indices: state.selected })}
-                onBulkSetAction={handleBulkSetAction}
-                onBulkSetDate={handleBulkSetDate}
-                onBulkSetCategory={handleBulkSetCategory}
-              />
-            </Paper>
-          )}
-
-          {/* Table */}
-          <ScrollArea>
-            <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th w={36}>
-                    <Checkbox
-                      size="xs"
-                      checked={allSelected}
-                      indeterminate={someSelected && !allSelected}
-                      onChange={allSelected ? handleClearSelection : handleSelectAll}
-                      disabled={state.importing}
-                    />
-                  </Table.Th>
-                  <Table.Th w={36} />
-                  <Table.Th>Data</Table.Th>
-                  <Table.Th>Descrição</Table.Th>
-                  <Table.Th>Valor</Table.Th>
-                  <Table.Th>Tipo</Table.Th>
-                  <Table.Th>Categoria</Table.Th>
-                  <Table.Th>Conta Destino</Table.Th>
-                  <Table.Th>Parcelamento</Table.Th>
-                  <Table.Th>Divisão</Table.Th>
-                  <Table.Th>Ação</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {state.rows.map((row, i) => (
-                  <ImportReviewRow
-                    key={row.row_index}
-                    ref={(el) => {
-                      if (el) rowRefs.current.set(i, el)
-                      else rowRefs.current.delete(i)
-                    }}
-                    row={row}
-                    index={i}
-                    selected={state.selected.has(i)}
-                    disabled={state.importing && !state.paused}
-                    onChange={handleUpdateRow}
-                    onToggleSelect={handleToggleSelect}
-                  />
-                ))}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
-
-          {/* Navigation blocker modal */}
-          <Modal
-            opened={blockerStatus === 'blocked'}
-            onClose={() => resetBlocker?.()}
-            title="Atenção"
-            centered
-            size="sm"
-          >
-            <Stack gap="md">
-              <Text fz="sm">{blockMessage}</Text>
-              <Group justify="flex-end" gap="xs">
-                <Button variant="default" onClick={() => resetBlocker?.()}>
-                  Cancelar
+    <FormProvider {...form}>
+      <Stack gap="md" pb="2rem">
+        {step === 'upload' ? (
+          <UploadStep
+            onParsed={(parsedRows, accountId) => {
+              form.reset({
+                accountId,
+                rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
+              })
+              setStep('review')
+              setSelected(new Set())
+              setImporting(false)
+              setPaused(false)
+            }}
+            onBack={() => void navigate({ to: '/transactions' })}
+          />
+        ) : (
+          <>
+            {/* Header */}
+            <Group justify="space-between" align="center" wrap="nowrap">
+              <Group gap="xs">
+                <Button
+                  variant="subtle"
+                  leftSection={<IconArrowLeft size={16} />}
+                  onClick={() => void navigate({ to: '/transactions' })}
+                  size="sm"
+                  disabled={importing}
+                >
+                  Voltar
                 </Button>
-                <Button color="red" onClick={() => proceed?.()}>
-                  Sair mesmo assim
-                </Button>
+                <Title order={4}>Revisão da importação</Title>
               </Group>
-            </Stack>
-          </Modal>
-        </>
-      )}
-    </Stack>
+
+              <Group gap="xs">
+                <Text fz="sm" c="dimmed">
+                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {toImportRows.length} para importar
+                </Text>
+                <ImportConfirmButton
+                  importing={importing}
+                  paused={paused}
+                  toImportCount={toImportRows.filter((r) => r.import_status !== 'success').length}
+                  onPause={handlePause}
+                  onConfirm={() => void handleConfirm()}
+                />
+              </Group>
+            </Group>
+
+            {/* Summary after done */}
+            {isDone && (
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                color={errorCount > 0 ? 'yellow' : 'green'}
+                title="Importação concluída"
+              >
+                {importedCount} transaç{importedCount !== 1 ? 'ões importadas' : 'ão importada'}.
+                {errorCount > 0 && ` ${errorCount} com erro.`}
+              </Alert>
+            )}
+
+            {/* Bulk toolbar */}
+            {someSelected && !importing && (
+              <Paper p="xs" withBorder>
+                <ImportCSVBulkToolbar
+                  selectedCount={selected.size}
+                  onRemove={handleRemoveSelected}
+                  onBulkSetAction={handleBulkSetAction}
+                  onBulkSetDate={handleBulkSetDate}
+                  onBulkSetCategory={handleBulkSetCategory}
+                />
+              </Paper>
+            )}
+
+            {/* Table */}
+            <ScrollArea>
+              <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th w={36}>
+                      <Checkbox
+                        size="xs"
+                        checked={allSelected}
+                        indeterminate={someSelected && !allSelected}
+                        onChange={allSelected ? handleClearSelection : handleSelectAll}
+                        disabled={importing}
+                      />
+                    </Table.Th>
+                    <Table.Th w={36} />
+                    <Table.Th>Data</Table.Th>
+                    <Table.Th>Descrição</Table.Th>
+                    <Table.Th>Valor</Table.Th>
+                    <Table.Th>Tipo</Table.Th>
+                    <Table.Th>Categoria</Table.Th>
+                    <Table.Th>Conta Destino</Table.Th>
+                    <Table.Th>Parcelamento</Table.Th>
+                    <Table.Th>Divisão</Table.Th>
+                    <Table.Th>Ação</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {fields.map((field, i) => (
+                    <ImportReviewRow
+                      key={field.id}
+                      ref={(el) => {
+                        if (el) rowRefs.current.set(i, el)
+                        else rowRefs.current.delete(i)
+                      }}
+                      rowIndex={i}
+                      selected={selected.has(i)}
+                      disabled={importing && !paused}
+                      onToggleSelect={handleToggleSelect}
+                    />
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+
+            {/* Navigation blocker modal */}
+            <Modal
+              opened={blockerStatus === 'blocked'}
+              onClose={() => resetBlocker?.()}
+              title="Atenção"
+              centered
+              size="sm"
+            >
+              <Stack gap="md">
+                <Text fz="sm">{blockMessage}</Text>
+                <Group justify="flex-end" gap="xs">
+                  <Button variant="default" onClick={() => resetBlocker?.()}>
+                    Cancelar
+                  </Button>
+                  <Button color="red" onClick={() => proceed?.()}>
+                    Sair mesmo assim
+                  </Button>
+                </Group>
+              </Stack>
+            </Modal>
+          </>
+        )}
+      </Stack>
+    </FormProvider>
   )
 }
 
