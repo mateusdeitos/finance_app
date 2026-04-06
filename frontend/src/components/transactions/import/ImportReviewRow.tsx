@@ -1,17 +1,5 @@
 import { forwardRef, memo, useState } from "react";
-import {
-  Box,
-  Button,
-  Checkbox,
-  Loader,
-  Popover,
-  Select,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Tooltip,
-} from "@mantine/core";
+import { Box, Button, Checkbox, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller } from "react-hook-form";
@@ -53,7 +41,7 @@ interface Props {
 export const ImportReviewRow = memo(
   forwardRef<HTMLTableRowElement, Props>(function ImportReviewRow(
     { rowIndex, selected, disabled, onToggleSelect },
-    ref
+    ref,
   ) {
     const namePrefix = `rows.${rowIndex}.` as const;
     const form = useFormContext<Transactions.ImportFormValues>();
@@ -74,23 +62,22 @@ export const ImportReviewRow = memo(
       label: a.name,
     }));
 
-    const sharedAccounts = accounts.filter(
-      (a) => a.user_connection?.connection_status === "accepted"
-    );
+    const sharedAccounts = accounts.filter((a) => a.user_connection?.connection_status === "accepted");
 
-    // Watch only the fields we need for this row
-    const action = useWatch({ name: `rows.${rowIndex}.action` }) as Transactions.ImportRowAction;
-    const importStatus = useWatch({ name: `rows.${rowIndex}.import_status` }) as string;
-    const importError = useWatch({ name: `rows.${rowIndex}.import_error` }) as string;
-    const parseErrors = useWatch({ name: `rows.${rowIndex}.parse_errors` }) as string[];
-    const transactionType = useWatch({ name: `rows.${rowIndex}.transaction_type` }) as Transactions.TransactionType;
-    const date = useWatch({ name: `rows.${rowIndex}.date` }) as string;
-    const description = useWatch({ name: `rows.${rowIndex}.description` }) as string;
-    const amount = useWatch({ name: `rows.${rowIndex}.amount` }) as number;
-    const destinationAccountId = useWatch({ name: `rows.${rowIndex}.destination_account_id` }) as number | null;
-    const splitSettings = useWatch({ name: `rows.${rowIndex}.split_settings` }) as Transactions.SplitSetting[];
-    const recurrenceType = useWatch({ name: `rows.${rowIndex}.recurrenceType` }) as Transactions.RecurrenceType | null;
-    const recurrenceRepetitions = useWatch({ name: `rows.${rowIndex}.recurrenceRepetitions` }) as number | null;
+    const {
+      action,
+      transaction_type: transactionType,
+      recurrenceType,
+      recurrenceRepetitions,
+      split_settings: splitSettings,
+      import_status: importStatus,
+      import_error: importError,
+      parse_errors: parseErrors,
+      date,
+      description,
+      amount,
+      destination_account_id: destinationAccountId,
+    } = useWatch({ control: form.control, name: `rows.${rowIndex}` });
 
     const isSkipped = action !== "import";
     const isTransfer = transactionType === "transfer";
@@ -119,8 +106,7 @@ export const ImportReviewRow = memo(
 
     const statusCell = () => {
       if (importStatus === "loading") return <Loader size="xs" />;
-      if (importStatus === "success")
-        return <IconCheck size={16} color="var(--mantine-color-green-6)" />;
+      if (importStatus === "success") return <IconCheck size={16} color="var(--mantine-color-green-6)" />;
       if (importStatus === "error") {
         return (
           <Tooltip label={importError ?? "Erro ao importar"} withArrow>
@@ -130,12 +116,7 @@ export const ImportReviewRow = memo(
       }
       if (parseErrors?.length) {
         return (
-          <Tooltip
-            label={parseErrors.join("; ")}
-            withArrow
-            multiline
-            maw={300}
-          >
+          <Tooltip label={parseErrors.join("; ")} withArrow multiline maw={300}>
             <IconAlertCircle size={16} color="var(--mantine-color-orange-6)" />
           </Tooltip>
         );
@@ -147,12 +128,7 @@ export const ImportReviewRow = memo(
       <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex}>
         {/* Checkbox */}
         <Table.Td>
-          <Checkbox
-            checked={selected}
-            onChange={() => onToggleSelect(rowIndex)}
-            disabled={disabled}
-            size="xs"
-          />
+          <Checkbox checked={selected} onChange={() => onToggleSelect(rowIndex)} disabled={disabled} size="xs" />
         </Table.Td>
 
         {/* Status */}
@@ -203,6 +179,7 @@ export const ImportReviewRow = memo(
                 value={field.value as number}
                 onChange={field.onChange}
                 error={!amount && action === "import" ? "Obrigatório" : undefined}
+                disabled={disabled || isSkipped}
               />
             )}
           />
@@ -218,9 +195,9 @@ export const ImportReviewRow = memo(
                 data={TRANSACTION_TYPE_OPTIONS}
                 value={field.value as string}
                 onChange={(val) => {
-                  field.onChange(val)
-                  form.setValue(`rows.${rowIndex}.category_id`, null)
-                  form.setValue(`rows.${rowIndex}.destination_account_id`, null)
+                  field.onChange(val);
+                  form.setValue(`rows.${rowIndex}.category_id`, null);
+                  form.setValue(`rows.${rowIndex}.destination_account_id`, null);
                 }}
                 disabled={disabled || isSkipped}
                 withCheckIcon={false}
@@ -249,7 +226,9 @@ export const ImportReviewRow = memo(
               )}
             />
           ) : (
-            <Text fz="xs" c="dimmed">—</Text>
+            <Text fz="xs" c="dimmed">
+              —
+            </Text>
           )}
         </Table.Td>
 
@@ -273,7 +252,9 @@ export const ImportReviewRow = memo(
               )}
             />
           ) : (
-            <Text fz="xs" c="dimmed">—</Text>
+            <Text fz="xs" c="dimmed">
+              —
+            </Text>
           )}
         </Table.Td>
 
@@ -297,7 +278,9 @@ export const ImportReviewRow = memo(
               disabled={disabled || isSkipped}
             />
           ) : (
-            <Text fz="xs" c="dimmed">—</Text>
+            <Text fz="xs" c="dimmed">
+              —
+            </Text>
           )}
         </Table.Td>
 
@@ -319,7 +302,7 @@ export const ImportReviewRow = memo(
         </Table.Td>
       </Table.Tr>
     );
-  })
+  }),
 );
 
 // ─── RecurrencePopover ────────────────────────────────────────────────────────
@@ -335,11 +318,7 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
   const [opened, setOpened] = useState(false);
 
   return (
-    <Popover
-      opened={opened}
-      closeOnClickOutside={false}
-      withinPortal
-    >
+    <Popover opened={opened} closeOnClickOutside={false} withinPortal>
       <Popover.Target>
         <Button
           size="xs"
@@ -353,10 +332,7 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
       </Popover.Target>
       <Popover.Dropdown>
         <Stack gap="xs" w={220}>
-          <RecurrenceFields
-            namePrefix={namePrefix}
-            comboboxWithinPortal={false}
-          />
+          <RecurrenceFields namePrefix={namePrefix} comboboxWithinPortal={false} />
           <Button size="xs" variant="subtle" onClick={() => setOpened(false)}>
             Fechar
           </Button>
@@ -379,11 +355,7 @@ function SplitPopover({ namePrefix, summary, hasSplit, disabled }: SplitPopoverP
   const [opened, setOpened] = useState(false);
 
   return (
-    <Popover
-      opened={opened}
-      closeOnClickOutside={false}
-      withinPortal
-    >
+    <Popover opened={opened} closeOnClickOutside={false} withinPortal>
       <Popover.Target>
         <Button
           size="xs"
@@ -397,10 +369,7 @@ function SplitPopover({ namePrefix, summary, hasSplit, disabled }: SplitPopoverP
       </Popover.Target>
       <Popover.Dropdown>
         <Stack gap="xs" w={260}>
-          <SplitSettingsFields
-            namePrefix={namePrefix}
-            comboboxWithinPortal={false}
-          />
+          <SplitSettingsFields namePrefix={namePrefix} comboboxWithinPortal={false} />
           <Button size="xs" variant="subtle" onClick={() => setOpened(false)}>
             Fechar
           </Button>

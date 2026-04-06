@@ -17,22 +17,9 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import {
-  IconAlertCircle,
-  IconArrowLeft,
-  IconFileTypeCsv,
-} from "@tabler/icons-react";
-import {
-  createFileRoute,
-  useBlocker,
-  useNavigate,
-} from "@tanstack/react-router";
-import {
-  useForm,
-  useFieldArray,
-  FormProvider,
-  useWatch,
-} from "react-hook-form";
+import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv } from "@tabler/icons-react";
+import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
+import { useForm, useFieldArray, FormProvider, useWatch } from "react-hook-form";
 import { createTransaction } from "@/api/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useParseImportCSV } from "@/hooks/useParseImportCSV";
@@ -87,14 +74,11 @@ function hasBlockingError(row: Transactions.ImportRowFormValues): boolean {
   if (!row.date) return true;
   if (!row.description) return true;
   if (!row.amount || row.amount <= 0) return true;
-  if (row.transaction_type === "transfer" && !row.destination_account_id)
-    return true;
+  if (row.transaction_type === "transfer" && !row.destination_account_id) return true;
   return false;
 }
 
-function buildPayload(
-  row: Transactions.ImportRowFormValues
-): Transactions.CreateTransactionPayload {
+function buildPayload(row: Transactions.ImportRowFormValues): Transactions.CreateTransactionPayload {
   const payload: Transactions.CreateTransactionPayload = {
     transaction_type: row.transaction_type,
     account_id: row.account_id,
@@ -125,10 +109,7 @@ function buildPayload(
   return payload;
 }
 
-function parsedRowToFormValues(
-  r: Transactions.ParsedImportRow,
-  accountId: number
-): Transactions.ImportRowFormValues {
+function parsedRowToFormValues(r: Transactions.ParsedImportRow, accountId: number): Transactions.ImportRowFormValues {
   return {
     row_index: r.row_index,
     original_description: r.description,
@@ -182,9 +163,7 @@ function ImportReviewPage() {
 
   const rows = useWatch({ control: form.control, name: "rows" });
 
-  const hasPendingRows =
-    step === "review" &&
-    rows.some((r) => r.action === "import" && r.import_status !== "success");
+  const hasPendingRows = step === "review" && rows.some((r) => r.action === "import" && r.import_status !== "success");
 
   const {
     status: blockerStatus,
@@ -251,22 +230,15 @@ function ImportReviewPage() {
     pauseRef.current = true;
   };
 
-  const start = () =>
-    setImportState((p) => ({ ...p, importing: true, paused: false }));
+  const start = () => setImportState((p) => ({ ...p, importing: true, paused: false }));
 
-  const pause = () =>
-    setImportState((p) => ({ ...p, importing: false, paused: true }));
+  const pause = () => setImportState((p) => ({ ...p, importing: false, paused: true }));
 
-  const finish = () =>
-    setImportState((p) => ({ ...p, importing: false, paused: false }));
+  const finish = () => setImportState((p) => ({ ...p, importing: false, paused: false }));
 
   const toImportRows = rows.filter((r) => r.action === "import");
-  const importedCount = toImportRows.filter(
-    (r) => r.import_status === "success"
-  ).length;
-  const errorCount = toImportRows.filter(
-    (r) => r.import_status === "error"
-  ).length;
+  const importedCount = toImportRows.filter((r) => r.import_status === "success").length;
+  const errorCount = toImportRows.filter((r) => r.import_status === "error").length;
   const isDone = !importing && !paused && importedCount + errorCount > 0;
 
   async function handleConfirm() {
@@ -322,9 +294,7 @@ function ImportReviewPage() {
             onParsed={(parsedRows, accountId) => {
               form.reset({
                 accountId,
-                rows: parsedRows.map((r) =>
-                  parsedRowToFormValues(r, accountId)
-                ),
+                rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
               });
               setStep("review");
               setSelected(new Set());
@@ -351,16 +321,12 @@ function ImportReviewPage() {
 
               <Group gap="xs">
                 <Text fz="sm" c="dimmed">
-                  {fields.length} linha{fields.length !== 1 ? "s" : ""} ·{" "}
-                  {toImportRows.length} para importar
+                  {fields.length} linha{fields.length !== 1 ? "s" : ""} · {toImportRows.length} para importar
                 </Text>
                 <ImportConfirmButton
                   importing={importing}
                   paused={paused}
-                  toImportCount={
-                    toImportRows.filter((r) => r.import_status !== "success")
-                      .length
-                  }
+                  toImportCount={toImportRows.filter((r) => r.import_status !== "success").length}
                   onPause={handlePause}
                   onConfirm={() => void handleConfirm()}
                 />
@@ -375,8 +341,7 @@ function ImportReviewPage() {
                 title="Importação concluída"
               >
                 {importedCount} transaç
-                {importedCount !== 1 ? "ões importadas" : "ão importada"}.
-                {errorCount > 0 && ` ${errorCount} com erro.`}
+                {importedCount !== 1 ? "ões importadas" : "ão importada"}.{errorCount > 0 && ` ${errorCount} com erro.`}
               </Alert>
             )}
 
@@ -395,12 +360,7 @@ function ImportReviewPage() {
 
             {/* Table */}
             <ScrollArea>
-              <Table
-                withTableBorder
-                withColumnBorders
-                verticalSpacing="xs"
-                fz="sm"
-              >
+              <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th w={36}>
@@ -408,9 +368,7 @@ function ImportReviewPage() {
                         size="xs"
                         checked={allSelected}
                         indeterminate={someSelected && !allSelected}
-                        onChange={
-                          allSelected ? handleClearSelection : handleSelectAll
-                        }
+                        onChange={allSelected ? handleClearSelection : handleSelectAll}
                         disabled={importing}
                       />
                     </Table.Th>
@@ -514,25 +472,20 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
             setErrorMessage(
               (tag ? Transactions.IMPORT_ERROR_MESSAGES[tag] : undefined) ??
                 apiError.message ??
-                "Erro ao processar o arquivo."
+                "Erro ao processar o arquivo.",
             );
           } else {
             setErrorMessage("Erro ao processar o arquivo.");
           }
         },
-      }
+      },
     );
   }
 
   return (
     <Stack gap="md" maw={640}>
       <Group gap="xs">
-        <Button
-          variant="subtle"
-          leftSection={<IconArrowLeft size={16} />}
-          onClick={onBack}
-          size="sm"
-        >
+        <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onBack} size="sm">
           Voltar
         </Button>
         <Title order={4}>Importar Transações</Title>
