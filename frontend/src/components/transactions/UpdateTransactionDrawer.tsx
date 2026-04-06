@@ -13,6 +13,7 @@ import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
 import { UpdatePropagationSelector, PropagationValue } from "./UpdatePropagationSelector";
+import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
 
 interface Props {
   transaction: Transactions.Transaction;
@@ -48,7 +49,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       transaction_type: transaction.type,
-      date: transaction.date.slice(0, 10),
+      date: convertUtcToLocalKeepingValues(transaction.date),
       description: transaction.description,
       amount: transaction.amount,
       account_id: transaction.account_id,
