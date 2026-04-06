@@ -333,15 +333,6 @@ interface RecurrencePopoverProps {
 
 function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: RecurrencePopoverProps) {
   const [opened, setOpened] = useState(false);
-  const form = useFormContext<Transactions.ImportFormValues>();
-
-  function handleOpen() {
-    // Auto-enable recurrence when popover is opened so RecurrenceFields shows content
-    if (!hasRecurrence) {
-      form.setValue(`${namePrefix}recurrenceEnabled` as `rows.0.recurrenceEnabled`, true);
-    }
-    setOpened((o) => !o);
-  }
 
   return (
     <Popover
@@ -355,7 +346,7 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
           variant={hasRecurrence ? "light" : "default"}
           disabled={disabled}
           fullWidth
-          onClick={handleOpen}
+          onClick={() => setOpened((o) => !o)}
         >
           {summary}
         </Button>
@@ -364,7 +355,6 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
         <Stack gap="xs" w={220}>
           <RecurrenceFields
             namePrefix={namePrefix}
-            showEnabledSwitch={false}
             comboboxWithinPortal={false}
           />
           <Button size="xs" variant="subtle" onClick={() => setOpened(false)}>

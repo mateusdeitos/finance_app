@@ -70,7 +70,7 @@ function buildPayload(row: Transactions.ImportRowFormValues): Transactions.Creat
   if (row.transaction_type === 'transfer' && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id
   }
-  if (row.recurrenceEnabled && row.recurrenceType) {
+  if (row.recurrenceType) {
     if (row.recurrenceEndDateMode && row.recurrenceEndDate) {
       payload.recurrence_settings = { type: row.recurrenceType, end_date: row.recurrenceEndDate }
     } else if (row.recurrenceRepetitions) {

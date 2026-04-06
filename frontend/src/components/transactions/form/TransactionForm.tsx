@@ -15,6 +15,7 @@ import {
   Group,
   SimpleGrid,
   Box,
+  Switch,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
@@ -78,6 +79,7 @@ export const TransactionForm = ({
   }, []);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
+  const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
   const isTransfer = transactionType === "transfer";
 
   const generalError =
@@ -361,7 +363,20 @@ export const TransactionForm = ({
           )}
         />
 
-        <RecurrenceFields />
+        <Stack gap="xs">
+          <Controller
+            control={control}
+            name="recurrenceEnabled"
+            render={({ field }) => (
+              <Switch
+                label="Recorrência"
+                checked={!!field.value}
+                onChange={(e) => field.onChange(e.currentTarget.checked)}
+              />
+            )}
+          />
+          {recurrenceEnabled && <RecurrenceFields />}
+        </Stack>
       </Stack>
 
       <Box
