@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -16,87 +16,129 @@ import {
   Table,
   Text,
   Title,
-} from '@mantine/core'
-import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv } from '@tabler/icons-react'
-import { createFileRoute, useBlocker, useNavigate } from '@tanstack/react-router'
-import { useForm, useFieldArray, FormProvider } from 'react-hook-form'
-import { createTransaction } from '@/api/transactions'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useParseImportCSV } from '@/hooks/useParseImportCSV'
-import { useTransactions } from '@/hooks/useTransactions'
-import { Transactions } from '@/types/transactions'
-import { parseApiError } from '@/utils/apiErrors'
-import { ImportReviewRow } from '@/components/transactions/import/ImportReviewRow'
-import { ImportCSVBulkToolbar } from '@/components/transactions/import/ImportCSVBulkToolbar'
-import { ImportConfirmButton } from '@/components/transactions/import/ImportConfirmButton'
+} from "@mantine/core";
+import {
+  IconAlertCircle,
+  IconArrowLeft,
+  IconFileTypeCsv,
+} from "@tabler/icons-react";
+import {
+  createFileRoute,
+  useBlocker,
+  useNavigate,
+} from "@tanstack/react-router";
+import {
+  useForm,
+  useFieldArray,
+  FormProvider,
+  useWatch,
+} from "react-hook-form";
+import { createTransaction } from "@/api/transactions";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useParseImportCSV } from "@/hooks/useParseImportCSV";
+import { useTransactions } from "@/hooks/useTransactions";
+import { Transactions } from "@/types/transactions";
+import { parseApiError } from "@/utils/apiErrors";
+import { ImportReviewRow } from "@/components/transactions/import/ImportReviewRow";
+import { ImportCSVBulkToolbar } from "@/components/transactions/import/ImportCSVBulkToolbar";
+import { ImportConfirmButton } from "@/components/transactions/import/ImportConfirmButton";
 
-export const Route = createFileRoute('/_authenticated/transactions_/import')({
+export const Route = createFileRoute("/_authenticated/transactions_/import")({
   component: ImportReviewPage,
-})
+});
 
 // ─── CSV column reference ──────────────────────────────────────────────────────
 
 const CSV_COLUMNS = [
-  { col: 'Data', required: true, description: 'Formato DD/MM/AAAA' },
-  { col: 'Descrição', required: true, description: 'Texto livre' },
-  { col: 'Tipo', required: true, description: 'despesa, receita ou transferência' },
-  { col: 'Valor', required: true, description: 'Ex: 1234,56 ou 1.234,56' },
-  { col: 'Categoria', required: false, description: 'Nome da categoria (obrigatório se não for transferência)' },
-  { col: 'Conta Destino', required: false, description: 'Nome da conta (obrigatório se for transferência)' },
-  { col: 'Tipo de Parcelamento', required: false, description: 'diário, semanal, mensal ou anual' },
-  { col: 'Quantidade de Parcelas', required: false, description: 'Número inteiro (obrigatório se parcelamento definido)' },
-]
+  { col: "Data", required: true, description: "Formato DD/MM/AAAA" },
+  { col: "Descrição", required: true, description: "Texto livre" },
+  {
+    col: "Tipo",
+    required: true,
+    description: "despesa, receita ou transferência",
+  },
+  { col: "Valor", required: true, description: "Ex: 1234,56 ou 1.234,56" },
+  {
+    col: "Categoria",
+    required: false,
+    description: "Nome da categoria (obrigatório se não for transferência)",
+  },
+  {
+    col: "Conta Destino",
+    required: false,
+    description: "Nome da conta (obrigatório se for transferência)",
+  },
+  {
+    col: "Tipo de Parcelamento",
+    required: false,
+    description: "diário, semanal, mensal ou anual",
+  },
+  {
+    col: "Quantidade de Parcelas",
+    required: false,
+    description: "Número inteiro (obrigatório se parcelamento definido)",
+  },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function hasBlockingError(row: Transactions.ImportRowFormValues): boolean {
-  if (row.action !== 'import') return false
-  if (!row.date) return true
-  if (!row.description) return true
-  if (!row.amount || row.amount <= 0) return true
-  if (row.transaction_type === 'transfer' && !row.destination_account_id) return true
-  return false
+  if (row.action !== "import") return false;
+  if (!row.date) return true;
+  if (!row.description) return true;
+  if (!row.amount || row.amount <= 0) return true;
+  if (row.transaction_type === "transfer" && !row.destination_account_id)
+    return true;
+  return false;
 }
 
-function buildPayload(row: Transactions.ImportRowFormValues): Transactions.CreateTransactionPayload {
+function buildPayload(
+  row: Transactions.ImportRowFormValues
+): Transactions.CreateTransactionPayload {
   const payload: Transactions.CreateTransactionPayload = {
     transaction_type: row.transaction_type,
     account_id: row.account_id,
     amount: row.amount,
     date: row.date,
     description: row.description,
-  }
-  if (row.category_id) payload.category_id = row.category_id
-  if (row.transaction_type === 'transfer' && row.destination_account_id) {
-    payload.destination_account_id = row.destination_account_id
+  };
+  if (row.category_id) payload.category_id = row.category_id;
+  if (row.transaction_type === "transfer" && row.destination_account_id) {
+    payload.destination_account_id = row.destination_account_id;
   }
   if (row.recurrenceType) {
     if (row.recurrenceEndDateMode && row.recurrenceEndDate) {
-      payload.recurrence_settings = { type: row.recurrenceType, end_date: row.recurrenceEndDate }
+      payload.recurrence_settings = {
+        type: row.recurrenceType,
+        end_date: row.recurrenceEndDate,
+      };
     } else if (row.recurrenceRepetitions) {
-      payload.recurrence_settings = { type: row.recurrenceType, repetitions: row.recurrenceRepetitions }
+      payload.recurrence_settings = {
+        type: row.recurrenceType,
+        repetitions: row.recurrenceRepetitions,
+      };
     }
   }
   if (row.split_settings?.length) {
-    payload.split_settings = row.split_settings
+    payload.split_settings = row.split_settings;
   }
-  return payload
+  return payload;
 }
 
 function parsedRowToFormValues(
   r: Transactions.ParsedImportRow,
-  accountId: number,
+  accountId: number
 ): Transactions.ImportRowFormValues {
   return {
     row_index: r.row_index,
     original_description: r.description,
     status: r.status,
     parse_errors: r.parse_errors ?? [],
-    action: r.status === 'duplicate' ? 'duplicate' : 'import',
-    import_status: 'idle',
-    import_error: '',
+    action: r.status === "duplicate" ? "duplicate" : "import",
+    import_status: "idle",
+    import_error: "",
     account_id: accountId,
-    date: r.date ?? '',
+    date: r.date ?? "",
     description: r.description,
     amount: r.amount,
     transaction_type: r.type,
@@ -108,167 +150,187 @@ function parsedRowToFormValues(
     recurrenceEndDate: null,
     recurrenceRepetitions: r.recurrence_count ?? null,
     split_settings: [],
-  }
+  };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function ImportReviewPage() {
-  const navigate = useNavigate()
-  const [step, setStep] = useState<'upload' | 'review'>('upload')
-  const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [importing, setImporting] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const pauseRef = useRef(false)
-  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const navigate = useNavigate();
+  const [step, setStep] = useState<"upload" | "review">("upload");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [importState, setImportState] = useState({
+    importing: false,
+    paused: false,
+  });
+  const pauseRef = useRef(false);
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
   const form = useForm<Transactions.ImportFormValues>({
     defaultValues: { accountId: 0, rows: [] },
-  })
+  });
 
   const { fields, remove } = useFieldArray({
     control: form.control,
-    name: 'rows',
-  })
+    name: "rows",
+  });
 
   const { invalidate: invalidateTransactions } = useTransactions({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
-  })
+  });
 
-  const rows = form.watch('rows')
+  const rows = useWatch({ control: form.control, name: "rows" });
 
   const hasPendingRows =
-    step === 'review' &&
-    rows.some((r) => r.action === 'import' && r.import_status !== 'success')
+    step === "review" &&
+    rows.some((r) => r.action === "import" && r.import_status !== "success");
 
-  const { status: blockerStatus, proceed, reset: resetBlocker } = useBlocker({
+  const {
+    status: blockerStatus,
+    proceed,
+    reset: resetBlocker,
+  } = useBlocker({
     blockerFn: () => true,
     condition: hasPendingRows,
-  })
+  });
+
+  const importing = importState.importing;
+  const paused = importState.paused;
 
   const blockMessage = importing
-    ? 'A importação está em andamento. Ao sair ela será pausada e os dados serão perdidos. Deseja continuar?'
-    : 'Você tem transações não importadas. Os dados serão perdidos ao sair. Deseja continuar?'
+    ? "A importação está em andamento. Ao sair ela será pausada e os dados serão perdidos. Deseja continuar?"
+    : "Você tem transações não importadas. Os dados serão perdidos ao sair. Deseja continuar?";
 
   // ─── Selection helpers ──────────────────────────────────────────────────────
 
   const handleToggleSelect = useCallback((index: number) => {
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
-    })
-  }, [])
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
 
-  const handleSelectAll = () => setSelected(new Set(rows.map((_, i) => i)))
-  const handleClearSelection = () => setSelected(new Set())
+  const handleSelectAll = () => setSelected(new Set(rows.map((_, i) => i)));
+  const handleClearSelection = () => setSelected(new Set());
 
   // ─── Bulk actions ───────────────────────────────────────────────────────────
 
   const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
     selected.forEach((i) => {
-      form.setValue(`rows.${i}.action`, action)
-    })
-    setSelected(new Set())
-  }
+      form.setValue(`rows.${i}.action`, action);
+    });
+    setSelected(new Set());
+  };
 
   const handleBulkSetDate = (date: string) => {
     selected.forEach((i) => {
-      form.setValue(`rows.${i}.date`, date)
-    })
-    setSelected(new Set())
-  }
+      form.setValue(`rows.${i}.date`, date);
+    });
+    setSelected(new Set());
+  };
 
   const handleBulkSetCategory = (categoryId: number) => {
     selected.forEach((i) => {
-      form.setValue(`rows.${i}.category_id`, categoryId)
-    })
-    setSelected(new Set())
-  }
+      form.setValue(`rows.${i}.category_id`, categoryId);
+    });
+    setSelected(new Set());
+  };
 
   const handleRemoveSelected = () => {
-    const sorted = [...selected].sort((a, b) => b - a)
-    sorted.forEach((i) => remove(i))
-    setSelected(new Set())
-  }
+    const sorted = [...selected].sort((a, b) => b - a);
+    sorted.forEach((i) => remove(i));
+    setSelected(new Set());
+  };
 
   // ─── Import loop ────────────────────────────────────────────────────────────
 
   const handlePause = () => {
-    pauseRef.current = true
-  }
+    pauseRef.current = true;
+  };
 
-  const toImportRows = rows.filter((r) => r.action === 'import')
-  const importedCount = toImportRows.filter((r) => r.import_status === 'success').length
-  const errorCount = toImportRows.filter((r) => r.import_status === 'error').length
-  const isDone = !importing && !paused && (importedCount + errorCount) > 0
+  const start = () =>
+    setImportState((p) => ({ ...p, importing: true, paused: false }));
+
+  const pause = () =>
+    setImportState((p) => ({ ...p, importing: false, paused: true }));
+
+  const finish = () =>
+    setImportState((p) => ({ ...p, importing: false, paused: false }));
+
+  const toImportRows = rows.filter((r) => r.action === "import");
+  const importedCount = toImportRows.filter(
+    (r) => r.import_status === "success"
+  ).length;
+  const errorCount = toImportRows.filter(
+    (r) => r.import_status === "error"
+  ).length;
+  const isDone = !importing && !paused && importedCount + errorCount > 0;
 
   async function handleConfirm() {
-    const currentRows = form.getValues('rows')
-    const firstInvalidIndex = currentRows.findIndex(hasBlockingError)
+    const currentRows = form.getValues("rows");
+    const firstInvalidIndex = currentRows.findIndex(hasBlockingError);
     if (firstInvalidIndex !== -1) {
-      const el = rowRefs.current.get(firstInvalidIndex)
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
+      const el = rowRefs.current.get(firstInvalidIndex);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
 
-    pauseRef.current = false
-    setImporting(true)
-    setPaused(false)
+    pauseRef.current = false;
+    start();
 
     for (let i = 0; i < currentRows.length; i++) {
-      if (pauseRef.current) break
+      if (pauseRef.current) break;
 
-      const row = form.getValues(`rows.${i}`)
-      if (row.action !== 'import' || row.import_status === 'success') continue
+      const row = form.getValues(`rows.${i}`);
+      if (row.action !== "import" || row.import_status === "success") continue;
 
-      form.setValue(`rows.${i}.import_status`, 'loading')
+      form.setValue(`rows.${i}.import_status`, "loading");
 
       try {
-        await createTransaction(buildPayload(row))
-        form.setValue(`rows.${i}.import_status`, 'success')
+        await createTransaction(buildPayload(row));
+        form.setValue(`rows.${i}.import_status`, "success");
       } catch (err: unknown) {
-        let errorMsg = 'Erro ao importar'
+        let errorMsg = "Erro ao importar";
         if (err instanceof Response) {
-          const apiError = await parseApiError(err)
-          errorMsg = apiError.message || errorMsg
+          const apiError = await parseApiError(err);
+          errorMsg = apiError.message || errorMsg;
         }
-        form.setValue(`rows.${i}.import_status`, 'error')
-        form.setValue(`rows.${i}.import_error`, errorMsg)
+        form.setValue(`rows.${i}.import_status`, "error");
+        form.setValue(`rows.${i}.import_error`, errorMsg);
       }
     }
 
     if (pauseRef.current) {
-      setImporting(false)
-      setPaused(true)
+      pause();
     } else {
-      setImporting(false)
-      setPaused(false)
-      invalidateTransactions()
+      finish();
+      invalidateTransactions();
     }
   }
 
-  const allSelected = fields.length > 0 && selected.size === fields.length
-  const someSelected = selected.size > 0
+  const allSelected = fields.length > 0 && selected.size === fields.length;
+  const someSelected = selected.size > 0;
 
   return (
     <FormProvider {...form}>
       <Stack gap="md" pb="2rem">
-        {step === 'upload' ? (
+        {step === "upload" ? (
           <UploadStep
             onParsed={(parsedRows, accountId) => {
               form.reset({
                 accountId,
-                rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
-              })
-              setStep('review')
-              setSelected(new Set())
-              setImporting(false)
-              setPaused(false)
+                rows: parsedRows.map((r) =>
+                  parsedRowToFormValues(r, accountId)
+                ),
+              });
+              setStep("review");
+              setSelected(new Set());
+              finish();
             }}
-            onBack={() => void navigate({ to: '/transactions' })}
+            onBack={() => void navigate({ to: "/transactions" })}
           />
         ) : (
           <>
@@ -278,7 +340,7 @@ function ImportReviewPage() {
                 <Button
                   variant="subtle"
                   leftSection={<IconArrowLeft size={16} />}
-                  onClick={() => void navigate({ to: '/transactions' })}
+                  onClick={() => void navigate({ to: "/transactions" })}
                   size="sm"
                   disabled={importing}
                 >
@@ -289,12 +351,16 @@ function ImportReviewPage() {
 
               <Group gap="xs">
                 <Text fz="sm" c="dimmed">
-                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {toImportRows.length} para importar
+                  {fields.length} linha{fields.length !== 1 ? "s" : ""} ·{" "}
+                  {toImportRows.length} para importar
                 </Text>
                 <ImportConfirmButton
                   importing={importing}
                   paused={paused}
-                  toImportCount={toImportRows.filter((r) => r.import_status !== 'success').length}
+                  toImportCount={
+                    toImportRows.filter((r) => r.import_status !== "success")
+                      .length
+                  }
                   onPause={handlePause}
                   onConfirm={() => void handleConfirm()}
                 />
@@ -305,10 +371,11 @@ function ImportReviewPage() {
             {isDone && (
               <Alert
                 icon={<IconAlertCircle size={16} />}
-                color={errorCount > 0 ? 'yellow' : 'green'}
+                color={errorCount > 0 ? "yellow" : "green"}
                 title="Importação concluída"
               >
-                {importedCount} transaç{importedCount !== 1 ? 'ões importadas' : 'ão importada'}.
+                {importedCount} transaç
+                {importedCount !== 1 ? "ões importadas" : "ão importada"}.
                 {errorCount > 0 && ` ${errorCount} com erro.`}
               </Alert>
             )}
@@ -328,7 +395,12 @@ function ImportReviewPage() {
 
             {/* Table */}
             <ScrollArea>
-              <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
+              <Table
+                withTableBorder
+                withColumnBorders
+                verticalSpacing="xs"
+                fz="sm"
+              >
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th w={36}>
@@ -336,7 +408,9 @@ function ImportReviewPage() {
                         size="xs"
                         checked={allSelected}
                         indeterminate={someSelected && !allSelected}
-                        onChange={allSelected ? handleClearSelection : handleSelectAll}
+                        onChange={
+                          allSelected ? handleClearSelection : handleSelectAll
+                        }
                         disabled={importing}
                       />
                     </Table.Th>
@@ -357,8 +431,8 @@ function ImportReviewPage() {
                     <ImportReviewRow
                       key={field.id}
                       ref={(el) => {
-                        if (el) rowRefs.current.set(i, el)
-                        else rowRefs.current.delete(i)
+                        if (el) rowRefs.current.set(i, el);
+                        else rowRefs.current.delete(i);
                       }}
                       rowIndex={i}
                       selected={selected.has(i)}
@@ -372,7 +446,7 @@ function ImportReviewPage() {
 
             {/* Navigation blocker modal */}
             <Modal
-              opened={blockerStatus === 'blocked'}
+              opened={blockerStatus === "blocked"}
               onClose={() => resetBlocker?.()}
               title="Atenção"
               centered
@@ -394,34 +468,40 @@ function ImportReviewPage() {
         )}
       </Stack>
     </FormProvider>
-  )
+  );
 }
 
 // ─── Upload Step ───────────────────────────────────────────────────────────────
 
 interface UploadStepProps {
-  onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
-  onBack: () => void
+  onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void;
+  onBack: () => void;
 }
 
 function UploadStep({ onParsed, onBack }: UploadStepProps) {
-  const [accountId, setAccountId] = useState<number | null>(null)
-  const [file, setFile] = useState<File | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<number | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { query: accountsQuery } = useAccounts()
-  const accounts = accountsQuery.data ?? []
+  const { query: accountsQuery } = useAccounts();
+  const accounts = accountsQuery.data ?? [];
 
   const ownAccountOptions = accounts
     .filter((a) => !a.user_connection && a.is_active)
-    .map((a) => ({ value: String(a.id), label: a.name }))
+    .map((a) => ({ value: String(a.id), label: a.name }));
 
-  const { mutation } = useParseImportCSV()
+  const { mutation } = useParseImportCSV();
 
   function handleSubmit() {
-    setErrorMessage(null)
-    if (!file) { setErrorMessage('Selecione um arquivo CSV.'); return }
-    if (!accountId) { setErrorMessage('Selecione uma conta.'); return }
+    setErrorMessage(null);
+    if (!file) {
+      setErrorMessage("Selecione um arquivo CSV.");
+      return;
+    }
+    if (!accountId) {
+      setErrorMessage("Selecione uma conta.");
+      return;
+    }
 
     mutation.mutate(
       { file, accountId },
@@ -429,25 +509,30 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         onSuccess: (result) => onParsed(result.rows, accountId),
         onError: async (err: unknown) => {
           if (err instanceof Response) {
-            const apiError = await parseApiError(err)
-            const tag = apiError.tags[0] as string | undefined
+            const apiError = await parseApiError(err);
+            const tag = apiError.tags[0] as string | undefined;
             setErrorMessage(
               (tag ? Transactions.IMPORT_ERROR_MESSAGES[tag] : undefined) ??
-              apiError.message ??
-              'Erro ao processar o arquivo.'
-            )
+                apiError.message ??
+                "Erro ao processar o arquivo."
+            );
           } else {
-            setErrorMessage('Erro ao processar o arquivo.')
+            setErrorMessage("Erro ao processar o arquivo.");
           }
         },
-      },
-    )
+      }
+    );
   }
 
   return (
     <Stack gap="md" maw={640}>
       <Group gap="xs">
-        <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onBack} size="sm">
+        <Button
+          variant="subtle"
+          leftSection={<IconArrowLeft size={16} />}
+          onClick={onBack}
+          size="sm"
+        >
           Voltar
         </Button>
         <Title order={4}>Importar Transações</Title>
@@ -489,8 +574,12 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
       </Button>
 
       <Box mt="md">
-        <Title order={6} mb="xs">Modelo de cabeçalho válido</Title>
-        <Code block mb="xs">{CSV_COLUMNS.map((c) => c.col).join(';')}</Code>
+        <Title order={6} mb="xs">
+          Modelo de cabeçalho válido
+        </Title>
+        <Code block mb="xs">
+          {CSV_COLUMNS.map((c) => c.col).join(";")}
+        </Code>
         <Table withTableBorder withColumnBorders fz="xs">
           <Table.Thead>
             <Table.Tr>
@@ -502,18 +591,26 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
           <Table.Tbody>
             {CSV_COLUMNS.map((col) => (
               <Table.Tr key={col.col}>
-                <Table.Td><Text fw={500} fz="xs">{col.col}</Text></Table.Td>
                 <Table.Td>
-                  <Text c={col.required ? 'red' : 'dimmed'} fz="xs">
-                    {col.required ? 'Sim' : 'Não'}
+                  <Text fw={500} fz="xs">
+                    {col.col}
                   </Text>
                 </Table.Td>
-                <Table.Td><Text fz="xs" c="dimmed">{col.description}</Text></Table.Td>
+                <Table.Td>
+                  <Text c={col.required ? "red" : "dimmed"} fz="xs">
+                    {col.required ? "Sim" : "Não"}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text fz="xs" c="dimmed">
+                    {col.description}
+                  </Text>
+                </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
         </Table>
       </Box>
     </Stack>
-  )
+  );
 }
