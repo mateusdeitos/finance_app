@@ -302,7 +302,7 @@ export function SplitSettingsFields({
 
   if (connectedAccounts.length === 0) return null;
 
-  const usedConnectionIds = (fields as { connection_id: number }[])
+  const usedConnectionIds = (fields as unknown as { connection_id: number }[])
     .map((f) => f.connection_id)
     .filter((id) => id > 0);
 
@@ -341,7 +341,7 @@ export function SplitSettingsFields({
 
       <Stack gap="sm">
         {fields.map((field, index) => {
-          const othersUsed = (fields as { connection_id: number }[])
+          const othersUsed = (fields as unknown as { connection_id: number }[])
             .filter((_, i) => i !== index)
             .map((f) => f.connection_id)
             .filter((id) => id > 0);

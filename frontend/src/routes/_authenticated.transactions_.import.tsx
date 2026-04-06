@@ -126,7 +126,7 @@ function ImportReviewPage() {
     defaultValues: { accountId: 0, rows: [] },
   })
 
-  const { fields, remove, update } = useFieldArray({
+  const { fields, remove } = useFieldArray({
     control: form.control,
     name: 'rows',
   })
