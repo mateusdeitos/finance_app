@@ -1,8 +1,9 @@
-import { forwardRef, memo, useState } from "react";
+import { forwardRef, memo, useEffect, useRef, useState } from "react";
 import { Box, Button, Checkbox, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
-import { useFormContext, useWatch, Controller } from "react-hook-form";
+import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { Transactions } from "@/types/transactions";
@@ -10,6 +11,7 @@ import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
 import { SplitSettingsFields } from "@/components/transactions/form/SplitSettingsFields";
+import { checkDuplicateTransaction } from "@/api/transactions";
 import classes from "./ImportReviewRow.module.css";
 
 const TRANSACTION_TYPE_OPTIONS = [
@@ -78,6 +80,37 @@ export const ImportReviewRow = memo(
       amount,
       destination_account_id: destinationAccountId,
     } = useWatch({ control: form.control, name: `rows.${rowIndex}` });
+
+    // ─── Duplicate re-detection ─────────────────────────────────────────────────
+
+    const [debouncedDate] = useDebouncedValue(date, 500);
+    const [debouncedDescription] = useDebouncedValue(description, 500);
+    const [debouncedAmount] = useDebouncedValue(amount, 500);
+
+    // Skip duplicate check on initial mount (backend already checked)
+    const isFirstRender = useRef(true);
+    useEffect(() => {
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
+      if (!debouncedDate || !debouncedDescription || !debouncedAmount || debouncedAmount <= 0) return;
+      void checkDuplicateTransaction({
+        date: debouncedDate as string,
+        description: debouncedDescription as string,
+        amount: debouncedAmount as number,
+      }).then((result) => {
+        const currentAction = form.getValues(`rows.${rowIndex}.action`);
+        if (result.is_duplicate && currentAction === "import") {
+          form.setValue(`rows.${rowIndex}.action`, "duplicate");
+        } else if (!result.is_duplicate && currentAction === "duplicate") {
+          form.setValue(`rows.${rowIndex}.action`, "import");
+        }
+      }).catch(() => { /* ignore network errors */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [debouncedDate, debouncedDescription, debouncedAmount]);
+
+    // ─── Display helpers ────────────────────────────────────────────────────────
 
     const isSkipped = action !== "import";
     const isTransfer = transactionType === "transfer";
@@ -276,6 +309,7 @@ export const ImportReviewRow = memo(
               summary={splitSummary()}
               hasSplit={!!splitSettings?.length}
               disabled={disabled || isSkipped}
+              rowAmount={amount as number}
             />
           ) : (
             <Text fz="xs" c="dimmed">
@@ -307,6 +341,13 @@ export const ImportReviewRow = memo(
 
 // ─── RecurrencePopover ────────────────────────────────────────────────────────
 
+interface RecurrenceLocalValues {
+  recurrenceType: Transactions.RecurrenceType | null;
+  recurrenceEndDateMode: boolean;
+  recurrenceEndDate: string | null;
+  recurrenceRepetitions: number | null;
+}
+
 interface RecurrencePopoverProps {
   namePrefix: string;
   summary: string;
@@ -316,65 +357,146 @@ interface RecurrencePopoverProps {
 
 function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: RecurrencePopoverProps) {
   const [opened, setOpened] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parentForm = useFormContext<any>();
+
+  const localForm = useForm<RecurrenceLocalValues>({
+    defaultValues: {
+      recurrenceType: null,
+      recurrenceEndDateMode: false,
+      recurrenceEndDate: null,
+      recurrenceRepetitions: null,
+    },
+  });
+
+  function handleOpen() {
+    const rowPath = namePrefix.slice(0, -1); // "rows.0." → "rows.0"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowValues = parentForm.getValues(rowPath) as any;
+    localForm.reset({
+      recurrenceType: rowValues.recurrenceType ?? null,
+      recurrenceEndDateMode: rowValues.recurrenceEndDateMode ?? false,
+      recurrenceEndDate: rowValues.recurrenceEndDate ?? null,
+      recurrenceRepetitions: rowValues.recurrenceRepetitions ?? null,
+    });
+    setOpened(true);
+  }
+
+  function handleClose() {
+    const values = localForm.getValues();
+    const rowPath = namePrefix.slice(0, -1);
+    parentForm.setValue(`${rowPath}.recurrenceType`, values.recurrenceType);
+    parentForm.setValue(`${rowPath}.recurrenceEndDateMode`, values.recurrenceEndDateMode);
+    parentForm.setValue(`${rowPath}.recurrenceEndDate`, values.recurrenceEndDate);
+    parentForm.setValue(`${rowPath}.recurrenceRepetitions`, values.recurrenceRepetitions);
+    setOpened(false);
+  }
+
+  function handleToggle() {
+    if (opened) handleClose();
+    else handleOpen();
+  }
 
   return (
-    <Popover opened={opened} closeOnClickOutside={false} withinPortal>
-      <Popover.Target>
-        <Button
-          size="xs"
-          variant={hasRecurrence ? "light" : "default"}
-          disabled={disabled}
-          fullWidth
-          onClick={() => setOpened((o) => !o)}
-        >
-          {summary}
-        </Button>
-      </Popover.Target>
-      <Popover.Dropdown>
-        <Stack gap="xs" w={220}>
-          <RecurrenceFields namePrefix={namePrefix} comboboxWithinPortal={false} />
-          <Button size="xs" variant="subtle" onClick={() => setOpened(false)}>
-            Fechar
+    <FormProvider {...localForm}>
+      <Popover opened={opened} closeOnClickOutside={false} withinPortal>
+        <Popover.Target>
+          <Button
+            size="xs"
+            variant={hasRecurrence ? "light" : "default"}
+            disabled={disabled}
+            fullWidth
+            onClick={handleToggle}
+          >
+            {summary}
           </Button>
-        </Stack>
-      </Popover.Dropdown>
-    </Popover>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="xs" w={220}>
+            <RecurrenceFields namePrefix="" comboboxWithinPortal={false} />
+            <Button size="xs" variant="subtle" onClick={handleClose}>
+              Fechar
+            </Button>
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </FormProvider>
   );
 }
 
 // ─── SplitPopover ─────────────────────────────────────────────────────────────
+
+interface SplitLocalValues {
+  amount: number;
+  split_settings: Transactions.SplitSetting[];
+}
 
 interface SplitPopoverProps {
   namePrefix: string;
   summary: string;
   hasSplit: boolean;
   disabled: boolean;
+  rowAmount: number;
 }
 
-function SplitPopover({ namePrefix, summary, hasSplit, disabled }: SplitPopoverProps) {
+function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: SplitPopoverProps) {
   const [opened, setOpened] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parentForm = useFormContext<any>();
+
+  const localForm = useForm<SplitLocalValues>({
+    defaultValues: {
+      amount: rowAmount,
+      split_settings: [],
+    },
+  });
+
+  function handleOpen() {
+    const rowPath = namePrefix.slice(0, -1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rowValues = parentForm.getValues(rowPath) as any;
+    localForm.reset({
+      amount: rowValues.amount ?? rowAmount,
+      split_settings: rowValues.split_settings ?? [],
+    });
+    setOpened(true);
+  }
+
+  function handleClose() {
+    const values = localForm.getValues();
+    const rowPath = namePrefix.slice(0, -1);
+    parentForm.setValue(`${rowPath}.split_settings`, values.split_settings);
+    setOpened(false);
+  }
+
+  function handleToggle() {
+    if (opened) handleClose();
+    else handleOpen();
+  }
 
   return (
-    <Popover opened={opened} closeOnClickOutside={false} withinPortal>
-      <Popover.Target>
-        <Button
-          size="xs"
-          variant={hasSplit ? "light" : "default"}
-          disabled={disabled}
-          fullWidth
-          onClick={() => setOpened((o) => !o)}
-        >
-          {summary}
-        </Button>
-      </Popover.Target>
-      <Popover.Dropdown>
-        <Stack gap="xs" w={260}>
-          <SplitSettingsFields namePrefix={namePrefix} comboboxWithinPortal={false} />
-          <Button size="xs" variant="subtle" onClick={() => setOpened(false)}>
-            Fechar
+    <FormProvider {...localForm}>
+      <Popover opened={opened} closeOnClickOutside={false} withinPortal>
+        <Popover.Target>
+          <Button
+            size="xs"
+            variant={hasSplit ? "light" : "default"}
+            disabled={disabled}
+            fullWidth
+            onClick={handleToggle}
+          >
+            {summary}
           </Button>
-        </Stack>
-      </Popover.Dropdown>
-    </Popover>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="xs" w={260}>
+            <SplitSettingsFields namePrefix="" comboboxWithinPortal={false} />
+            <Button size="xs" variant="subtle" onClick={handleClose}>
+              Fechar
+            </Button>
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    </FormProvider>
   );
 }

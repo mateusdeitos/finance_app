@@ -35,3 +35,10 @@ type ImportCSVResponse struct {
 	DuplicateCount int               `json:"duplicate_count"`
 	ErrorCount     int               `json:"error_count"`
 }
+
+// CheckDuplicateRequest is the request body for the check-duplicate endpoint.
+type CheckDuplicateRequest struct {
+	Date        string `json:"date"`        // YYYY-MM-DD
+	Description string `json:"description"`
+	Amount      int64  `json:"amount"` // cents
+}

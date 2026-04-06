@@ -363,6 +363,16 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 	return false
 }
 
+// CheckDuplicateTransaction checks whether a transaction with the given date, description,
+// and amount already exists for the user. date must be in "YYYY-MM-DD" format.
+func (s *transactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64) (bool, error) {
+	t, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return false, pkgErrors.New(pkgErrors.ErrCodeBadRequest, "invalid date format, expected YYYY-MM-DD")
+	}
+	return isDuplicate(ctx, s, userID, description, t, amount), nil
+}
+
 // parseBRAmount parses a Brazilian-format currency string (e.g. "1.234,56") to cents.
 func parseBRAmount(s string) (int64, error) {
 	// Remove thousands separator (dot) and replace decimal separator (comma) with dot

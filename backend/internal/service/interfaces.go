@@ -25,6 +25,7 @@ type TransactionService interface {
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	ParseImportCSV(ctx context.Context, userID int, accountID int, csvData []byte) (*domain.ImportCSVResponse, error)
+	CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64) (bool, error)
 }
 
 type AccountService interface {

@@ -421,6 +421,66 @@ func (_c *MockTransactionService_Update_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, description, amount
+func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64) (bool, error) {
+	ret := _m.Called(ctx, userID, date, description, amount)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckDuplicateTransaction")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64) (bool, error)); ok {
+		return rf(ctx, userID, date, description, amount)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64) bool); ok {
+		r0 = rf(ctx, userID, date, description, amount)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, string, string, int64) error); ok {
+		r1 = rf(ctx, userID, date, description, amount)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_CheckDuplicateTransaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckDuplicateTransaction'
+type MockTransactionService_CheckDuplicateTransaction_Call struct {
+	*mock.Call
+}
+
+// CheckDuplicateTransaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - date string
+//   - description string
+//   - amount int64
+func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, description interface{}, amount interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
+	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, description, amount)}
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date string, description string, amount int64)) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(int64))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 bool, _a1 error) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, string, string, int64) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionService creates a new instance of MockTransactionService. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionService(t interface {

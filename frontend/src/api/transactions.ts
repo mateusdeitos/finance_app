@@ -130,6 +130,21 @@ export async function parseImportCSV(
   return res.json() as Promise<Transactions.ImportCSVResponse>
 }
 
+export async function checkDuplicateTransaction(params: {
+  date: string
+  description: string
+  amount: number
+}): Promise<{ is_duplicate: boolean }> {
+  const res = await fetch(`${apiUrl}/api/transactions/check-duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw res
+  return res.json() as Promise<{ is_duplicate: boolean }>
+}
+
 export async function createTransaction(
   payload: Transactions.CreateTransactionPayload,
 ): Promise<Response> {

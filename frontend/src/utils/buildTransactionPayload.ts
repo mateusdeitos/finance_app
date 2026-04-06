@@ -12,9 +12,13 @@ export function buildTransactionPayload(
     return existing ? { id: existing.id, name } : { name }
   })
 
+  const dateStr = values.date instanceof Date
+    ? values.date.toISOString().slice(0, 10)
+    : (values.date as unknown as string)
+
   return {
     transaction_type: values.transaction_type,
-    date: values.date,
+    date: dateStr,
     description: values.description,
     amount: values.amount,
     account_id: values.account_id!,
