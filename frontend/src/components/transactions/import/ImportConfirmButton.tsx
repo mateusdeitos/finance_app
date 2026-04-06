@@ -1,4 +1,3 @@
-import { MutableRefObject } from 'react'
 import { Button, Group } from '@mantine/core'
 import { IconPlayerPause, IconPlayerPlay } from '@tabler/icons-react'
 
@@ -6,23 +5,19 @@ interface Props {
   importing: boolean
   paused: boolean
   toImportCount: number
-  abortRef: MutableRefObject<AbortController | null>
+  onPause: () => void
   onConfirm: () => void
 }
 
-export function ImportConfirmButton({ importing, paused, toImportCount, abortRef, onConfirm }: Props) {
-  function handlePause() {
-    abortRef.current?.abort()
-  }
-
+export function ImportConfirmButton({ importing, paused, toImportCount, onPause, onConfirm }: Props) {
   return (
     <Group gap="xs">
-      {importing && (
+      {importing && !paused && (
         <Button
           variant="light"
           color="orange"
           leftSection={<IconPlayerPause size={16} />}
-          onClick={handlePause}
+          onClick={onPause}
         >
           Pausar
         </Button>
@@ -32,7 +27,6 @@ export function ImportConfirmButton({ importing, paused, toImportCount, abortRef
         <Button
           leftSection={<IconPlayerPlay size={16} />}
           onClick={onConfirm}
-          loading={importing && !paused}
           disabled={toImportCount === 0}
         >
           {paused ? 'Retomar importação' : `Confirmar importação (${toImportCount})`}

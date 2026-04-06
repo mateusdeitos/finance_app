@@ -217,6 +217,7 @@ export namespace Transactions {
     destination_account_id: number | null;
     recurrence_type: RecurrenceType | null;
     recurrence_count: number | null;
+    split_settings: SplitSetting[] | null;
     parse_errors?: string[];
     import_status: "idle" | "loading" | "success" | "error";
     import_error?: string;
