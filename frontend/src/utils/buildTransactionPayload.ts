@@ -13,7 +13,7 @@ export function buildTransactionPayload(
   })
 
   const dateStr = values.date instanceof Date
-    ? values.date.toISOString().slice(0, 10)
+    ? values.date.toISOString()
     : (values.date as unknown as string)
 
   return {
