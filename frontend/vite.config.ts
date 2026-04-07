@@ -10,7 +10,11 @@ export default defineConfig({
   },
   plugins: [
     tanstackRouter({ routesDirectory: "./src/routes", generatedRouteTree: "./src/routeTree.gen.ts" }),
-    react(),
+    react({
+      babel: {
+        plugins: [['babel-plugin-react-compiler', {}]],
+      },
+    }),
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
