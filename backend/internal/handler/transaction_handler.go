@@ -323,7 +323,7 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        body  body  domain.CheckDuplicateRequest  true  "Duplicate check params"
+// @Param        request  body  domain.CheckDuplicateRequest  true  "Duplicate check params"
 // @Success      200  {object}  map[string]bool
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
