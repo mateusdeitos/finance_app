@@ -5,12 +5,13 @@ import {
   apiDeleteAccount,
   apiCreateTransaction,
   apiDeleteTransaction,
+  apiCreateCategory,
+  apiDeleteCategory,
 } from "../helpers/api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CSV_HEADER =
-  "Data;Descrição;Tipo;Valor;Categoria;Conta Destino;Tipo de Parcelamento;Quantidade de Parcelas";
+const CSV_HEADER = "Data;Descrição;Tipo;Valor;Categoria;Conta Destino;Tipo de Parcelamento;Quantidade de Parcelas";
 
 function buildCsvContent(rows: string[][]): string {
   return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
@@ -36,6 +37,8 @@ test.describe("Import transactions", () => {
   let importPage: ImportPage;
   let testAccountId: number;
   let testAccountName: string;
+  let testCategoryId: number;
+  let testCategoryName: string;
   const createdTransactionIds: number[] = [];
 
   test.beforeAll(async () => {
@@ -45,6 +48,12 @@ test.describe("Import transactions", () => {
       initial_balance: 0,
     });
     testAccountId = account.id;
+
+    testCategoryName = `Categoria Import ${Date.now()}`;
+    const category = await apiCreateCategory({
+      name: testCategoryName,
+    });
+    testCategoryId = category.id;
   });
 
   test.afterAll(async () => {
@@ -52,6 +61,7 @@ test.describe("Import transactions", () => {
       await apiDeleteTransaction(id).catch(() => undefined);
     }
     await apiDeleteAccount(testAccountId).catch(() => undefined);
+    await apiDeleteCategory(testCategoryId).catch(() => undefined);
   });
 
   test.beforeEach(async ({ page }) => {
@@ -65,7 +75,7 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 0, 15); // 15/01/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "150,00", "", "", "", ""],
+      [formatDateBR(txDate), description, "despesa", "150,00", testCategoryName, "", "", ""],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -77,7 +87,9 @@ test.describe("Import transactions", () => {
     await importPage.confirmImport();
 
     // Transaction should appear somewhere on the transactions page
-    await importPage.page.goto("/transactions");
+    const month = txDate.getMonth() + 1;
+    const year = txDate.getFullYear();
+    await importPage.page.goto(`/transactions?month=${month}&year=${year}`);
     await importPage.page.waitForLoadState("networkidle");
     await expect(importPage.page.getByText(description)).toBeVisible({
       timeout: 10000,
@@ -93,6 +105,7 @@ test.describe("Import transactions", () => {
     const created = await apiCreateTransaction({
       account_id: testAccountId,
       transaction_type: "expense",
+      category_id: testCategoryId,
       amount: 8000,
       date: formatDateISO(txDate),
       description,
@@ -101,16 +114,14 @@ test.describe("Import transactions", () => {
 
     // Now try to import the same transaction
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "80,00", "", "", "", ""],
+      [formatDateBR(txDate), description, "despesa", "80,00", testCategoryName, "", "", ""],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
 
     // Row 0 should have action "duplicate" (detected server-side)
-    const actionSelect = importPage.reviewStep.getByTestId(
-      "select_import_action_0",
-    );
-    await expect(actionSelect.locator("input")).toHaveValue("Duplicado", {
+    const actionSelect = importPage.reviewStep.getByTestId("select_import_action_0");
+    await expect(actionSelect).toHaveValue("Duplicado", {
       timeout: 5000,
     });
   });
@@ -122,8 +133,8 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 2, 10); // 10/03/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description1, "despesa", "50,00", "", "", "", ""],
-      [formatDateBR(txDate), description2, "despesa", "75,00", "", "", "", ""],
+      [formatDateBR(txDate), description1, "despesa", "50,00", testCategoryName, "", "", ""],
+      [formatDateBR(txDate), description2, "despesa", "75,00", testCategoryName, "", "", ""],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -134,7 +145,9 @@ test.describe("Import transactions", () => {
     await importPage.confirmImport();
 
     // description1 should appear; description2 should not
-    await importPage.page.goto("/transactions");
+    const month = txDate.getMonth() + 1;
+    const year = txDate.getFullYear();
+    await importPage.page.goto(`/transactions?month=${month}&year=${year}`);
     await importPage.page.waitForLoadState("networkidle");
     await expect(importPage.page.getByText(description1)).toBeVisible({
       timeout: 10000,
@@ -144,8 +157,7 @@ test.describe("Import transactions", () => {
 
   // ── Invalid CSV ────────────────────────────────────────────────────────────
   test("invalid CSV: shows error message when header is missing required column", async () => {
-    const invalidCsv =
-      "Data;Descrição;Tipo\n15/01/2026;Teste;despesa";
+    const invalidCsv = "Data;Descrição;Tipo\n15/01/2026;Teste;despesa";
 
     await importPage.selectAccount(testAccountName);
     await importPage.uploadCSVContent(invalidCsv);

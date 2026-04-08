@@ -4,6 +4,7 @@ export class ImportPage {
   readonly page: Page;
   readonly uploadStep: Locator;
   readonly reviewStep: Locator;
+  readonly finishedStep: Locator;
   readonly processButton: Locator;
   readonly confirmButton: Locator;
 
@@ -11,6 +12,7 @@ export class ImportPage {
     this.page = page;
     this.uploadStep = page.getByTestId("import_upload_step");
     this.reviewStep = page.getByTestId("import_review_step");
+    this.finishedStep = page.getByTestId("finished_import_successfully_step");
     this.processButton = page.getByTestId("btn_process_csv");
     this.confirmButton = page.getByTestId("btn_confirm_import");
   }
@@ -27,9 +29,9 @@ export class ImportPage {
 
   /** Select the account in the upload step. */
   async selectAccount(accountName: string) {
-    const select = this.uploadStep.getByTestId("select_import_account");
-    await select.click();
-    await select.locator("input").fill(accountName);
+    const input = this.uploadStep.getByTestId("select_import_account");
+    await input.click();
+    await input.fill(accountName);
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
@@ -60,7 +62,7 @@ export class ImportPage {
   async confirmImport() {
     await this.confirmButton.click();
     // Wait for the summary alert that appears after the import loop finishes
-    await expect(this.reviewStep.getByText("Importação concluída")).toBeVisible({
+    await expect(this.finishedStep.getByText("Importação concluída")).toBeVisible({
       timeout: 30000,
     });
     await this.page.waitForLoadState("networkidle", { timeout: 15000 });
@@ -79,12 +81,21 @@ export class ImportPage {
     const statusCell = this.reviewStep.getByTestId(`import_status_${rowIndex}`);
     const actionSelect = this.reviewStep.getByTestId(`select_import_action_${rowIndex}`);
     // Check visible icons
-    const hasSuccess = await statusCell.locator("svg[class*='icon-check'], [data-icon='check']").isVisible().catch(() => false);
+    const hasSuccess = await statusCell
+      .locator("svg[class*='icon-check'], [data-icon='check']")
+      .isVisible()
+      .catch(() => false);
     if (hasSuccess) return "success";
-    const hasError = await statusCell.locator("svg[class*='icon-x'], [data-icon='x']").isVisible().catch(() => false);
+    const hasError = await statusCell
+      .locator("svg[class*='icon-x'], [data-icon='x']")
+      .isVisible()
+      .catch(() => false);
     if (hasError) return "error";
     // Otherwise read from action select value
-    const value = await actionSelect.locator("input").inputValue().catch(() => "");
+    const value = await actionSelect
+      .locator("input")
+      .inputValue()
+      .catch(() => "");
     return value || "pending";
   }
 

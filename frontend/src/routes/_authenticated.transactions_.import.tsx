@@ -331,7 +331,7 @@ function ImportReviewPage() {
             onBack={() => void navigate({ to: "/transactions" })}
           />
         ) : allImportedSuccess ? (
-          <Stack align="center" justify="center" gap="xs" py="xl">
+          <Stack align="center" justify="center" gap="xs" py="xl" data-testid="finished_import_successfully_step">
             <IconCircleCheck size={64} color="var(--mantine-color-green-6)" />
             <Text fw={500} fz="lg">
               Importação concluída com sucesso!
