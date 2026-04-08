@@ -3,8 +3,6 @@ import { ImportPage } from "../pages/ImportPage";
 import {
   apiCreateAccount,
   apiDeleteAccount,
-  apiCreateCategory,
-  apiDeleteCategory,
   apiCreateTransaction,
   apiDeleteTransaction,
   apiCreateCategory,
