@@ -40,7 +40,8 @@ test.describe('Transfer Transactions', () => {
     await transactionsPage.fillTransfer(20000, description, sourceAccountName, destAccountName)
     await transactionsPage.submitForm()
 
-    await expect(page.getByText(description)).toBeVisible({ timeout: 8000 })
+    // A transfer creates two rows (debit + credit) with the same description
+    await expect(page.getByText(description).first()).toBeVisible({ timeout: 8000 })
   })
 
   test('transfer form shows source and destination account selects', async ({ page }) => {
@@ -69,13 +70,14 @@ test.describe('Transfer Transactions', () => {
     createdTransactionIds.push(tx.id)
 
     await transactionsPage.goto()
-    await expect(page.getByText(originalDesc)).toBeVisible()
+    // Transfer creates two rows with the same description
+    await expect(page.getByText(originalDesc).first()).toBeVisible()
 
     await transactionsPage.clickTransactionRow(tx.id)
     await transactionsPage.clearAndFillDescription(updatedDesc)
     await transactionsPage.submitUpdate()
 
-    await expect(page.getByText(updatedDesc)).toBeVisible({ timeout: 8000 })
-    await expect(page.getByText(originalDesc)).not.toBeVisible()
+    await expect(page.getByText(updatedDesc).first()).toBeVisible({ timeout: 8000 })
+    await expect(page.getByText(originalDesc).first()).not.toBeVisible()
   })
 })

@@ -34,10 +34,10 @@ test.describe('Categories Advanced', () => {
     await page.locator(`[data-category-name="${catToDelete}"]`).getByTestId('btn_category_delete').click()
     await expect(page.getByTestId('btn_confirm_delete_category')).toBeVisible()
 
-    // Select replacement category
-    const replaceSelect = page.getByTestId('select_replace_category')
-    await replaceSelect.click()
-    await replaceSelect.fill(catReplacement)
+    // Select replacement category via the searchable input (placeholder = "Deixar sem categoria")
+    // Note: the modal is defined inline in _authenticated.categories.tsx, not in DeleteCategoryDialog.tsx
+    await page.getByPlaceholder('Deixar sem categoria').click()
+    await page.getByPlaceholder('Deixar sem categoria').fill(catReplacement)
     await page.getByRole('option', { name: catReplacement }).click()
 
     // Confirm deletion
