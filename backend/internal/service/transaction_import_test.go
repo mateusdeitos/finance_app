@@ -396,42 +396,46 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 	account, err := suite.createTestAccount(ctx, user)
 	suite.Require().NoError(err)
 
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
 	txDate := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
 
 	suite.Run("existing transaction is duplicate", func() {
 		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 			AccountID:       account.ID,
 			TransactionType: domain.TransactionTypeExpense,
+			CategoryID:      category.ID,
 			Amount:          7500,
 			Date:            txDate,
 			Description:     "Spotify Check",
 		})
 		suite.Require().NoError(err)
 
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "Spotify Check", 7500)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "Spotify Check", 7500, &account.ID)
 		suite.Require().NoError(err)
 		suite.True(isDup)
 	})
 
 	suite.Run("no matching transaction returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "NonExistentDesc12345", 9999)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "NonExistentDesc12345", 9999, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})
 
 	suite.Run("invalid date format returns error", func() {
-		_, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "20/03/2026", "Test", 100)
+		_, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "20/03/2026", "Test", 100, &account.ID)
 		suite.Error(err)
 	})
 
 	suite.Run("different amount returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "Spotify Check", 9999)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "Spotify Check", 9999, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})
 
 	suite.Run("different date returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-21", "Spotify Check", 7500)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-21", "Spotify Check", 7500, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})
