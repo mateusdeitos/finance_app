@@ -3,6 +3,8 @@ import { ImportPage } from "../pages/ImportPage";
 import {
   apiCreateAccount,
   apiDeleteAccount,
+  apiCreateCategory,
+  apiDeleteCategory,
   apiCreateTransaction,
   apiDeleteTransaction,
 } from "../helpers/api";
@@ -36,6 +38,8 @@ test.describe("Import transactions", () => {
   let importPage: ImportPage;
   let testAccountId: number;
   let testAccountName: string;
+  let testCategoryId: number;
+  let testCategoryName: string;
   const createdTransactionIds: number[] = [];
 
   test.beforeAll(async () => {
@@ -45,12 +49,20 @@ test.describe("Import transactions", () => {
       initial_balance: 0,
     });
     testAccountId = account.id;
+
+    // Category is required for non-transfer expense/income transactions
+    const category = await apiCreateCategory({
+      name: `Cat Import ${Date.now()}`,
+    });
+    testCategoryId = category.id;
+    testCategoryName = category.name;
   });
 
   test.afterAll(async () => {
     for (const id of createdTransactionIds) {
       await apiDeleteTransaction(id).catch(() => undefined);
     }
+    await apiDeleteCategory(testCategoryId).catch(() => undefined);
     await apiDeleteAccount(testAccountId).catch(() => undefined);
   });
 
@@ -65,7 +77,16 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 0, 15); // 15/01/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "150,00", "", "", "", ""],
+      [
+        formatDateBR(txDate),
+        description,
+        "despesa",
+        "150,00",
+        testCategoryName,
+        "",
+        "",
+        "",
+      ],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -76,7 +97,7 @@ test.describe("Import transactions", () => {
 
     await importPage.confirmImport();
 
-    // Transaction should appear somewhere on the transactions page
+    // Transaction should appear on the transactions page
     await importPage.page.goto("/transactions");
     await importPage.page.waitForLoadState("networkidle");
     await expect(importPage.page.getByText(description)).toBeVisible({
@@ -89,10 +110,11 @@ test.describe("Import transactions", () => {
     const description = `Duplicado Import ${Date.now()}`;
     const txDate = new Date(2026, 1, 20); // 20/02/2026
 
-    // Create the transaction via API first
+    // Create the transaction via API first (category_id required for expenses)
     const created = await apiCreateTransaction({
       account_id: testAccountId,
       transaction_type: "expense",
+      category_id: testCategoryId,
       amount: 8000,
       date: formatDateISO(txDate),
       description,
@@ -101,7 +123,16 @@ test.describe("Import transactions", () => {
 
     // Now try to import the same transaction
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "80,00", "", "", "", ""],
+      [
+        formatDateBR(txDate),
+        description,
+        "despesa",
+        "80,00",
+        testCategoryName,
+        "",
+        "",
+        "",
+      ],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -122,8 +153,26 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 2, 10); // 10/03/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description1, "despesa", "50,00", "", "", "", ""],
-      [formatDateBR(txDate), description2, "despesa", "75,00", "", "", "", ""],
+      [
+        formatDateBR(txDate),
+        description1,
+        "despesa",
+        "50,00",
+        testCategoryName,
+        "",
+        "",
+        "",
+      ],
+      [
+        formatDateBR(txDate),
+        description2,
+        "despesa",
+        "75,00",
+        testCategoryName,
+        "",
+        "",
+        "",
+      ],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -144,8 +193,7 @@ test.describe("Import transactions", () => {
 
   // ── Invalid CSV ────────────────────────────────────────────────────────────
   test("invalid CSV: shows error message when header is missing required column", async () => {
-    const invalidCsv =
-      "Data;Descrição;Tipo\n15/01/2026;Teste;despesa";
+    const invalidCsv = "Data;Descrição;Tipo\n15/01/2026;Teste;despesa";
 
     await importPage.selectAccount(testAccountName);
     await importPage.uploadCSVContent(invalidCsv);
