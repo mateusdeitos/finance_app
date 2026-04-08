@@ -40,5 +40,6 @@ type ImportCSVResponse struct {
 type CheckDuplicateRequest struct {
 	Date        string `json:"date"`        // YYYY-MM-DD
 	Description string `json:"description"`
-	Amount      int64  `json:"amount"` // cents
+	Amount      int64  `json:"amount"`      // cents
+	AccountID   *int   `json:"account_id"`  // optional; when set, only checks within that account
 }

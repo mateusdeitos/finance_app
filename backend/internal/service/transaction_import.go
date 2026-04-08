@@ -92,7 +92,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID int, acc
 	errorCount := 0
 
 	for i, record := range dataRows {
-		row := parseCSVRow(ctx, s, userID, i, record, colIdx, categories, accounts)
+		row := parseCSVRow(ctx, s, userID, accountID, i, record, colIdx, categories, accounts)
 		if row.Status == domain.ImportRowStatusDuplicate {
 			duplicateCount++
 		}
@@ -171,6 +171,7 @@ func parseCSVRow(
 	ctx context.Context,
 	s *transactionService,
 	userID int,
+	accountID int,
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
@@ -291,7 +292,7 @@ func parseCSVRow(
 
 	// Duplicate detection (only if required fields parsed successfully)
 	if row.Date != nil && row.Description != "" && row.Amount > 0 {
-		if isDuplicate(ctx, s, userID, row.Description, *row.Date, row.Amount) {
+		if isDuplicate(ctx, s, userID, row.Description, *row.Date, row.Amount, &accountID) {
 			row.Status = domain.ImportRowStatusDuplicate
 		}
 	}
@@ -335,8 +336,8 @@ func inferCategoryFromHistory(ctx context.Context, s *transactionService, userID
 }
 
 // isDuplicate checks whether a transaction with the same description, date and amount
-// already exists for the user.
-func isDuplicate(ctx context.Context, s *transactionService, userID int, description string, date time.Time, amount int64) bool {
+// already exists for the user, optionally scoped to a specific account.
+func isDuplicate(ctx context.Context, s *transactionService, userID int, description string, date time.Time, amount int64, accountID *int) bool {
 	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
 
@@ -349,6 +350,9 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 		EndDate: &domain.ComparableSearch[time.Time]{
 			LessThanOrEqual: &dayEnd,
 		},
+	}
+	if accountID != nil {
+		filter.AccountIDs = []int{*accountID}
 	}
 	txs, err := s.transactionRepo.Search(ctx, filter)
 	if err != nil {
@@ -365,12 +369,12 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 
 // CheckDuplicateTransaction checks whether a transaction with the given date, description,
 // and amount already exists for the user. date must be in "YYYY-MM-DD" format.
-func (s *transactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64) (bool, error) {
+func (s *transactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error) {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return false, pkgErrors.New(pkgErrors.ErrCodeBadRequest, "invalid date format, expected YYYY-MM-DD")
 	}
-	return isDuplicate(ctx, s, userID, description, t, amount), nil
+	return isDuplicate(ctx, s, userID, description, t, amount, accountID), nil
 }
 
 // parseBRAmount parses a Brazilian-format currency string (e.g. "1.234,56") to cents.

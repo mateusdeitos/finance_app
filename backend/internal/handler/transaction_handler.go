@@ -336,7 +336,7 @@ func (h *TransactionHandler) CheckDuplicate(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	isDup, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date, req.Description, req.Amount)
+	isDup, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date, req.Description, req.Amount, req.AccountID)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}

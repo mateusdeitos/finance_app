@@ -421,9 +421,9 @@ func (_c *MockTransactionService_Update_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
-// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, description, amount
-func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64) (bool, error) {
-	ret := _m.Called(ctx, userID, date, description, amount)
+// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, description, amount, accountID
+func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error) {
+	ret := _m.Called(ctx, userID, date, description, amount, accountID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CheckDuplicateTransaction")
@@ -431,17 +431,17 @@ func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context,
 
 	var r0 bool
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64) (bool, error)); ok {
-		return rf(ctx, userID, date, description, amount)
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) (bool, error)); ok {
+		return rf(ctx, userID, date, description, amount, accountID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64) bool); ok {
-		r0 = rf(ctx, userID, date, description, amount)
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) bool); ok {
+		r0 = rf(ctx, userID, date, description, amount, accountID)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, string, string, int64) error); ok {
-		r1 = rf(ctx, userID, date, description, amount)
+	if rf, ok := ret.Get(1).(func(context.Context, int, string, string, int64, *int) error); ok {
+		r1 = rf(ctx, userID, date, description, amount, accountID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -460,13 +460,14 @@ type MockTransactionService_CheckDuplicateTransaction_Call struct {
 //   - date string
 //   - description string
 //   - amount int64
-func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, description interface{}, amount interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
-	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, description, amount)}
+//   - accountID *int
+func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, description interface{}, amount interface{}, accountID interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
+	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, description, amount, accountID)}
 }
 
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date string, description string, amount int64)) *MockTransactionService_CheckDuplicateTransaction_Call {
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date string, description string, amount int64, accountID *int)) *MockTransactionService_CheckDuplicateTransaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(int64))
+		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(int64), args[5].(*int))
 	})
 	return _c
 }
@@ -476,7 +477,7 @@ func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 bool
 	return _c
 }
 
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, string, string, int64) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, string, string, int64, *int) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
 	_c.Call.Return(run)
 	return _c
 }
