@@ -1,10 +1,5 @@
 import { useEffect, type FocusEvent } from "react";
-import {
-  useFormContext,
-  Controller,
-  useWatch,
-  FieldPath,
-} from "react-hook-form";
+import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
 import {
   Stack,
   SegmentedControl,
@@ -15,6 +10,7 @@ import {
   Group,
   SimpleGrid,
   Box,
+  Switch,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
@@ -78,19 +74,16 @@ export const TransactionForm = ({
   }, []);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
+  const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
   const isTransfer = transactionType === "transfer";
 
-  const generalError =
-    submitError ??
-    (errors as Record<string, { message?: string }>)["_general"]?.message;
+  const generalError = submitError ?? (errors as Record<string, { message?: string }>)["_general"]?.message;
 
   const onSubmit = (values: TransactionFormValues) => {
     onSubmitPayload({ ...values, date: values.date });
   };
 
-  function handleSuggestionSelect(
-    suggestion: Transactions.TransactionSuggestion
-  ) {
+  function handleSuggestionSelect(suggestion: Transactions.TransactionSuggestion) {
     setValue("transaction_type", suggestion.type);
     setValue("amount", suggestion.amount);
     if (suggestion.account_id) setValue("account_id", suggestion.account_id);
@@ -98,7 +91,7 @@ export const TransactionForm = ({
     if (suggestion.tags)
       setValue(
         "tags",
-        suggestion.tags.map((t) => t.name)
+        suggestion.tags.map((t) => t.name),
       );
     // Clear split settings on autocomplete to avoid stale data
     setValue("split_settings", []);
@@ -108,39 +101,40 @@ export const TransactionForm = ({
     .filter((a) => !a.user_connection)
     .map((a) => ({ value: String(a.id), label: a.name }));
 
-  const destinationAccountOptions: ComboboxItemGroup<ComboboxItem>[] =
-    accounts.reduce<ComboboxItemGroup<ComboboxItem>[]>(
-      (acc, a) => {
-        const item = { label: a.name, value: String(a.id) };
-        if (a.user_connection) {
-          return [
-            acc[0],
-            {
-              ...acc[1],
-              items: [...acc[1].items, item],
-            },
-          ];
-        }
-
+  const destinationAccountOptions: ComboboxItemGroup<ComboboxItem>[] = accounts.reduce<
+    ComboboxItemGroup<ComboboxItem>[]
+  >(
+    (acc, a) => {
+      const item = { label: a.name, value: String(a.id) };
+      if (a.user_connection) {
         return [
+          acc[0],
           {
-            ...acc[0],
-            items: [...acc[0].items, item],
+            ...acc[1],
+            items: [...acc[1].items, item],
           },
-          acc[1],
         ];
+      }
+
+      return [
+        {
+          ...acc[0],
+          items: [...acc[0].items, item],
+        },
+        acc[1],
+      ];
+    },
+    [
+      {
+        group: "Minhas contas",
+        items: [],
       },
-      [
-        {
-          group: "Minhas contas",
-          items: [],
-        },
-        {
-          group: "Contas Compartilhadas",
-          items: [],
-        },
-      ]
-    );
+      {
+        group: "Contas Compartilhadas",
+        items: [],
+      },
+    ],
+  );
 
   const categoryOptions = categories
     .filter((c) => !c.parent_id)
@@ -153,11 +147,10 @@ export const TransactionForm = ({
 
   function makeSelectBlurHandler(
     options: ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[],
-    onChange: (val: number | null) => void
+    onChange: (val: number | null) => void,
   ) {
-    const isItemGroup = (
-      o: ComboboxItem | ComboboxItemGroup<ComboboxItem>
-    ): o is ComboboxItemGroup<ComboboxItem> => "group" in o;
+    const isItemGroup = (o: ComboboxItem | ComboboxItemGroup<ComboboxItem>): o is ComboboxItemGroup<ComboboxItem> =>
+      "group" in o;
 
     return (e: FocusEvent<HTMLInputElement>) => {
       const typed = e.target.value.trim().toLowerCase();
@@ -267,9 +260,7 @@ export const TransactionForm = ({
                   data={accountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(accountOptions, (val) =>
-                    field.onChange(val)
-                  )}
+                  onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                   error={errors.account_id?.message}
                   searchable
                   data-testid="select_account"
@@ -287,10 +278,7 @@ export const TransactionForm = ({
                   data={destinationAccountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(
-                    destinationAccountOptions,
-                    (val) => field.onChange(val)
-                  )}
+                  onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
                 />
@@ -310,9 +298,7 @@ export const TransactionForm = ({
                     data={categoryOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(categoryOptions, (val) =>
-                      field.onChange(val)
-                    )}
+                    onBlur={makeSelectBlurHandler(categoryOptions, (val) => field.onChange(val))}
                     error={errors.category_id?.message}
                     searchable
                     clearable
@@ -325,14 +311,13 @@ export const TransactionForm = ({
                 name="account_id"
                 render={({ field }) => (
                   <Select
+                    ref={field.ref}
                     label="Conta"
                     required
                     data={accountOptions}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(accountOptions, (val) =>
-                      field.onChange(val)
-                    )}
+                    onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                     error={errors.account_id?.message}
                     searchable
                     data-testid="select_account"
@@ -361,7 +346,20 @@ export const TransactionForm = ({
           )}
         />
 
-        <RecurrenceFields />
+        <Stack gap="xs">
+          <Controller
+            control={control}
+            name="recurrenceEnabled"
+            render={({ field }) => (
+              <Switch
+                label="Recorrência"
+                checked={!!field.value}
+                onChange={(e) => field.onChange(e.currentTarget.checked)}
+              />
+            )}
+          />
+          {recurrenceEnabled && <RecurrenceFields />}
+        </Stack>
       </Stack>
 
       <Box
@@ -386,11 +384,7 @@ export const TransactionForm = ({
               Salvar e criar outra
             </Button>
           )}
-          <Button
-            type="submit"
-            loading={isSubmitting || isPending}
-            data-testid="btn_save_transaction"
-          >
+          <Button type="submit" loading={isSubmitting || isPending} data-testid="btn_save_transaction">
             Salvar
           </Button>
         </Group>

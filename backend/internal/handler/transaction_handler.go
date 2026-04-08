@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 
@@ -312,4 +313,81 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// CheckDuplicate godoc
+// @Summary      Check if a transaction is a duplicate
+// @Description  Returns whether a transaction with the given date, description and amount already exists for the authenticated user.
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        request  body  domain.CheckDuplicateRequest  true  "Duplicate check params"
+// @Success      200  {object}  map[string]bool
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/check-duplicate [post]
+func (h *TransactionHandler) CheckDuplicate(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	var req domain.CheckDuplicateRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	isDup, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date, req.Description, req.Amount, req.AccountID)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]bool{"is_duplicate": isDup})
+}
+
+// ImportCSV godoc
+// @Summary      Parse and enrich a CSV file for import
+// @Description  Accepts a multipart CSV file and an account_id. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
+// @Tags         transactions
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        account_id  formData  int   true  "Destination account ID"
+// @Param        file        formData  file  true  "CSV file"
+// @Success      200  {object}  domain.ImportCSVResponse
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/import-csv [post]
+func (h *TransactionHandler) ImportCSV(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	accountIDStr := c.FormValue("account_id")
+	accountID, err := strconv.Atoi(accountIDStr)
+	if err != nil || accountID <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid account_id")
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "file is required")
+	}
+
+	src, err := fileHeader.Open()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to open file")
+	}
+	defer func() { _ = src.Close() }()
+
+	// Limit file to 1 MB
+	data, err := io.ReadAll(io.LimitReader(src, 1<<20))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "failed to read file")
+	}
+
+	result, err := h.transactionService.ParseImportCSV(c.Request().Context(), userID, accountID, data)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, result)
 }

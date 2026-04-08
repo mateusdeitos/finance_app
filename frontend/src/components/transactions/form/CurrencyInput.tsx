@@ -1,60 +1,61 @@
-import { useRef, forwardRef, useImperativeHandle } from 'react'
-import { TextInput } from '@mantine/core'
+import { useRef, forwardRef, useImperativeHandle } from "react";
+import { TextInput } from "@mantine/core";
 
 interface Props {
-  value: number // in cents
-  onChange: (cents: number) => void
-  error?: string
-  label?: string
-  required?: boolean
-  'data-testid'?: string
+  value: number; // in cents
+  onChange: (cents: number) => void;
+  error?: string;
+  label?: string;
+  required?: boolean;
+  disabled?: boolean;
+  "data-testid"?: string;
 }
 
 export interface CurrencyInputHandle {
-  focus: () => void
+  focus: () => void;
 }
 
-const MAX_CENTS = 9_999_999_999 // R$ 99.999.999,99
+const MAX_CENTS = 9_999_999_999; // R$ 99.999.999,99
 
 function formatCents(cents: number): string {
-  return new Intl.NumberFormat('pt-BR', {
+  return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(cents / 100)
+  }).format(cents / 100);
 }
 
 export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function CurrencyInput(
-  { value, onChange, error, label, required, 'data-testid': dataTestId }: Props,
+  { value, onChange, error, label, required, disabled, "data-testid": dataTestId }: Props,
   ref,
 ) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
-  }))
+  }));
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // Let browser handle shortcuts and navigation
-    if (e.ctrlKey || e.metaKey) return
-    if (['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return
+    if (e.ctrlKey || e.metaKey) return;
+    if (["Tab", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
 
-    e.preventDefault()
+    e.preventDefault();
 
-    const el = e.currentTarget
-    const allSelected = el.selectionStart === 0 && el.selectionEnd === el.value.length
+    const el = e.currentTarget;
+    const allSelected = el.selectionStart === 0 && el.selectionEnd === el.value.length;
 
-    if (e.key === 'Backspace' || e.key === 'Delete') {
+    if (e.key === "Backspace" || e.key === "Delete") {
       if (allSelected) {
-        onChange(0)
-      } else if (e.key === 'Backspace') {
-        onChange(Math.floor(value / 10))
+        onChange(0);
+      } else if (e.key === "Backspace") {
+        onChange(Math.floor(value / 10));
       }
-      return
+      return;
     }
 
     if (/^\d$/.test(e.key)) {
-      const next = allSelected ? parseInt(e.key, 10) : value * 10 + parseInt(e.key, 10)
-      if (next <= MAX_CENTS) onChange(next)
+      const next = allSelected ? parseInt(e.key, 10) : value * 10 + parseInt(e.key, 10);
+      if (next <= MAX_CENTS) onChange(next);
     }
   }
 
@@ -63,6 +64,7 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
       ref={inputRef}
       label={label}
       required={required}
+      disabled={disabled}
       value={formatCents(value)}
       onChange={() => {}}
       onKeyDown={handleKeyDown}
@@ -71,5 +73,5 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
       inputMode="numeric"
       data-testid={dataTestId}
     />
-  )
-})
+  );
+});
