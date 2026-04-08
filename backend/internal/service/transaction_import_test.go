@@ -211,6 +211,9 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 	account, err := suite.createTestAccount(ctx, user)
 	suite.Require().NoError(err)
 
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
 	suite.Run("empty file", func() {
 		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, []byte{})
 		suite.ErrorIs(err, pkgErrors.ErrImportEmptyFile)
@@ -269,6 +272,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 			AccountID:       account.ID,
 			TransactionType: domain.TransactionTypeExpense,
+			CategoryID:      category.ID,
 			Amount:          5000,
 			Date:            txDate,
 			Description:     "Netflix",
