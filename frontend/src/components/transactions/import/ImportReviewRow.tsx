@@ -158,7 +158,7 @@ export const ImportReviewRow = memo(
     };
 
     return (
-      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex}>
+      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={`import_row_${rowIndex}`}>
         {/* Checkbox */}
         <Table.Td>
           <Checkbox checked={selected} onChange={() => onToggleSelect(rowIndex)} disabled={disabled} size="xs" />
@@ -166,7 +166,7 @@ export const ImportReviewRow = memo(
 
         {/* Status */}
         <Table.Td>
-          <Box className={classes.statusIcon}>{statusCell()}</Box>
+          <Box className={classes.statusIcon} data-testid={`import_status_${rowIndex}`}>{statusCell()}</Box>
         </Table.Td>
 
         {/* Date */}
@@ -330,6 +330,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 disabled={disabled}
                 withCheckIcon={false}
+                data-testid={`select_import_action_${rowIndex}`}
               />
             )}
           />

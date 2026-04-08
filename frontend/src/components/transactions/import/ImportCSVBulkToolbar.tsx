@@ -51,6 +51,7 @@ export function ImportCSVBulkToolbar({
         color="red"
         leftSection={<IconTrash size={14} />}
         onClick={onRemove}
+        data-testid="btn_bulk_remove"
       >
         Remover
       </Button>
@@ -73,6 +74,7 @@ export function ImportCSVBulkToolbar({
               size="xs"
               data={ACTION_OPTIONS}
               withCheckIcon={false}
+              data-testid="select_bulk_action"
               onChange={(val) => {
                 if (val) {
                   onBulkSetAction(val as Transactions.ImportRowAction)

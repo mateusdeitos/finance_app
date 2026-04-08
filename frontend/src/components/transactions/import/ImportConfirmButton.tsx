@@ -18,6 +18,7 @@ export function ImportConfirmButton({ importing, paused, toImportCount, onPause,
           color="orange"
           leftSection={<IconPlayerPause size={16} />}
           onClick={onPause}
+          data-testid="btn_pause_import"
         >
           Pausar
         </Button>
@@ -28,6 +29,7 @@ export function ImportConfirmButton({ importing, paused, toImportCount, onPause,
           leftSection={<IconPlayerPlay size={16} />}
           onClick={onConfirm}
           disabled={toImportCount === 0}
+          data-testid={paused ? 'btn_resume_import' : 'btn_confirm_import'}
         >
           {paused ? 'Retomar importação' : `Confirmar importação (${toImportCount})`}
         </Button>
