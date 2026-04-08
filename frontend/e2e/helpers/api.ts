@@ -106,6 +106,18 @@ export async function apiDeleteTransaction(
   await apiFetch(url, { method: 'DELETE' })
 }
 
+export async function apiCreateTag(payload: { name: string }): Promise<{ id: number; name: string }> {
+  const res = await apiFetch('/api/tags', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return res.json()
+}
+
+export async function apiDeleteTag(id: number): Promise<void> {
+  await apiFetch(`/api/tags/${id}`, { method: 'DELETE' })
+}
+
 export async function apiUpdateTransaction(
   id: number,
   payload: Partial<Transactions.CreateTransactionPayload>,

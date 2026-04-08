@@ -25,6 +25,12 @@ export class TransactionsPage {
     await this.page.getByTestId("open_advanced_filters").click();
   }
 
+  async selectGroupBy(option: 'date' | 'category' | 'account') {
+    const labelMap: Record<string, string> = { date: 'Data', category: 'Categoria', account: 'Conta' }
+    await this.page.getByTestId('segmented_group_by').getByText(labelMap[option]).click()
+    await this.page.waitForLoadState('networkidle')
+  }
+
   /** Click the transaction row for the given transaction ID to open the update drawer. */
   async clickTransactionRow(transactionId: number) {
     await this.page.locator(`[data-transaction-id="${transactionId}"]`).click();

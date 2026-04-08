@@ -105,9 +105,7 @@ test.describe("Transaction Filters", () => {
   });
 
   // ── Account filter ────────────────────────────────────────────────────────
-  test("account filter shows only transactions from selected account", async ({
-    page,
-  }) => {
+  test("account filter shows only transactions from selected account", async ({ page }) => {
     const descA = `ContaA Tx ${Date.now()}`;
     const descB = `ContaB Tx ${Date.now()}`;
 
@@ -143,9 +141,7 @@ test.describe("Transaction Filters", () => {
   });
 
   // ── Category filter ───────────────────────────────────────────────────────
-  test("category filter shows only transactions from selected category", async ({
-    page,
-  }) => {
+  test("category filter shows only transactions from selected category", async ({ page }) => {
     const descA = `CatA Tx ${Date.now()}`;
     const descB = `CatB Tx ${Date.now()}`;
 
@@ -181,9 +177,7 @@ test.describe("Transaction Filters", () => {
   });
 
   // ── Type filter (advanced) ────────────────────────────────────────────────
-  test("type filter shows only expenses when expense filter is active", async ({
-    page,
-  }) => {
+  test("type filter shows only expenses when expense filter is active", async ({ page }) => {
     const expenseDesc = `TypeFilter Despesa ${Date.now()}`;
     const incomeDesc = `TypeFilter Receita ${Date.now()}`;
 
@@ -212,9 +206,7 @@ test.describe("Transaction Filters", () => {
     // Open advanced filter and toggle "Apenas despesas"
     // getByTestId finds the Mantine Switch root <label> element, which is visible
     await transactionsPage.openAdvancedFilters();
-    await page
-      .getByTestId("advanced_filters_popover")
-      .waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
     await page
       .getByTestId("switch_type_expense")
       .locator("xpath=ancestor::label")
@@ -223,6 +215,243 @@ test.describe("Transaction Filters", () => {
 
     await expect(page.getByText(expenseDesc)).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(incomeDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── Type filter — income ──────────────────────────────────────────────────
+  test("type filter shows only income when income filter is active", async ({ page }) => {
+    const expenseDesc = `IncomeFilter Despesa ${Date.now()}`;
+    const incomeDesc = `IncomeFilter Receita ${Date.now()}`;
+
+    const expenseTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: expenseDesc,
+    });
+    const incomeTx = await apiCreateTransaction({
+      transaction_type: "income",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 2000,
+      date: today,
+      description: incomeDesc,
+    });
+    createdTransactionIds.push(expenseTx.id, incomeTx.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(expenseDesc)).toBeVisible();
+    await expect(page.getByText(incomeDesc)).toBeVisible();
+
+    await transactionsPage.openAdvancedFilters();
+    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId("switch_type_income").locator("xpath=ancestor::label").click({ timeout: 3000, force: true });
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(incomeDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(expenseDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── Type filter — transfer ────────────────────────────────────────────────
+  test("type filter shows only transfers when transfer filter is active", async ({ page }) => {
+    const transferDesc = `TransferFilter Transf ${Date.now()}`;
+    const expenseDesc = `TransferFilter Despesa ${Date.now()}`;
+
+    const transferTx = await apiCreateTransaction({
+      transaction_type: "transfer",
+      account_id: accountAId,
+      destination_account_id: accountBId,
+      amount: 3000,
+      date: today,
+      description: transferDesc,
+    });
+    const expenseTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1500,
+      date: today,
+      description: expenseDesc,
+    });
+    createdTransactionIds.push(transferTx.id, expenseTx.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(transferDesc).first()).toBeVisible();
+    await expect(page.getByText(expenseDesc)).toBeVisible();
+
+    await transactionsPage.openAdvancedFilters();
+    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page
+      .getByTestId("switch_type_transfer")
+      .locator("xpath=ancestor::label")
+      .click({ timeout: 3000, force: true });
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(transferDesc).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(expenseDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── Tag filter ────────────────────────────────────────────────────────────
+  test("tag filter shows only transactions with selected tag", async ({ page }) => {
+    const tagName = `TagFiltro${Date.now()}`;
+    const taggedDesc = `TagFilter Tagged ${Date.now()}`;
+    const untaggedDesc = `TagFilter Untagged ${Date.now()}`;
+
+    const taggedTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: taggedDesc,
+      tags: [{ name: tagName }],
+    });
+    const untaggedTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 2000,
+      date: today,
+      description: untaggedDesc,
+    });
+    createdTransactionIds.push(taggedTx.id, untaggedTx.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(taggedDesc)).toBeVisible();
+    await expect(page.getByText(untaggedDesc)).toBeVisible();
+
+    await page.getByRole("button", { name: /Tags/ }).click();
+    await page.locator(".mantine-Popover-dropdown").getByText(tagName).click();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(taggedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(untaggedDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── Grouping — by category ────────────────────────────────────────────────
+  test("grouping by category groups transactions under correct category headers", async ({ page }) => {
+    const descA = `GroupCat A ${Date.now()}`;
+    const descB = `GroupCat B ${Date.now()}`;
+
+    const txA = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: descA,
+    });
+    const txB = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryBId,
+      amount: 2000,
+      date: today,
+      description: descB,
+    });
+    createdTransactionIds.push(txA.id, txB.id);
+
+    await transactionsPage.goto();
+    await transactionsPage.selectGroupBy("category");
+
+    await expect(page.getByText(categoryAName).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categoryBName).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(descA)).toBeVisible();
+    await expect(page.getByText(descB)).toBeVisible();
+
+    await transactionsPage.selectGroupBy("date");
+  });
+
+  // ── Grouping — by account ─────────────────────────────────────────────────
+  test("grouping by account groups transactions under correct account headers", async ({ page }) => {
+    const descA = `GroupAcct A ${Date.now()}`;
+    const descB = `GroupAcct B ${Date.now()}`;
+
+    const txA = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: descA,
+    });
+    const txB = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountBId,
+      category_id: categoryAId,
+      amount: 2000,
+      date: today,
+      description: descB,
+    });
+    createdTransactionIds.push(txA.id, txB.id);
+
+    await transactionsPage.goto();
+    await transactionsPage.selectGroupBy("account");
+
+    await expect(page.getByText(accountAName).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(accountBName).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(descA)).toBeVisible();
+    await expect(page.getByText(descB)).toBeVisible();
+
+    await transactionsPage.selectGroupBy("date");
+  });
+
+  // ── Multiple filters combined ─────────────────────────────────────────────
+  test("multiple filters: expense type and specific account combined", async ({ page }) => {
+    const expenseADesc = `MultiFilter ExpA ${Date.now()}`;
+    const incomeADesc = `MultiFilter IncA ${Date.now()}`;
+    const expenseBDesc = `MultiFilter ExpB ${Date.now()}`;
+
+    const expenseA = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: expenseADesc,
+    });
+    const incomeA = await apiCreateTransaction({
+      transaction_type: "income",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 2000,
+      date: today,
+      description: incomeADesc,
+    });
+    const expenseB = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountBId,
+      category_id: categoryAId,
+      amount: 3000,
+      date: today,
+      description: expenseBDesc,
+    });
+    createdTransactionIds.push(expenseA.id, incomeA.id, expenseB.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(expenseADesc)).toBeVisible();
+    await expect(page.getByText(incomeADesc)).toBeVisible();
+    await expect(page.getByText(expenseBDesc)).toBeVisible();
+
+    // Apply expense type filter
+    await transactionsPage.openAdvancedFilters();
+    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page
+      .getByTestId("switch_type_expense")
+      .locator("xpath=ancestor::label")
+      .click({ timeout: 3000, force: true });
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Escape");
+
+    // Apply account filter for accountA
+    await page.getByRole("button", { name: /Contas/ }).click();
+    await page.getByLabel(accountAName).check();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(expenseADesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(incomeADesc)).not.toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(expenseBDesc)).not.toBeVisible({ timeout: 8000 });
   });
 
   // ── Clear filters ─────────────────────────────────────────────────────────

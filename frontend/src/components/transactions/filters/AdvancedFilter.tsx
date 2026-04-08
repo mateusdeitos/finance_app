@@ -104,6 +104,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             label="Ocultar acertos"
             checked={hideSettlements}
             onChange={toggleHideSettlements}
+            data-testid="switch_hide_settlements"
           />
         </Stack>
       </Popover.Dropdown>
