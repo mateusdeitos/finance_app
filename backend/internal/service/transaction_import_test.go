@@ -57,6 +57,7 @@ func TestParseCSVHeader(t *testing.T) {
 			header:  []string{"Data", "Descrição", "Tipo", "Valor", "Categoria", "Conta Destino", "Tipo de Parcelamento", "Quantidade de Parcelas"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
+				t.Helper()
 				assert.Equal(t, 0, idx.date)
 				assert.Equal(t, 1, idx.description)
 				assert.Equal(t, 2, idx.txType)
@@ -77,6 +78,7 @@ func TestParseCSVHeader(t *testing.T) {
 			header:  []string{"DATA", "DESCRIÇÃO", "TIPO", "VALOR"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
+				t.Helper()
 				assert.Equal(t, 0, idx.date)
 				assert.Equal(t, 1, idx.description)
 				assert.Equal(t, 2, idx.txType)
@@ -88,6 +90,7 @@ func TestParseCSVHeader(t *testing.T) {
 			header:  []string{"Data", "Descrição", "Tipo", "Valor", "Extra1", "Extra2"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
+				t.Helper()
 				assert.Equal(t, 0, idx.date)
 				assert.Equal(t, 3, idx.amount)
 			},
@@ -97,6 +100,7 @@ func TestParseCSVHeader(t *testing.T) {
 			header:  []string{"Data", "Descricao", "Tipo", "Valor"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
+				t.Helper()
 				assert.Equal(t, 1, idx.description)
 			},
 		},

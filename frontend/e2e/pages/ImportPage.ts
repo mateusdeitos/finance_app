@@ -56,16 +56,14 @@ export class ImportPage {
     await this.submitUpload();
   }
 
-  /** Click confirm import and wait until all rows are done (no more loading spinners). */
+  /** Click confirm import and wait until the "Importação concluída" summary alert appears. */
   async confirmImport() {
     await this.confirmButton.click();
-    // Wait until the confirm button disappears (becomes resume) or loading finishes
-    await this.page.waitForFunction(
-      () => !document.querySelector('[data-testid="btn_confirm_import"]') || true,
-      { timeout: 30000 },
-    );
-    // Wait for network to settle
-    await this.page.waitForLoadState("networkidle", { timeout: 30000 });
+    // Wait for the summary alert that appears after the import loop finishes
+    await expect(this.reviewStep.getByText("Importação concluída")).toBeVisible({
+      timeout: 30000,
+    });
+    await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 
   /** Return the number of review rows in the table. */
