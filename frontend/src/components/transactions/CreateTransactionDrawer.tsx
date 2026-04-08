@@ -48,7 +48,7 @@ export function CreateTransactionDrawer() {
       date: convertUtcToLocalKeepingValues(prefill.date ? prefill.date : new Date()),
       description: "",
       amount: 0,
-      account_id: prefill.accountId ?? null,
+      account_id: prefill.accountId ?? undefined,
       category_id: prefill.categoryId ?? null,
       destination_account_id: null,
       tags: [],
@@ -73,7 +73,7 @@ export function CreateTransactionDrawer() {
     const payload = buildTransactionPayload(values, existingTags);
     mutation.mutate(payload, {
       onSuccess: () => {
-        savePrefill(payload.date, payload.category_id ?? null, payload.account_id);
+        savePrefill(payload.date, payload.category_id ?? null, payload.account_id ?? null);
         onSuccess();
       },
       onError: async (err: unknown) => {

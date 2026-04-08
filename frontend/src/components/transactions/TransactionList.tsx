@@ -1,76 +1,79 @@
-import { Skeleton, Stack, Text } from '@mantine/core'
-import { useSearch } from '@tanstack/react-router'
-import { useMemo } from 'react'
-import { useActiveFilters } from '@/hooks/useActiveFilters'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useCategories } from '@/hooks/useCategories'
-import { useOpeningBalance } from '@/hooks/useOpeningBalance'
-import { useTransactions } from '@/hooks/useTransactions'
-import { Transactions } from '@/types/transactions'
-import { groupTransactions } from '@/utils/groupTransactions'
-import { TransactionGroup } from './TransactionGroup'
+import { Skeleton, Stack, Text } from "@mantine/core";
+import { useSearch } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useActiveFilters } from "@/hooks/useActiveFilters";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCategories } from "@/hooks/useCategories";
+import { useOpeningBalance } from "@/hooks/useOpeningBalance";
+import { useTransactions } from "@/hooks/useTransactions";
+import { Transactions } from "@/types/transactions";
+import { groupTransactions } from "@/utils/groupTransactions";
+import { TransactionGroup } from "./TransactionGroup";
 
 interface TransactionListProps {
-  currentUserId: number
-  selectedIds?: Set<number>
-  onSelectTransaction?: (id: number) => void
+  currentUserId: number;
+  selectedIds?: Set<number>;
+  onSelectTransaction?: (id: number) => void;
 }
 
 function groupNetTotal(group: Transactions.TransactionGroup, hideSettlements: boolean): number {
   return group.transactions.reduce((sum, tx) => {
-    const txAmount = tx.operation_type === 'credit' ? tx.amount : -tx.amount
+    const txAmount = tx.operation_type === "credit" ? tx.amount : -tx.amount;
     const settlementsAmount = hideSettlements
       ? 0
       : (tx.settlements_from_source ?? []).reduce(
-          (s, settlement) => s + (settlement.type === 'credit' ? settlement.amount : -settlement.amount),
+          (s, settlement) => s + (settlement.type === "credit" ? settlement.amount : -settlement.amount),
           0,
-        )
-    return sum + txAmount + settlementsAmount
-  }, 0)
+        );
+    return sum + txAmount + settlementsAmount;
+  }, 0);
 }
 
 export function TransactionList({ currentUserId, selectedIds, onSelectTransaction }: TransactionListProps) {
-  const search = useSearch({ from: '/_authenticated/transactions' })
-  const filters = useActiveFilters()
+  const search = useSearch({ from: "/_authenticated/transactions" });
+  const filters = useActiveFilters();
 
   const { query: txQuery } = useTransactions({
     month: search.month,
     year: search.year,
     ...filters,
-  })
+  });
   const { query: balanceQuery } = useOpeningBalance({
     month: search.month,
     year: search.year,
     accumulated: search.accumulated,
-  })
+  });
 
-  const { query: accountsQuery } = useAccounts()
-  const { query: categoriesQuery } = useCategories()
-  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
-  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data])
+  const { query: accountsQuery } = useAccounts();
+  const { query: categoriesQuery } = useCategories();
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
-  const openingBalance = balanceQuery.data?.balance ?? 0
+  const openingBalance = balanceQuery.data?.balance ?? 0;
 
   const filtered = useMemo(() => {
-    const transactions = txQuery.data ?? []
-    if (!search.query) return transactions
-    const lower = search.query.toLowerCase()
-    return transactions.filter((tx) => tx.description.toLowerCase().includes(lower))
-  }, [txQuery.data, search.query])
+    const transactions = txQuery.data ?? [];
+    if (!search.query) return transactions;
+    const lower = search.query.toLowerCase();
+    return transactions.filter((tx) => tx.description.toLowerCase().includes(lower));
+  }, [txQuery.data, search.query]);
 
   const groups = useMemo(
     () => groupTransactions(filtered, search.groupBy, accounts, categories),
     [filtered, search.groupBy, accounts, categories],
-  )
+  );
 
-  const groupTotals = useMemo(() => groups.map((g) => groupNetTotal(g, search.hideSettlements)), [groups, search.hideSettlements])
+  const groupTotals = useMemo(
+    () => groups.map((g) => groupNetTotal(g, search.hideSettlements)),
+    [groups, search.hideSettlements],
+  );
 
   const runningBalances = useMemo(() => {
     return groupTotals.reduce<number[]>((acc, total) => {
-      const prev = acc.length > 0 ? acc[acc.length - 1] : openingBalance
-      return [...acc, prev + total]
-    }, [])
-  }, [groupTotals, openingBalance])
+      const prev = acc.length > 0 ? acc[acc.length - 1] : openingBalance;
+      return [...acc, prev + total];
+    }, []);
+  }, [groupTotals, openingBalance]);
 
   if (txQuery.isLoading) {
     return (
@@ -84,7 +87,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
           </Stack>
         ))}
       </Stack>
-    )
+    );
   }
 
   if (groups.length === 0) {
@@ -92,7 +95,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
       <Text ta="center" c="dimmed" py="xl">
         Nenhuma transação encontrada
       </Text>
-    )
+    );
   }
 
   return (
@@ -114,5 +117,5 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
         />
       ))}
     </Stack>
-  )
+  );
 }

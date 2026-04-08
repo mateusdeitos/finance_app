@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -17,18 +17,25 @@ import {
   Text,
   Title,
 } from "@mantine/core";
-import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv } from "@tabler/icons-react";
+import { IconAlertCircle, IconArrowLeft, IconCircleCheck, IconFileTypeCsv } from "@tabler/icons-react";
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useForm, useFieldArray, FormProvider, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { createTransaction } from "@/api/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useParseImportCSV } from "@/hooks/useParseImportCSV";
-import { useTransactions } from "@/hooks/useTransactions";
 import { Transactions } from "@/types/transactions";
 import { parseApiError } from "@/utils/apiErrors";
 import { ImportReviewRow } from "@/components/transactions/import/ImportReviewRow";
 import { ImportCSVBulkToolbar } from "@/components/transactions/import/ImportCSVBulkToolbar";
 import { ImportConfirmButton } from "@/components/transactions/import/ImportConfirmButton";
+import {
+  importFormSchema,
+  type ImportFormValues,
+  type ImportRowFormValues,
+} from "@/components/transactions/form/importFormSchema";
+import { useQueryClient } from "@tanstack/react-query";
+import { QueryKeys } from "@/utils/queryKeys";
 
 export const Route = createFileRoute("/_authenticated/transactions_/import")({
   component: ImportReviewPage,
@@ -69,19 +76,10 @@ const CSV_COLUMNS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hasBlockingError(row: Transactions.ImportRowFormValues): boolean {
-  if (row.action !== "import") return false;
-  if (!row.date) return true;
-  if (!row.description) return true;
-  if (!row.amount || row.amount <= 0) return true;
-  if (row.transaction_type === "transfer" && !row.destination_account_id) return true;
-  return false;
-}
-
-function buildPayload(row: Transactions.ImportRowFormValues): Transactions.CreateTransactionPayload {
+function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionPayload {
   const payload: Transactions.CreateTransactionPayload = {
     transaction_type: row.transaction_type,
-    account_id: row.account_id,
+    account_id: row.account_id ?? undefined,
     amount: row.amount,
     date: row.date,
     description: row.description,
@@ -109,7 +107,7 @@ function buildPayload(row: Transactions.ImportRowFormValues): Transactions.Creat
   return payload;
 }
 
-function parsedRowToFormValues(r: Transactions.ParsedImportRow, accountId: number): Transactions.ImportRowFormValues {
+function parsedRowToFormValues(r: Transactions.ParsedImportRow, accountId: number): ImportRowFormValues {
   return {
     row_index: r.row_index,
     original_description: r.description,
@@ -147,8 +145,18 @@ function ImportReviewPage() {
   const pauseRef = useRef(false);
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
-  const form = useForm<Transactions.ImportFormValues>({
+  const form = useForm<ImportFormValues>({
+    resolver: zodResolver(importFormSchema),
     defaultValues: { accountId: 0, rows: [] },
+  });
+
+  const { totalSuccess, total } = useWatch({
+    control: form.control,
+    name: "rows",
+    compute: (rows) => ({
+      totalSuccess: rows.filter((r) => r.action === "import" && r.import_status === "success").length,
+      total: rows.filter((r) => r.action === "import").length,
+    }),
   });
 
   const { fields, remove } = useFieldArray({
@@ -156,14 +164,14 @@ function ImportReviewPage() {
     name: "rows",
   });
 
-  const { invalidate: invalidateTransactions } = useTransactions({
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
-  });
+  const queryClient = useQueryClient();
+
+  const invalidateTransactions = () => queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] });
 
   const rows = useWatch({ control: form.control, name: "rows" });
 
-  const hasPendingRows = step === "review" && rows.some((r) => r.action === "import" && r.import_status !== "success");
+  const importing = importState.importing;
+  const paused = importState.paused;
 
   const {
     status: blockerStatus,
@@ -171,11 +179,8 @@ function ImportReviewPage() {
     reset: resetBlocker,
   } = useBlocker({
     blockerFn: () => true,
-    condition: hasPendingRows,
+    condition: importing,
   });
-
-  const importing = importState.importing;
-  const paused = importState.paused;
 
   const blockMessage = importing
     ? "A importação está em andamento. Ao sair ela será pausada e os dados serão perdidos. Deseja continuar?"
@@ -237,19 +242,30 @@ function ImportReviewPage() {
   const finish = () => setImportState((p) => ({ ...p, importing: false, paused: false }));
 
   const toImportRows = rows.filter((r) => r.action === "import");
-  const importedCount = toImportRows.filter((r) => r.import_status === "success").length;
   const errorCount = toImportRows.filter((r) => r.import_status === "error").length;
-  const isDone = !importing && !paused && importedCount + errorCount > 0;
+  const isDone = !importing && !paused && totalSuccess + errorCount > 0;
+  const allImportedSuccess = isDone && total > 0 && totalSuccess === total;
+
+  useEffect(() => {
+    if (!allImportedSuccess) return;
+    const timer = setTimeout(() => void navigate({ to: "/transactions" }), 3000);
+    return () => clearTimeout(timer);
+  }, [allImportedSuccess, navigate]);
 
   async function handleConfirm() {
-    const currentRows = form.getValues("rows");
-    const firstInvalidIndex = currentRows.findIndex(hasBlockingError);
-    if (firstInvalidIndex !== -1) {
-      const el = rowRefs.current.get(firstInvalidIndex);
-      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const isValid = await form.trigger("rows");
+    if (!isValid) {
+      const rowErrors = form.formState.errors.rows as (object | undefined)[] | undefined;
+      if (rowErrors) {
+        const firstErrorIndex = rowErrors.findIndex((e) => e !== undefined);
+        if (firstErrorIndex >= 0) {
+          rowRefs.current.get(firstErrorIndex)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
       return;
     }
 
+    const currentRows = form.getValues("rows");
     pauseRef.current = false;
     start();
 
@@ -278,6 +294,18 @@ function ImportReviewPage() {
     if (pauseRef.current) {
       pause();
     } else {
+      const finalRows = form.getValues("rows");
+      const { successIndices, hasErrors } = finalRows.reduce<{ successIndices: number[]; hasErrors: boolean }>(
+        (acc, r, i) => {
+          if (r.import_status === "success") acc.successIndices.push(i);
+          if (r.action === "import" && r.import_status === "error") acc.hasErrors = true;
+          return acc;
+        },
+        { successIndices: [], hasErrors: false },
+      );
+
+      if (hasErrors) remove(successIndices);
+
       finish();
       invalidateTransactions();
     }
@@ -302,6 +330,16 @@ function ImportReviewPage() {
             }}
             onBack={() => void navigate({ to: "/transactions" })}
           />
+        ) : allImportedSuccess ? (
+          <Stack align="center" justify="center" gap="xs" py="xl">
+            <IconCircleCheck size={64} color="var(--mantine-color-green-6)" />
+            <Text fw={500} fz="lg">
+              Importação concluída com sucesso!
+            </Text>
+            <Text fz="sm" c="dimmed">
+              Redirecionando para transações...
+            </Text>
+          </Stack>
         ) : (
           <>
             {/* Header */}
@@ -333,15 +371,10 @@ function ImportReviewPage() {
               </Group>
             </Group>
 
-            {/* Summary after done */}
-            {isDone && (
-              <Alert
-                icon={<IconAlertCircle size={16} />}
-                color={errorCount > 0 ? "yellow" : "green"}
-                title="Importação concluída"
-              >
-                {importedCount} transaç
-                {importedCount !== 1 ? "ões importadas" : "ão importada"}.{errorCount > 0 && ` ${errorCount} com erro.`}
+            {/* Summary after done with errors */}
+            {isDone && errorCount > 0 && (
+              <Alert icon={<IconAlertCircle size={16} />} color="yellow" title="Importação concluída com erros">
+                {errorCount} transaç{errorCount !== 1 ? "ões" : "ão"} com erro. Corrija e tente importar novamente.
               </Alert>
             )}
 

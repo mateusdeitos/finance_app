@@ -134,6 +134,7 @@ export async function checkDuplicateTransaction(params: {
   date: string
   description: string
   amount: number
+  account_id: number
 }): Promise<{ is_duplicate: boolean }> {
   const res = await fetch(`${apiUrl}/api/transactions/check-duplicate`, {
     method: 'POST',

@@ -1,4 +1,4 @@
-import { forwardRef, memo, useEffect, useRef, useState } from "react";
+import { forwardRef, memo, useEffect, useRef } from "react";
 import { Box, Button, Checkbox, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
@@ -7,6 +7,7 @@ import { useFormContext, useWatch, Controller, useForm, FormProvider } from "rea
 import { useCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { Transactions } from "@/types/transactions";
+import { type ImportFormValues } from "@/components/transactions/form/importFormSchema";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
@@ -46,7 +47,7 @@ export const ImportReviewRow = memo(
     ref,
   ) {
     const namePrefix = `rows.${rowIndex}.` as const;
-    const form = useFormContext<Transactions.ImportFormValues>();
+    const form = useFormContext<ImportFormValues>();
 
     const { query: categoriesQuery } = useCategories();
     const { query: accountsQuery } = useAccounts();
@@ -66,20 +67,34 @@ export const ImportReviewRow = memo(
 
     const sharedAccounts = accounts.filter((a) => a.user_connection?.connection_status === "accepted");
 
-    const {
+    const [
       action,
-      transaction_type: transactionType,
+      transactionType,
       recurrenceType,
       recurrenceRepetitions,
-      split_settings: splitSettings,
-      import_status: importStatus,
-      import_error: importError,
-      parse_errors: parseErrors,
+      splitSettings,
+      importStatus,
+      importError,
+      parseErrors,
       date,
       description,
       amount,
-      destination_account_id: destinationAccountId,
-    } = useWatch({ control: form.control, name: `rows.${rowIndex}` });
+    ] = useWatch({
+      control: form.control,
+      name: [
+        `rows.${rowIndex}.action`,
+        `rows.${rowIndex}.transaction_type`,
+        `rows.${rowIndex}.recurrenceType`,
+        `rows.${rowIndex}.recurrenceRepetitions`,
+        `rows.${rowIndex}.split_settings`,
+        `rows.${rowIndex}.import_status`,
+        `rows.${rowIndex}.import_error`,
+        `rows.${rowIndex}.parse_errors`,
+        `rows.${rowIndex}.date`,
+        `rows.${rowIndex}.description`,
+        `rows.${rowIndex}.amount`,
+      ],
+    });
 
     // ─── Duplicate re-detection ─────────────────────────────────────────────────
 
@@ -99,16 +114,23 @@ export const ImportReviewRow = memo(
         date: debouncedDate as string,
         description: debouncedDescription as string,
         amount: debouncedAmount as number,
-      }).then((result) => {
-        const currentAction = form.getValues(`rows.${rowIndex}.action`);
-        if (result.is_duplicate && currentAction === "import") {
-          form.setValue(`rows.${rowIndex}.action`, "duplicate");
-        } else if (!result.is_duplicate && currentAction === "duplicate") {
-          form.setValue(`rows.${rowIndex}.action`, "import");
-        }
-      }).catch(() => { /* ignore network errors */ });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        account_id: form.getValues("accountId"),
+      })
+        .then((result) => {
+          const currentAction = form.getValues(`rows.${rowIndex}.action`);
+          if (result.is_duplicate && currentAction === "import") {
+            form.setValue(`rows.${rowIndex}.action`, "duplicate");
+          } else if (!result.is_duplicate && currentAction === "duplicate") {
+            form.setValue(`rows.${rowIndex}.action`, "import");
+          }
+        })
+        .catch(() => {
+          /* ignore network errors */
+        });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedDate, debouncedDescription, debouncedAmount]);
+
+    const rowErrors = form.formState.errors.rows?.[rowIndex];
 
     // ─── Display helpers ────────────────────────────────────────────────────────
 
@@ -161,7 +183,13 @@ export const ImportReviewRow = memo(
       <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex}>
         {/* Checkbox */}
         <Table.Td>
-          <Checkbox checked={selected} onChange={() => onToggleSelect(rowIndex)} disabled={disabled} size="xs" />
+          <Checkbox
+            style={{ cursor: "pointer" }}
+            checked={selected}
+            onChange={() => onToggleSelect(rowIndex)}
+            disabled={disabled}
+            size="xs"
+          />
         </Table.Td>
 
         {/* Status */}
@@ -175,12 +203,13 @@ export const ImportReviewRow = memo(
             name={`rows.${rowIndex}.date`}
             render={({ field }) => (
               <DatePickerInput
+                ref={field.ref}
                 size="xs"
                 valueFormat="DD/MM/YYYY"
                 value={field.value ? parseDate(field.value as string) : null}
                 onChange={(d) => field.onChange(d ? localDateStr(d) : "")}
                 disabled={disabled || isSkipped}
-                error={!date && action === "import" ? "Obrigatório" : undefined}
+                error={rowErrors?.date?.message}
                 popoverProps={{ withinPortal: true }}
               />
             )}
@@ -193,11 +222,12 @@ export const ImportReviewRow = memo(
             name={`rows.${rowIndex}.description`}
             render={({ field }) => (
               <TextInput
+                ref={field.ref}
                 size="xs"
                 value={field.value as string}
                 onChange={field.onChange}
                 disabled={disabled || isSkipped}
-                error={!description && action === "import" ? "Obrigatório" : undefined}
+                error={rowErrors?.description?.message}
               />
             )}
           />
@@ -209,9 +239,10 @@ export const ImportReviewRow = memo(
             name={`rows.${rowIndex}.amount`}
             render={({ field }) => (
               <CurrencyInput
+                ref={field.ref}
                 value={field.value as number}
                 onChange={field.onChange}
-                error={!amount && action === "import" ? "Obrigatório" : undefined}
+                error={rowErrors?.amount?.message}
                 disabled={disabled || isSkipped}
               />
             )}
@@ -224,6 +255,7 @@ export const ImportReviewRow = memo(
             name={`rows.${rowIndex}.transaction_type`}
             render={({ field }) => (
               <Select
+                ref={field.ref}
                 size="xs"
                 data={TRANSACTION_TYPE_OPTIONS}
                 value={field.value as string}
@@ -246,8 +278,10 @@ export const ImportReviewRow = memo(
               name={`rows.${rowIndex}.category_id`}
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   size="xs"
                   data={categoryOptions}
+                  error={rowErrors?.category_id?.message}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
                   disabled={disabled || isSkipped}
@@ -272,6 +306,7 @@ export const ImportReviewRow = memo(
               name={`rows.${rowIndex}.destination_account_id`}
               render={({ field }) => (
                 <Select
+                  ref={field.ref}
                   size="xs"
                   data={accountOptions}
                   value={field.value ? String(field.value) : null}
@@ -280,7 +315,7 @@ export const ImportReviewRow = memo(
                   searchable
                   placeholder="Selecionar..."
                   withCheckIcon={false}
-                  error={!destinationAccountId && action === "import" ? "Obrigatório" : undefined}
+                  error={rowErrors?.destination_account_id?.message}
                 />
               )}
             />
@@ -356,7 +391,6 @@ interface RecurrencePopoverProps {
 }
 
 function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: RecurrencePopoverProps) {
-  const [opened, setOpened] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parentForm = useFormContext<any>();
 
@@ -379,7 +413,6 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
       recurrenceEndDate: rowValues.recurrenceEndDate ?? null,
       recurrenceRepetitions: rowValues.recurrenceRepetitions ?? null,
     });
-    setOpened(true);
   }
 
   function handleClose() {
@@ -389,34 +422,19 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
     parentForm.setValue(`${rowPath}.recurrenceEndDateMode`, values.recurrenceEndDateMode);
     parentForm.setValue(`${rowPath}.recurrenceEndDate`, values.recurrenceEndDate);
     parentForm.setValue(`${rowPath}.recurrenceRepetitions`, values.recurrenceRepetitions);
-    setOpened(false);
-  }
-
-  function handleToggle() {
-    if (opened) handleClose();
-    else handleOpen();
   }
 
   return (
     <FormProvider {...localForm}>
-      <Popover opened={opened} closeOnClickOutside={false} withinPortal>
+      <Popover trapFocus withinPortal onOpen={handleOpen} onClose={handleClose}>
         <Popover.Target>
-          <Button
-            size="xs"
-            variant={hasRecurrence ? "light" : "default"}
-            disabled={disabled}
-            fullWidth
-            onClick={handleToggle}
-          >
+          <Button size="xs" variant={hasRecurrence ? "light" : "default"} disabled={disabled} fullWidth>
             {summary}
           </Button>
         </Popover.Target>
         <Popover.Dropdown>
           <Stack gap="xs" w={220}>
             <RecurrenceFields namePrefix="" comboboxWithinPortal={false} />
-            <Button size="xs" variant="subtle" onClick={handleClose}>
-              Fechar
-            </Button>
           </Stack>
         </Popover.Dropdown>
       </Popover>
@@ -440,7 +458,6 @@ interface SplitPopoverProps {
 }
 
 function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: SplitPopoverProps) {
-  const [opened, setOpened] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parentForm = useFormContext<any>();
 
@@ -459,41 +476,25 @@ function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: Sp
       amount: rowValues.amount ?? rowAmount,
       split_settings: rowValues.split_settings ?? [],
     });
-    setOpened(true);
   }
 
   function handleClose() {
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
     parentForm.setValue(`${rowPath}.split_settings`, values.split_settings);
-    setOpened(false);
-  }
-
-  function handleToggle() {
-    if (opened) handleClose();
-    else handleOpen();
   }
 
   return (
     <FormProvider {...localForm}>
-      <Popover opened={opened} closeOnClickOutside={false} withinPortal>
+      <Popover trapFocus closeOnClickOutside withinPortal closeOnEscape onClose={handleClose} onOpen={handleOpen}>
         <Popover.Target>
-          <Button
-            size="xs"
-            variant={hasSplit ? "light" : "default"}
-            disabled={disabled}
-            fullWidth
-            onClick={handleToggle}
-          >
+          <Button size="xs" variant={hasSplit ? "light" : "default"} disabled={disabled} fullWidth>
             {summary}
           </Button>
         </Popover.Target>
         <Popover.Dropdown>
-          <Stack gap="xs" w={260}>
+          <Stack gap="xs" w={320}>
             <SplitSettingsFields namePrefix="" comboboxWithinPortal={false} />
-            <Button size="xs" variant="subtle" onClick={handleClose}>
-              Fechar
-            </Button>
           </Stack>
         </Popover.Dropdown>
       </Popover>

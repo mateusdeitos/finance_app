@@ -151,7 +151,7 @@ export namespace Transactions {
 
   export interface CreateTransactionPayload {
     transaction_type: TransactionType;
-    account_id: number;
+    account_id?: number;
     category_id?: number;
     amount: number;
     date: string;
@@ -223,47 +223,12 @@ export namespace Transactions {
     import_error?: string;
   }
 
-  /** RHF row schema for the import table — recurrence fields mirror TransactionFormValues naming. */
-  export interface ImportRowFormValues {
-    // metadata
-    row_index: number;
-    original_description: string;
-    status: ImportRowStatus;
-    parse_errors: string[];
-    // process state
-    action: ImportRowAction;
-    import_status: "idle" | "loading" | "success" | "error";
-    import_error: string;
-    // transaction fields
-    account_id: number;
-    date: string;
-    description: string;
-    amount: number;
-    transaction_type: TransactionType;
-    category_id: number | null;
-    destination_account_id: number | null;
-    // recurrence — same names as TransactionFormValues so RecurrenceFields can be reused
-    recurrenceEnabled: boolean;
-    recurrenceType: RecurrenceType | null;
-    recurrenceEndDateMode: boolean;
-    recurrenceEndDate: string | null;
-    recurrenceRepetitions: number | null;
-    // split — same structure as TransactionFormValues
-    split_settings: SplitSetting[];
-  }
-
-  export interface ImportFormValues {
-    accountId: number;
-    rows: ImportRowFormValues[];
-  }
-
   /** Maps backend error tags to user-facing Portuguese messages. */
   export const IMPORT_ERROR_MESSAGES: Record<string, string> = {
     "IMPORT.EMPTY_FILE": "O arquivo está vazio.",
     "IMPORT.INVALID_LAYOUT":
       "Layout inválido: verifique se o cabeçalho contém as colunas obrigatórias (Data, Descrição, Tipo, Valor).",
-    "IMPORT.MAX_ROWS_EXCEEDED":
-      "O arquivo não pode ter mais de 100 linhas de dados.",
+    "IMPORT.MAX_ROWS_EXCEEDED": "O arquivo não pode ter mais de 100 linhas de dados.",
     "IMPORT.NO_ROWS": "O arquivo não contém nenhuma linha de dados.",
   };
 }

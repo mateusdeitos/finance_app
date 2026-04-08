@@ -111,7 +111,7 @@ function SplitRowControls({
       </Tooltip>
 
       {mode === "percentage" ? (
-        <Group gap="xs" align="center" style={{ flex: 1 }}>
+        <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
           <NumberInput
             min={1}
             max={100}
