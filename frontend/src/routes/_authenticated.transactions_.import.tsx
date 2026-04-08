@@ -341,7 +341,7 @@ function ImportReviewPage() {
             </Text>
           </Stack>
         ) : (
-          <>
+          <Box data-testid="import_review_step">
             {/* Header */}
             <Group justify="space-between" align="center" wrap="nowrap">
               <Group gap="xs">
@@ -455,7 +455,7 @@ function ImportReviewPage() {
                 </Group>
               </Stack>
             </Modal>
-          </>
+          </Box>
         )}
       </Stack>
     </FormProvider>
@@ -516,7 +516,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
   }
 
   return (
-    <Stack gap="md" maw={640}>
+    <Stack gap="md" maw={640} data-testid="import_upload_step">
       <Group gap="xs">
         <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onBack} size="sm">
           Voltar
@@ -532,6 +532,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         value={accountId ? String(accountId) : null}
         onChange={(val) => setAccountId(val ? Number(val) : null)}
         searchable
+        data-testid="select_import_account"
       />
 
       <FileInput
@@ -555,6 +556,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         loading={mutation.isPending}
         leftSection={mutation.isPending ? <Loader size="xs" /> : undefined}
         disabled={!file || !accountId}
+        data-testid="btn_process_csv"
       >
         Processar arquivo
       </Button>
