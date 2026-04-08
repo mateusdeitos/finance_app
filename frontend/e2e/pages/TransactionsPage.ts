@@ -21,6 +21,10 @@ export class TransactionsPage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  async openAdvancedFilters() {
+    await this.page.getByTestId("open_advanced_filters").click();
+  }
+
   /** Click the transaction row for the given transaction ID to open the update drawer. */
   async clickTransactionRow(transactionId: number) {
     await this.page.locator(`[data-transaction-id="${transactionId}"]`).click();
