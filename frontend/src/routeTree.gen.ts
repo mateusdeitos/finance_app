@@ -16,6 +16,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated.transactions'
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated.categories'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated.accounts'
+import { Route as AuthenticatedTransactionsImportRouteImport } from './routes/_authenticated.transactions_.import'
 import { Route as AuthenticatedConnectWithExternalIdRouteImport } from './routes/_authenticated.connect-with.$externalId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -53,6 +54,12 @@ const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
   path: '/accounts',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTransactionsImportRoute =
+  AuthenticatedTransactionsImportRouteImport.update({
+    id: '/transactions_/import',
+    path: '/transactions/import',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedConnectWithExternalIdRoute =
   AuthenticatedConnectWithExternalIdRouteImport.update({
     id: '/connect-with/$externalId',
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
+  '/transactions/import': typeof AuthenticatedTransactionsImportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,6 +85,7 @@ export interface FileRoutesByTo {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
+  '/transactions/import': typeof AuthenticatedTransactionsImportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,6 +97,7 @@ export interface FileRoutesById {
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authenticated/connect-with/$externalId': typeof AuthenticatedConnectWithExternalIdRoute
+  '/_authenticated/transactions_/import': typeof AuthenticatedTransactionsImportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/auth/callback'
     | '/connect-with/$externalId'
+    | '/transactions/import'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/auth/callback'
     | '/connect-with/$externalId'
+    | '/transactions/import'
   id:
     | '__root__'
     | '/'
@@ -118,6 +130,7 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions'
     | '/auth/callback'
     | '/_authenticated/connect-with/$externalId'
+    | '/_authenticated/transactions_/import'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/transactions_/import': {
+      id: '/_authenticated/transactions_/import'
+      path: '/transactions/import'
+      fullPath: '/transactions/import'
+      preLoaderRoute: typeof AuthenticatedTransactionsImportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/connect-with/$externalId': {
       id: '/_authenticated/connect-with/$externalId'
       path: '/connect-with/$externalId'
@@ -193,6 +213,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCategoriesRoute: typeof AuthenticatedCategoriesRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedConnectWithExternalIdRoute: typeof AuthenticatedConnectWithExternalIdRoute
+  AuthenticatedTransactionsImportRoute: typeof AuthenticatedTransactionsImportRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -201,6 +222,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedConnectWithExternalIdRoute:
     AuthenticatedConnectWithExternalIdRoute,
+  AuthenticatedTransactionsImportRoute: AuthenticatedTransactionsImportRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

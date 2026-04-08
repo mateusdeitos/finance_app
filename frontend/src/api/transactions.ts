@@ -113,6 +113,39 @@ export async function updateTransaction(
   if (!res.ok) throw res
 }
 
+export async function parseImportCSV(
+  file: File,
+  accountId: number,
+): Promise<Transactions.ImportCSVResponse> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('account_id', String(accountId))
+  // Do NOT set Content-Type header — browser sets it automatically with the boundary.
+  const res = await fetch(`${apiUrl}/api/transactions/import-csv`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  })
+  if (!res.ok) throw res
+  return res.json() as Promise<Transactions.ImportCSVResponse>
+}
+
+export async function checkDuplicateTransaction(params: {
+  date: string
+  description: string
+  amount: number
+  account_id: number
+}): Promise<{ is_duplicate: boolean }> {
+  const res = await fetch(`${apiUrl}/api/transactions/check-duplicate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(params),
+  })
+  if (!res.ok) throw res
+  return res.json() as Promise<{ is_duplicate: boolean }>
+}
+
 export async function createTransaction(
   payload: Transactions.CreateTransactionPayload,
 ): Promise<Response> {

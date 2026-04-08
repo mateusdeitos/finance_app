@@ -64,8 +64,13 @@ const (
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
 
-	ErrorTagDuplicateCategoryName        ErrorTag = "CATEGORY.DUPLICATE_NAME"
-	ErrorTagInvalidReplacementCategory   ErrorTag = "CATEGORY.INVALID_REPLACEMENT"
+	ErrorTagDuplicateCategoryName      ErrorTag = "CATEGORY.DUPLICATE_NAME"
+	ErrorTagInvalidReplacementCategory ErrorTag = "CATEGORY.INVALID_REPLACEMENT"
+
+	ErrorTagImportEmptyFile       ErrorTag = "IMPORT.EMPTY_FILE"
+	ErrorTagImportInvalidLayout   ErrorTag = "IMPORT.INVALID_LAYOUT"
+	ErrorTagImportMaxRowsExceeded ErrorTag = "IMPORT.MAX_ROWS_EXCEEDED"
+	ErrorTagImportNoRows          ErrorTag = "IMPORT.NO_ROWS"
 )
 
 var (
@@ -339,6 +344,13 @@ func Internal(message string, err error) *ServiceError {
 func BadRequest(message string) *ServiceError {
 	return New(ErrCodeBadRequest, message)
 }
+
+var (
+	ErrImportEmptyFile       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportEmptyFile)}, "the file is empty")
+	ErrImportInvalidLayout   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidLayout)}, "invalid CSV layout: missing required columns")
+	ErrImportMaxRowsExceeded = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportMaxRowsExceeded)}, "CSV file cannot have more than 100 rows")
+	ErrImportNoRows          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportNoRows)}, "CSV file has no data rows")
+)
 
 // IsNotFound checks if an error is a NOT_FOUND error
 func IsNotFound(err error) bool {

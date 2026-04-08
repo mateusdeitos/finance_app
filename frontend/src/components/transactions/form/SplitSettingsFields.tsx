@@ -24,7 +24,9 @@ import {
 import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
-import type { TransactionFormValues } from "./transactionFormSchema";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyFormValues = any
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -47,7 +49,7 @@ interface SplitRowControlsProps {
   account: Transactions.Account;
   currentUserId: number;
   totalAmount: number;
-  fieldIndex: number;
+  fieldName: string; // full RHF path to this row's `amount` field
   error?: string;
 }
 
@@ -55,11 +57,10 @@ function SplitRowControls({
   account,
   currentUserId,
   totalAmount,
-  fieldIndex,
+  fieldName,
   error,
 }: SplitRowControlsProps) {
-  const { control, register, setValue } = useFormContext<TransactionFormValues>();
-  const fieldName = `split_settings.${fieldIndex}.amount` as `split_settings.0.amount`;
+  const { control, register, setValue } = useFormContext<AnyFormValues>();
   const { ref: inputRef } = register(fieldName);
   const fieldValue = (useWatch({ control, name: fieldName }) as number | undefined) ?? 0;
 
@@ -69,7 +70,6 @@ function SplitRowControls({
     ? conn.from_default_split_percentage
     : conn.to_default_split_percentage;
 
-  // If the field is pre-populated (amount > 0), start in fixed-amount mode.
   const [mode, setMode] = useState<"percentage" | "amount">(() =>
     fieldValue > 0 ? "amount" : "percentage"
   );
@@ -111,7 +111,7 @@ function SplitRowControls({
       </Tooltip>
 
       {mode === "percentage" ? (
-        <Group gap="xs" align="center" style={{ flex: 1 }}>
+        <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
           <NumberInput
             min={1}
             max={100}
@@ -145,35 +145,37 @@ function SplitRowControls({
 // ─── SplitRow ─────────────────────────────────────────────────────────────────
 
 interface SplitRowProps {
-  fieldIndex: number;
+  /** Full RHF path to this split row, e.g. `"split_settings.0"` or `"rows.2.split_settings.0"`. */
+  rowPath: string;
   connectedAccounts: Transactions.Account[];
   usedConnectionIds: number[];
   currentUserId: number;
   totalAmount: number;
   onRemove: () => void;
   error?: string;
+  comboboxWithinPortal?: boolean;
 }
 
 function SplitRow({
-  fieldIndex,
+  rowPath,
   connectedAccounts,
   usedConnectionIds,
   currentUserId,
   totalAmount,
   onRemove,
   error,
+  comboboxWithinPortal = true,
 }: SplitRowProps) {
-  const { control, setValue } = useFormContext<TransactionFormValues>();
+  const { control, setValue } = useFormContext<AnyFormValues>();
   const connectionId = useWatch({
     control,
-    name: `split_settings.${fieldIndex}.connection_id` as `split_settings.0.connection_id`,
+    name: `${rowPath}.connection_id`,
   }) as number | undefined;
 
   const selectedAccount = connectedAccounts.find(
     (a) => a.user_connection?.id === connectionId
   );
 
-  // Available accounts for selection: all connected accounts not used in OTHER rows
   const selectData = connectedAccounts
     .filter(
       (a) =>
@@ -186,7 +188,6 @@ function SplitRow({
       label: a.description || a.name,
     }));
 
-  // Row not yet assigned a connection — show a select
   if (!connectionId || connectionId === 0) {
     return (
       <Group gap="sm" align="center" wrap="nowrap">
@@ -195,12 +196,10 @@ function SplitRow({
           data={selectData}
           size="sm"
           style={{ flex: 1 }}
+          comboboxProps={{ withinPortal: comboboxWithinPortal }}
           onChange={(val) => {
             if (val) {
-              setValue(
-                `split_settings.${fieldIndex}.connection_id` as `split_settings.0.connection_id`,
-                Number(val)
-              );
+              setValue(`${rowPath}.connection_id`, Number(val));
             }
           }}
         />
@@ -238,7 +237,7 @@ function SplitRow({
             account={selectedAccount}
             currentUserId={currentUserId}
             totalAmount={totalAmount}
-            fieldIndex={fieldIndex}
+            fieldName={`${rowPath}.amount`}
             error={error}
           />
         )}
@@ -266,12 +265,28 @@ function SplitRow({
 
 // ─── SplitSettingsFields ─────────────────────────────────────────────────────
 
-export function SplitSettingsFields() {
-  const { control, formState: { errors } } = useFormContext<TransactionFormValues>();
-  const totalAmount = useWatch({ control, name: "amount" }) ?? 0;
+interface SplitSettingsFieldsProps {
+  /**
+   * Prefix prepended to every field name, e.g. `"rows.2."`.
+   * Defaults to `""` (top-level), which is the transaction form usage.
+   */
+  namePrefix?: string;
+  /**
+   * Whether the connection Select's dropdown renders inside a portal.
+   * Set to `false` when used inside a Popover.
+   */
+  comboboxWithinPortal?: boolean;
+}
+
+export function SplitSettingsFields({
+  namePrefix = "",
+  comboboxWithinPortal = true,
+}: SplitSettingsFieldsProps) {
+  const { control, formState: { errors } } = useFormContext<AnyFormValues>();
+  const totalAmount = (useWatch({ control, name: `${namePrefix}amount` }) as number) ?? 0;
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "split_settings",
+    name: `${namePrefix}split_settings`,
   });
 
   const { query: meQuery } = useMe((me) => me.id);
@@ -287,23 +302,28 @@ export function SplitSettingsFields() {
 
   if (connectedAccounts.length === 0) return null;
 
-  // Connection IDs already used across all rows
-  const usedConnectionIds = fields
+  const usedConnectionIds = (fields as unknown as { connection_id: number }[])
     .map((f) => f.connection_id)
     .filter((id) => id > 0);
 
-  // Only show "add" button if there are still available connections
   const hasAvailableConnections =
     connectedAccounts.filter(
       (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)
     ).length > 0;
 
-  const splitErrors = Object.fromEntries(
-    Object.entries(errors as Record<string, { message?: string }>)
-      .filter(([k]) => k.startsWith("split_settings"))
-      .map(([k, v]) => [k, v?.message ?? ""])
-  );
-  const generalError = splitErrors["split_settings"];
+  // Resolve errors for a dot-path under namePrefix
+  function fieldError(suffix: string): string | undefined {
+    const parts = `${namePrefix}${suffix}`.split(".");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let cur: any = errors;
+    for (const p of parts) {
+      if (cur == null) return undefined;
+      cur = /^\d+$/.test(p) ? cur[Number(p)] : cur[p];
+    }
+    return cur?.message as string | undefined;
+  }
+
+  const generalError = fieldError("split_settings");
 
   return (
     <Stack gap="xs">
@@ -321,35 +341,26 @@ export function SplitSettingsFields() {
 
       <Stack gap="sm">
         {fields.map((field, index) => {
-          // For this row, usedConnectionIds excluding its own
-          const othersUsed = fields
+          const othersUsed = (fields as unknown as { connection_id: number }[])
             .filter((_, i) => i !== index)
             .map((f) => f.connection_id)
             .filter((id) => id > 0);
 
-          const indexErrors =
-            Object.fromEntries(
-              Object.entries(splitErrors)
-                .filter(([k]) => k.startsWith(`split_settings.${index}.`))
-                .map(([k, v]) => [
-                  k.replace(`split_settings.${index}.`, ""),
-                  v,
-                ])
-            );
+          const rowError =
+            fieldError(`split_settings.${index}.amount`) ??
+            fieldError(`split_settings.${index}`);
 
           return (
             <SplitRow
               key={field.id}
-              fieldIndex={index}
+              rowPath={`${namePrefix}split_settings.${index}`}
               connectedAccounts={connectedAccounts}
               usedConnectionIds={othersUsed}
               currentUserId={currentUserId}
               totalAmount={totalAmount}
               onRemove={() => remove(index)}
-              error={
-                indexErrors["amount"] ??
-                splitErrors[`split_settings.${index}`]
-              }
+              error={rowError}
+              comboboxWithinPortal={comboboxWithinPortal}
             />
           );
         })}

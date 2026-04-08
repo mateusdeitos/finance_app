@@ -148,34 +148,34 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 }
 
 func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domain.User, error) {
-	randomInt := rand.IntN(1000000)
+	n := rand.Int64()
 	return suite.Repos.User.Create(ctx, &domain.User{
-		Name:  fmt.Sprintf("Test User %d", randomInt),
-		Email: fmt.Sprintf("test_user_%d@example.com", randomInt),
+		Name:  fmt.Sprintf("Test User %d", n),
+		Email: fmt.Sprintf("test_user_%d@example.com", n),
 	})
 }
 
 func (suite *ServiceTestWithDBSuite) createTestAccount(ctx context.Context, user *domain.User) (*domain.Account, error) {
-	randomInt := rand.IntN(1000000)
+	n := rand.Int64()
 	return suite.Repos.Account.Create(ctx, &domain.Account{
-		Name:     fmt.Sprintf("Test Account %d (User: %s)", randomInt, user.Name),
+		Name:     fmt.Sprintf("Test Account %d (User: %s)", n, user.Name),
 		UserID:   user.ID,
 		IsActive: true,
 	})
 }
 
 func (suite *ServiceTestWithDBSuite) createTestCategory(ctx context.Context, user *domain.User) (*domain.Category, error) {
-	randomInt := rand.IntN(1000000)
+	n := rand.Int64()
 	return suite.Repos.Category.Create(ctx, &domain.Category{
-		Name:   fmt.Sprintf("Test Category %d (User: %s)", randomInt, user.Name),
+		Name:   fmt.Sprintf("Test Category %d (User: %s)", n, user.Name),
 		UserID: user.ID,
 	})
 }
 
 func (suite *ServiceTestWithDBSuite) createTestTag(ctx context.Context, user *domain.User) (*domain.Tag, error) {
-	randomInt := rand.IntN(1000000)
+	n := rand.Int64()
 	return suite.Repos.Tag.Create(ctx, &domain.Tag{
-		Name:   fmt.Sprintf("test_tag_%d", randomInt),
+		Name:   fmt.Sprintf("test_tag_%d", n),
 		UserID: user.ID,
 	})
 }

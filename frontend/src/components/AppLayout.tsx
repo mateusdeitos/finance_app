@@ -1,24 +1,10 @@
-import {
-  AppShell,
-  Burger,
-  Group,
-  Text,
-  NavLink,
-  Avatar,
-  Menu,
-} from "@mantine/core";
+import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import {
-  IconReceipt2,
-  IconChevronDown,
-  IconUsers,
-  IconWallet,
-  IconTree,
-} from "@tabler/icons-react";
+import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
-import { InviteDrawer } from "@/components/InviteDrawer"
+import { InviteDrawer } from "@/components/InviteDrawer";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
 const navLinks = [
@@ -29,8 +15,7 @@ const navLinks = [
 
 export function AppLayout() {
   const [opened, { toggle, close }] = useDisclosure();
-  const [inviteOpened, { open: openInvite, close: closeInvite }] =
-    useDisclosure();
+  const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure();
   const { query: meQuery } = useMe();
   const user = meQuery.data;
   const routerState = useRouterState();
@@ -52,19 +37,16 @@ export function AppLayout() {
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
       style={{
-        ['--app-shell-header-height' as string]: 'calc(60px + env(safe-area-inset-top))',
-        ['--app-shell-header-offset' as string]: 'calc(60px + env(safe-area-inset-top))',
+        ["--app-shell-header-height" as string]: "calc(60px + env(safe-area-inset-top))",
+        ["--app-shell-header-offset" as string]: "calc(60px + env(safe-area-inset-top))",
       }}
     >
-      <AppShell.Header style={{ height: 'calc(60px + env(safe-area-inset-top))', paddingTop: "env(safe-area-inset-top)" }}>
+      <AppShell.Header
+        style={{ height: "calc(60px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}
+      >
         <Group h="100%" px="md" justify="space-between">
           <Group>
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
+            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Link to="/transactions" style={{ textDecoration: "none" }}>
               <Group gap="xs">
                 <img src="/icon.svg" width={36} height={36} alt="FinanceApp" />
@@ -78,12 +60,7 @@ export function AppLayout() {
           {user && (
             <Menu shadow="md" position="bottom-end">
               <Menu.Target>
-                <Group
-                  gap={4}
-                  wrap="nowrap"
-                  align="center"
-                  style={{ cursor: "pointer" }}
-                >
+                <Group gap={4} wrap="nowrap" align="center" style={{ cursor: "pointer" }}>
                   <Avatar color="blue" radius="xl" size="sm">
                     {initials}
                   </Avatar>
@@ -95,17 +72,11 @@ export function AppLayout() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{user.email}</Menu.Label>
-                <Menu.Item
-                  leftSection={<IconUsers size={16} />}
-                  onClick={openInvite}
-                >
+                <Menu.Item leftSection={<IconUsers size={16} />} onClick={openInvite}>
                   Criar Conexão
                 </Menu.Item>
                 <Menu.Divider />
-                <Menu.Item
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                >
+                <Menu.Item onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
                   Sair
                 </Menu.Item>
               </Menu.Dropdown>

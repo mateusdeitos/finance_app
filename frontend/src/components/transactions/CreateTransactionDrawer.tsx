@@ -11,13 +11,10 @@ import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
 import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
-import { localDateStr } from "@/utils/parseDate";
 import { useDrawerContext } from "@/utils/renderDrawer";
-import {
-  transactionFormSchema,
-  TransactionFormValues,
-} from "./form/transactionFormSchema";
+import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
+import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
   expense: "Nova Despesa",
@@ -48,10 +45,10 @@ export function CreateTransactionDrawer() {
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       transaction_type: "expense",
-      date: prefill.date ?? localDateStr(new Date()),
+      date: convertUtcToLocalKeepingValues(prefill.date ? prefill.date : new Date()),
       description: "",
       amount: 0,
-      account_id: prefill.accountId ?? null,
+      account_id: prefill.accountId ?? undefined,
       category_id: prefill.categoryId ?? null,
       destination_account_id: null,
       tags: [],
@@ -76,11 +73,7 @@ export function CreateTransactionDrawer() {
     const payload = buildTransactionPayload(values, existingTags);
     mutation.mutate(payload, {
       onSuccess: () => {
-        savePrefill(
-          payload.date,
-          payload.category_id ?? null,
-          payload.account_id
-        );
+        savePrefill(payload.date, payload.category_id ?? null, payload.account_id ?? null);
         onSuccess();
       },
       onError: async (err: unknown) => {
@@ -110,13 +103,7 @@ export function CreateTransactionDrawer() {
   }
 
   return (
-    <Drawer
-      opened={opened}
-      onClose={close}
-      title={TYPE_LABELS[transactionType]}
-      position="right"
-      size="md"
-    >
+    <Drawer opened={opened} onClose={close} title={TYPE_LABELS[transactionType]} position="right" size="md">
       <FormProvider {...methods}>
         <TransactionForm
           focusField="amount"
