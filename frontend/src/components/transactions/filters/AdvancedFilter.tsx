@@ -26,6 +26,7 @@ function TypeOptions({ selected, toggle }: {
           label={opt.label}
           checked={selected.includes(opt.value)}
           onChange={() => toggle(opt.value)}
+          data-testid={`switch_type_${opt.value}`}
         />
       ))}
     </>

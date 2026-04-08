@@ -73,7 +73,10 @@ test.describe('Transfer Transactions', () => {
     // Transfer creates two rows with the same description
     await expect(page.getByText(originalDesc).first()).toBeVisible()
 
-    await transactionsPage.clickTransactionRow(tx.id)
+    // Click the description text within the specific row to reliably open the edit drawer.
+    // Clicking the row center is not reliable for transfers since the layout differs.
+    await page.locator(`[data-transaction-id="${tx.id}"]`).getByText(originalDesc).click()
+    await transactionsPage.waitForUpdateDrawer()
     await transactionsPage.clearAndFillDescription(updatedDesc)
     await transactionsPage.submitUpdate()
 

@@ -192,9 +192,9 @@ test.describe('Transaction Filters', () => {
     await expect(page.getByText(incomeDesc)).toBeVisible()
 
     // Open advanced filter and toggle "Apenas despesas"
-    // The Mantine Switch input is visually hidden; force the click
+    // getByTestId finds the Mantine Switch root <label> element, which is visible
     await page.getByRole('button', { name: /Filtros avançados/ }).click()
-    await page.getByLabel('Apenas despesas').click({ force: true })
+    await page.getByTestId('switch_type_expense').click()
     await page.waitForLoadState('networkidle')
 
     await expect(page.getByText(expenseDesc)).toBeVisible({ timeout: 8000 })
