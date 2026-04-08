@@ -3,6 +3,8 @@ import { ImportPage } from "../pages/ImportPage";
 import {
   apiCreateAccount,
   apiDeleteAccount,
+  apiCreateCategory,
+  apiDeleteCategory,
   apiCreateTransaction,
   apiDeleteTransaction,
   apiCreateCategory,
@@ -60,6 +62,7 @@ test.describe("Import transactions", () => {
     for (const id of createdTransactionIds) {
       await apiDeleteTransaction(id).catch(() => undefined);
     }
+    await apiDeleteCategory(testCategoryId).catch(() => undefined);
     await apiDeleteAccount(testAccountId).catch(() => undefined);
     await apiDeleteCategory(testCategoryId).catch(() => undefined);
   });
@@ -101,7 +104,7 @@ test.describe("Import transactions", () => {
     const description = `Duplicado Import ${Date.now()}`;
     const txDate = new Date(2026, 1, 20); // 20/02/2026
 
-    // Create the transaction via API first
+    // Create the transaction via API first (category_id required for expenses)
     const created = await apiCreateTransaction({
       account_id: testAccountId,
       transaction_type: "expense",

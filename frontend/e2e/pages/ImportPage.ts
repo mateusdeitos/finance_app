@@ -58,7 +58,18 @@ export class ImportPage {
     await this.submitUpload();
   }
 
-  /** Click confirm import and wait until the "Importação concluída" summary alert appears. */
+  /**
+   * Click confirm import and wait until the import loop finishes.
+   *
+   * Two possible completion states:
+   * - allImportedSuccess: the review_step Box is REPLACED by a success screen
+   *   with "Importação concluída com sucesso!" — must search the whole page.
+   * - done with errors: the review_step Box stays and shows an Alert with
+   *   "Importação concluída com erros" inside it.
+   *
+   * In both cases the text starts with "Importação concluída", so we wait for
+   * that substring anywhere on the page.
+   */
   async confirmImport() {
     await this.confirmButton.click();
     // Wait for the summary alert that appears after the import loop finishes
