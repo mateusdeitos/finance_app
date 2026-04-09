@@ -277,8 +277,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{*tag},
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	}
 
@@ -519,8 +520,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		Description:          "Test transfer from user1 to user2",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	}
 
@@ -538,8 +540,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		Description:          "Test transfer from user2 to user1",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	}
 
@@ -657,8 +660,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			Description:     "Test daily expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeDaily,
-				Repetitions: lo.ToPtr(30),
+				Type:               domain.RecurrenceTypeDaily,
+				CurrentInstallment: 1,
+				TotalInstallments:  30,
 			},
 		},
 		{
@@ -670,8 +674,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			Description:     "Test weekly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeWeekly,
-				Repetitions: lo.ToPtr(4),
+				Type:               domain.RecurrenceTypeWeekly,
+				CurrentInstallment: 1,
+				TotalInstallments:  4,
 			},
 		},
 		{
@@ -683,8 +688,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			Description:     "Test monthly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeMonthly,
-				Repetitions: lo.ToPtr(3),
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 1,
+				TotalInstallments:  3,
 			},
 		},
 		{
@@ -696,8 +702,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			Description:     "Test yearly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeYearly,
-				Repetitions: lo.ToPtr(3),
+				Type:               domain.RecurrenceTypeYearly,
+				CurrentInstallment: 1,
+				TotalInstallments:  3,
 			},
 		},
 	}
@@ -721,171 +728,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 	}
 
 	suite.Assert().Len(transactionsDB, lo.SumBy(transactions, func(transaction domain.TransactionCreateRequest) int {
-		return lo.FromPtr(transaction.RecurrenceSettings.Repetitions)
+		return transaction.RecurrenceSettings.TotalInstallments
 	}))
-
-	dailyDate := d
-	dailyInstallment := 1
-
-	weeklyDate := d
-	weeklyInstallment := 1
-
-	monthlyDate := d
-	monthlyInstallment := 1
-
-	yearlyDate := d
-	yearlyInstallment := 1
-
-	for _, t := range transactionsDB {
-		suite.Assert().NotNil(t.TransactionRecurrenceID)
-		suite.Assert().NotNil(t.InstallmentNumber)
-		suite.Assert().Equal(t.UserID, user.ID)
-		suite.Assert().Equal(lo.FromPtr(t.OriginalUserID), user.ID)
-		suite.Assert().Equal(t.AccountID, account.ID)
-		suite.Assert().Equal(int64(t.Amount), int64(100))
-		suite.Assert().Equal(t.Type, domain.TransactionTypeExpense)
-		suite.Assert().Len(t.Tags, 1)
-		suite.Assert().Equal(t.Tags[0].ID, tag.ID)
-
-		if t.Description == "Test daily expense" {
-			suite.Assert().Equal(t.Date, dailyDate, "daily date")
-			suite.Assert().Equal(lo.FromPtr(t.InstallmentNumber), dailyInstallment, "daily installment")
-			dailyDate = dailyDate.AddDate(0, 0, 1)
-			dailyInstallment++
-			continue
-		}
-
-		if t.Description == "Test weekly expense" {
-			suite.Assert().Equal(t.Date, weeklyDate, "weekly date")
-			suite.Assert().Equal(lo.FromPtr(t.InstallmentNumber), weeklyInstallment, "weekly installment")
-			weeklyDate = weeklyDate.AddDate(0, 0, 7)
-			weeklyInstallment++
-			continue
-		}
-
-		if t.Description == "Test monthly expense" {
-			suite.Assert().Equal(t.Date, monthlyDate, "monthly date")
-			suite.Assert().Equal(lo.FromPtr(t.InstallmentNumber), monthlyInstallment, "monthly installment")
-			monthlyDate = monthlyDate.AddDate(0, 1, 0)
-			monthlyInstallment++
-			continue
-		}
-
-		if t.Description == "Test yearly expense" {
-			suite.Assert().Equal(t.Date, yearlyDate, "yearly date")
-			suite.Assert().Equal(lo.FromPtr(t.InstallmentNumber), yearlyInstallment, "yearly installment")
-			yearlyDate = yearlyDate.AddDate(1, 0, 0)
-			yearlyInstallment++
-			continue
-		}
-
-		suite.T().Fatalf("Unknown transaction description: %s", t.Description)
-	}
-
-	suite.Assert().Equal(dailyInstallment-1, 30)
-	suite.Assert().Equal(weeklyInstallment-1, 4)
-	suite.Assert().Equal(monthlyInstallment-1, 3)
-	suite.Assert().Equal(yearlyInstallment-1, 3)
-}
-
-func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithEndDate() {
-	ctx := context.Background()
-	user, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user: %v", err)
-	}
-
-	account, err := suite.createTestAccount(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test account: %v", err)
-	}
-
-	category, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
-	tag, err := suite.createTestTag(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test tag: %v", err)
-	}
-
-	d := now()
-
-	transactions := []domain.TransactionCreateRequest{
-		{
-			AccountID:       account.ID,
-			CategoryID:      category.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			Amount:          100,
-			Date:            d,
-			Description:     "Test daily expense",
-			Tags:            []domain.Tag{*tag},
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeDaily,
-				EndDate: lo.ToPtr(d.AddDate(0, 0, 30)),
-			},
-		},
-		{
-			AccountID:       account.ID,
-			CategoryID:      category.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			Amount:          100,
-			Date:            d,
-			Description:     "Test weekly expense",
-			Tags:            []domain.Tag{*tag},
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeWeekly,
-				EndDate: lo.ToPtr(d.AddDate(0, 0, 28)),
-			},
-		},
-		{
-			AccountID:       account.ID,
-			CategoryID:      category.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			Amount:          100,
-			Date:            d,
-			Description:     "Test monthly expense",
-			Tags:            []domain.Tag{*tag},
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeMonthly,
-				EndDate: lo.ToPtr(d.AddDate(0, 3, 0)),
-			},
-		},
-		{
-			AccountID:       account.ID,
-			CategoryID:      category.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			Amount:          100,
-			Date:            d,
-			Description:     "Test yearly expense",
-			Tags:            []domain.Tag{*tag},
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeYearly,
-				EndDate: lo.ToPtr(d.AddDate(3, 0, 0)),
-			},
-		},
-	}
-
-	for _, transaction := range transactions {
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &transaction)
-		if err != nil {
-			suite.T().Fatalf("Failed to create transaction: %v", err)
-		}
-	}
-
-	transactionsDB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-		SortBy: &domain.SortBy{
-			Field: "installment_number",
-			Order: domain.SortOrderAsc,
-		},
-	})
-	if err != nil {
-		suite.T().Fatalf("Failed to get transaction: %v", err)
-	}
-
-	suite.Assert().Len(transactionsDB, 40)
 
 	dailyDate := d
 	dailyInstallment := 1
