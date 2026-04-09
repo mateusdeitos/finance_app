@@ -32,9 +32,9 @@
 
 **Plans**: 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Redefine RecurrenceSettings struct, RecurrenceFromSettings, and error constants
-- [ ] 01-02-PLAN.md — Rewrite validateRecurrenceSettings with new rules in create and update services
-- [ ] 01-03-PLAN.md — Fix all compile-breaking callers (tests + seed) to reach go build ./... exit 0
+- [x] 01-01-PLAN.md — Redefine RecurrenceSettings struct, RecurrenceFromSettings, and error constants
+- [x] 01-02-PLAN.md — Rewrite validateRecurrenceSettings with new rules in create and update services
+- [x] 01-03-PLAN.md — Fix all compile-breaking callers (tests + seed) to reach go build ./... exit 0
 
 **UI hint**: no
 
