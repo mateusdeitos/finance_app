@@ -30,7 +30,12 @@
 4. Passing `current_installment > total_installments` or `total_installments > 1000` returns distinct, tagged validation errors
 5. Old validation branches for `end_date` and `repetitions` are absent from the codebase
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Redefine RecurrenceSettings struct, RecurrenceFromSettings, and error constants
+- [ ] 01-02-PLAN.md — Rewrite validateRecurrenceSettings with new rules in create and update services
+- [ ] 01-03-PLAN.md — Fix all compile-breaking callers (tests + seed) to reach go build ./... exit 0
+
 **UI hint**: no
 
 ---
@@ -95,7 +100,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Domain & Validation | 0/? | Not started | - |
+| 1. Domain & Validation | 0/3 | Not started | - |
 | 2. Service & API | 0/? | Not started | - |
 | 3. Frontend | 0/? | Not started | - |
 | 4. Tests | 0/? | Not started | - |
