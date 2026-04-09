@@ -1,0 +1,520 @@
+package service
+
+import (
+	"context"
+	"time"
+
+	"github.com/finance_app/backend/internal/domain"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
+	"github.com/samber/lo"
+)
+
+// hasTag is a helper to assert that a ServiceErrors contains a specific ErrorTag.
+func hasTag(err error, tag pkgErrors.ErrorTag) bool {
+	return pkgErrors.Is(err, pkgErrors.ServiceError{Tags: []string{string(tag)}})
+}
+
+// ==================== Group 1a: Create Validation Errors ====================
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
+	ctx := context.Background()
+	d := now()
+
+	assertTag := func(err error, tag pkgErrors.ErrorTag) {
+		suite.T().Helper()
+		suite.Require().Error(err)
+		suite.Assert().True(hasTag(err, tag), "expected error tag %s in: %v", tag, err)
+	}
+
+	suite.Run("invalid_transaction_type", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: "invalid",
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidTransactionType)
+	})
+
+	suite.Run("account_id_zero", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       0,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidAccountID)
+	})
+
+	suite.Run("category_id_zero_for_expense", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      0,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidCategoryID)
+	})
+
+	suite.Run("category_id_zero_for_income", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeIncome,
+			AccountID:       1,
+			CategoryID:      0,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidCategoryID)
+	})
+
+	suite.Run("amount_zero", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          0,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
+	})
+
+	suite.Run("amount_negative", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          -100,
+			Date:            d,
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
+	})
+
+	suite.Run("date_zero", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            time.Time{},
+			Description:     "test",
+		})
+		assertTag(err, pkgErrors.ErrorTagDateIsRequired)
+	})
+
+	suite.Run("description_empty", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "",
+		})
+		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
+	})
+
+	suite.Run("description_whitespace_only", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "   ",
+		})
+		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
+	})
+
+	suite.Run("tag_with_empty_name", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeExpense,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+			Tags:            []domain.Tag{{Name: ""}},
+		})
+		assertTag(err, pkgErrors.ErrorTagTagNameCannotBeEmpty)
+	})
+
+	suite.Run("transfer_without_destination_account", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType:      domain.TransactionTypeTransfer,
+			AccountID:            1,
+			Amount:               100,
+			Date:                 d,
+			Description:          "test",
+			DestinationAccountID: nil,
+		})
+		assertTag(err, pkgErrors.ErrorTagMissingDestinationAccount)
+	})
+
+	suite.Run("transfer_with_split_settings", func() {
+		destID := 2
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType:      domain.TransactionTypeTransfer,
+			AccountID:            1,
+			Amount:               100,
+			Date:                 d,
+			Description:          "test",
+			DestinationAccountID: &destID,
+			SplitSettings:        []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
+		})
+		assertTag(err, pkgErrors.ErrorTagSplitSettingsNotAllowedForTransfer)
+	})
+
+	suite.Run("income_with_split_settings", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType: domain.TransactionTypeIncome,
+			AccountID:       1,
+			CategoryID:      1,
+			Amount:          100,
+			Date:            d,
+			Description:     "test",
+			SplitSettings:   []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
+		})
+		assertTag(err, pkgErrors.ErrorTagSplitAllowedOnlyForExpense)
+	})
+}
+
+// ==================== Group 1b: Create Recurrence Validation ====================
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreate_RecurrenceValidation() {
+	ctx := context.Background()
+	d := now()
+
+	assertTag := func(err error, tag pkgErrors.ErrorTag) {
+		suite.T().Helper()
+		suite.Require().Error(err)
+		suite.Assert().True(hasTag(err, tag), "expected error tag %s in: %v", tag, err)
+	}
+
+	baseReq := func(r *domain.RecurrenceSettings) *domain.TransactionCreateRequest {
+		return &domain.TransactionCreateRequest{
+			TransactionType:    domain.TransactionTypeExpense,
+			AccountID:          1,
+			CategoryID:         1,
+			Amount:             100,
+			Date:               d,
+			Description:        "test",
+			RecurrenceSettings: r,
+		}
+	}
+
+	suite.Run("invalid_recurrence_type", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:        "invalid",
+			Repetitions: lo.ToPtr(3),
+		}))
+		assertTag(err, pkgErrors.ErrorTagInvalidRecurrenceType)
+	})
+
+	suite.Run("both_end_date_and_repetitions", func() {
+		endDate := d.AddDate(0, 1, 0)
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(3),
+			EndDate:     &endDate,
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
+	})
+
+	suite.Run("neither_end_date_nor_repetitions", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type: domain.RecurrenceTypeMonthly,
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateOrRepetitionsIsRequired)
+	})
+
+	suite.Run("end_date_before_transaction_date", func() {
+		endDate := d.AddDate(0, -1, 0)
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:    domain.RecurrenceTypeMonthly,
+			EndDate: &endDate,
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
+	})
+
+	suite.Run("end_date_equal_to_transaction_date", func() {
+		endDate := d // same day — must be strictly after
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:    domain.RecurrenceTypeMonthly,
+			EndDate: &endDate,
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
+	})
+
+	suite.Run("repetitions_zero", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(0),
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
+	})
+
+	suite.Run("repetitions_negative", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(-1),
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
+	})
+
+	suite.Run("repetitions_exceeds_1000", func() {
+		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
+			Type:        domain.RecurrenceTypeMonthly,
+			Repetitions: lo.ToPtr(1001),
+		}))
+		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo)
+	})
+}
+
+// ==================== Group 1c: Update Validation Errors ====================
+
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors() {
+	ctx := context.Background()
+	d := now()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	txID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            d,
+		Description:     "base transaction",
+	})
+	suite.Require().NoError(err)
+
+	assertTag := func(err error, tag pkgErrors.ErrorTag) {
+		suite.T().Helper()
+		suite.Require().Error(err)
+		suite.Assert().True(hasTag(err, tag), "expected error tag %s in: %v", tag, err)
+	}
+
+	suite.Run("invalid_transaction_type", func() {
+		invalidType := domain.TransactionType("invalid")
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			TransactionType:     &invalidType,
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidTransactionType)
+	})
+
+	suite.Run("amount_zero", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			Amount:              lo.ToPtr(int64(0)),
+		})
+		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
+	})
+
+	suite.Run("amount_negative", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			Amount:              lo.ToPtr(int64(-50)),
+		})
+		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
+	})
+
+	suite.Run("date_zero", func() {
+		zeroDate := time.Time{}
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			Date:                &zeroDate,
+		})
+		assertTag(err, pkgErrors.ErrorTagDateIsRequired)
+	})
+
+	suite.Run("description_empty", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			Description:         lo.ToPtr(""),
+		})
+		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
+	})
+
+	suite.Run("description_whitespace", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			Description:         lo.ToPtr("   "),
+		})
+		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
+	})
+
+	suite.Run("recurrence_invalid_type", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:        "invalid",
+				Repetitions: lo.ToPtr(3),
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagInvalidRecurrenceType)
+	})
+
+	suite.Run("recurrence_no_end_date_or_repetitions", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type: domain.RecurrenceTypeMonthly,
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateOrRepetitionsIsRequired)
+	})
+
+	suite.Run("recurrence_both_end_date_and_repetitions", func() {
+		endDate := d.AddDate(0, 3, 0)
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:        domain.RecurrenceTypeMonthly,
+				Repetitions: lo.ToPtr(3),
+				EndDate:     &endDate,
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
+	})
+
+	suite.Run("recurrence_end_date_before_transaction_date", func() {
+		endDate := d.AddDate(0, -1, 0)
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:    domain.RecurrenceTypeMonthly,
+				EndDate: &endDate,
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
+	})
+
+	suite.Run("recurrence_repetitions_zero", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:        domain.RecurrenceTypeMonthly,
+				Repetitions: lo.ToPtr(0),
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
+	})
+
+	suite.Run("recurrence_repetitions_exceeds_1000", func() {
+		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+			RecurrenceSettings: &domain.RecurrenceSettings{
+				Type:        domain.RecurrenceTypeMonthly,
+				Repetitions: lo.ToPtr(1001),
+			},
+		})
+		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo)
+	})
+}
+
+// TestUpdate_OwnershipValidation verifies that a user cannot update a transaction
+// they do not own (getByID returns not-found for a different userID).
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_OwnershipValidation() {
+	ctx := context.Background()
+	d := now()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		Amount:          100,
+		Date:            d,
+		Description:     "userA transaction",
+	})
+	suite.Require().NoError(err)
+
+	// userB tries to update userA's transaction — getByID filters by userID, so not found
+	err = suite.Services.Transaction.Update(ctx, txID, userB.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		Description:         lo.ToPtr("updated by userB"),
+	})
+	suite.Require().Error(err)
+	suite.Assert().True(pkgErrors.IsNotFound(err), "expected not-found error, got: %v", err)
+}
+
+// TestUpdate_ChildTransactionCannotBeUpdated verifies that the linked (child)
+// transaction of a split expense cannot be directly updated by its owner.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionCannotBeUpdated() {
+	ctx := context.Background()
+	d := now()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	// Create a split expense — this generates a linked (child) transaction for userB
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      categoryA.ID,
+		Amount:          100,
+		Date:            d,
+		Description:     "split expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	// Fetch the child transaction that belongs to userB
+	childTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(childTxs, 1, "expected exactly one child transaction for userB")
+	childTxID := childTxs[0].ID
+
+	// userB tries to update the child transaction — should be rejected
+	err = suite.Services.Transaction.Update(ctx, childTxID, userB.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		Description:         lo.ToPtr("should not be updated"),
+	})
+	suite.Require().Error(err)
+
+	// Both ownership and child-transaction errors are expected
+	suite.Assert().True(
+		hasTag(err, pkgErrors.ErrorTagChildTransactionCannotBeUpdated) ||
+			hasTag(err, pkgErrors.ErrorTagParentTransactionBelongsToAnotherUser),
+		"expected child-transaction or ownership error, got: %v", err,
+	)
+}
