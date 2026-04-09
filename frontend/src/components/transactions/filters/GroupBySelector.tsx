@@ -22,7 +22,7 @@ export function GroupBySelector() {
   return (
     <Stack gap={4}>
       <Text size="sm" c="dimmed">Agrupar por</Text>
-      <SegmentedControl value={groupBy} onChange={onChange} data={OPTIONS} size="sm" />
+      <SegmentedControl value={groupBy} onChange={onChange} data={OPTIONS} size="sm" data-testid="segmented_group_by" />
     </Stack>
   )
 }
