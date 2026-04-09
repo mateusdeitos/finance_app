@@ -72,13 +72,37 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOM-01, DOM-02, DOM-03 | Phase 1 | Pending |
-| VAL-01 – VAL-06 | Phase 1 | Pending |
-| CRE-01 – CRE-05 | Phase 1 | Pending |
-| UPD-01 | Phase 1 | Pending |
-| API-01, API-02 | Phase 1 | Pending |
-| FE-01 – FE-06 | Phase 2 | Pending |
-| TST-01 – TST-08 | Phase 3 | Pending |
+| DOM-01 | Phase 1 | Pending |
+| DOM-02 | Phase 1 | Pending |
+| DOM-03 | Phase 1 | Pending |
+| VAL-01 | Phase 1 | Pending |
+| VAL-02 | Phase 1 | Pending |
+| VAL-03 | Phase 1 | Pending |
+| VAL-04 | Phase 1 | Pending |
+| VAL-05 | Phase 1 | Pending |
+| VAL-06 | Phase 1 | Pending |
+| CRE-01 | Phase 2 | Pending |
+| CRE-02 | Phase 2 | Pending |
+| CRE-03 | Phase 2 | Pending |
+| CRE-04 | Phase 2 | Pending |
+| CRE-05 | Phase 2 | Pending |
+| UPD-01 | Phase 2 | Pending |
+| API-01 | Phase 2 | Pending |
+| API-02 | Phase 2 | Pending |
+| FE-01 | Phase 3 | Pending |
+| FE-02 | Phase 3 | Pending |
+| FE-03 | Phase 3 | Pending |
+| FE-04 | Phase 3 | Pending |
+| FE-05 | Phase 3 | Pending |
+| FE-06 | Phase 3 | Pending |
+| TST-01 | Phase 4 | Pending |
+| TST-02 | Phase 4 | Pending |
+| TST-03 | Phase 4 | Pending |
+| TST-04 | Phase 4 | Pending |
+| TST-05 | Phase 4 | Pending |
+| TST-06 | Phase 4 | Pending |
+| TST-07 | Phase 4 | Pending |
+| TST-08 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 29 total
@@ -87,4 +111,4 @@
 
 ---
 *Requirements defined: 2026-04-09*
-*Last updated: 2026-04-09 after initialization*
+*Last updated: 2026-04-09 after roadmap creation*
