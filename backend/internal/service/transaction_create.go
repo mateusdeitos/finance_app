@@ -176,7 +176,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	}
 
 	if hasRecurrence {
-		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings, req.Date)
+		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings)
 		if err != nil {
 			return 0, err
 		}
@@ -357,7 +357,7 @@ func (s *transactionService) injectLinkedTransactions(
 			// transferência entre contas do mesmo usuário
 			var recurrenceID *int
 			if hasRecurrence {
-				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings, transaction.Date)
+				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings)
 				if err != nil {
 					return err
 				}
@@ -428,7 +428,7 @@ func (s *transactionService) injectLinkedTransactions(
 		}
 
 		if hasRecurrence {
-			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings, transaction.Date)
+			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings)
 			if err != nil {
 				return err
 			}
@@ -512,8 +512,8 @@ func (s *transactionService) createTags(ctx context.Context, userID int, tags []
 	return pkgErrors.ServiceErrors(errs)
 }
 
-func (s *transactionService) createRecurrence(ctx context.Context, userID int, recurrenceSettings domain.RecurrenceSettings, startDate time.Time) (*domain.TransactionRecurrence, error) {
-	tr := domain.RecurrenceFromSettings(recurrenceSettings, userID, startDate)
+func (s *transactionService) createRecurrence(ctx context.Context, userID int, recurrenceSettings domain.RecurrenceSettings) (*domain.TransactionRecurrence, error) {
+	tr := domain.RecurrenceFromSettings(recurrenceSettings, userID)
 
 	if recurrence, err := s.transactionRecurRepo.Create(ctx, tr); err != nil {
 		return nil, err
