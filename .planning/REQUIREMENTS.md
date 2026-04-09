@@ -57,6 +57,13 @@
 - [ ] **TST-07**: Existing tests updated to remove `end_date` / `repetitions` inputs
 - [ ] **TST-08**: Frontend: form validation rejects `current_installment > total_installments`
 
+### E2E Tests (Playwright)
+
+- [ ] **E2E-01**: Existing e2e tests that seed recurring transactions via API (`repetitions: 3`) updated to use `current_installment: 1, total_installments: 3`
+- [ ] **E2E-02**: E2E test: user creates a recurring expense starting at installment 1 of 5 — verifies 5 transactions appear in the list
+- [ ] **E2E-03**: E2E test: user creates a recurring expense starting at installment 3 of 10 — verifies 8 transactions appear, first one labeled installment 3
+- [ ] **E2E-04**: E2E test: "Parcela atual" > "Total de parcelas" shows inline validation error, form cannot be submitted
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -103,10 +110,14 @@
 | TST-06 | Phase 4 | Pending |
 | TST-07 | Phase 4 | Pending |
 | TST-08 | Phase 4 | Pending |
+| E2E-01 | Phase 4 | Pending |
+| E2E-02 | Phase 4 | Pending |
+| E2E-03 | Phase 4 | Pending |
+| E2E-04 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 29 total
-- Mapped to phases: 29
+- v1 requirements: 33 total
+- Mapped to phases: 33
 - Unmapped: 0
 
 ---

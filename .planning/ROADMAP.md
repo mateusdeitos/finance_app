@@ -3,7 +3,7 @@
 **Project:** Couples Finance App — Recurrence Input Redesign
 **Milestone:** Replace `repetitions | end_date` with `current_installment + total_installments`
 **Granularity:** Standard
-**Coverage:** 29/29 v1 requirements mapped
+**Coverage:** 33/33 v1 requirements mapped
 
 ---
 
@@ -72,9 +72,9 @@
 ---
 
 ### Phase 4: Tests
-**Goal**: All new behavior is verified by automated tests; no existing test refers to removed fields (`end_date`, `repetitions`)
+**Goal**: All new behavior is verified by automated tests; no existing test refers to removed fields (`end_date`, `repetitions`); Playwright e2e suite updated and passing
 **Depends on**: Phase 3
-**Requirements**: TST-01, TST-02, TST-03, TST-04, TST-05, TST-06, TST-07, TST-08
+**Requirements**: TST-01, TST-02, TST-03, TST-04, TST-05, TST-06, TST-07, TST-08, E2E-01, E2E-02, E2E-03, E2E-04
 
 **Success Criteria** (what must be TRUE):
 1. Integration test suite passes with a case for `current_installment=1, total_installments=5` (5 transactions, numbered 1–5)
@@ -83,6 +83,9 @@
 4. Unit tests assert that missing `current_installment`, `current_installment > total_installments`, and `total_installments > 1000` each return distinct validation errors
 5. All previously-passing tests compile and pass without referencing `end_date` or `repetitions`
 6. Frontend: form-level Zod validation test rejects `current_installment > total_installments`
+7. Existing Playwright e2e tests that seed recurring transactions (in `update-transaction.spec.ts`) updated to use `current_installment: 1, total_installments: N`
+8. New Playwright e2e test: user fills "Parcela atual = 3, Total = 10" in the create form, transaction list shows 8 items starting at installment 3
+9. New Playwright e2e test: inline error appears when "Parcela atual" > "Total de parcelas"
 
 **Plans**: TBD
 
@@ -134,8 +137,12 @@
 | TST-06 | Phase 4 | Unit: total > 1000 rejected |
 | TST-07 | Phase 4 | Existing tests updated (no end_date/repetitions) |
 | TST-08 | Phase 4 | Frontend: form rejects current > total |
+| E2E-01 | Phase 4 | Existing Playwright tests updated to new API shape |
+| E2E-02 | Phase 4 | E2E: create recurring from installment 1 of 5 |
+| E2E-03 | Phase 4 | E2E: create recurring from installment 3 of 10 |
+| E2E-04 | Phase 4 | E2E: inline error when current > total |
 
-**Total mapped:** 29/29 v1 requirements
+**Total mapped:** 33/33 v1 requirements
 
 ---
 
