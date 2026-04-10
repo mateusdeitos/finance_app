@@ -77,7 +77,7 @@ Plans:
 
 **Plans**: 1 plan
 Plans:
-- [ ] 03-01-PLAN.md — Replace recurrence types, schema, payload builder, UI component, and drawer defaults
+- [x] 03-01-PLAN.md — Replace recurrence types, schema, payload builder, UI component, and drawer defaults
 
 **UI hint**: yes
 
