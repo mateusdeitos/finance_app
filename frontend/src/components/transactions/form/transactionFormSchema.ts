@@ -26,9 +26,8 @@ export const baseTransactionFields = {
   split_settings: z.array(splitSettingSchema),
   recurrenceEnabled: z.boolean(),
   recurrenceType: z.enum(["monthly", "weekly", "daily", "yearly"]).nullable(),
-  recurrenceEndDateMode: z.boolean(),
-  recurrenceEndDate: z.string().nullable(),
-  recurrenceRepetitions: z.number().int().nullable(),
+  recurrenceCurrentInstallment: z.number().int().nullable(),
+  recurrenceTotalInstallments: z.number().int().nullable(),
 } as const;
 
 type SharedRefinementData = {
@@ -37,9 +36,8 @@ type SharedRefinementData = {
   destination_account_id: number | null;
   recurrenceEnabled: boolean;
   recurrenceType: string | null;
-  recurrenceEndDateMode: boolean;
-  recurrenceEndDate: string | null;
-  recurrenceRepetitions: number | null;
+  recurrenceCurrentInstallment: number | null;
+  recurrenceTotalInstallments: number | null;
 };
 
 /**
@@ -67,26 +65,34 @@ export function applySharedRefinements(data: SharedRefinementData, ctx: z.Refine
     if (!data.recurrenceType) {
       ctx.addIssue({
         code: "custom",
-        message: "Informe o tipo da recorrência",
+        message: "Informe o tipo da recorrencia",
         path: ["recurrenceType"],
       });
     }
-    if (data.recurrenceEndDateMode) {
-      if (!data.recurrenceEndDate) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Informe a data de término",
-          path: ["recurrenceEndDate"],
-        });
-      }
-    } else {
-      if (!data.recurrenceRepetitions || data.recurrenceRepetitions < 1) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Informe o número de repetições",
-          path: ["recurrenceRepetitions"],
-        });
-      }
+    if (data.recurrenceCurrentInstallment == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe a parcela atual",
+        path: ["recurrenceCurrentInstallment"],
+      });
+    }
+    if (data.recurrenceTotalInstallments == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Informe o total de parcelas",
+        path: ["recurrenceTotalInstallments"],
+      });
+    }
+    if (
+      data.recurrenceCurrentInstallment != null &&
+      data.recurrenceTotalInstallments != null &&
+      data.recurrenceCurrentInstallment > data.recurrenceTotalInstallments
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Parcela atual nao pode ser maior que o total",
+        path: ["recurrenceCurrentInstallment"],
+      });
     }
   }
 }
