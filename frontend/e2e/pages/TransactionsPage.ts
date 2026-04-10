@@ -21,6 +21,16 @@ export class TransactionsPage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  async openAdvancedFilters() {
+    await this.page.getByTestId("open_advanced_filters").click();
+  }
+
+  async selectGroupBy(option: 'date' | 'category' | 'account') {
+    const labelMap: Record<string, string> = { date: 'Data', category: 'Categoria', account: 'Conta' }
+    await this.page.getByTestId('segmented_group_by').getByText(labelMap[option]).click()
+    await this.page.waitForLoadState('networkidle')
+  }
+
   /** Click the transaction row for the given transaction ID to open the update drawer. */
   async clickTransactionRow(transactionId: number) {
     await this.page.locator(`[data-transaction-id="${transactionId}"]`).click();
@@ -142,6 +152,26 @@ export class TransactionsPage {
     await this.fillAmount(amountCents);
     await this.selectAccount(accountName);
     await this.selectCategory(categoryName);
+  }
+
+  async selectDestinationAccount(accountName: string) {
+    const input = this.page.getByTestId("select_destination_account");
+    await input.click();
+    await input.fill(accountName);
+    await this.page.getByRole("option", { name: accountName }).click();
+  }
+
+  async fillTransfer(
+    amountCents: number,
+    description: string,
+    sourceAccountName: string,
+    destAccountName: string
+  ) {
+    await this.selectType("transfer");
+    await this.fillDescription(description);
+    await this.fillAmount(amountCents);
+    await this.selectAccount(sourceAccountName);
+    await this.selectDestinationAccount(destAccountName);
   }
 
   async selectTransaction(transactionId: number) {
