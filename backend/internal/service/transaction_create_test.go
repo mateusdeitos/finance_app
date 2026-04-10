@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/suite"
 )
@@ -1012,6 +1013,146 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.ParentTransactionID)
 }
 
+func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of5() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	baseDate := now()
+
+	req := domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            baseDate,
+		Description:     "TST-01 recurring expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
+		},
+	}
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &req)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{
+			Field: "installment_number",
+			Order: domain.SortOrderAsc,
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+
+	// TST-01: exactly 5 installments created
+	suite.Assert().Len(transactions, 5, "expected 5 installments for current=1,total=5")
+
+	for i := 0; i < 5; i++ {
+		// TST-01: installments numbered 1 through 5
+		suite.Assert().Equal(i+1, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, i+1))
+		// TST-03: date of installment N = baseDate + (N - current_installment) * 1 month
+		expectedDate := baseDate.AddDate(0, i, 0)
+		suite.Assert().Equal(expectedDate, transactions[i].Date, fmt.Sprintf("transactions[%d].Date should be %s (baseDate + %d months)", i, expectedDate, i))
+		// Each installment must have a recurrence ID
+		suite.Assert().NotNil(transactions[i].TransactionRecurrenceID, fmt.Sprintf("transactions[%d].TransactionRecurrenceID should not be nil", i))
+	}
+}
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom3of10() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	baseDate := now()
+
+	req := domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            baseDate,
+		Description:     "TST-02 recurring expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 3,
+			TotalInstallments:  10,
+		},
+	}
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &req)
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{
+			Field: "installment_number",
+			Order: domain.SortOrderAsc,
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transactions: %v", err)
+	}
+
+	// TST-02: exactly 8 installments created (installments 3 through 10)
+	suite.Assert().Len(transactions, 8, "expected 8 installments for current=3,total=10")
+
+	// TST-02: first installment is #3, last is #10
+	suite.Assert().Equal(3, lo.FromPtr(transactions[0].InstallmentNumber), "transactions[0].InstallmentNumber should be 3")
+	suite.Assert().Equal(10, lo.FromPtr(transactions[7].InstallmentNumber), "transactions[7].InstallmentNumber should be 10")
+
+	// TST-03: installment 3 gets baseDate, installment 4 gets baseDate+1mo, ... installment 10 gets baseDate+7mo
+	for i := 0; i < 8; i++ {
+		expectedInstallmentNumber := i + 3
+		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
+		expectedDate := baseDate.AddDate(0, i, 0)
+		suite.Assert().Equal(expectedDate, transactions[i].Date, fmt.Sprintf("transactions[%d].Date should be %s (baseDate + %d months)", i, expectedDate, i))
+		suite.Assert().NotNil(transactions[i].TransactionRecurrenceID, fmt.Sprintf("transactions[%d].TransactionRecurrenceID should not be nil", i))
+	}
+
+	// TST-02: assert TransactionRecurrence.Installments == 10 (total installments stored on the recurrence record)
+	recurrenceID := lo.FromPtr(transactions[0].TransactionRecurrenceID)
+	recurrences, err := suite.Repos.TransactionRecurrence.Search(ctx, domain.TransactionRecurrenceFilter{
+		IDs: []int{recurrenceID},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search transaction recurrences: %v", err)
+	}
+	suite.Assert().Len(recurrences, 1, "expected 1 recurrence record")
+	suite.Assert().Equal(10, recurrences[0].Installments, "TransactionRecurrence.Installments should be 10 (total_installments)")
+}
+
 func now() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -1023,4 +1164,72 @@ func TestTransactionCreateWithDB(t *testing.T) {
 	}
 
 	suite.Run(t, new(TransactionCreateWithDBTestSuite))
+}
+
+type TransactionCreateValidationTestSuite struct {
+	ServiceTestSuite
+}
+
+func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsMissingCurrentInstallment() {
+	req := domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       1,
+		CategoryID:      1,
+		Amount:          100,
+		Date:            time.Now(),
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 0,
+			TotalInstallments:  5,
+		},
+	}
+
+	_, err := suite.Services.Transaction.Create(context.Background(), suite.UserID, &req)
+	suite.Assert().Error(err)
+	suite.Assert().True(pkgErrors.Is(err, *pkgErrors.ErrRecurrenceCurrentInstallmentMustBeAtLeastOne), "expected ErrRecurrenceCurrentInstallmentMustBeAtLeastOne")
+}
+
+func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsCurrentGreaterThanTotal() {
+	req := domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       1,
+		CategoryID:      1,
+		Amount:          100,
+		Date:            time.Now(),
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 5,
+			TotalInstallments:  3,
+		},
+	}
+
+	_, err := suite.Services.Transaction.Create(context.Background(), suite.UserID, &req)
+	suite.Assert().Error(err)
+	suite.Assert().True(pkgErrors.Is(err, *pkgErrors.ErrRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent), "expected ErrRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent")
+}
+
+func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsTotalGreaterThan1000() {
+	req := domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       1,
+		CategoryID:      1,
+		Amount:          100,
+		Date:            time.Now(),
+		Description:     "test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  1001,
+		},
+	}
+
+	_, err := suite.Services.Transaction.Create(context.Background(), suite.UserID, &req)
+	suite.Assert().Error(err)
+	suite.Assert().True(pkgErrors.Is(err, *pkgErrors.ErrRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo(1000)), "expected ErrRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo(1000)")
+}
+
+func TestTransactionCreateValidation(t *testing.T) {
+	suite.Run(t, new(TransactionCreateValidationTestSuite))
 }
