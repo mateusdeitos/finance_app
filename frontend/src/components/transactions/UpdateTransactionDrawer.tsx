@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Divider, Drawer, Stack } from "@mantine/core";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,9 +10,9 @@ import { Transactions } from "@/types/transactions";
 import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
-import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
+import { updateTransactionFormSchema, UpdateTransactionFormValues, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
-import { UpdatePropagationSelector, PropagationValue } from "./UpdatePropagationSelector";
+import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
 import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
 
 interface Props {
@@ -22,7 +22,6 @@ interface Props {
 
 export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const { opened, close } = useDrawerContext<void>();
-  const [propagation, setPropagation] = useState<PropagationValue>("current");
   const [submitError, setSubmitError] = useState<string | undefined>();
 
   const { query: accountsQuery } = useAccounts();
@@ -45,8 +44,10 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const destinationAccountId =
     transaction.type != "transfer" ? null : transaction?.linked_transactions?.[0]?.account_id;
 
-  const methods = useForm<TransactionFormValues>({
-    resolver: zodResolver(transactionFormSchema),
+  const isRecurring = transaction.transaction_recurrence_id != null;
+
+  const methods = useForm<UpdateTransactionFormValues>({
+    resolver: zodResolver(updateTransactionFormSchema),
     defaultValues: {
       transaction_type: transaction.type,
       date: convertUtcToLocalKeepingValues(transaction.date),
@@ -61,15 +62,14 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       recurrenceType: transaction.transaction_recurrence?.type ?? "monthly",
       recurrenceCurrentInstallment: transaction.installment_number ?? null,
       recurrenceTotalInstallments: transaction.transaction_recurrence?.installments ?? null,
+      propagation_settings: "current",
     },
   });
 
   const queryClient = useQueryClient();
   const { mutation } = useUpdateTransaction();
 
-  const isRecurring = transaction.transaction_recurrence_id != null;
-
-  function submitTransaction(values: TransactionFormValues, onSuccess: () => void) {
+  function submitTransaction(values: UpdateTransactionFormValues, onSuccess: () => void) {
     setSubmitError(undefined);
     const payload = buildTransactionPayload(values, existingTags);
     mutation.mutate(
@@ -77,7 +77,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
         id: transaction.id,
         payload: {
           ...payload,
-          propagation_settings: isRecurring ? propagation : undefined,
+          propagation_settings: isRecurring ? values.propagation_settings : undefined,
         },
       },
       {
@@ -92,34 +92,40 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
     );
   }
 
-  function handleSubmitPayload(values: TransactionFormValues) {
+  function handleSubmitPayload(values: UpdateTransactionFormValues) {
     submitTransaction(values, close);
   }
 
-  function handleSaveAndCreateAnother(values: TransactionFormValues) {
+  function handleSaveAndCreateAnother(values: UpdateTransactionFormValues) {
     submitTransaction(values, () => methods.reset());
   }
 
   return (
     <Drawer opened={opened} onClose={close} title="Editar transação" position="right" size="md">
-      <Stack gap="md">
-        <FormProvider {...methods}>
-          <TransactionForm
-            focusField={focusField}
-            onSubmitPayload={handleSubmitPayload}
-            onSaveAndCreateAnother={handleSaveAndCreateAnother}
-            isPending={mutation.isPending}
-            submitError={submitError}
-          />
-        </FormProvider>
-
-        {isRecurring && (
-          <>
-            <Divider />
-            <UpdatePropagationSelector value={propagation} onChange={setPropagation} />
-          </>
-        )}
-      </Stack>
+      <FormProvider {...methods}>
+        <TransactionForm
+          focusField={focusField}
+          onSubmitPayload={handleSubmitPayload as (values: TransactionFormValues) => void}
+          onSaveAndCreateAnother={handleSaveAndCreateAnother as (values: TransactionFormValues) => void}
+          isPending={mutation.isPending}
+          submitError={submitError}
+          isUpdate
+          extraContent={
+            isRecurring ? (
+              <Stack gap="md">
+                <Divider />
+                <Controller
+                  control={methods.control}
+                  name="propagation_settings"
+                  render={({ field }) => (
+                    <UpdatePropagationSelector value={field.value} onChange={field.onChange} />
+                  )}
+                />
+              </Stack>
+            ) : undefined
+          }
+        />
+      </FormProvider>
     </Drawer>
   );
 }

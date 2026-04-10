@@ -13,12 +13,17 @@ interface RecurrenceFieldsProps {
    * prevent the combobox from closing the containing popover.
    */
   comboboxWithinPortal?: boolean;
+  /**
+   * Disables the current installment input.
+   * Used in the update form where changing the installment number has no effect.
+   */
+  disableCurrentInstallment?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFormValues = any;
 
-export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true }: RecurrenceFieldsProps) {
+export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true, disableCurrentInstallment = false }: RecurrenceFieldsProps) {
   const {
     control,
     formState: { errors },
@@ -72,6 +77,7 @@ export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true 
                 min={1}
                 w={64}
                 hideControls
+                disabled={disableCurrentInstallment}
                 value={(field.value as number | null) ?? ""}
                 onChange={(val) => field.onChange(val === "" ? null : Number(val))}
                 error={!!fieldError("recurrenceCurrentInstallment")}

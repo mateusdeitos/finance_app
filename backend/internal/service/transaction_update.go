@@ -808,6 +808,9 @@ func (s *transactionService) handlerRecurrenceUpdate(
 			return r, nil
 		}
 
+		// CurrentInstallment is intentionally ignored on updates — it only controls
+		// which installment number to start from during creation. On updates, all
+		// existing installments are renumbered sequentially by handlerRecurrenceUpdate.
 		recurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, userID)
 		if t.TransactionRecurrenceID != nil {
 			recurrence.ID = *t.TransactionRecurrenceID

@@ -112,3 +112,21 @@ export const transactionFormSchema = z
   });
 
 export type TransactionFormValues = z.infer<typeof transactionFormSchema>;
+
+export const propagationSettingsEnum = z.enum(["current", "current_and_future", "all"]);
+
+export const updateTransactionFormSchema = z
+  .object({
+    ...baseTransactionFields,
+    date: z.date({ error: "Data é obrigatória" }),
+    tags: z.array(z.string()),
+    propagation_settings: propagationSettingsEnum,
+  })
+  .superRefine((data, ctx) => {
+    if (!data.account_id) {
+      ctx.addIssue({ code: "custom", message: "Selecione uma conta", path: ["account_id"] });
+    }
+    applySharedRefinements(data, ctx);
+  });
+
+export type UpdateTransactionFormValues = z.infer<typeof updateTransactionFormSchema>;
