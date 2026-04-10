@@ -194,7 +194,9 @@ export const ImportReviewRow = memo(
 
         {/* Status */}
         <Table.Td>
-          <Box className={classes.statusIcon} data-testid={`import_status_${rowIndex}`}>{statusCell()}</Box>
+          <Box className={classes.statusIcon} data-testid={`import_status_${rowIndex}`}>
+            {statusCell()}
+          </Box>
         </Table.Td>
 
         {/* Date */}
@@ -430,7 +432,7 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
           </Button>
         </Popover.Target>
         <Popover.Dropdown>
-          <Stack gap="xs" w={220}>
+          <Stack gap="xs" w={300}>
             <RecurrenceFields namePrefix="" comboboxWithinPortal={false} />
           </Stack>
         </Popover.Dropdown>

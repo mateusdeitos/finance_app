@@ -1,4 +1,4 @@
-import { Select, NumberInput, Stack, Group } from "@mantine/core";
+import { Select, NumberInput, Stack, Group, Text } from "@mantine/core";
 import { Controller, useFormContext } from "react-hook-form";
 
 interface RecurrenceFieldsProps {
@@ -59,36 +59,48 @@ export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true 
         )}
       />
 
-      <Group gap="sm">
-        <Controller
-          control={control}
-          name={`${namePrefix}recurrenceCurrentInstallment`}
-          render={({ field }) => (
-            <NumberInput
-              label="Parcela atual"
-              min={1}
-              value={(field.value as number | null) ?? ""}
-              onChange={(val) => field.onChange(val === "" ? null : Number(val))}
-              error={fieldError("recurrenceCurrentInstallment")}
-              style={{ flex: 1 }}
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name={`${namePrefix}recurrenceTotalInstallments`}
-          render={({ field }) => (
-            <NumberInput
-              label="Total de parcelas"
-              min={1}
-              value={(field.value as number | null) ?? ""}
-              onChange={(val) => field.onChange(val === "" ? null : Number(val))}
-              error={fieldError("recurrenceTotalInstallments")}
-              style={{ flex: 1 }}
-            />
-          )}
-        />
-      </Group>
+      <Stack gap={4}>
+        <Text size="sm" fw={500}>Parcelamento</Text>
+        <Group gap="xs" align="center">
+          <Text size="sm">Parcela</Text>
+          <Controller
+            control={control}
+            name={`${namePrefix}recurrenceCurrentInstallment`}
+            render={({ field }) => (
+              <NumberInput
+                aria-label="Parcela atual"
+                min={1}
+                w={64}
+                hideControls
+                value={(field.value as number | null) ?? ""}
+                onChange={(val) => field.onChange(val === "" ? null : Number(val))}
+                error={!!fieldError("recurrenceCurrentInstallment")}
+              />
+            )}
+          />
+          <Text size="sm">de</Text>
+          <Controller
+            control={control}
+            name={`${namePrefix}recurrenceTotalInstallments`}
+            render={({ field }) => (
+              <NumberInput
+                aria-label="Total de parcelas"
+                min={1}
+                w={64}
+                hideControls
+                value={(field.value as number | null) ?? ""}
+                onChange={(val) => field.onChange(val === "" ? null : Number(val))}
+                error={!!fieldError("recurrenceTotalInstallments")}
+              />
+            )}
+          />
+        </Group>
+        {(fieldError("recurrenceCurrentInstallment") || fieldError("recurrenceTotalInstallments")) && (
+          <Text size="xs" c="red">
+            {fieldError("recurrenceCurrentInstallment") ?? fieldError("recurrenceTotalInstallments")}
+          </Text>
+        )}
+      </Stack>
     </Stack>
   );
 }
