@@ -56,8 +56,8 @@ Plans:
 
 **Plans**: 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — Fix create loop to honor CurrentInstallment (loop bounds + date offset)
-- [ ] 02-02-PLAN.md — Regenerate Swagger docs for new RecurrenceSettings shape
+- [x] 02-01-PLAN.md — Fix create loop to honor CurrentInstallment (loop bounds + date offset)
+- [x] 02-02-PLAN.md — Regenerate Swagger docs for new RecurrenceSettings shape
 
 **UI hint**: no
 
