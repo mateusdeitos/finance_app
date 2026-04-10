@@ -47,6 +47,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
         color="red"
         onClick={clearFilters}
         aria-label="Limpar filtros"
+        data-testid="btn_clear_filters"
       >
         <IconX size={20} />
       </ActionIcon>
@@ -60,6 +61,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
       color="red"
       leftSection={<IconX size={12} />}
       onClick={clearFilters}
+      data-testid="btn_clear_filters"
     >
       Limpar filtros
     </Button>

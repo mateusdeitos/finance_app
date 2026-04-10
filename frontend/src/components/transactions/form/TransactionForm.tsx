@@ -281,6 +281,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
+                  data-testid="select_destination_account"
                 />
               )}
             />

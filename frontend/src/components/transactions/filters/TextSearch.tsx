@@ -26,6 +26,7 @@ export function TextSearch({ style }: TextSearchProps) {
       value={value}
       onChange={(e) => setValue(e.currentTarget.value)}
       style={{ minWidth: 200, ...style }}
+      data-testid="input_text_search"
     />
   )
 }
