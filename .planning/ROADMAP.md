@@ -99,7 +99,12 @@ Plans:
 8. New Playwright e2e test: user fills "Parcela atual = 3, Total = 10" in the create form, transaction list shows 8 items starting at installment 3
 9. New Playwright e2e test: inline error appears when "Parcela atual" > "Total de parcelas"
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — Backend integration tests (TST-01/02/03) and validation unit tests (TST-04/05/06)
+- [ ] 04-02-PLAN.md — E2E seed fix (E2E-01) and new recurrence Playwright tests (E2E-02/03/04)
+
+**UI hint**: no
 
 ---
 
@@ -110,7 +115,7 @@ Plans:
 | 1. Domain & Validation | 3/3 | Complete | 2026-04-09 |
 | 2. Service & API | 0/2 | Planned | - |
 | 3. Frontend | 0/1 | Planned | - |
-| 4. Tests | 0/? | Not started | - |
+| 4. Tests | 0/2 | Planned | - |
 
 ---
 
