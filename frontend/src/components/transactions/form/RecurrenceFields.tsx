@@ -1,6 +1,5 @@
-import { Switch, Select, NumberInput, Stack, Group } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
-import { Controller, useWatch, useFormContext } from "react-hook-form";
+import { Select, NumberInput, Stack, Group } from "@mantine/core";
+import { Controller, useFormContext } from "react-hook-form";
 
 interface RecurrenceFieldsProps {
   /**
@@ -24,7 +23,6 @@ export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true 
     control,
     formState: { errors },
   } = useFormContext<AnyFormValues>();
-  const endDateMode = useWatch({ control, name: `${namePrefix}recurrenceEndDateMode` }) as boolean | undefined;
 
   /** Resolve a dot-separated error path against the errors object. */
   function fieldError(suffix: string): string | undefined {
@@ -64,48 +62,33 @@ export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true 
       <Group gap="sm">
         <Controller
           control={control}
-          name={`${namePrefix}recurrenceEndDateMode`}
+          name={`${namePrefix}recurrenceCurrentInstallment`}
           render={({ field }) => (
-            <Switch
-              label="Usar data de término"
-              checked={!!field.value}
-              onChange={(e) => field.onChange(e.currentTarget.checked)}
+            <NumberInput
+              label="Parcela atual"
+              min={1}
+              value={(field.value as number | null) ?? ""}
+              onChange={(val) => field.onChange(val === "" ? null : Number(val))}
+              error={fieldError("recurrenceCurrentInstallment")}
+              style={{ flex: 1 }}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name={`${namePrefix}recurrenceTotalInstallments`}
+          render={({ field }) => (
+            <NumberInput
+              label="Total de parcelas"
+              min={1}
+              value={(field.value as number | null) ?? ""}
+              onChange={(val) => field.onChange(val === "" ? null : Number(val))}
+              error={fieldError("recurrenceTotalInstallments")}
+              style={{ flex: 1 }}
             />
           )}
         />
       </Group>
-
-      {endDateMode ? (
-        <Controller
-          control={control}
-          name={`${namePrefix}recurrenceEndDate`}
-          render={({ field }) => (
-            <DatePickerInput
-              label="Data de término"
-              value={field.value ? new Date(field.value as string) : null}
-              onChange={(date) => field.onChange(date ? String(date).split("T")[0] : null)}
-              error={fieldError("recurrenceEndDate")}
-              valueFormat="DD/MM/YYYY"
-            />
-          )}
-        />
-      ) : (
-        <Controller
-          control={control}
-          name={`${namePrefix}recurrenceRepetitions`}
-          render={({ field }) => (
-            <NumberInput
-              ref={field.ref}
-              label="Repetições"
-              description="Número de parcelas"
-              min={1}
-              value={(field.value as number | null) ?? ""}
-              onChange={(val) => field.onChange(val === "" ? null : Number(val))}
-              error={fieldError("recurrenceRepetitions")}
-            />
-          )}
-        />
-      )}
     </Stack>
   );
 }

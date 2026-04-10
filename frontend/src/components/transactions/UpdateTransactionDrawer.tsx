@@ -59,9 +59,8 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       split_settings: initialSplitSettings,
       recurrenceEnabled: !!transaction.transaction_recurrence?.id,
       recurrenceType: transaction.transaction_recurrence?.type ?? "monthly",
-      recurrenceEndDateMode: false,
-      recurrenceEndDate: null,
-      recurrenceRepetitions: transaction.transaction_recurrence?.installments ?? null,
+      recurrenceCurrentInstallment: transaction.installment_number ?? null,
+      recurrenceTotalInstallments: transaction.transaction_recurrence?.installments ?? null,
     },
   });
 

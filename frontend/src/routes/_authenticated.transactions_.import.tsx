@@ -88,18 +88,12 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
   if (row.transaction_type === "transfer" && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id;
   }
-  if (row.recurrenceType) {
-    if (row.recurrenceEndDateMode && row.recurrenceEndDate) {
-      payload.recurrence_settings = {
-        type: row.recurrenceType,
-        end_date: row.recurrenceEndDate,
-      };
-    } else if (row.recurrenceRepetitions) {
-      payload.recurrence_settings = {
-        type: row.recurrenceType,
-        repetitions: row.recurrenceRepetitions,
-      };
-    }
+  if (row.recurrenceEnabled && row.recurrenceType && row.recurrenceCurrentInstallment != null && row.recurrenceTotalInstallments != null) {
+    payload.recurrence_settings = {
+      type: row.recurrenceType,
+      current_installment: row.recurrenceCurrentInstallment,
+      total_installments: row.recurrenceTotalInstallments,
+    };
   }
   if (row.split_settings?.length) {
     payload.split_settings = row.split_settings;
@@ -125,9 +119,8 @@ function parsedRowToFormValues(r: Transactions.ParsedImportRow, accountId: numbe
     destination_account_id: r.destination_account_id ?? null,
     recurrenceEnabled: !!r.recurrence_type,
     recurrenceType: r.recurrence_type ?? null,
-    recurrenceEndDateMode: false,
-    recurrenceEndDate: null,
-    recurrenceRepetitions: r.recurrence_count ?? null,
+    recurrenceCurrentInstallment: null,
+    recurrenceTotalInstallments: r.recurrence_count ?? null,
     split_settings: [],
   };
 }

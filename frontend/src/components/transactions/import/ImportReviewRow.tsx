@@ -71,7 +71,7 @@ export const ImportReviewRow = memo(
       action,
       transactionType,
       recurrenceType,
-      recurrenceRepetitions,
+      recurrenceTotalInstallments,
       splitSettings,
       importStatus,
       importError,
@@ -85,7 +85,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.action`,
         `rows.${rowIndex}.transaction_type`,
         `rows.${rowIndex}.recurrenceType`,
-        `rows.${rowIndex}.recurrenceRepetitions`,
+        `rows.${rowIndex}.recurrenceTotalInstallments`,
         `rows.${rowIndex}.split_settings`,
         `rows.${rowIndex}.import_status`,
         `rows.${rowIndex}.import_error`,
@@ -146,7 +146,7 @@ export const ImportReviewRow = memo(
     function recurrenceSummary() {
       if (!recurrenceType) return "Parcelamento";
       const label = RECURRENCE_TYPE_LABELS[recurrenceType] ?? recurrenceType;
-      return recurrenceRepetitions ? `${recurrenceRepetitions}x (${label})` : label;
+      return recurrenceTotalInstallments ? `${recurrenceTotalInstallments}x (${label})` : label;
     }
 
     function splitSummary() {
@@ -379,9 +379,8 @@ export const ImportReviewRow = memo(
 
 interface RecurrenceLocalValues {
   recurrenceType: Transactions.RecurrenceType | null;
-  recurrenceEndDateMode: boolean;
-  recurrenceEndDate: string | null;
-  recurrenceRepetitions: number | null;
+  recurrenceCurrentInstallment: number | null;
+  recurrenceTotalInstallments: number | null;
 }
 
 interface RecurrencePopoverProps {
@@ -398,9 +397,8 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
   const localForm = useForm<RecurrenceLocalValues>({
     defaultValues: {
       recurrenceType: null,
-      recurrenceEndDateMode: false,
-      recurrenceEndDate: null,
-      recurrenceRepetitions: null,
+      recurrenceCurrentInstallment: null,
+      recurrenceTotalInstallments: null,
     },
   });
 
@@ -410,9 +408,8 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
     const rowValues = parentForm.getValues(rowPath) as any;
     localForm.reset({
       recurrenceType: rowValues.recurrenceType ?? null,
-      recurrenceEndDateMode: rowValues.recurrenceEndDateMode ?? false,
-      recurrenceEndDate: rowValues.recurrenceEndDate ?? null,
-      recurrenceRepetitions: rowValues.recurrenceRepetitions ?? null,
+      recurrenceCurrentInstallment: rowValues.recurrenceCurrentInstallment ?? null,
+      recurrenceTotalInstallments: rowValues.recurrenceTotalInstallments ?? null,
     });
   }
 
@@ -420,9 +417,8 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
     parentForm.setValue(`${rowPath}.recurrenceType`, values.recurrenceType);
-    parentForm.setValue(`${rowPath}.recurrenceEndDateMode`, values.recurrenceEndDateMode);
-    parentForm.setValue(`${rowPath}.recurrenceEndDate`, values.recurrenceEndDate);
-    parentForm.setValue(`${rowPath}.recurrenceRepetitions`, values.recurrenceRepetitions);
+    parentForm.setValue(`${rowPath}.recurrenceCurrentInstallment`, values.recurrenceCurrentInstallment);
+    parentForm.setValue(`${rowPath}.recurrenceTotalInstallments`, values.recurrenceTotalInstallments);
   }
 
   return (
