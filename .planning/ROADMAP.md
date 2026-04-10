@@ -54,7 +54,11 @@ Plans:
 6. The update service validates recurrence using the same rules as create (no `end_date`, requires both new fields)
 7. The Swagger spec documents `current_installment` and `total_installments`; `repetitions` and `end_date` do not appear
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Fix create loop to honor CurrentInstallment (loop bounds + date offset)
+- [ ] 02-02-PLAN.md — Regenerate Swagger docs for new RecurrenceSettings shape
+
 **UI hint**: no
 
 ---
@@ -100,8 +104,8 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Domain & Validation | 0/3 | Not started | - |
-| 2. Service & API | 0/? | Not started | - |
+| 1. Domain & Validation | 3/3 | Complete | 2026-04-09 |
+| 2. Service & API | 0/2 | Planned | - |
 | 3. Frontend | 0/? | Not started | - |
 | 4. Tests | 0/? | Not started | - |
 
