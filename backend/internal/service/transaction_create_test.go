@@ -1065,7 +1065,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of
 	// TST-01: exactly 5 installments created
 	suite.Assert().Len(transactions, 5, "expected 5 installments for current=1,total=5")
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		// TST-01: installments numbered 1 through 5
 		suite.Assert().Equal(i+1, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, i+1))
 		// TST-03: date of installment N = baseDate + (N - current_installment) * 1 month
@@ -1133,7 +1133,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom3of
 	suite.Assert().Equal(10, lo.FromPtr(transactions[7].InstallmentNumber), "transactions[7].InstallmentNumber should be 10")
 
 	// TST-03: installment 3 gets baseDate, installment 4 gets baseDate+1mo, ... installment 10 gets baseDate+7mo
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		expectedInstallmentNumber := i + 3
 		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
 		expectedDate := baseDate.AddDate(0, i, 0)
