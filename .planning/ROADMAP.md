@@ -75,7 +75,10 @@ Plans:
 4. The form rejects submission when `recurrenceCurrentInstallment > recurrenceTotalInstallments` with an inline validation message
 5. The import form schema compiles without reference to removed recurrence fields
 
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 03-01-PLAN.md — Replace recurrence types, schema, payload builder, UI component, and drawer defaults
+
 **UI hint**: yes
 
 ---
@@ -106,7 +109,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Domain & Validation | 3/3 | Complete | 2026-04-09 |
 | 2. Service & API | 0/2 | Planned | - |
-| 3. Frontend | 0/? | Not started | - |
+| 3. Frontend | 0/1 | Planned | - |
 | 4. Tests | 0/? | Not started | - |
 
 ---
