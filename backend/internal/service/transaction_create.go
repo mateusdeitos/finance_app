@@ -181,12 +181,12 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			return 0, err
 		}
 
-		for i := 1; i <= recurrence.Installments; i++ {
+		for i := req.RecurrenceSettings.CurrentInstallment; i <= recurrence.Installments; i++ {
 			transactions = append(transactions, domain.Transaction{
 				ID:                      0,
 				TransactionRecurrenceID: &recurrence.ID,
 				InstallmentNumber:       &i,
-				Date:                    s.incrementInstallmentDate(req.Date, lo.FromPtr(req.RecurrenceSettings).Type, i-1),
+				Date:                    s.incrementInstallmentDate(req.Date, lo.FromPtr(req.RecurrenceSettings).Type, i-req.RecurrenceSettings.CurrentInstallment),
 				Description:             req.Description,
 				UserID:                  userID,
 				OriginalUserID:          &userID,
