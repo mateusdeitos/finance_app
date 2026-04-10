@@ -107,8 +107,8 @@ test.describe('Recurrence', () => {
     // Fill the main expense fields first
     await transactionsPage.fillExpense(1000, `Parcela invalida - e2e ${Date.now()}`, testAccountName, testCategoryName)
 
-    // Enable recurrence toggle — Mantine Switch hides the input visually; use force:true
-    await page.getByLabel('Recorrência').click({ force: true })
+    // Enable recurrence toggle — click the visible <label> element, not the hidden input
+    await page.locator('label', { hasText: 'Recorrência' }).click()
 
     // Fill invalid values: current (5) > total (3)
     await page.getByLabel('Parcela atual').fill('5')
