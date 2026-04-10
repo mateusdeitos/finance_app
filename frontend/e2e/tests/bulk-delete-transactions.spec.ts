@@ -91,7 +91,7 @@ test.describe('Bulk Delete Transactions', () => {
       amount: 500,
       date: today,
       description: desc,
-      recurrence_settings: { type: 'monthly', repetitions: 3 },
+      recurrence_settings: { type: 'monthly', current_installment: 1, total_installments: 3 },
     })
     createdTransactionIds.push(tx.id)
 
