@@ -10,6 +10,8 @@ definitions:
         type: integer
       initial_balance:
         type: integer
+      is_active:
+        type: boolean
       name:
         type: string
       updated_at:
@@ -32,6 +34,8 @@ definitions:
         type: array
       created_at:
         type: string
+      emoji:
+        type: string
       id:
         type: integer
       name:
@@ -45,6 +49,46 @@ definitions:
       user_id:
         type: integer
     type: object
+  domain.CheckDuplicateRequest:
+    properties:
+      account_id:
+        description: optional; when set, only checks within that account
+        type: integer
+      amount:
+        description: cents
+        type: integer
+      date:
+        description: YYYY-MM-DD
+        type: string
+      description:
+        type: string
+    type: object
+  domain.DeleteCategoryRequest:
+    properties:
+      replace_with_id:
+        type: integer
+    type: object
+  domain.ImportCSVResponse:
+    properties:
+      duplicate_count:
+        type: integer
+      error_count:
+        type: integer
+      rows:
+        items:
+          $ref: '#/definitions/domain.ParsedImportRow'
+        type: array
+      total_rows:
+        type: integer
+    type: object
+  domain.ImportRowStatus:
+    enum:
+    - pending
+    - duplicate
+    type: string
+    x-enum-varnames:
+    - ImportRowStatusPending
+    - ImportRowStatusDuplicate
   domain.OperationType:
     enum:
     - credit
@@ -53,12 +97,41 @@ definitions:
     x-enum-varnames:
     - OperationTypeCredit
     - OperationTypeDebit
+  domain.ParsedImportRow:
+    properties:
+      amount:
+        description: cents
+        type: integer
+      category_id:
+        type: integer
+      category_inferred:
+        type: boolean
+      date:
+        type: string
+      description:
+        type: string
+      destination_account_id:
+        type: integer
+      parse_errors:
+        items:
+          type: string
+        type: array
+      recurrence_count:
+        type: integer
+      recurrence_type:
+        $ref: '#/definitions/domain.RecurrenceType'
+      row_index:
+        type: integer
+      status:
+        $ref: '#/definitions/domain.ImportRowStatus'
+      type:
+        $ref: '#/definitions/domain.TransactionType'
+    type: object
   domain.RecurrenceSettings:
     properties:
-      end_date:
-        type: string
-      repetitions:
-        description: nil = indefinite
+      current_installment:
+        type: integer
+      total_installments:
         type: integer
       type:
         $ref: '#/definitions/domain.RecurrenceType'
@@ -274,6 +347,8 @@ definitions:
         type: string
       email:
         type: string
+      external_id:
+        type: string
       id:
         type: integer
       name:
@@ -314,12 +389,28 @@ definitions:
     - UserConnectionStatusPending
     - UserConnectionStatusAccepted
     - UserConnectionStatusRejected
+  handler.AcceptInviteRequest:
+    properties:
+      external_id:
+        type: string
+      from_default_split_percentage:
+        type: integer
+    type: object
+  handler.testLoginRequest:
+    properties:
+      email:
+        type: string
+    type: object
   middleware.ErrorResponse:
     properties:
       error:
         type: string
       message:
         type: string
+      tags:
+        items:
+          type: string
+        type: array
     type: object
 host: localhost:8080
 info:
@@ -450,6 +541,31 @@ paths:
       summary: Update account
       tags:
       - accounts
+  /api/accounts/{id}/activate:
+    post:
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Activate account
+      tags:
+      - accounts
   /api/auth/me:
     get:
       produces:
@@ -523,12 +639,19 @@ paths:
       - categories
   /api/categories/{id}:
     delete:
+      consumes:
+      - application/json
       parameters:
       - description: Category ID
         in: path
         name: id
         required: true
         type: integer
+      - description: Optional replacement category
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/domain.DeleteCategoryRequest'
       responses:
         "204":
           description: No Content
@@ -538,6 +661,10 @@ paths:
             $ref: '#/definitions/middleware.ErrorResponse'
         "401":
           description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       security:
@@ -980,6 +1107,120 @@ paths:
       summary: Get balance for a period
       tags:
       - transactions
+  /api/transactions/check-duplicate:
+    post:
+      consumes:
+      - application/json
+      description: Returns whether a transaction with the given date, description
+        and amount already exists for the authenticated user.
+      parameters:
+      - description: Duplicate check params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CheckDuplicateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Check if a transaction is a duplicate
+      tags:
+      - transactions
+  /api/transactions/import-csv:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Accepts a multipart CSV file and an account_id. Returns parsed
+        rows enriched with inferred categories and duplicate flags. No transactions
+        are created; use the standard POST /transactions endpoint to create each confirmed
+        row.
+      parameters:
+      - description: Destination account ID
+        in: formData
+        name: account_id
+        required: true
+        type: integer
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ImportCSVResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Parse and enrich a CSV file for import
+      tags:
+      - transactions
+  /api/transactions/suggestions:
+    get:
+      description: Returns up to `limit` transactions whose description matches the
+        query string (PostgreSQL text search). Used for autocomplete when creating
+        a new transaction.
+      parameters:
+      - description: Description search query
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Maximum results (default 10, max 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Transaction'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Suggest transactions by description
+      tags:
+      - transactions
   /api/user-connections:
     get:
       parameters:
@@ -1116,6 +1357,71 @@ paths:
       summary: Update connection status (accept / reject)
       tags:
       - user-connections
+  /api/user-connections/accept-invite:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Invite data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AcceptInviteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.UserConnection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Accept an invite using the inviter's external ID
+      tags:
+      - user-connections
+  /api/user-connections/invite-info/{external_id}:
+    get:
+      parameters:
+      - description: User external ID
+        in: path
+        name: external_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get user info by external ID (for invite preview)
+      tags:
+      - user-connections
   /auth/{provider}:
     get:
       description: Redirects the user to the OAuth provider's authorization page
@@ -1165,6 +1471,35 @@ paths:
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: OAuth callback
+      tags:
+      - auth
+  /auth/test-login:
+    post:
+      consumes:
+      - application/json
+      description: Issues a JWT auth cookie for the given email without OAuth. Only
+        available when ENV != production.
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.testLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Test login (non-production only)
       tags:
       - auth
 securityDefinitions:

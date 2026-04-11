@@ -174,8 +174,9 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() 
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(installments),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
 		},
 	})
 
@@ -238,8 +239,9 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAll() {
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(installments),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
 		},
 	})
 
@@ -306,8 +308,9 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(installments),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
 		},
 	})
 
@@ -569,8 +572,9 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(installments),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -662,8 +666,9 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(installments),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{

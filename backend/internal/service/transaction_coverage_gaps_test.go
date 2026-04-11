@@ -100,36 +100,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_SplitSettingsItemValid
 	})
 }
 
-// ─── validateRecurrenceSettings: hours%24 path + nil guard ───────────────────
-
-// TestCreate_RecurrenceEndDateNonWholeDayOffset exercises the `int(diff.Hours())%24 != 0`
-// branch in validateRecurrenceSettings (endDate is strictly after txDate but the
-// difference is not a whole number of days).
-func (suite *TransactionCreateWithDBTestSuite) TestCreate_RecurrenceEndDateNonWholeDayOffset() {
-	ctx := context.Background()
-	d := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
-	// endDate is 36 hours after d → passes "must be after" but 36%24 = 12 ≠ 0
-	endDate := d.Add(36 * time.Hour)
-
-	_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
-		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       1,
-		CategoryID:      1,
-		Amount:          100,
-		Date:            d,
-		Description:     "test",
-		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:    domain.RecurrenceTypeMonthly,
-			EndDate: &endDate,
-		},
-	})
-	suite.Require().Error(err)
-	suite.Assert().True(
-		hasTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate),
-		"expected RecurrenceEndDateMustBeAfterTransactionDate: %v", err,
-	)
-}
-
 // TestPrivateMethods_Create calls private methods of transactionService directly
 // to cover branches that are never reached through the public API.
 func (suite *TransactionCreateWithDBTestSuite) TestPrivateMethods_Create() {
@@ -149,7 +119,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestPrivateMethods_Create() {
 	suite.Assert().Equal(base, result2, "incrementInstallmentDate with unknown type")
 
 	// validateRecurrenceSettings — nil settings → returns empty slice
-	errs := svc.validateRecurrenceSettings(time.Now(), nil)
+	errs := svc.validateRecurrenceSettings(nil)
 	suite.Assert().Empty(errs, "validateRecurrenceSettings(nil) must return no errors")
 }
 
@@ -254,40 +224,20 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors_Addit
 		assertTag(err, pkgErrors.ErrorTagSplitSettingAmountMustBeGreaterThanZero)
 	})
 
-	// recurrence endDate non-whole-day offset in update path
-	// Uses a non-midnight transaction date so that the diff from tx.Date to endDate
-	// is an exact multiple of 24 h (passes validateUpdateTransactionRequest) but the
-	// diff from zero-time (used inside handlerRecurrenceUpdate when req.Date == nil)
-	// is NOT a multiple of 24 h (triggers the error inside handlerRecurrenceUpdate).
-	suite.Run("recurrence_end_date_non_whole_day_in_handler", func() {
-		// Create a new transaction at noon so that the hours component is 12.
-		noonDate := time.Date(2025, time.February, 1, 12, 0, 0, 0, time.UTC)
-		noonTxID, createErr := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
-			TransactionType: domain.TransactionTypeExpense,
-			AccountID:       account.ID,
-			CategoryID:      category.ID,
-			Amount:          100,
-			Date:            noonDate,
-			Description:     "noon tx",
-		})
-		suite.Require().NoError(createErr)
-
-		// endDate is exactly 24 h after noonDate (whole-day diff from noonDate),
-		// but 24 h after a noon time means the diff from time.Time{} still ends on 12 h
-		// → int(diff.Hours()) % 24 == 12 ≠ 0 inside handlerRecurrenceUpdate.
-		endDate := noonDate.Add(24 * time.Hour)
-		updateErr := suite.Services.Transaction.Update(ctx, noonTxID, user.ID, &domain.TransactionUpdateRequest{
+	// recurrence validation inside handlerRecurrenceUpdate path
+	suite.Run("recurrence_current_installment_zero_in_handler", func() {
+		updateErr := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-			// req.Date intentionally nil → handlerRecurrenceUpdate uses time.Time{} as base
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeMonthly,
-				EndDate: &endDate,
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 0,
+				TotalInstallments:  3,
 			},
 		})
-		suite.Require().Error(updateErr, "expected error from non-whole-day endDate inside handlerRecurrenceUpdate")
+		suite.Require().Error(updateErr)
 		suite.Assert().True(
-			hasTag(updateErr, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate),
-			"expected RecurrenceEndDateMustBeAfterTransactionDate: %v", updateErr,
+			hasTag(updateErr, pkgErrors.ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne),
+			"expected ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne: %v", updateErr,
 		)
 	})
 }

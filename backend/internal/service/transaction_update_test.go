@@ -1792,8 +1792,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario1_NoRecurr
 	err = suite.Services.Transaction.Update(ctx, transactionID, user.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -1847,8 +1848,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario2_WithRecu
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -1907,8 +1909,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario3_WithRecu
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -1976,8 +1979,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario4_WithRecu
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2051,8 +2055,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2071,8 +2076,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 	err = suite.Services.Transaction.Update(ctx, firstInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(5),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2122,8 +2128,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_Decrease
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(5),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2144,8 +2151,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_Decrease
 	err = suite.Services.Transaction.Update(ctx, firstInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2193,8 +2201,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario7_Decrease
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(5),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2216,8 +2225,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario7_Decrease
 	err = suite.Services.Transaction.Update(ctx, installment2.ID, user.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(2),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  2,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2290,8 +2300,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario8_AddSplit
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2309,8 +2320,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario8_AddSplit
 	err = suite.Services.Transaction.Update(ctx, installmentsBefore[0].ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2377,8 +2389,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2403,8 +2416,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 	err = suite.Services.Transaction.Update(ctx, installmentsBefore[0].ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{},
 	})
@@ -2457,8 +2471,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10_AddSpli
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2478,8 +2493,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10_AddSpli
 	err = suite.Services.Transaction.Update(ctx, installment2.ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2541,8 +2557,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario11_AddSpli
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2563,8 +2580,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario11_AddSpli
 	err = suite.Services.Transaction.Update(ctx, installment2.ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(2),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  2,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2642,8 +2660,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario12_RemoveR
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)
@@ -2732,8 +2751,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2818,8 +2838,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2909,8 +2930,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2931,8 +2953,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 	err = suite.Services.Transaction.Update(ctx, installmentsBefore[0].ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(5),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -2987,8 +3010,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 		Date:            d,
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(5),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  5,
 		},
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -3011,8 +3035,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 	err = suite.Services.Transaction.Update(ctx, installmentsBefore[0].ID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{},
 	})
@@ -3395,8 +3420,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		Date:            d,
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3456,8 +3482,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		Date:            d,
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3475,8 +3502,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
 		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(2),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  2,
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))
@@ -3530,8 +3558,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 		Date:            d,
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3556,8 +3585,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))

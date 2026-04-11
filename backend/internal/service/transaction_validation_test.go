@@ -213,69 +213,47 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_RecurrenceValidation()
 
 	suite.Run("invalid_recurrence_type", func() {
 		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:        "invalid",
-			Repetitions: lo.ToPtr(3),
+			Type:               "invalid",
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		}))
 		assertTag(err, pkgErrors.ErrorTagInvalidRecurrenceType)
 	})
 
-	suite.Run("both_end_date_and_repetitions", func() {
-		endDate := d.AddDate(0, 1, 0)
+	suite.Run("current_installment_zero", func() {
 		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(3),
-			EndDate:     &endDate,
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 0,
+			TotalInstallments:  3,
 		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne)
 	})
 
-	suite.Run("neither_end_date_nor_repetitions", func() {
+	suite.Run("current_installment_negative", func() {
 		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type: domain.RecurrenceTypeMonthly,
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: -1,
+			TotalInstallments:  3,
 		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateOrRepetitionsIsRequired)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne)
 	})
 
-	suite.Run("end_date_before_transaction_date", func() {
-		endDate := d.AddDate(0, -1, 0)
+	suite.Run("current_greater_than_total", func() {
 		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:    domain.RecurrenceTypeMonthly,
-			EndDate: &endDate,
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 5,
+			TotalInstallments:  3,
 		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent)
 	})
 
-	suite.Run("end_date_equal_to_transaction_date", func() {
-		endDate := d // same day — must be strictly after
+	suite.Run("total_installments_exceeds_1000", func() {
 		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:    domain.RecurrenceTypeMonthly,
-			EndDate: &endDate,
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  1001,
 		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
-	})
-
-	suite.Run("repetitions_zero", func() {
-		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(0),
-		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
-	})
-
-	suite.Run("repetitions_negative", func() {
-		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(-1),
-		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
-	})
-
-	suite.Run("repetitions_exceeds_1000", func() {
-		_, err := suite.Services.Transaction.Create(ctx, 1, baseReq(&domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(1001),
-		}))
-		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo)
 	})
 }
 
@@ -364,68 +342,48 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors() {
 		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        "invalid",
-				Repetitions: lo.ToPtr(3),
+				Type:               "invalid",
+				CurrentInstallment: 1,
+				TotalInstallments:  3,
 			},
 		})
 		assertTag(err, pkgErrors.ErrorTagInvalidRecurrenceType)
 	})
 
-	suite.Run("recurrence_no_end_date_or_repetitions", func() {
+	suite.Run("recurrence_current_installment_zero", func() {
 		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type: domain.RecurrenceTypeMonthly,
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 0,
+				TotalInstallments:  3,
 			},
 		})
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateOrRepetitionsIsRequired)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne)
 	})
 
-	suite.Run("recurrence_both_end_date_and_repetitions", func() {
-		endDate := d.AddDate(0, 3, 0)
+	suite.Run("recurrence_current_greater_than_total", func() {
 		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeMonthly,
-				Repetitions: lo.ToPtr(3),
-				EndDate:     &endDate,
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 5,
+				TotalInstallments:  3,
 			},
 		})
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent)
 	})
 
-	suite.Run("recurrence_end_date_before_transaction_date", func() {
-		endDate := d.AddDate(0, -1, 0)
+	suite.Run("recurrence_total_installments_exceeds_1000", func() {
 		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:    domain.RecurrenceTypeMonthly,
-				EndDate: &endDate,
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 1,
+				TotalInstallments:  1001,
 			},
 		})
-		assertTag(err, pkgErrors.ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)
-	})
-
-	suite.Run("recurrence_repetitions_zero", func() {
-		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
-			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeMonthly,
-				Repetitions: lo.ToPtr(0),
-			},
-		})
-		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBePositive)
-	})
-
-	suite.Run("recurrence_repetitions_exceeds_1000", func() {
-		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
-			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeMonthly,
-				Repetitions: lo.ToPtr(1001),
-			},
-		})
-		assertTag(err, pkgErrors.ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo)
+		assertTag(err, pkgErrors.ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo)
 	})
 }
 

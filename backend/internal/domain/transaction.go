@@ -3,12 +3,10 @@ package domain
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"reflect"
 	"slices"
 	"time"
 
-	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
 
@@ -135,38 +133,13 @@ type TransactionRecurrence struct {
 	UpdatedAt    *time.Time     `json:"updated_at"`
 }
 
-func RecurrenceFromSettings(recurrenceSettings RecurrenceSettings, userID int, startDate time.Time) *TransactionRecurrence {
-	tr := &TransactionRecurrence{
+func RecurrenceFromSettings(recurrenceSettings RecurrenceSettings, userID int) *TransactionRecurrence {
+	return &TransactionRecurrence{
 		ID:           0,
 		Type:         recurrenceSettings.Type,
-		Installments: lo.FromPtr(recurrenceSettings.Repetitions),
+		Installments: recurrenceSettings.TotalInstallments,
 		UserID:       userID,
 	}
-
-	if recurrenceSettings.EndDate != nil {
-		var installments int
-
-		endDate := recurrenceSettings.EndDate
-
-		switch recurrenceSettings.Type {
-		case RecurrenceTypeDaily:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24))
-		case RecurrenceTypeWeekly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 7))
-		case RecurrenceTypeMonthly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 30))
-		case RecurrenceTypeYearly:
-			installments = int(math.Round(endDate.Sub(startDate).Hours() / 24 / 365))
-		}
-
-		if installments < 1 {
-			installments = 1
-		}
-
-		tr.Installments = installments
-	}
-
-	return tr
 }
 
 type TransactionRecurrenceFilter struct {
@@ -176,9 +149,9 @@ type TransactionRecurrenceFilter struct {
 }
 
 type RecurrenceSettings struct {
-	Type        RecurrenceType `json:"type"`
-	Repetitions *int           `json:"repetitions,omitempty"` // nil = indefinite
-	EndDate     *time.Time     `json:"end_date,omitempty"`
+	Type               RecurrenceType `json:"type"`
+	CurrentInstallment int            `json:"current_installment"`
+	TotalInstallments  int            `json:"total_installments"`
 }
 
 type SplitSettings struct {

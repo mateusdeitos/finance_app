@@ -396,8 +396,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MonthlyRecurrence_DayC
 		Date:            jan31,
 		Description:     "monthly clamp test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeMonthly,
-			Repetitions: lo.ToPtr(4),
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  4,
 		},
 	})
 	suite.Require().NoError(err)
@@ -445,8 +446,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_YearlyRecurrence_LeapY
 		Date:            feb29,
 		Description:     "yearly leap clamp test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
-			Type:        domain.RecurrenceTypeYearly,
-			Repetitions: lo.ToPtr(3),
+			Type:               domain.RecurrenceTypeYearly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
 		},
 	})
 	suite.Require().NoError(err)

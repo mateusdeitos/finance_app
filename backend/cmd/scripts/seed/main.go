@@ -460,8 +460,9 @@ func seedRecurringTransactions(
 			Date:            date,
 			Description:     description,
 			RecurrenceSettings: &domain.RecurrenceSettings{
-				Type:        domain.RecurrenceTypeMonthly,
-				Repetitions: &installments,
+				Type:               domain.RecurrenceTypeMonthly,
+				CurrentInstallment: 1,
+				TotalInstallments:  installments,
 			},
 		}
 

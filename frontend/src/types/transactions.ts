@@ -139,8 +139,8 @@ export namespace Transactions {
 
   export interface RecurrenceSettings {
     type: RecurrenceType;
-    repetitions?: number;
-    end_date?: string;
+    current_installment: number;
+    total_installments: number;
   }
 
   export interface SplitSetting {
