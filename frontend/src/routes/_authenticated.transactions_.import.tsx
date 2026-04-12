@@ -222,6 +222,20 @@ function ImportReviewPage() {
     setSelected(new Set());
   };
 
+  const handleBulkSetTransactionType = (type: Transactions.TransactionType) => {
+    selected.forEach((i) => {
+      form.setValue(`rows.${i}.transaction_type`, type);
+    });
+    setSelected(new Set());
+  };
+
+  const handleSetDescription = (description: string) => {
+    selected.forEach((i) => {
+      form.setValue(`rows.${i}.description`, description);
+    });
+    setSelected(new Set());
+  };
+
   const handleRemoveSelected = () => {
     const sorted = [...selected].sort((a, b) => b - a);
     sorted.forEach((i) => remove(i));
@@ -340,7 +354,7 @@ function ImportReviewPage() {
             </Text>
           </Stack>
         ) : (
-          <Box data-testid="import_review_step">
+          <Stack gap="md" data-testid="import_review_step">
             {/* Header */}
             <Group justify="space-between" align="center" wrap="nowrap">
               <Group gap="xs">
@@ -386,6 +400,8 @@ function ImportReviewPage() {
                   onBulkSetAction={handleBulkSetAction}
                   onBulkSetDate={handleBulkSetDate}
                   onBulkSetCategory={handleBulkSetCategory}
+                  onBulkSetTransactionType={handleBulkSetTransactionType}
+                  onBulkSetDescription={handleSetDescription}
                 />
               </Paper>
             )}
@@ -454,7 +470,7 @@ function ImportReviewPage() {
                 </Group>
               </Stack>
             </Modal>
-          </Box>
+          </Stack>
         )}
       </Stack>
     </FormProvider>
