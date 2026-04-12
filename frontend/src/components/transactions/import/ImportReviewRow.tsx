@@ -4,7 +4,7 @@ import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
-import { useCategories } from "@/hooks/useCategories";
+import { useFlattenCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues } from "@/components/transactions/form/importFormSchema";
@@ -49,7 +49,7 @@ export const ImportReviewRow = memo(
     const namePrefix = `rows.${rowIndex}.` as const;
     const form = useFormContext<ImportFormValues>();
 
-    const { query: categoriesQuery } = useCategories();
+    const { query: categoriesQuery } = useFlattenCategories();
     const { query: accountsQuery } = useAccounts();
 
     const categories = categoriesQuery.data ?? [];

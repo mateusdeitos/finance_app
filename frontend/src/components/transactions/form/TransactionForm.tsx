@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories } from "@/hooks/useCategories";
+import { useFlattenCategories } from "@/hooks/useCategories";
 import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
@@ -47,7 +47,7 @@ export const TransactionForm = ({
   submitError,
 }: Props) => {
   const { query: accountsQuery } = useAccounts();
-  const { query: categoriesQuery } = useCategories();
+  const { query: categoriesQuery } = useFlattenCategories();
   const { query: tagsQuery } = useTags();
 
   const accounts = accountsQuery.data ?? [];
@@ -136,12 +136,10 @@ export const TransactionForm = ({
     ],
   );
 
-  const categoryOptions = categories
-    .filter((c) => !c.parent_id)
-    .map((c) => ({
-      value: String(c.id),
-      label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
-    }));
+  const categoryOptions = categories.map((c) => ({
+    value: String(c.id),
+    label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
+  }));
 
   const tagNames = existingTags.map((t) => t.name);
 

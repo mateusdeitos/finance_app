@@ -384,7 +384,8 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to read file")
 	}
 
-	result, err := h.transactionService.ParseImportCSV(c.Request().Context(), userID, accountID, data)
+	ctx := c.Request().Context()
+	result, err := h.transactionService.ParseImportCSV(ctx, userID, accountID, data)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}
