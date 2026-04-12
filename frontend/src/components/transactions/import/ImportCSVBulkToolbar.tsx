@@ -107,7 +107,7 @@ export function ImportCSVBulkToolbar({
 
       <Popover
         opened={descriptionPopoverOpen}
-        onChange={(open) => {
+        onChange={() => {
           setDescription("");
           descriptionPopover.toggle();
         }}
