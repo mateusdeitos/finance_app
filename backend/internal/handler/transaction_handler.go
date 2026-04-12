@@ -3,6 +3,7 @@ package handler
 import (
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -384,8 +385,13 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to read file")
 	}
 
+	decimalSeparator := c.FormValue("decimal_separator")
+	if !slices.Contains([]string{"comma", "dot"}, decimalSeparator) {
+		decimalSeparator = "comma"
+	}
+
 	ctx := c.Request().Context()
-	result, err := h.transactionService.ParseImportCSV(ctx, userID, accountID, data)
+	result, err := h.transactionService.ParseImportCSV(ctx, userID, accountID, decimalSeparator, data)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}

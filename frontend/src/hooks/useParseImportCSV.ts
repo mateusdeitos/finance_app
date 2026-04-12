@@ -1,10 +1,18 @@
-import { useMutation } from '@tanstack/react-query'
-import { parseImportCSV } from '@/api/transactions'
+import { useMutation } from "@tanstack/react-query";
+import { parseImportCSV } from "@/api/transactions";
+import { Transactions } from "@/types/transactions";
 
 export function useParseImportCSV() {
   const mutation = useMutation({
-    mutationFn: ({ file, accountId }: { file: File; accountId: number }) =>
-      parseImportCSV(file, accountId),
-  })
-  return { mutation }
+    mutationFn: ({
+      file,
+      accountId,
+      decimalSeparator,
+    }: {
+      file: File;
+      accountId: number;
+      decimalSeparator: Transactions.DecimalSeparatorValue;
+    }) => parseImportCSV(file, accountId, decimalSeparator),
+  });
+  return { mutation };
 }

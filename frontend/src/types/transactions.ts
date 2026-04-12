@@ -198,6 +198,8 @@ export namespace Transactions {
     parse_errors?: string[];
   }
 
+  export type DecimalSeparatorValue = "comma" | "dot";
+
   export interface ImportCSVResponse {
     rows: ParsedImportRow[];
     total_rows: number;

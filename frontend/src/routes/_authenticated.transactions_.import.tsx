@@ -16,6 +16,7 @@ import {
   Table,
   Text,
   Title,
+  Flex,
 } from "@mantine/core";
 import { IconAlertCircle, IconArrowLeft, IconCircleCheck, IconFileTypeCsv } from "@tabler/icons-react";
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
@@ -88,7 +89,12 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
   if (row.transaction_type === "transfer" && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id;
   }
-  if (row.recurrenceEnabled && row.recurrenceType && row.recurrenceCurrentInstallment != null && row.recurrenceTotalInstallments != null) {
+  if (
+    row.recurrenceEnabled &&
+    row.recurrenceType &&
+    row.recurrenceCurrentInstallment != null &&
+    row.recurrenceTotalInstallments != null
+  ) {
     payload.recurrence_settings = {
       type: row.recurrenceType,
       current_installment: row.recurrenceCurrentInstallment,
@@ -463,6 +469,7 @@ interface UploadStepProps {
 }
 
 function UploadStep({ onParsed, onBack }: UploadStepProps) {
+  const [decimalSeparator, setDecimalSeparator] = useState<Transactions.DecimalSeparatorValue>("comma");
   const [accountId, setAccountId] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -488,7 +495,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
     }
 
     mutation.mutate(
-      { file, accountId },
+      { file, accountId, decimalSeparator },
       {
         onSuccess: (result) => onParsed(result.rows, accountId),
         onError: async (err: unknown) => {
@@ -509,7 +516,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
   }
 
   return (
-    <Stack gap="md" maw={640} data-testid="import_upload_step">
+    <Stack gap="md" maw={{ lg: 1280 }} data-testid="import_upload_step">
       <Group gap="xs">
         <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onBack} size="sm">
           Voltar
@@ -517,22 +524,42 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         <Title order={4}>Importar Transações</Title>
       </Group>
 
-      <Select
-        label="Conta"
-        placeholder="Selecione uma conta"
-        required
-        data={ownAccountOptions}
-        value={accountId ? String(accountId) : null}
-        onChange={(val) => setAccountId(val ? Number(val) : null)}
-        searchable
-        data-testid="select_import_account"
-      />
+      <Flex direction="row" gap="xs">
+        <Select
+          label="Conta"
+          placeholder="Selecione uma conta"
+          required
+          data={ownAccountOptions}
+          value={accountId ? String(accountId) : null}
+          onChange={(val) => setAccountId(val ? Number(val) : null)}
+          data-testid="select_import_account"
+        />
+
+        <Select
+          label="Separador decimal"
+          placeholder="Escolha qual o formato da coluna 'Valor'"
+          required
+          data={[
+            {
+              label: "1.234,56",
+              value: "comma",
+            },
+            {
+              label: "1,243.56",
+              value: "dot",
+            },
+          ]}
+          value={decimalSeparator}
+          onChange={(val) => setDecimalSeparator((val as Transactions.DecimalSeparatorValue | null) ?? "comma")}
+          data-testid="select_decimal_separator"
+        />
+      </Flex>
 
       <FileInput
         label="Arquivo CSV"
         placeholder="Clique para selecionar"
         required
-        accept=".csv,text/csv"
+        accept="text/csv"
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}

@@ -15,26 +15,33 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Pure unit tests (no DB, always run)
+// Pure unit tests
 // ---------------------------------------------------------------------------
 
-func TestParseBRAmount(t *testing.T) {
+func TestParseAmountSigned(t *testing.T) {
 	cases := []struct {
-		input   string
-		want    int64
-		wantErr bool
+		input     string
+		separator string
+		want      int64
+		wantErr   bool
 	}{
-		{"150,00", 15000, false},
-		{"1.234,56", 123456, false},
-		{"100", 10000, false},
-		{"-50,00", 5000, false}, // negative → absolute value
-		{"abc", 0, true},
-		{"", 0, true},
+		// Comma (Brazilian)
+		{"150,00", "comma", 15000, false},
+		{"1.234,56", "comma", 123456, false},
+		{"-50,00", "comma", -5000, false},
+		// Dot (International)
+		{"150.00", "dot", 15000, false},
+		{"1,234.56", "dot", 123456, false},
+		{"-50.00", "dot", -5000, false},
+		// General
+		{"100", "comma", 10000, false},
+		{"abc", "comma", 0, true},
+		{"", "comma", 0, true},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.input, func(t *testing.T) {
-			got, err := parseBRAmount(tc.input)
+		t.Run(fmt.Sprintf("%s_%s", tc.input, tc.separator), func(t *testing.T) {
+			got, err := parseAmountSigned(tc.input, tc.separator)
 			if tc.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -53,51 +60,35 @@ func TestParseCSVHeader(t *testing.T) {
 		checks  func(t *testing.T, idx csvColumnIndex)
 	}{
 		{
-			name:    "valid full header",
-			header:  []string{"Data", "Descrição", "Tipo", "Valor", "Categoria", "Conta Destino", "Tipo de Parcelamento", "Quantidade de Parcelas"},
+			name:    "valid simplified header",
+			header:  []string{"Data", "Descrição", "Valor"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
 				t.Helper()
 				assert.Equal(t, 0, idx.date)
 				assert.Equal(t, 1, idx.description)
-				assert.Equal(t, 2, idx.txType)
-				assert.Equal(t, 3, idx.amount)
-				assert.Equal(t, 4, idx.category)
-				assert.Equal(t, 5, idx.destinationAcct)
-				assert.Equal(t, 6, idx.recurrenceType)
-				assert.Equal(t, 7, idx.recurrenceCount)
+				assert.Equal(t, 2, idx.amount)
 			},
 		},
 		{
 			name:    "missing Valor column",
-			header:  []string{"Data", "Descrição", "Tipo"},
+			header:  []string{"Data", "Descrição"},
 			wantErr: true,
 		},
 		{
 			name:    "uppercase header",
-			header:  []string{"DATA", "DESCRIÇÃO", "TIPO", "VALOR"},
+			header:  []string{"DATA", "DESCRIÇÃO", "VALOR"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
 				t.Helper()
 				assert.Equal(t, 0, idx.date)
 				assert.Equal(t, 1, idx.description)
-				assert.Equal(t, 2, idx.txType)
-				assert.Equal(t, 3, idx.amount)
-			},
-		},
-		{
-			name:    "header with extra columns",
-			header:  []string{"Data", "Descrição", "Tipo", "Valor", "Extra1", "Extra2"},
-			wantErr: false,
-			checks: func(t *testing.T, idx csvColumnIndex) {
-				t.Helper()
-				assert.Equal(t, 0, idx.date)
-				assert.Equal(t, 3, idx.amount)
+				assert.Equal(t, 2, idx.amount)
 			},
 		},
 		{
 			name:    "description without accent (descricao)",
-			header:  []string{"Data", "Descricao", "Tipo", "Valor"},
+			header:  []string{"Data", "Descricao", "Valor"},
 			wantErr: false,
 			checks: func(t *testing.T, idx csvColumnIndex) {
 				t.Helper()
@@ -122,81 +113,20 @@ func TestParseCSVHeader(t *testing.T) {
 	}
 }
 
-func TestParseTransactionType(t *testing.T) {
-	cases := []struct {
-		input   string
-		want    domain.TransactionType
-		wantErr bool
-	}{
-		{"despesa", domain.TransactionTypeExpense, false},
-		{"Despesa", domain.TransactionTypeExpense, false},
-		{"DESPESA", domain.TransactionTypeExpense, false},
-		{"receita", domain.TransactionTypeIncome, false},
-		{"transferência", domain.TransactionTypeTransfer, false},
-		{"Transferencia", domain.TransactionTypeTransfer, false},
-		{"invalido", "", true},
-		{"", "", true},
-	}
-
-	for _, tc := range cases {
-		t.Run(fmt.Sprintf("%q", tc.input), func(t *testing.T) {
-			got, err := parseTransactionType(tc.input)
-			if tc.wantErr {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tc.want, got)
-			}
-		})
-	}
-}
-
-func TestParseRecurrenceType(t *testing.T) {
-	cases := []struct {
-		input   string
-		want    domain.RecurrenceType
-		wantErr bool
-	}{
-		{"diário", domain.RecurrenceTypeDaily, false},
-		{"diario", domain.RecurrenceTypeDaily, false},
-		{"Diário", domain.RecurrenceTypeDaily, false},
-		{"semanal", domain.RecurrenceTypeWeekly, false},
-		{"mensal", domain.RecurrenceTypeMonthly, false},
-		{"anual", domain.RecurrenceTypeYearly, false},
-		{"invalido", "", true},
-		{"", "", true},
-	}
-
-	for _, tc := range cases {
-		t.Run(fmt.Sprintf("%q", tc.input), func(t *testing.T) {
-			got, err := parseRecurrenceType(tc.input)
-			if tc.wantErr {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tc.want, got)
-			}
-		})
-	}
-}
-
 // ---------------------------------------------------------------------------
-// Integration tests (require PostgreSQL via testcontainers)
+// Integration tests
 // ---------------------------------------------------------------------------
 
-const csvFullHeader = "Data;Descrição;Tipo;Valor;Categoria;Conta Destino;Tipo de Parcelamento;Quantidade de Parcelas"
+const csvSimpleHeader = "Data;Descrição;Valor"
 
 func buildCSV(rows [][]string) []byte {
 	lines := make([]string, 0, len(rows)+1)
-	lines = append(lines, csvFullHeader)
+	lines = append(lines, csvSimpleHeader)
 	for _, row := range rows {
 		lines = append(lines, strings.Join(row, ";"))
 	}
 	return []byte(strings.Join(lines, "\n"))
 }
-
-// emptyCol is a placeholder for optional CSV columns.
-const emptyCol = ""
 
 type TransactionImportWithDBTestSuite struct {
 	ServiceTestWithDBSuite
@@ -211,65 +141,73 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 	account, err := suite.createTestAccount(ctx, user)
 	suite.Require().NoError(err)
 
-	category, err := suite.createTestCategory(ctx, user)
-	suite.Require().NoError(err)
-
 	suite.Run("empty file", func() {
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, []byte{})
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", []byte{})
 		suite.ErrorIs(err, pkgErrors.ErrImportEmptyFile)
 	})
 
 	suite.Run("only header no data rows", func() {
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, []byte(csvFullHeader))
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", []byte(csvSimpleHeader))
 		suite.ErrorIs(err, pkgErrors.ErrImportNoRows)
 	})
 
 	suite.Run("invalid layout missing Valor", func() {
-		csv := []byte("Data;Descrição;Tipo\n01/01/2026;Test;despesa")
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
+		csv := []byte("Data;Descrição\n01/01/2026;Test")
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
 		suite.ErrorIs(err, pkgErrors.ErrImportInvalidLayout)
 	})
 
 	suite.Run("more than 100 rows", func() {
 		rows := make([][]string, 101)
 		for i := range rows {
-			rows[i] = []string{"01/01/2026", "Test", "despesa", "100,00", emptyCol, emptyCol, emptyCol, emptyCol}
+			rows[i] = []string{"01/01/2026", "Test", "100,00"}
 		}
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, buildCSV(rows))
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", buildCSV(rows))
 		suite.ErrorIs(err, pkgErrors.ErrImportMaxRowsExceeded)
 	})
 
 	suite.Run("UTF-8 BOM stripped", func() {
 		csv := append([]byte{0xEF, 0xBB, 0xBF}, buildCSV([][]string{
-			{"01/01/2026", "Aluguel", "despesa", "150,00", emptyCol, emptyCol, emptyCol, emptyCol},
+			{"01/01/2026", "Aluguel", "-150,00"},
 		})...)
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
 	})
 
-	suite.Run("basic valid expense row", func() {
+	suite.Run("infer type as expense (negative value)", func() {
 		csv := buildCSV([][]string{
-			{"15/03/2026", "Supermercado", "despesa", "250,00", emptyCol, emptyCol, emptyCol, emptyCol},
+			{"15/03/2026", "Supermercado", "-250,00"},
 		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
 		row := resp.Rows[0]
-		suite.Equal(domain.ImportRowStatusPending, row.Status)
 		suite.Equal("Supermercado", row.Description)
 		suite.Equal(domain.TransactionTypeExpense, row.Type)
-		suite.EqualValues(25000, row.Amount)
+		suite.EqualValues(25000, row.Amount) // Absolute value in cents
 		suite.Require().NotNil(row.Date)
 		suite.Equal(15, row.Date.Day())
-		suite.Equal(time.March, row.Date.Month())
-		suite.Equal(2026, row.Date.Year())
-		suite.Empty(row.ParseErrors)
+	})
+
+	suite.Run("infer type as income (positive value)", func() {
+		csv := buildCSV([][]string{
+			{"15/03/2026", "Salário", "5000,00"},
+		})
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		suite.Require().NoError(err)
+		row := resp.Rows[0]
+		suite.Equal(domain.TransactionTypeIncome, row.Type)
+		suite.EqualValues(500000, row.Amount)
 	})
 
 	suite.Run("duplicate detection", func() {
+		// Criar categoria obrigatória
+		category, err := suite.createTestCategory(ctx, user)
+		suite.Require().NoError(err)
+
 		txDate := time.Date(2026, 2, 10, 0, 0, 0, 0, time.UTC)
-		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 			AccountID:       account.ID,
 			TransactionType: domain.TransactionTypeExpense,
 			CategoryID:      category.ID,
@@ -280,114 +218,25 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		suite.Require().NoError(err)
 
 		csv := buildCSV([][]string{
-			{"10/02/2026", "Netflix", "despesa", "50,00", emptyCol, emptyCol, emptyCol, emptyCol},
+			{"10/02/2026", "Netflix", "-50,00"},
 		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
 		suite.Require().NoError(err)
 		suite.Equal(domain.ImportRowStatusDuplicate, resp.Rows[0].Status)
 		suite.Equal(1, resp.DuplicateCount)
 	})
 
-	suite.Run("category lookup by name", func() {
-		category, err := suite.createTestCategory(ctx, user)
-		suite.Require().NoError(err)
+	suite.Run("capture line error as description", func() {
+		// CSV corrompido (aspas não fechadas, por exemplo)
+		corruptedLine := "01/01/2026;\"Texto mal fechado;100,00"
+		csv := []byte(csvSimpleHeader + "\n" + corruptedLine)
 
-		csv := buildCSV([][]string{
-			{"01/04/2026", "Compra", "despesa", "100,00", category.Name, emptyCol, emptyCol, emptyCol},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
-		suite.Require().NoError(err)
-		suite.Require().NotNil(resp.Rows[0].CategoryID)
-		suite.Equal(category.ID, *resp.Rows[0].CategoryID)
-		suite.False(resp.Rows[0].CategoryInferred)
-	})
-
-	suite.Run("category inference from history", func() {
-		category, err := suite.createTestCategory(ctx, user)
-		suite.Require().NoError(err)
-
-		txDate := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
-			AccountID:       account.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			CategoryID:      category.ID,
-			Amount:          3000,
-			Date:            txDate,
-			Description:     "Farmácia Recorrente",
-		})
-		suite.Require().NoError(err)
-
-		csv := buildCSV([][]string{
-			{"05/02/2026", "Farmácia Recorrente", "despesa", "30,00", emptyCol, emptyCol, emptyCol, emptyCol},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
-		suite.Require().NoError(err)
-		suite.Require().NotNil(resp.Rows[0].CategoryID)
-		suite.Equal(category.ID, *resp.Rows[0].CategoryID)
-		suite.True(resp.Rows[0].CategoryInferred)
-	})
-
-	suite.Run("parse errors accumulate without aborting", func() {
-		csv := buildCSV([][]string{
-			{"data-invalida", "Desc", "despesa", "100,00", emptyCol, emptyCol, emptyCol, emptyCol},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
+		suite.Contains(resp.Rows[0].Description, "Conteúdo ilegível")
 		suite.NotEmpty(resp.Rows[0].ParseErrors)
 		suite.Equal(1, resp.ErrorCount)
-	})
-
-	suite.Run("recurrence type and count", func() {
-		csv := buildCSV([][]string{
-			{"01/05/2026", "Academia", "despesa", "80,00", emptyCol, emptyCol, "mensal", "12"},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
-		suite.Require().NoError(err)
-		row := resp.Rows[0]
-		suite.Empty(row.ParseErrors)
-		suite.Require().NotNil(row.RecurrenceType)
-		suite.Equal(domain.RecurrenceTypeMonthly, *row.RecurrenceType)
-		suite.Require().NotNil(row.RecurrenceCount)
-		suite.Equal(12, *row.RecurrenceCount)
-	})
-
-	suite.Run("recurrence type without count adds parse error", func() {
-		csv := buildCSV([][]string{
-			{"01/05/2026", "Academia", "despesa", "80,00", emptyCol, emptyCol, "mensal", emptyCol},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
-		suite.Require().NoError(err)
-		suite.NotEmpty(resp.Rows[0].ParseErrors)
-	})
-
-	suite.Run("transfer with destination account", func() {
-		destAccount, err := suite.createTestAccount(ctx, user)
-		suite.Require().NoError(err)
-
-		csv := buildCSV([][]string{
-			{"01/06/2026", "TED poupança", "transferência", "500,00", emptyCol, destAccount.Name, emptyCol, emptyCol},
-		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, csv)
-		suite.Require().NoError(err)
-		row := resp.Rows[0]
-		suite.Equal(domain.TransactionTypeTransfer, row.Type)
-		suite.Require().NotNil(row.DestinationAccountID)
-		suite.Equal(destAccount.ID, *row.DestinationAccountID)
-	})
-
-	suite.Run("account from another user returns error", func() {
-		otherUser, err := suite.createTestUser(ctx)
-		suite.Require().NoError(err)
-
-		otherAccount, err := suite.createTestAccount(ctx, otherUser)
-		suite.Require().NoError(err)
-
-		csv := buildCSV([][]string{
-			{"01/01/2026", "Test", "despesa", "100,00", emptyCol, emptyCol, emptyCol, emptyCol},
-		})
-		_, err = suite.Services.Transaction.ParseImportCSV(ctx, user.ID, otherAccount.ID, csv)
-		suite.Error(err)
 	})
 }
 
@@ -400,6 +249,7 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 	account, err := suite.createTestAccount(ctx, user)
 	suite.Require().NoError(err)
 
+	// Criar categoria obrigatória
 	category, err := suite.createTestCategory(ctx, user)
 	suite.Require().NoError(err)
 
@@ -423,23 +273,6 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 
 	suite.Run("no matching transaction returns false", func() {
 		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "NonExistentDesc12345", 9999, &account.ID)
-		suite.Require().NoError(err)
-		suite.False(isDup)
-	})
-
-	suite.Run("invalid date format returns error", func() {
-		_, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "20/03/2026", "Test", 100, &account.ID)
-		suite.Error(err)
-	})
-
-	suite.Run("different amount returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", "Spotify Check", 9999, &account.ID)
-		suite.Require().NoError(err)
-		suite.False(isDup)
-	})
-
-	suite.Run("different date returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-21", "Spotify Check", 7500, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})

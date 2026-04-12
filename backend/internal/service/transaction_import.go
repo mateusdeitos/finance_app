@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -12,87 +13,92 @@ import (
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
-	"github.com/samber/lo"
 )
 
 const importMaxRows = 100
 
-// csvColumnIndex holds the position of each expected column in the CSV header.
+// csvColumnIndex guarda a posição de cada coluna esperada no cabeçalho simplificado.
 type csvColumnIndex struct {
-	date            int
-	description     int
-	txType          int
-	amount          int
-	category        int
-	destinationAcct int
-	recurrenceType  int
-	recurrenceCount int
+	date        int
+	description int
+	amount      int
 }
 
-var requiredColumns = []string{"data", "descrição", "tipo", "valor"}
-
-func (s *transactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, csvData []byte) (*domain.ImportCSVResponse, error) {
-	// Validate account ownership
+func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator string, csvData []byte) (*domain.ImportCSVResponse, error) {
+	// Valida propriedade da conta
 	if _, err := s.services.Account.GetByID(ctx, userID, accountID); err != nil {
 		return nil, err
 	}
 
-	// Strip UTF-8 BOM if present (added by Excel on Windows)
+	// Remove BOM do UTF-8 se presente
 	csvData = bytes.TrimPrefix(csvData, []byte{0xEF, 0xBB, 0xBF})
 
 	if len(bytes.TrimSpace(csvData)) == 0 {
 		return nil, pkgErrors.ErrImportEmptyFile
 	}
 
+	// 1. Infere o separador do CSV a partir da primeira linha
+	firstLineEnd := bytes.IndexByte(csvData, '\n')
+	firstLine := ""
+	if firstLineEnd == -1 {
+		firstLine = string(csvData)
+	} else {
+		firstLine = string(csvData[:firstLineEnd])
+	}
+	comma := detectSeparator(firstLine)
+
+	// 2. Inicializa o leitor de CSV
 	reader := csv.NewReader(bytes.NewReader(csvData))
-	reader.Comma = ';'
+	reader.Comma = comma
 	reader.LazyQuotes = true
 	reader.TrimLeadingSpace = true
 
-	records, err := reader.ReadAll()
+	// Lendo o cabeçalho
+	headerRecord, err := reader.Read()
 	if err != nil {
 		return nil, pkgErrors.ErrImportInvalidLayout
 	}
 
-	if len(records) == 0 {
-		return nil, pkgErrors.ErrImportEmptyFile
-	}
-
-	// Parse header row
-	colIdx, err := parseCSVHeader(records[0])
+	colIdx, err := parseCSVHeader(headerRecord)
 	if err != nil {
 		return nil, err
 	}
 
-	dataRows := records[1:]
-	if len(dataRows) == 0 {
-		return nil, pkgErrors.ErrImportNoRows
-	}
-	if len(dataRows) > importMaxRows {
-		return nil, pkgErrors.ErrImportMaxRowsExceeded
-	}
-
-	// Pre-load categories and accounts for name lookups
-	categories, err := s.services.Category.Search(ctx, domain.CategorySearchOptions{
-		UserIDs: []int{userID},
-	})
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to load categories", err)
-	}
-
-	accounts, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
-		UserIDs: []int{userID},
-	})
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to load accounts", err)
-	}
-
-	rows := make([]domain.ParsedImportRow, 0, len(dataRows))
+	rows := make([]domain.ParsedImportRow, 0)
 	duplicateCount := 0
 	errorCount := 0
+	dataRowIndex := 0
 
-	for i, record := range dataRows {
-		row := parseCSVRow(ctx, s, userID, accountID, i, record, colIdx, categories, accounts)
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+
+		dataRowIndex++
+
+		if dataRowIndex > importMaxRows {
+			return nil, pkgErrors.ErrImportMaxRowsExceeded
+		}
+
+		var row domain.ParsedImportRow
+
+		if err != nil {
+			errorMessage := "Erro de formatação na linha"
+			if parseErr, ok := err.(*csv.ParseError); ok {
+				errorMessage = fmt.Sprintf("Erro na linha %d: %v", parseErr.Line, parseErr.Err)
+			}
+
+			row = domain.ParsedImportRow{
+				RowIndex:    dataRowIndex,
+				Description: fmt.Sprintf("Conteúdo ilegível (Erro: %v)", err),
+				Status:      domain.ImportRowStatusPending,
+				ParseErrors: []string{errorMessage},
+			}
+		} else {
+			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, decimalSeparator)
+		}
+
 		if row.Status == domain.ImportRowStatusDuplicate {
 			duplicateCount++
 		}
@@ -100,6 +106,10 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID int, acc
 			errorCount++
 		}
 		rows = append(rows, row)
+	}
+
+	if len(rows) == 0 {
+		return nil, pkgErrors.ErrImportNoRows
 	}
 
 	return &domain.ImportCSVResponse{
@@ -110,54 +120,43 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID int, acc
 	}, nil
 }
 
+// detectSeparator identifica se o CSV usa vírgula ou ponto e vírgula.
+func detectSeparator(line string) rune {
+	semicolons := strings.Count(line, ";")
+	commas := strings.Count(line, ",")
+
+	if semicolons > commas {
+		return ';'
+	}
+	return ','
+}
+
 func parseCSVHeader(header []string) (csvColumnIndex, error) {
 	idx := csvColumnIndex{
-		date: -1, description: -1, txType: -1, amount: -1,
-		category: -1, destinationAcct: -1, recurrenceType: -1, recurrenceCount: -1,
+		date: -1, description: -1, amount: -1,
 	}
 
 	for i, col := range header {
 		switch normalize(col) {
-		case "data":
+		case "data", "date":
 			idx.date = i
-		case "descrição", "descricao":
+		case "descrição", "descricao", "título", "titulo", "title", "description":
 			idx.description = i
-		case "tipo":
-			idx.txType = i
-		case "valor":
+		case "valor", "amount", "total":
 			idx.amount = i
-		case "categoria":
-			idx.category = i
-		case "conta destino":
-			idx.destinationAcct = i
-		case "tipo de parcelamento":
-			idx.recurrenceType = i
-		case "quantidade de parcelas":
-			idx.recurrenceCount = i
 		}
 	}
 
-	// Check required columns
-	missing := make([]string, 0, len(requiredColumns))
-	for _, req := range requiredColumns {
-		switch req {
-		case "data":
-			if idx.date < 0 {
-				missing = append(missing, "Data")
-			}
-		case "descrição":
-			if idx.description < 0 {
-				missing = append(missing, "Descrição")
-			}
-		case "tipo":
-			if idx.txType < 0 {
-				missing = append(missing, "Tipo")
-			}
-		case "valor":
-			if idx.amount < 0 {
-				missing = append(missing, "Valor")
-			}
-		}
+	// Verifica colunas obrigatórias
+	missing := make([]string, 0)
+	if idx.date < 0 {
+		missing = append(missing, "Data")
+	}
+	if idx.description < 0 {
+		missing = append(missing, "Descrição")
+	}
+	if idx.amount < 0 {
+		missing = append(missing, "Valor")
 	}
 
 	if len(missing) > 0 {
@@ -175,8 +174,7 @@ func parseCSVRow(
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
-	categories []*domain.Category,
-	accounts []*domain.Account,
+	decimalSeparator string,
 ) domain.ParsedImportRow {
 	row := domain.ParsedImportRow{
 		RowIndex: rowIndex,
@@ -190,107 +188,54 @@ func parseCSVRow(
 		return strings.TrimSpace(record[idx])
 	}
 
-	// Date
+	// 1. Data
 	dateStr := getField(colIdx.date)
 	if dateStr == "" {
 		row.ParseErrors = append(row.ParseErrors, "Data é obrigatória")
 	} else {
-		t, err := time.Parse("02/01/2006", dateStr)
-		if err != nil {
+		formats := []string{"02/01/2006", time.DateOnly, time.RFC3339}
+		for _, format := range formats {
+			t, err := time.Parse(format, dateStr)
+			if err == nil {
+				row.Date = &t
+				break
+			}
+		}
+
+		if row.Date == nil {
 			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Data inválida: %q (esperado DD/MM/AAAA)", dateStr))
-		} else {
-			row.Date = &t
 		}
 	}
 
-	// Description
+	// 2. Descrição
 	row.Description = getField(colIdx.description)
 	if row.Description == "" {
 		row.ParseErrors = append(row.ParseErrors, "Descrição é obrigatória")
 	}
 
-	// Type
-	txTypeStr := getField(colIdx.txType)
-	txType, typeErr := parseTransactionType(txTypeStr)
-	if typeErr != nil {
-		row.ParseErrors = append(row.ParseErrors, typeErr.Error())
-	} else {
-		row.Type = txType
-	}
-
-	// Amount
+	// 3. Valor e Inferência de Tipo
 	amountStr := getField(colIdx.amount)
 	if amountStr == "" {
 		row.ParseErrors = append(row.ParseErrors, "Valor é obrigatório")
 	} else {
-		amount, err := parseBRAmount(amountStr)
-		switch {
-		case err != nil:
-			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Valor inválido: %q", amountStr))
-		case amount <= 0:
-			row.ParseErrors = append(row.ParseErrors, "Valor deve ser maior que zero")
-		default:
-			row.Amount = amount
-		}
-	}
-
-	// Category (lookup by name)
-	categoryStr := getField(colIdx.category)
-	if categoryStr != "" {
-		cat := findCategoryByName(categories, categoryStr)
-		if cat == nil {
-			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Categoria não encontrada: %q", categoryStr))
-		} else {
-			row.CategoryID = &cat.ID
-		}
-	} else if typeErr == nil && txType != domain.TransactionTypeTransfer && row.Description != "" {
-		// Infer category from transaction history
-		inferredCategoryID := inferCategoryFromHistory(ctx, s, userID, row.Description)
-		if inferredCategoryID != nil {
-			row.CategoryID = inferredCategoryID
-			row.CategoryInferred = true
-		}
-	}
-
-	// Destination account (for transfers)
-	destAcctStr := getField(colIdx.destinationAcct)
-	if destAcctStr != "" {
-		acct := findAccountByName(accounts, destAcctStr)
-		if acct == nil {
-			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Conta destino não encontrada: %q", destAcctStr))
-		} else {
-			row.DestinationAccountID = &acct.ID
-		}
-	}
-
-	// Recurrence type
-	recurrenceTypeStr := getField(colIdx.recurrenceType)
-	if recurrenceTypeStr != "" {
-		rt, err := parseRecurrenceType(recurrenceTypeStr)
+		// parseAmountSigned retorna o valor em centavos mantendo o sinal
+		signedCents, err := parseAmountSigned(amountStr, decimalSeparator)
 		if err != nil {
-			row.ParseErrors = append(row.ParseErrors, err.Error())
+			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Valor inválido: %q", amountStr))
 		} else {
-			row.RecurrenceType = &rt
+			// Inferência de tipo baseada no sinal
+			if signedCents < 0 {
+				row.Type = domain.TransactionTypeExpense
+			} else {
+				row.Type = domain.TransactionTypeIncome
+			}
+
+			// Armazena sempre o valor absoluto no Amount da transação
+			row.Amount = int64(math.Abs(float64(signedCents)))
 		}
 	}
 
-	// Recurrence count
-	recurrenceCountStr := getField(colIdx.recurrenceCount)
-	if recurrenceCountStr != "" {
-		count, err := strconv.Atoi(recurrenceCountStr)
-		if err != nil || count <= 0 {
-			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Quantidade de parcelas inválida: %q", recurrenceCountStr))
-		} else {
-			row.RecurrenceCount = &count
-		}
-	}
-
-	// Cross-field validation: recurrence count required if type is set
-	if row.RecurrenceType != nil && row.RecurrenceCount == nil {
-		row.ParseErrors = append(row.ParseErrors, "Quantidade de parcelas é obrigatória quando o tipo de parcelamento é definido")
-	}
-
-	// Duplicate detection (only if required fields parsed successfully)
+	// 4. Detecção de duplicados
 	if row.Date != nil && row.Description != "" && row.Amount > 0 {
 		if isDuplicate(ctx, s, userID, row.Description, *row.Date, row.Amount, &accountID) {
 			row.Status = domain.ImportRowStatusDuplicate
@@ -300,43 +245,26 @@ func parseCSVRow(
 	return row
 }
 
-// inferCategoryFromHistory searches transaction history for the most common category
-// used with an exact description match.
-func inferCategoryFromHistory(ctx context.Context, s *transactionService, userID int, description string) *int {
-	filter := domain.TransactionFilter{
-		UserID:      &userID,
-		Description: &domain.TextSearch{Query: description, Exact: true},
-	}
-	txs, err := s.transactionRepo.Search(ctx, filter)
-	if err != nil || len(txs) == 0 {
-		return nil
-	}
-
-	// Count occurrences per category
-	counts := map[int]int{}
-	for _, tx := range txs {
-		if tx.CategoryID != nil {
-			counts[*tx.CategoryID]++
-		}
-	}
-	if len(counts) == 0 {
-		return nil
+// parseAmountSigned converte uma string numérica para centavos (int64) mantendo o sinal.
+func parseAmountSigned(s string, decimalSeparator string) (int64, error) {
+	s = strings.TrimSpace(s)
+	if decimalSeparator == "dot" {
+		// Padrão Internacional: 1,234.56 -> Remove vírgulas de milhar
+		s = strings.ReplaceAll(s, ",", "")
+	} else {
+		// Padrão Brasileiro: 1.234,56 -> Remove pontos de milhar e troca vírgula por ponto
+		s = strings.ReplaceAll(s, ".", "")
+		s = strings.ReplaceAll(s, ",", ".")
 	}
 
-	// Pick most frequent
-	bestID, bestCount := 0, 0
-	for id, count := range counts {
-		if count > bestCount {
-			bestID = id
-			bestCount = count
-		}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
 	}
-
-	return lo.ToPtr(bestID)
+	return int64(math.Round(f * 100)), nil
 }
 
-// isDuplicate checks whether a transaction with the same description, date and amount
-// already exists for the user, optionally scoped to a specific account.
+// isDuplicate verifica se a transação já existe.
 func isDuplicate(ctx context.Context, s *transactionService, userID int, description string, date time.Time, amount int64, accountID *int) bool {
 	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
@@ -344,12 +272,8 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 	filter := domain.TransactionFilter{
 		UserID:      &userID,
 		Description: &domain.TextSearch{Query: description, Exact: true},
-		StartDate: &domain.ComparableSearch[time.Time]{
-			GreaterThanOrEqual: &dayStart,
-		},
-		EndDate: &domain.ComparableSearch[time.Time]{
-			LessThanOrEqual: &dayEnd,
-		},
+		StartDate:   &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
+		EndDate:     &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
@@ -367,77 +291,6 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 	return false
 }
 
-// CheckDuplicateTransaction checks whether a transaction with the given date, description,
-// and amount already exists for the user. date must be in "YYYY-MM-DD" format.
-func (s *transactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error) {
-	t, err := time.Parse("2006-01-02", date)
-	if err != nil {
-		return false, pkgErrors.New(pkgErrors.ErrCodeBadRequest, "invalid date format, expected YYYY-MM-DD")
-	}
-	return isDuplicate(ctx, s, userID, description, t, amount, accountID), nil
-}
-
-// parseBRAmount parses a Brazilian-format currency string (e.g. "1.234,56") to cents.
-func parseBRAmount(s string) (int64, error) {
-	// Remove thousands separator (dot) and replace decimal separator (comma) with dot
-	s = strings.ReplaceAll(s, ".", "")
-	s = strings.ReplaceAll(s, ",", ".")
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-	return int64(math.Round(math.Abs(f) * 100)), nil
-}
-
-func parseTransactionType(s string) (domain.TransactionType, error) {
-	switch normalize(s) {
-	case "despesa":
-		return domain.TransactionTypeExpense, nil
-	case "receita":
-		return domain.TransactionTypeIncome, nil
-	case "transferencia", "transferência":
-		return domain.TransactionTypeTransfer, nil
-	default:
-		return "", fmt.Errorf("tipo inválido: %q (esperado: despesa, receita ou transferência)", s)
-	}
-}
-
-func parseRecurrenceType(s string) (domain.RecurrenceType, error) {
-	switch normalize(s) {
-	case "diario", "diário":
-		return domain.RecurrenceTypeDaily, nil
-	case "semanal":
-		return domain.RecurrenceTypeWeekly, nil
-	case "mensal":
-		return domain.RecurrenceTypeMonthly, nil
-	case "anual":
-		return domain.RecurrenceTypeYearly, nil
-	default:
-		return "", fmt.Errorf("tipo de parcelamento inválido: %q (esperado: diário, semanal, mensal ou anual)", s)
-	}
-}
-
-func findCategoryByName(categories []*domain.Category, name string) *domain.Category {
-	normalized := normalize(name)
-	for _, c := range categories {
-		if normalize(c.Name) == normalized {
-			return c
-		}
-	}
-	return nil
-}
-
-func findAccountByName(accounts []*domain.Account, name string) *domain.Account {
-	normalized := normalize(name)
-	for _, a := range accounts {
-		if normalize(a.Name) == normalized {
-			return a
-		}
-	}
-	return nil
-}
-
-// normalize lowercases and trims a string for case-insensitive comparisons.
 func normalize(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
