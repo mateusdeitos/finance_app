@@ -222,7 +222,7 @@ test.describe('Transaction Update', () => {
       amount: 3000,
       date: today,
       description: desc,
-      recurrence_settings: { type: 'monthly', repetitions: 3 },
+      recurrence_settings: { type: 'monthly', current_installment: 1, total_installments: 3 },
     })
     createdTransactionIds.push(tx.id)
 
@@ -248,7 +248,7 @@ test.describe('Transaction Update', () => {
       amount: 2000,
       date: today,
       description: originalDesc,
-      recurrence_settings: { type: 'monthly', repetitions: 3 },
+      recurrence_settings: { type: 'monthly', current_installment: 1, total_installments: 3 },
     })
     createdTransactionIds.push(tx.id)
 
@@ -283,7 +283,7 @@ test.describe('Transaction Update', () => {
       amount: 2000,
       date: today,
       description: originalDesc,
-      recurrence_settings: { type: 'monthly', repetitions: 3 },
+      recurrence_settings: { type: 'monthly', current_installment: 1, total_installments: 3 },
     })
     createdTransactionIds.push(tx.id)
 

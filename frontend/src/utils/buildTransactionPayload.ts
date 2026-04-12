@@ -27,9 +27,8 @@ export function buildTransactionPayload(
     recurrence_settings: values.recurrenceEnabled
       ? {
           type: values.recurrenceType ?? "monthly",
-          repetitions:
-            !values.recurrenceEndDateMode && values.recurrenceRepetitions ? values.recurrenceRepetitions : undefined,
-          end_date: values.recurrenceEndDateMode && values.recurrenceEndDate ? values.recurrenceEndDate : undefined,
+          current_installment: values.recurrenceCurrentInstallment!,
+          total_installments: values.recurrenceTotalInstallments!,
         }
       : undefined,
   };

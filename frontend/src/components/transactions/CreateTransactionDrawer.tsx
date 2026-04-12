@@ -55,9 +55,8 @@ export function CreateTransactionDrawer() {
       split_settings: [],
       recurrenceEnabled: false,
       recurrenceType: "monthly",
-      recurrenceEndDateMode: false,
-      recurrenceEndDate: null,
-      recurrenceRepetitions: null,
+      recurrenceCurrentInstallment: null,
+      recurrenceTotalInstallments: null,
     },
   });
 

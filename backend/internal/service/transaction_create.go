@@ -83,7 +83,7 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 	}
 
 	if transaction.RecurrenceSettings != nil {
-		if rErrs := s.validateRecurrenceSettings(transaction.Date, transaction.RecurrenceSettings); len(rErrs) > 0 {
+		if rErrs := s.validateRecurrenceSettings(transaction.RecurrenceSettings); len(rErrs) > 0 {
 			errs = append(errs, rErrs...)
 		}
 	}
@@ -127,7 +127,6 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 }
 
 func (s *transactionService) validateRecurrenceSettings(
-	transactionDate time.Time,
 	recurrenceSettings *domain.RecurrenceSettings,
 ) []*pkgErrors.ServiceError {
 	errs := []*pkgErrors.ServiceError{}
@@ -135,37 +134,21 @@ func (s *transactionService) validateRecurrenceSettings(
 	if recurrenceSettings == nil {
 		return errs
 	}
+
 	if !recurrenceSettings.Type.IsValid() {
 		errs = append(errs, pkgErrors.ErrInvalidRecurrenceType(recurrenceSettings.Type))
 	}
 
-	if recurrenceSettings.EndDate == nil && recurrenceSettings.Repetitions == nil {
-		errs = append(errs, pkgErrors.ErrRecurrenceEndDateOrRepetitionsIsRequired)
+	if recurrenceSettings.CurrentInstallment < 1 {
+		errs = append(errs, pkgErrors.ErrRecurrenceCurrentInstallmentMustBeAtLeastOne)
 	}
 
-	if recurrenceSettings.EndDate != nil && !recurrenceSettings.EndDate.After(transactionDate) {
-		errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
+	if recurrenceSettings.TotalInstallments < recurrenceSettings.CurrentInstallment {
+		errs = append(errs, pkgErrors.ErrRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent)
 	}
 
-	if recurrenceSettings.EndDate != nil {
-		diff := recurrenceSettings.EndDate.Sub(transactionDate)
-		if int(diff.Hours())%24 != 0 {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
-		}
-	}
-
-	if recurrenceSettings.EndDate != nil && recurrenceSettings.Repetitions != nil {
-		errs = append(errs, pkgErrors.ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
-	}
-
-	if recurrenceSettings.EndDate == nil {
-		if lo.FromPtr(recurrenceSettings.Repetitions) < 1 {
-			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
-		}
-
-		if lo.FromPtr(recurrenceSettings.Repetitions) > 1000 {
-			errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
-		}
+	if recurrenceSettings.TotalInstallments > 1000 {
+		errs = append(errs, pkgErrors.ErrRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo(1000))
 	}
 
 	return errs
@@ -193,17 +176,17 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	}
 
 	if hasRecurrence {
-		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings, req.Date)
+		recurrence, err := s.createRecurrence(ctx, userID, *req.RecurrenceSettings)
 		if err != nil {
 			return 0, err
 		}
 
-		for i := 1; i <= recurrence.Installments; i++ {
+		for i := req.RecurrenceSettings.CurrentInstallment; i <= recurrence.Installments; i++ {
 			transactions = append(transactions, domain.Transaction{
 				ID:                      0,
 				TransactionRecurrenceID: &recurrence.ID,
 				InstallmentNumber:       &i,
-				Date:                    s.incrementInstallmentDate(req.Date, lo.FromPtr(req.RecurrenceSettings).Type, i-1),
+				Date:                    s.incrementInstallmentDate(req.Date, lo.FromPtr(req.RecurrenceSettings).Type, i-req.RecurrenceSettings.CurrentInstallment),
 				Description:             req.Description,
 				UserID:                  userID,
 				OriginalUserID:          &userID,
@@ -374,7 +357,7 @@ func (s *transactionService) injectLinkedTransactions(
 			// transferência entre contas do mesmo usuário
 			var recurrenceID *int
 			if hasRecurrence {
-				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings, transaction.Date)
+				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings)
 				if err != nil {
 					return err
 				}
@@ -445,7 +428,7 @@ func (s *transactionService) injectLinkedTransactions(
 		}
 
 		if hasRecurrence {
-			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings, transaction.Date)
+			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings)
 			if err != nil {
 				return err
 			}
@@ -529,8 +512,8 @@ func (s *transactionService) createTags(ctx context.Context, userID int, tags []
 	return pkgErrors.ServiceErrors(errs)
 }
 
-func (s *transactionService) createRecurrence(ctx context.Context, userID int, recurrenceSettings domain.RecurrenceSettings, startDate time.Time) (*domain.TransactionRecurrence, error) {
-	tr := domain.RecurrenceFromSettings(recurrenceSettings, userID, startDate)
+func (s *transactionService) createRecurrence(ctx context.Context, userID int, recurrenceSettings domain.RecurrenceSettings) (*domain.TransactionRecurrence, error) {
+	tr := domain.RecurrenceFromSettings(recurrenceSettings, userID)
 
 	if recurrence, err := s.transactionRecurRepo.Create(ctx, tr); err != nil {
 		return nil, err

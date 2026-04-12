@@ -26,53 +26,70 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ Balance calculation per account/period — existing
 - ✓ CSV transaction import — existing
 - ✓ Hide settlements filter in advanced search — existing
+- ✓ Recurrence input model: `current_installment + total_installments` replaces `repetitions | end_date` — v1.0
+- ✓ Create loop produces correct installment series from `current_installment` (e.g. 3–10 for `current=3, total=10`) — v1.0
+- ✓ `TransactionRecurrence.Installments` stores `total_installments` (total series size, not count created) — v1.0
+- ✓ Frontend form: "Parcela atual" + "Total de parcelas" inputs with cross-field Zod validation — v1.0
+- ✓ TypeScript types and payload builder updated for new recurrence fields — v1.0
 
 ### Active
 
-- [ ] Change recurrence input from `repetitions | end_date` to `current_installment + total_installments` — lets users register in-progress installment purchases (e.g., "I'm on installment 3 of 10")
-- [ ] When `current_installment = 3, total_installments = 10`, create only installments 3–10, numbered accordingly
-- [ ] Store `total_installments` in `TransactionRecurrence` (maps to existing `installments` column)
-- [ ] Remove `end_date` from `RecurrenceSettings` (applies only to fixed-count recurrences going forward)
+_(None — clean slate for next milestone)_
 
 ### Out of Scope
 
-- Backdating or creating past installments (1–2 in the example above) — user only needs future tracking
+- Backdating or creating past installments (1–2 in a 3-of-10 scenario) — user only needs future tracking
 - Migrating existing transaction data to the new format — old records stay as-is
-- Open-ended recurrences (subscriptions with no end) — not part of this change; current behavior for nil repetitions is not being touched
+- Open-ended recurrences (subscriptions with no end) — not part of this change
 - Backwards compatibility shim — breaking API change accepted
+- `end_date` as recurrence input — removed; fixed-count only going forward
 
 ## Context
 
-**Existing recurrence model:** `RecurrenceSettings` accepts `type` + either `repetitions` (int) or `end_date` (mutually exclusive). `RecurrenceFromSettings()` converts this to a `TransactionRecurrence` with an `installments` count. The create loop runs `for i := 1; i <= recurrence.Installments; i++`, so installment numbers always start from 1.
+**Current state (v1.0):** Recurrence redesign shipped. `RecurrenceSettings` now uses `CurrentInstallment + TotalInstallments`. The create loop starts from `current_installment`, date offsets are relative, and `TransactionRecurrence.Installments` stores the full series total. Frontend updated with new form inputs and Zod validation. All existing tests migrated; new integration + unit + e2e tests added.
 
-**The gap:** Users who already have installment purchases in progress have no way to register their current position. If they're on month 3 of a 10-month purchase, registering it today creates installments 1–10 — incorrect past dates and wrong installment numbering.
+**Tech stack:** Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine, Zod, React Hook Form (frontend) · Playwright (e2e)
 
-**The fix:** Replace `repetitions | end_date` with `current_installment + total_installments`. The create loop starts from `current_installment`, date offsets are calculated relative to that starting point, and `TransactionRecurrence.Installments` stores `total_installments` for series metadata.
+**Known open items:**
 
-**Affected layers:** `domain/transaction.go` (RecurrenceSettings struct + RecurrenceFromSettings), `service/transaction_create.go` (validation + loop), `service/transaction_update.go` (recurrence validation reuse), handler annotations, Swagger docs.
+- E2E tests (recurrence.spec.ts) require a live app to confirm — not runnable in CI without Docker/server
+- WR-04: error message in form uses unaccented "nao" — should be confirmed matches rendered UI text
+
+## Key Decisions
+
+| Decision                                                          | Rationale                                                                              | Outcome |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------- |
+| `current_installment` lives inside `RecurrenceSettings`           | Keeps recurrence concerns together; consistent with existing pattern                   | ✓ Good  |
+| `total_installments` replaces `repetitions` (rename for clarity)  | More expressive; removes ambiguity about what the count means                          | ✓ Good  |
+| Remove `end_date` from RecurrenceSettings                         | User chose fixed-count only; breaking change accepted; simplifies validation           | ✓ Good  |
+| Only create installments from current to total                    | Past installments are irrelevant to users at registration time                         | ✓ Good  |
+| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series              | ✓ Good  |
+| E2E tests seed via API (not UI) for recurrence assertions         | Shared test DB makes row-count assertions unreliable; badge assertions prove numbering | ✓ Good  |
 
 ## Constraints
 
 - **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL — no new dependencies for this change
 - **Breaking change**: API clients must update their request format; no transition period
 - **DB migration**: `transaction_recurrence.installments` column stores total installments — semantics unchanged, no schema migration needed
+  <<<<<<< HEAD
 - **No end_date**: Removed from RecurrenceSettings; only fixed-count recurrences supported going forward
 
 ## Key Decisions
 
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| `current_installment` lives inside `RecurrenceSettings` | Keeps recurrence concerns together; consistent with existing pattern | — Pending |
-| `total_installments` replaces `repetitions` (rename for clarity) | More expressive; removes ambiguity about what the count means | — Pending |
-| Remove `end_date` from RecurrenceSettings | User chose fixed-count only; breaking change accepted; simplifies validation | — Pending |
-| Only create installments from current to total | Past installments are irrelevant to users at registration time | — Pending |
-| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series | — Pending |
+| Decision                                                          | Rationale                                                                    | Outcome   |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------- |
+| `current_installment` lives inside `RecurrenceSettings`           | Keeps recurrence concerns together; consistent with existing pattern         | — Pending |
+| `total_installments` replaces `repetitions` (rename for clarity)  | More expressive; removes ambiguity about what the count means                | — Pending |
+| Remove `end_date` from RecurrenceSettings                         | User chose fixed-count only; breaking change accepted; simplifies validation | — Pending |
+| Only create installments from current to total                    | Past installments are irrelevant to users at registration time               | — Pending |
+| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series    | — Pending |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 **After each phase transition** (via `/gsd-transition`):
+
 1. Requirements invalidated? → Move to Out of Scope with reason
 2. Requirements validated? → Move to Validated with phase reference
 3. New requirements emerged? → Add to Active
@@ -80,10 +97,18 @@ This document evolves at phase transitions and milestone boundaries.
 5. "What This Is" still accurate? → Update if drifted
 
 **After each milestone** (via `/gsd-complete-milestone`):
+
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-09 after initialization*
+
+# _Last updated: 2026-04-09 after initialization_
+
+---
+
+_Last updated: 2026-04-10 after v1.0 milestone_
+
+> > > > > > > 837c2a8b4c46821fa710ca140091445d8383fbd4

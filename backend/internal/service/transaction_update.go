@@ -775,11 +775,9 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		return nil
 	}
 
-	if rErrs := s.validateRecurrenceSettings(lo.FromPtr(data.req.Date), data.req.RecurrenceSettings); len(rErrs) > 0 {
+	if rErrs := s.validateRecurrenceSettings(data.req.RecurrenceSettings); len(rErrs) > 0 {
 		return pkgErrors.ServiceErrors(rErrs)
 	}
-
-	date := lo.CoalesceOrEmpty(data.req.Date, &data.previousTransaction.Date)
 
 	// For propagation=current_and_future when past installments exist, the old recurrence
 	// must be shrunk to cover only the past installments, and a new recurrence must be
@@ -810,7 +808,10 @@ func (s *transactionService) handlerRecurrenceUpdate(
 			return r, nil
 		}
 
-		recurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, userID, *date)
+		// CurrentInstallment is intentionally ignored on updates — it only controls
+		// which installment number to start from during creation. On updates, all
+		// existing installments are renumbered sequentially by handlerRecurrenceUpdate.
+		recurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, userID)
 		if t.TransactionRecurrenceID != nil {
 			recurrence.ID = *t.TransactionRecurrenceID
 
@@ -963,38 +964,8 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	}
 
 	if req.RecurrenceSettings != nil {
-		if !req.RecurrenceSettings.Type.IsValid() {
-			errs = append(errs, pkgErrors.ErrInvalidRecurrenceType(req.RecurrenceSettings.Type))
-		}
-
-		if req.RecurrenceSettings.EndDate == nil && req.RecurrenceSettings.Repetitions == nil {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateOrRepetitionsIsRequired)
-		}
-
-		date := lo.CoalesceOrEmpty(req.Date, &transaction.Date)
-
-		if req.RecurrenceSettings.EndDate != nil && date != nil {
-			if !req.RecurrenceSettings.EndDate.After(*date) {
-				errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
-			}
-
-			if int(req.RecurrenceSettings.EndDate.Sub(*date).Hours())%24 != 0 {
-				errs = append(errs, pkgErrors.ErrRecurrenceEndDateMustBeAfterTransactionDate)
-			}
-		}
-
-		if req.RecurrenceSettings.EndDate != nil && req.RecurrenceSettings.Repetitions != nil {
-			errs = append(errs, pkgErrors.ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)
-		}
-
-		if req.RecurrenceSettings.EndDate == nil {
-			if lo.FromPtr(req.RecurrenceSettings.Repetitions) < 1 {
-				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBePositive)
-			}
-
-			if lo.FromPtr(req.RecurrenceSettings.Repetitions) > 1000 {
-				errs = append(errs, pkgErrors.ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo(1000))
-			}
+		if rErrs := s.validateRecurrenceSettings(req.RecurrenceSettings); len(rErrs) > 0 {
+			errs = append(errs, rErrs...)
 		}
 	}
 

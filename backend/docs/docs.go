@@ -216,6 +216,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/accounts/{id}/activate": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Activate account",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/me": {
             "get": {
                 "security": [
@@ -404,6 +446,9 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "consumes": [
+                    "application/json"
+                ],
                 "tags": [
                     "categories"
                 ],
@@ -415,6 +460,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Optional replacement category",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/domain.DeleteCategoryRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -429,6 +482,12 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/middleware.ErrorResponse"
                         }
@@ -894,6 +953,180 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/transactions/check-duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whether a transaction with the given date, description and amount already exists for the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Check if a transaction is a duplicate",
+                "parameters": [
+                    {
+                        "description": "Duplicate check params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CheckDuplicateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/import-csv": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Accepts a multipart CSV file and an account_id. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Parse and enrich a CSV file for import",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Destination account ID",
+                        "name": "account_id",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "CSV file",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ImportCSVResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/suggestions": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns up to ` + "`" + `limit` + "`" + ` transactions whose description matches the query string (PostgreSQL text search). Used for autocomplete when creating a new transaction.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Suggest transactions by description",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Description search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum results (default 10, max 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Transaction"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/transactions/{id}": {
             "get": {
                 "security": [
@@ -1176,6 +1409,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/user-connections/accept-invite": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-connections"
+                ],
+                "summary": "Accept an invite using the inviter's external ID",
+                "parameters": [
+                    {
+                        "description": "Invite data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AcceptInviteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.UserConnection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user-connections/invite-info/{external_id}": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-connections"
+                ],
+                "summary": "Get user info by external ID (for invite preview)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User external ID",
+                        "name": "external_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/user-connections/{id}": {
             "delete": {
                 "security": [
@@ -1284,6 +1624,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/test-login": {
+            "post": {
+                "description": "Issues a JWT auth cookie for the given email without OAuth. Only available when ENV != production.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Test login (non-production only)",
+                "parameters": [
+                    {
+                        "description": "Login request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.testLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/{provider}": {
             "get": {
                 "description": "Redirects the user to the OAuth provider's authorization page",
@@ -1377,6 +1760,9 @@ const docTemplate = `{
                 "initial_balance": {
                     "type": "integer"
                 },
+                "is_active": {
+                    "type": "boolean"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -1411,6 +1797,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "emoji": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -1431,6 +1820,65 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CheckDuplicateRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "description": "optional; when set, only checks within that account",
+                    "type": "integer"
+                },
+                "amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.DeleteCategoryRequest": {
+            "type": "object",
+            "properties": {
+                "replace_with_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.ImportCSVResponse": {
+            "type": "object",
+            "properties": {
+                "duplicate_count": {
+                    "type": "integer"
+                },
+                "error_count": {
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ParsedImportRow"
+                    }
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.ImportRowStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "duplicate"
+            ],
+            "x-enum-varnames": [
+                "ImportRowStatusPending",
+                "ImportRowStatusDuplicate"
+            ]
+        },
         "domain.OperationType": {
             "type": "string",
             "enum": [
@@ -1442,14 +1890,58 @@ const docTemplate = `{
                 "OperationTypeDebit"
             ]
         },
+        "domain.ParsedImportRow": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "category_inferred": {
+                    "type": "boolean"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "destination_account_id": {
+                    "type": "integer"
+                },
+                "parse_errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "recurrence_count": {
+                    "type": "integer"
+                },
+                "recurrence_type": {
+                    "$ref": "#/definitions/domain.RecurrenceType"
+                },
+                "row_index": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.ImportRowStatus"
+                },
+                "type": {
+                    "$ref": "#/definitions/domain.TransactionType"
+                }
+            }
+        },
         "domain.RecurrenceSettings": {
             "type": "object",
             "properties": {
-                "end_date": {
-                    "type": "string"
+                "current_installment": {
+                    "type": "integer"
                 },
-                "repetitions": {
-                    "description": "nil = indefinite",
+                "total_installments": {
                     "type": "integer"
                 },
                 "type": {
@@ -1768,6 +2260,9 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "external_id": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -1827,6 +2322,25 @@ const docTemplate = `{
                 "UserConnectionStatusRejected"
             ]
         },
+        "handler.AcceptInviteRequest": {
+            "type": "object",
+            "properties": {
+                "external_id": {
+                    "type": "string"
+                },
+                "from_default_split_percentage": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.testLoginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
         "middleware.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1835,6 +2349,12 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         }

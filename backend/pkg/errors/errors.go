@@ -44,11 +44,9 @@ const (
 	ErrorTagInvalidAccountID                                    ErrorTag = "TRANSACTION.INVALID_ACCOUNT_ID"
 	ErrorTagInvalidCategoryID                                   ErrorTag = "TRANSACTION.INVALID_CATEGORY_ID"
 	ErrorTagInvalidRecurrenceType                               ErrorTag = "TRANSACTION.INVALID_RECURRENCE_TYPE"
-	ErrorTagRecurrenceEndDateOrRepetitionsIsRequired            ErrorTag = "TRANSACTION.RECURRENCE_END_DATE_OR_REPETITIONS_IS_REQUIRED"
-	ErrorTagRecurrenceEndDateMustBeAfterTransactionDate         ErrorTag = "TRANSACTION.RECURRENCE_END_DATE_MUST_BE_AFTER_TRANSACTION_DATE"
-	ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether ErrorTag = "TRANSACTION.RECURRENCE_END_DATE_AND_REPETITIONS_CANNOT_BE_USED_TOGETHER"
-	ErrorTagRecurrenceRepetitionsMustBePositive                 ErrorTag = "TRANSACTION.RECURRENCE_REPETITIONS_MUST_BE_POSITIVE"
-	ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo        ErrorTag = "TRANSACTION.RECURRENCE_REPETITIONS_MUST_BE_LESS_THAN_OR_EQUAL_TO"
+	ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne            ErrorTag = "TRANSACTION.RECURRENCE_CURRENT_INSTALLMENT_MUST_BE_AT_LEAST_ONE"
+	ErrorTagRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent ErrorTag = "TRANSACTION.RECURRENCE_TOTAL_INSTALLMENTS_MUST_BE_GREATER_OR_EQUAL_TO_CURRENT"
+	ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo      ErrorTag = "TRANSACTION.RECURRENCE_TOTAL_INSTALLMENTS_MUST_BE_LESS_THAN_OR_EQUAL_TO"
 	ErrorTagSplitSettingInvalidConnectionID                     ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_CONNECTION_ID"
 	ErrorTagSplitSettingPercentageOrAmountIsRequired            ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_OR_AMOUNT_IS_REQUIRED"
 	ErrorTagSplitSettingPercentageAndAmountCannotBeUsedTogether ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_AND_AMOUNT_CANNOT_BE_USED_TOGETHER"
@@ -91,12 +89,10 @@ var (
 	ErrInvalidRecurrenceType = func(recurrenceType domain.RecurrenceType) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagInvalidRecurrenceType)}, fmt.Sprintf("invalid recurrence type: %s", recurrenceType))
 	}
-	ErrRecurrenceEndDateOrRepetitionsIsRequired            = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceEndDateOrRepetitionsIsRequired)}, "recurrence end date or repetitions is required")
-	ErrRecurrenceEndDateMustBeAfterTransactionDate         = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceEndDateMustBeAfterTransactionDate)}, "recurrence end date must be after transaction date")
-	ErrRecurrenceEndDateAndRepetitionsCannotBeUsedTogether = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceEndDateAndRepetitionsCannotBeUsedTogether)}, "recurrence end date and repetitions cannot be used together")
-	ErrRecurrenceRepetitionsMustBePositive                 = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceRepetitionsMustBePositive)}, "recurrence repetitions must be positive")
-	ErrRecurrenceRepetitionsMustBeLessThanOrEqualTo        = func(maxValue int) *ServiceError {
-		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceRepetitionsMustBeLessThanOrEqualTo)}, fmt.Sprintf("recurrence repetitions must be less than or equal to %d", maxValue))
+	ErrRecurrenceCurrentInstallmentMustBeAtLeastOne             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne)}, "recurrence current_installment must be at least 1")
+	ErrRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent)}, "recurrence total_installments must be greater than or equal to current_installment")
+	ErrRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo       = func(maxValue int) *ServiceError {
+		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo)}, fmt.Sprintf("recurrence total_installments must be less than or equal to %d", maxValue))
 	}
 	ErrSplitSettingInvalidConnectionID = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingInvalidConnectionID)}, fmt.Sprintf("split setting invalid connection ID at index %d", index)).AddIndex(index)

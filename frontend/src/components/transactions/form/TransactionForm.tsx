@@ -1,4 +1,4 @@
-import { useEffect, type FocusEvent } from "react";
+import { useEffect, type FocusEvent, type ReactNode } from "react";
 import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
 import {
   Stack,
@@ -37,6 +37,10 @@ interface Props {
   onSaveAndCreateAnother?: (values: TransactionFormValues) => void;
   isPending?: boolean;
   submitError?: string;
+  /** Extra content rendered between the form fields and the sticky submit button. */
+  extraContent?: ReactNode;
+  /** When true, disables the current installment input in RecurrenceFields. */
+  isUpdate?: boolean;
 }
 
 export const TransactionForm = ({
@@ -45,6 +49,8 @@ export const TransactionForm = ({
   onSaveAndCreateAnother,
   isPending,
   submitError,
+  extraContent,
+  isUpdate = false,
 }: Props) => {
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
@@ -279,6 +285,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
+                  data-testid="select_destination_account"
                 />
               )}
             />
@@ -356,9 +363,11 @@ export const TransactionForm = ({
               />
             )}
           />
-          {recurrenceEnabled && <RecurrenceFields />}
+          {recurrenceEnabled && <RecurrenceFields disableCurrentInstallment={isUpdate} />}
         </Stack>
       </Stack>
+
+      {extraContent}
 
       <Box
         style={{
