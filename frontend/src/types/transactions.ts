@@ -199,6 +199,7 @@ export namespace Transactions {
   }
 
   export type DecimalSeparatorValue = "comma" | "dot";
+  export type TypeDefinitionRule = "positive_as_income" | "positive_as_expense";
 
   export interface ImportCSVResponse {
     rows: ParsedImportRow[];

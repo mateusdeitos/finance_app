@@ -8,11 +8,13 @@ export function useParseImportCSV() {
       file,
       accountId,
       decimalSeparator,
+      typeDefinitionRule,
     }: {
       file: File;
       accountId: number;
       decimalSeparator: Transactions.DecimalSeparatorValue;
-    }) => parseImportCSV(file, accountId, decimalSeparator),
+      typeDefinitionRule: Transactions.TypeDefinitionRule;
+    }) => parseImportCSV(file, accountId, decimalSeparator, typeDefinitionRule),
   });
   return { mutation };
 }

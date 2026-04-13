@@ -24,7 +24,7 @@ type csvColumnIndex struct {
 	amount      int
 }
 
-func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator string, csvData []byte) (*domain.ImportCSVResponse, error) {
+func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator ImportDecimalSeparatorValue, typeDefinitionRule ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
 	// Valida propriedade da conta
 	if _, err := s.services.Account.GetByID(ctx, userID, accountID); err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 				ParseErrors: []string{errorMessage},
 			}
 		} else {
-			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, decimalSeparator)
+			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, decimalSeparator, typeDefinitionRule)
 		}
 
 		if row.Status == domain.ImportRowStatusDuplicate {
@@ -174,7 +174,8 @@ func parseCSVRow(
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
-	decimalSeparator string,
+	decimalSeparator ImportDecimalSeparatorValue,
+	typeDefinitionRule ImportTypeDefinitionRule,
 ) domain.ParsedImportRow {
 	row := domain.ParsedImportRow{
 		RowIndex: rowIndex,
@@ -230,6 +231,10 @@ func parseCSVRow(
 				row.Type = domain.TransactionTypeIncome
 			}
 
+			if typeDefinitionRule == TypeDefinitionPositiveAsExpense {
+				row.Type = row.Type.Invert()
+			}
+
 			// Armazena sempre o valor absoluto no Amount da transação
 			row.Amount = int64(math.Abs(float64(signedCents)))
 		}
@@ -246,7 +251,7 @@ func parseCSVRow(
 }
 
 // parseAmountSigned converte uma string numérica para centavos (int64) mantendo o sinal.
-func parseAmountSigned(s string, decimalSeparator string) (int64, error) {
+func parseAmountSigned(s string, decimalSeparator ImportDecimalSeparatorValue) (int64, error) {
 	s = strings.TrimSpace(s)
 	if decimalSeparator == "dot" {
 		// Padrão Internacional: 1,234.56 -> Remove vírgulas de milhar

@@ -21,22 +21,22 @@ import (
 func TestParseAmountSigned(t *testing.T) {
 	cases := []struct {
 		input     string
-		separator string
+		separator ImportDecimalSeparatorValue
 		want      int64
 		wantErr   bool
 	}{
 		// Comma (Brazilian)
-		{"150,00", "comma", 15000, false},
-		{"1.234,56", "comma", 123456, false},
-		{"-50,00", "comma", -5000, false},
+		{"150,00", DecimalSeparatorComma, 15000, false},
+		{"1.234,56", DecimalSeparatorComma, 123456, false},
+		{"-50,00", DecimalSeparatorComma, -5000, false},
 		// Dot (International)
-		{"150.00", "dot", 15000, false},
-		{"1,234.56", "dot", 123456, false},
-		{"-50.00", "dot", -5000, false},
+		{"150.00", DecimalSeparatorDot, 15000, false},
+		{"1,234.56", DecimalSeparatorDot, 123456, false},
+		{"-50.00", DecimalSeparatorDot, -5000, false},
 		// General
-		{"100", "comma", 10000, false},
-		{"abc", "comma", 0, true},
-		{"", "comma", 0, true},
+		{"100", DecimalSeparatorComma, 10000, false},
+		{"abc", DecimalSeparatorComma, 0, true},
+		{"", DecimalSeparatorComma, 0, true},
 	}
 
 	for _, tc := range cases {
@@ -142,18 +142,18 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 	suite.Require().NoError(err)
 
 	suite.Run("empty file", func() {
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", []byte{})
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, []byte{})
 		suite.ErrorIs(err, pkgErrors.ErrImportEmptyFile)
 	})
 
 	suite.Run("only header no data rows", func() {
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", []byte(csvSimpleHeader))
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, []byte(csvSimpleHeader))
 		suite.ErrorIs(err, pkgErrors.ErrImportNoRows)
 	})
 
 	suite.Run("invalid layout missing Valor", func() {
 		csv := []byte("Data;Descrição\n01/01/2026;Test")
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.ErrorIs(err, pkgErrors.ErrImportInvalidLayout)
 	})
 
@@ -162,7 +162,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		for i := range rows {
 			rows[i] = []string{"01/01/2026", "Test", "100,00"}
 		}
-		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", buildCSV(rows))
+		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, buildCSV(rows))
 		suite.ErrorIs(err, pkgErrors.ErrImportMaxRowsExceeded)
 	})
 
@@ -170,7 +170,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		csv := append([]byte{0xEF, 0xBB, 0xBF}, buildCSV([][]string{
 			{"01/01/2026", "Aluguel", "-150,00"},
 		})...)
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
 	})
@@ -179,7 +179,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		csv := buildCSV([][]string{
 			{"15/03/2026", "Supermercado", "-250,00"},
 		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
 		row := resp.Rows[0]
@@ -194,7 +194,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		csv := buildCSV([][]string{
 			{"15/03/2026", "Salário", "5000,00"},
 		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
 		row := resp.Rows[0]
 		suite.Equal(domain.TransactionTypeIncome, row.Type)
@@ -220,7 +220,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		csv := buildCSV([][]string{
 			{"10/02/2026", "Netflix", "-50,00"},
 		})
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
 		suite.Equal(domain.ImportRowStatusDuplicate, resp.Rows[0].Status)
 		suite.Equal(1, resp.DuplicateCount)
@@ -231,7 +231,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		corruptedLine := "01/01/2026;\"Texto mal fechado;100,00"
 		csv := []byte(csvSimpleHeader + "\n" + corruptedLine)
 
-		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, "comma", csv)
+		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
 		suite.Equal(1, resp.TotalRows)
 		suite.Contains(resp.Rows[0].Description, "Conteúdo ilegível")

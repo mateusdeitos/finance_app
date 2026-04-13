@@ -390,13 +390,18 @@ function ImportReviewPage() {
               <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th w={36}>
+                    <Table.Th
+                      w={36}
+                      style={{ cursor: "pointer" }}
+                      onClick={allSelected ? handleClearSelection : handleSelectAll}
+                    >
                       <Checkbox
                         size="xs"
                         checked={allSelected}
                         indeterminate={someSelected && !allSelected}
                         onChange={allSelected ? handleClearSelection : handleSelectAll}
                         disabled={importing}
+                        styles={{ input: { cursor: "pointer" } }}
                       />
                     </Table.Th>
                     <Table.Th w={36} />
@@ -465,8 +470,8 @@ interface UploadStepProps {
 
 function UploadStep({ onParsed, onBack }: UploadStepProps) {
   const [decimalSeparator, setDecimalSeparator] = useState<Transactions.DecimalSeparatorValue>("comma");
+  const [typeDefinitionRule, setTypeDefinitionRule] = useState<Transactions.TypeDefinitionRule>("positive_as_income");
   const [accountId, setAccountId] = useState<number | null>(null);
-  const [accountDescription, setAccountDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -491,7 +496,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
     }
 
     mutation.mutate(
-      { file, accountId, decimalSeparator },
+      { file, accountId, decimalSeparator, typeDefinitionRule },
       {
         onSuccess: (result) => onParsed(result.rows, accountId),
         onError: async (err: unknown) => {
@@ -546,6 +551,25 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
           ]}
           value={decimalSeparator}
           onChange={(val) => setDecimalSeparator((val as Transactions.DecimalSeparatorValue | null) ?? "comma")}
+          data-testid="select_decimal_separator"
+        />
+        <Select
+          label="Regra de definição do tipo"
+          required
+          data={[
+            {
+              label: "Valor positivo considerado 'receita'",
+              value: "positive_as_income",
+            },
+            {
+              label: "Valor positivo considerado 'despesa'",
+              value: "positive_as_expense",
+            },
+          ]}
+          value={typeDefinitionRule}
+          onChange={(val) =>
+            setTypeDefinitionRule((val as Transactions.TypeDefinitionRule | null) ?? "positive_as_income")
+          }
           data-testid="select_decimal_separator"
         />
       </Flex>

@@ -30,6 +30,20 @@ func UpdateNotChangedType() updateChanges {
 	}
 }
 
+type ImportDecimalSeparatorValue string
+
+const (
+	DecimalSeparatorComma ImportDecimalSeparatorValue = "comma"
+	DecimalSeparatorDot   ImportDecimalSeparatorValue = "dot"
+)
+
+type ImportTypeDefinitionRule string
+
+const (
+	TypeDefinitionPositiveAsIncome  ImportTypeDefinitionRule = "positive_as_income"
+	TypeDefinitionPositiveAsExpense ImportTypeDefinitionRule = "positive_as_expense"
+)
+
 const (
 	NOT_CHANGED updateScenario = iota
 
