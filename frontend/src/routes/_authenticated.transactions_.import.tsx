@@ -48,30 +48,9 @@ const CSV_COLUMNS = [
   { col: "Data", required: true, description: "Formato DD/MM/AAAA" },
   { col: "Descrição", required: true, description: "Texto livre" },
   {
-    col: "Tipo",
+    col: "Valor",
     required: true,
-    description: "despesa, receita ou transferência",
-  },
-  { col: "Valor", required: true, description: "Ex: 1234,56 ou 1.234,56" },
-  {
-    col: "Categoria",
-    required: false,
-    description: "Nome da categoria (obrigatório se não for transferência)",
-  },
-  {
-    col: "Conta Destino",
-    required: false,
-    description: "Nome da conta (obrigatório se for transferência)",
-  },
-  {
-    col: "Tipo de Parcelamento",
-    required: false,
-    description: "diário, semanal, mensal ou anual",
-  },
-  {
-    col: "Quantidade de Parcelas",
-    required: false,
-    description: "Número inteiro (obrigatório se parcelamento definido)",
+    description: "Valor da transação, se negativo será considerada uma despesa, se positivo uma receita",
   },
 ];
 
@@ -487,6 +466,7 @@ interface UploadStepProps {
 function UploadStep({ onParsed, onBack }: UploadStepProps) {
   const [decimalSeparator, setDecimalSeparator] = useState<Transactions.DecimalSeparatorValue>("comma");
   const [accountId, setAccountId] = useState<number | null>(null);
+  const [accountDescription, setAccountDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -552,8 +532,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         />
 
         <Select
-          label="Separador decimal"
-          placeholder="Escolha qual o formato da coluna 'Valor'"
+          label="Formato da coluna 'Valor'"
           required
           data={[
             {
