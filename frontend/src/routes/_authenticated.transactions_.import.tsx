@@ -240,6 +240,26 @@ function ImportReviewPage() {
     setSelected(new Set());
   };
 
+  const handleSetSplitSettings = (splitSettings: Transactions.SplitSetting[]) => {
+    selected.forEach((i) => {
+      const type = form.getValues(`rows.${i}.transaction_type`);
+      if (type === "transfer") {
+        return;
+      }
+
+      const amount = form.getValues(`rows.${i}.amount`);
+      const parsedSplitSettings: Transactions.SplitSetting[] = splitSettings.map((s) => {
+        const calculatedAmount = s.amount ? s.amount : Math.round((amount * (s?.percentage ?? 0)) / 100);
+        return {
+          connection_id: s.connection_id,
+          amount: calculatedAmount,
+        };
+      });
+
+      form.setValue(`rows.${i}.split_settings`, parsedSplitSettings);
+    });
+  };
+
   // ─── Import loop ────────────────────────────────────────────────────────────
 
   const handlePause = () => {
@@ -399,6 +419,7 @@ function ImportReviewPage() {
                 onBulkSetCategory={handleBulkSetCategory}
                 onBulkSetTransactionType={handleBulkSetTransactionType}
                 onBulkSetDescription={handleSetDescription}
+                onBulkSetSplitSettings={handleSetSplitSettings}
               />
             </Paper>
 

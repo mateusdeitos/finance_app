@@ -16,17 +16,13 @@ import {
 } from "@mantine/core";
 import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
-import {
-  useWatch,
-  useFieldArray,
-  useFormContext,
-} from "react-hook-form";
+import { useWatch, useFieldArray, useFormContext } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyFormValues = any
+type AnyFormValues = any;
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -49,29 +45,33 @@ interface SplitRowControlsProps {
   account: Transactions.Account;
   currentUserId: number;
   totalAmount: number;
-  fieldName: string; // full RHF path to this row's `amount` field
+  rowPath: string; // full RHF path to this row's `amount` field
   error?: string;
+  onlyPercentage: boolean;
 }
 
 function SplitRowControls({
   account,
   currentUserId,
   totalAmount,
-  fieldName,
+  onlyPercentage,
+  rowPath,
   error,
 }: SplitRowControlsProps) {
   const { control, register, setValue } = useFormContext<AnyFormValues>();
-  const { ref: inputRef } = register(fieldName);
-  const fieldValue = (useWatch({ control, name: fieldName }) as number | undefined) ?? 0;
+
+  const amountFieldName = `${rowPath}.amount`;
+  const percentageFieldName = `${rowPath}.percentage`;
+
+  const { ref: inputRef } = register(amountFieldName);
+  const fieldValue = (useWatch({ control, name: amountFieldName }) as number | undefined) ?? 0;
 
   const conn = account.user_connection!;
   const isFrom = conn.from_user_id === currentUserId;
-  const defaultPercentage = isFrom
-    ? conn.from_default_split_percentage
-    : conn.to_default_split_percentage;
+  const defaultPercentage = isFrom ? conn.from_default_split_percentage : conn.to_default_split_percentage;
 
   const [mode, setMode] = useState<"percentage" | "amount">(() =>
-    fieldValue > 0 ? "amount" : "percentage"
+    fieldValue > 0 && !onlyPercentage ? "amount" : "percentage",
   );
   const [percentage, setPercentage] = useState(defaultPercentage);
 
@@ -79,36 +79,36 @@ function SplitRowControls({
 
   useEffect(() => {
     if (mode === "percentage") {
-      setValue(fieldName, calculatedAmount);
+      setValue(amountFieldName, calculatedAmount);
+      setValue(percentageFieldName, percentage);
     }
-  }, [calculatedAmount, mode, fieldName, setValue]);
+  }, [calculatedAmount, mode, amountFieldName, setValue, percentageFieldName, percentage]);
 
   function toggleMode() {
     const next = mode === "percentage" ? "amount" : "percentage";
-    if (next === "amount") setValue(fieldName, calculatedAmount);
+    if (next === "amount") setValue(amountFieldName, calculatedAmount);
     setMode(next);
   }
 
   return (
     <>
-      <Tooltip
-        label={mode === "percentage" ? "Mudar para valor fixo" : "Mudar para percentual"}
-        withArrow
-      >
-        <Switch
-          size="md"
-          checked={mode === "amount"}
-          onChange={toggleMode}
-          thumbIcon={
-            mode === "percentage" ? (
-              <IconPercentage size={10} stroke={3} color="var(--mantine-color-blue-6)" />
-            ) : (
-              <IconCurrencyReal size={10} stroke={3} color="var(--mantine-color-teal-6)" />
-            )
-          }
-          styles={{ track: { cursor: "pointer" } }}
-        />
-      </Tooltip>
+      {!onlyPercentage && (
+        <Tooltip label={mode === "percentage" ? "Mudar para valor fixo" : "Mudar para percentual"} withArrow>
+          <Switch
+            size="md"
+            checked={mode === "amount"}
+            onChange={toggleMode}
+            thumbIcon={
+              mode === "percentage" ? (
+                <IconPercentage size={10} stroke={3} color="var(--mantine-color-blue-6)" />
+              ) : (
+                <IconCurrencyReal size={10} stroke={3} color="var(--mantine-color-teal-6)" />
+              )
+            }
+            styles={{ track: { cursor: "pointer" } }}
+          />
+        </Tooltip>
+      )}
 
       {mode === "percentage" ? (
         <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
@@ -132,7 +132,7 @@ function SplitRowControls({
           <CurrencyInput
             ref={inputRef}
             value={fieldValue}
-            onChange={(v) => setValue(fieldName, v)}
+            onChange={(v) => setValue(amountFieldName, v)}
             error={error}
             data-testid="input_split_amount"
           />
@@ -154,6 +154,7 @@ interface SplitRowProps {
   onRemove: () => void;
   error?: string;
   comboboxWithinPortal?: boolean;
+  onlyPercentage?: boolean;
 }
 
 function SplitRow({
@@ -165,6 +166,7 @@ function SplitRow({
   onRemove,
   error,
   comboboxWithinPortal = true,
+  onlyPercentage = false,
 }: SplitRowProps) {
   const { control, setValue } = useFormContext<AnyFormValues>();
   const connectionId = useWatch({
@@ -172,16 +174,13 @@ function SplitRow({
     name: `${rowPath}.connection_id`,
   }) as number | undefined;
 
-  const selectedAccount = connectedAccounts.find(
-    (a) => a.user_connection?.id === connectionId
-  );
+  const selectedAccount = connectedAccounts.find((a) => a.user_connection?.id === connectionId);
 
   const selectData = connectedAccounts
     .filter(
       (a) =>
         a.user_connection &&
-        (a.user_connection.id === connectionId ||
-          !usedConnectionIds.includes(a.user_connection.id))
+        (a.user_connection.id === connectionId || !usedConnectionIds.includes(a.user_connection.id)),
     )
     .map((a) => ({
       value: String(a.user_connection!.id),
@@ -203,13 +202,7 @@ function SplitRow({
             }
           }}
         />
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          color="red"
-          onClick={onRemove}
-          title="Remover divisão"
-        >
+        <ActionIcon size="sm" variant="subtle" color="red" onClick={onRemove} title="Remover divisão">
           <IconX size={14} />
         </ActionIcon>
       </Group>
@@ -221,12 +214,7 @@ function SplitRow({
       <Group gap="sm" align="center" wrap="nowrap">
         {selectedAccount && (
           <Tooltip label={selectedAccount.description ?? selectedAccount.name} withArrow>
-            <Avatar
-              size="sm"
-              radius="xl"
-              color="blue"
-              style={{ cursor: "default" }}
-            >
+            <Avatar size="sm" radius="xl" color="blue" style={{ cursor: "default" }}>
               {getInitials(selectedAccount.description || selectedAccount.name)}
             </Avatar>
           </Tooltip>
@@ -237,8 +225,9 @@ function SplitRow({
             account={selectedAccount}
             currentUserId={currentUserId}
             totalAmount={totalAmount}
-            fieldName={`${rowPath}.amount`}
+            rowPath={rowPath}
             error={error}
+            onlyPercentage={onlyPercentage}
           />
         )}
 
@@ -276,17 +265,28 @@ interface SplitSettingsFieldsProps {
    * Set to `false` when used inside a Popover.
    */
   comboboxWithinPortal?: boolean;
+
+  /**
+   * Whether to allow settings the split as amount
+   */
+  onlyPercentage?: boolean;
 }
 
 export function SplitSettingsFields({
   namePrefix = "",
   comboboxWithinPortal = true,
+  onlyPercentage = false,
 }: SplitSettingsFieldsProps) {
-  const { control, formState: { errors } } = useFormContext<AnyFormValues>();
+  const {
+    control,
+    formState: { errors },
+  } = useFormContext<AnyFormValues>();
   const totalAmount = (useWatch({ control, name: `${namePrefix}amount` }) as number) ?? 0;
+
+  const fieldName = `${namePrefix}split_settings`;
   const { fields, append, remove } = useFieldArray({
     control,
-    name: `${namePrefix}split_settings`,
+    name: fieldName,
   });
 
   const { query: meQuery } = useMe((me) => me.id);
@@ -296,20 +296,22 @@ export function SplitSettingsFields({
   const accounts = accountsQuery.data ?? [];
 
   const connectedAccounts = accounts.filter(
-    (a) =>
-      a.user_connection && a.user_connection.connection_status === "accepted"
+    (a) => a.user_connection && a.user_connection.connection_status === "accepted",
   );
+
+  const usedConnectionIds =
+    useWatch({
+      control,
+      name: fieldName,
+      compute: (settings: Transactions.SplitSetting[]): number[] => {
+        return settings?.map((s) => s.connection_id).filter(Boolean);
+      },
+    }) ?? [];
 
   if (connectedAccounts.length === 0) return null;
 
-  const usedConnectionIds = (fields as unknown as { connection_id: number }[])
-    .map((f) => f.connection_id)
-    .filter((id) => id > 0);
-
   const hasAvailableConnections =
-    connectedAccounts.filter(
-      (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)
-    ).length > 0;
+    connectedAccounts.filter((a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)).length > 0;
 
   // Resolve errors for a dot-path under namePrefix
   function fieldError(suffix: string): string | undefined {
@@ -346,9 +348,7 @@ export function SplitSettingsFields({
             .map((f) => f.connection_id)
             .filter((id) => id > 0);
 
-          const rowError =
-            fieldError(`split_settings.${index}.amount`) ??
-            fieldError(`split_settings.${index}`);
+          const rowError = fieldError(`split_settings.${index}.amount`) ?? fieldError(`split_settings.${index}`);
 
           return (
             <SplitRow
@@ -361,6 +361,7 @@ export function SplitSettingsFields({
               onRemove={() => remove(index)}
               error={rowError}
               comboboxWithinPortal={comboboxWithinPortal}
+              onlyPercentage={onlyPercentage}
             />
           );
         })}

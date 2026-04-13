@@ -11,9 +11,10 @@ import { type ImportFormValues } from "@/components/transactions/form/importForm
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
-import { SplitSettingsFields } from "@/components/transactions/form/SplitSettingsFields";
 import { checkDuplicateTransaction } from "@/api/transactions";
 import classes from "./ImportReviewRow.module.css";
+import { SplitPopover } from "./SplitPopover";
+import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -149,15 +150,7 @@ export const ImportReviewRow = memo(
       return recurrenceTotalInstallments ? `${recurrenceTotalInstallments}x (${label})` : label;
     }
 
-    function splitSummary() {
-      if (!splitSettings?.length) return "Sem divisão";
-      const s = splitSettings[0];
-      const acct = sharedAccounts.find((a) => a.user_connection?.id === s.connection_id);
-      const label = acct?.name ?? `#${s.connection_id}`;
-      if (s.percentage != null) return `${s.percentage}% — ${label}`;
-      if (s.amount != null) return `R$${(s.amount / 100).toFixed(2)} — ${label}`;
-      return label;
-    }
+    const splitSummary = useSplitSummary(splitSettings);
 
     const statusCell = () => {
       if (importStatus === "loading") return <Loader size="xs" />;
@@ -343,7 +336,7 @@ export const ImportReviewRow = memo(
           {!isTransfer && sharedAccounts.length > 0 ? (
             <SplitPopover
               namePrefix={namePrefix}
-              summary={splitSummary()}
+              summary={splitSummary}
               hasSplit={!!splitSettings?.length}
               disabled={disabled || isSkipped}
               rowAmount={amount as number}
@@ -434,66 +427,6 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
         <Popover.Dropdown>
           <Stack gap="xs" w={300}>
             <RecurrenceFields namePrefix="" comboboxWithinPortal={false} />
-          </Stack>
-        </Popover.Dropdown>
-      </Popover>
-    </FormProvider>
-  );
-}
-
-// ─── SplitPopover ─────────────────────────────────────────────────────────────
-
-interface SplitLocalValues {
-  amount: number;
-  split_settings: Transactions.SplitSetting[];
-}
-
-interface SplitPopoverProps {
-  namePrefix: string;
-  summary: string;
-  hasSplit: boolean;
-  disabled: boolean;
-  rowAmount: number;
-}
-
-function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: SplitPopoverProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parentForm = useFormContext<any>();
-
-  const localForm = useForm<SplitLocalValues>({
-    defaultValues: {
-      amount: rowAmount,
-      split_settings: [],
-    },
-  });
-
-  function handleOpen() {
-    const rowPath = namePrefix.slice(0, -1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowValues = parentForm.getValues(rowPath) as any;
-    localForm.reset({
-      amount: rowValues.amount ?? rowAmount,
-      split_settings: rowValues.split_settings ?? [],
-    });
-  }
-
-  function handleClose() {
-    const values = localForm.getValues();
-    const rowPath = namePrefix.slice(0, -1);
-    parentForm.setValue(`${rowPath}.split_settings`, values.split_settings);
-  }
-
-  return (
-    <FormProvider {...localForm}>
-      <Popover trapFocus closeOnClickOutside withinPortal closeOnEscape onClose={handleClose} onOpen={handleOpen}>
-        <Popover.Target>
-          <Button size="xs" variant={hasSplit ? "light" : "default"} disabled={disabled} fullWidth>
-            {summary}
-          </Button>
-        </Popover.Target>
-        <Popover.Dropdown>
-          <Stack gap="xs" w={320}>
-            <SplitSettingsFields namePrefix="" comboboxWithinPortal={false} />
           </Stack>
         </Popover.Dropdown>
       </Popover>
