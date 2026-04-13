@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { Button, Group, Popover, Select, Stack, Text, TextInput } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
-import { IconCategory, IconTrash } from "@tabler/icons-react";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
 import { localDateStr } from "@/utils/parseDate";
-import { useDisclosure } from "@mantine/hooks";
+import { Button, Group, Menu, MenuItem, Select, Text, TextInput } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
+import {
+  IconArrowsUpDown,
+  IconCalendar,
+  IconCategory,
+  IconHammer,
+  IconQuestionMark,
+  IconReceipt,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 
 const ACTION_OPTIONS = [
   { value: "import", label: "Importar" },
@@ -29,6 +36,20 @@ interface Props {
   onBulkSetDescription: (description: string) => void;
 }
 
+type AvailableAction = "date" | "import_action" | "type" | "description" | "category";
+type SelectedActionState = {
+  type: AvailableAction;
+  value: string;
+};
+
+const propsByType: Record<AvailableAction, { icon: React.ReactNode; label: string }> = {
+  date: { icon: <IconCalendar size={14} />, label: "Data" },
+  category: { icon: <IconCategory size={14} />, label: "Categoria" },
+  description: { icon: <IconReceipt size={14} />, label: "Descrição" },
+  type: { icon: <IconArrowsUpDown size={14} />, label: "Tipo de transação" },
+  import_action: { icon: <IconQuestionMark size={14} />, label: "Ação de importação" },
+};
+
 export function ImportCSVBulkToolbar({
   selectedCount,
   onRemove,
@@ -46,9 +67,48 @@ export function ImportCSVBulkToolbar({
     label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
   }));
 
-  const [description, setDescription] = useState("");
-  const [descriptionPopoverOpen, descriptionPopover] = useDisclosure(false);
-  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<SelectedActionState | null>(null);
+  const menuLabel = useMemo(() => {
+    switch (selectedAction?.type) {
+      case "date":
+        return "Data";
+      case "category":
+        return "Categoria";
+      case "description":
+        return "Descrição";
+      case "type":
+        return "Tipo";
+      case "import_action":
+        return "Ação de importação";
+      default:
+        return "Escolha uma ação";
+    }
+  }, [selectedAction]);
+
+  const updateSelectedActionValue = (value: string) => {
+    setSelectedAction((p) => (!p ? null : { ...p, value }));
+  };
+
+  const updateSelectedAction = (type: AvailableAction) => {
+    setSelectedAction({ type, value: "" });
+  };
+
+  const applySelectedAction = () => {
+    switch (selectedAction?.type) {
+      case "date":
+        return onBulkSetDate(selectedAction.value);
+      case "category":
+        return onBulkSetCategory(Number(selectedAction.value));
+      case "description":
+        return onBulkSetDescription(selectedAction.value);
+      case "type":
+        return onBulkSetTransactionType(selectedAction.value as Transactions.TransactionType);
+      case "import_action":
+        return onBulkSetAction(selectedAction.value as Transactions.ImportRowAction);
+      default:
+        break;
+    }
+  };
 
   return (
     <Group gap="xs" align="end">
@@ -57,7 +117,7 @@ export function ImportCSVBulkToolbar({
       </Text>
 
       <Button
-        size="xs"
+        size="compact-xs"
         variant="light"
         color="red"
         leftSection={<IconTrash size={14} />}
@@ -67,110 +127,106 @@ export function ImportCSVBulkToolbar({
         Remover
       </Button>
 
-      <Select
-        label="Ação"
-        size="xs"
-        data={ACTION_OPTIONS}
-        withCheckIcon={false}
-        data-testid="select_bulk_action"
-        onChange={(val) => {
-          if (val) {
-            onBulkSetAction(val as Transactions.ImportRowAction);
-          }
-        }}
-      />
+      <Text fz="sm" fw={500}>
+        Definir
+      </Text>
 
-      <DatePickerInput
-        label="Data"
-        size="xs"
-        miw={150}
-        valueFormat="DD/MM/YYYY"
-        onChange={(d) => {
-          if (d) {
-            onBulkSetDate(localDateStr(d));
-          }
-        }}
-      />
+      <Menu>
+        <Menu.Target>
+          <Button size="compact-xs" leftSection={selectedAction ? propsByType[selectedAction.type]?.icon : undefined}>
+            {menuLabel}
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {Object.entries(propsByType).map(([k, v]) => {
+            return (
+              <MenuItem
+                key={k}
+                component="button"
+                leftSection={v.icon}
+                onClick={() => updateSelectedAction(k as AvailableAction)}
+              >
+                {v.label}
+              </MenuItem>
+            );
+          })}
+        </Menu.Dropdown>
+      </Menu>
 
-      <Select
-        label="Tipo"
-        size="xs"
-        data={TYPE_OPTIONS}
-        withCheckIcon={false}
-        data-testid="select_bulk_action"
-        onChange={(val) => {
-          if (val) {
-            onBulkSetTransactionType(val as Transactions.TransactionType);
-          }
-        }}
-      />
+      <Text fz="sm" fw={500}>
+        Para
+      </Text>
 
-      <Popover
-        opened={descriptionPopoverOpen}
-        onChange={() => {
-          setDescription("");
-          descriptionPopover.toggle();
-        }}
-        withinPortal
+      {selectedAction?.type === "import_action" && (
+        <Select
+          size="xs"
+          data={ACTION_OPTIONS}
+          withCheckIcon={false}
+          data-testid="select_bulk_action"
+          onChange={(val) => {
+            if (val) {
+              updateSelectedActionValue(val);
+            }
+          }}
+        />
+      )}
+
+      {selectedAction?.type === "date" && (
+        <DatePickerInput
+          size="xs"
+          miw={150}
+          valueFormat="DD/MM/YYYY"
+          onChange={(d) => {
+            if (d) {
+              updateSelectedActionValue(localDateStr(d));
+            }
+          }}
+        />
+      )}
+
+      {selectedAction?.type === "type" && (
+        <Select
+          size="xs"
+          data={TYPE_OPTIONS}
+          withCheckIcon={false}
+          data-testid="select_bulk_action"
+          onChange={(val) => {
+            if (val) {
+              updateSelectedActionValue(val);
+            }
+          }}
+        />
+      )}
+
+      {selectedAction?.type === "description" && (
+        <TextInput size="xs" miw={200} onChange={(e) => updateSelectedActionValue(e.target.value)} />
+      )}
+
+      {selectedAction?.type === "category" && (
+        <Select
+          size="xs"
+          data={categoryOptions}
+          searchable
+          withCheckIcon={false}
+          onChange={(val) => {
+            if (val) {
+              updateSelectedActionValue(val);
+            }
+          }}
+        />
+      )}
+
+      <Button
+        size="compact-xs"
+        variant="light"
+        color="green"
+        leftSection={<IconHammer size={14} />}
+        onClick={applySelectedAction}
+        disabled={!selectedAction?.value}
+        data-testid="btn_bulk_apply"
       >
-        <Popover.Target>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<IconCategory size={14} />}
-            onClick={() => descriptionPopover.open()}
-          >
-            Descrição
-          </Button>
-        </Popover.Target>
-        <Popover.Dropdown>
-          <Stack gap="xs" w={200}>
-            <TextInput
-              label="Descrição"
-              size="xs"
-              miw={200}
-              onKeyDown={(e) => {
-                if (e.key == "Enter") {
-                  descriptionPopover.close();
-                  onBulkSetDescription(description);
-                  return;
-                }
-              }}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </Stack>
-        </Popover.Dropdown>
-      </Popover>
-
-      <Popover opened={categoryPopoverOpen} onChange={setCategoryPopoverOpen} withinPortal>
-        <Popover.Target>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<IconCategory size={14} />}
-            onClick={() => setCategoryPopoverOpen(true)}
-          >
-            Definir categoria
-          </Button>
-        </Popover.Target>
-        <Popover.Dropdown>
-          <Stack gap="xs" w={200}>
-            <Select
-              label="Categoria"
-              size="xs"
-              data={categoryOptions}
-              searchable
-              withCheckIcon={false}
-              onChange={(val) => {
-                if (val) {
-                  onBulkSetCategory(Number(val));
-                  setCategoryPopoverOpen(false);
-                }
-              }}
-            />
-          </Stack>
-        </Popover.Dropdown>
-      </Popover>
+        Aplicar
+      </Button>
     </Group>
   );
 }

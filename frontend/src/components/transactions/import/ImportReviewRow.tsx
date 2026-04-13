@@ -182,7 +182,7 @@ export const ImportReviewRow = memo(
     return (
       <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={`import_row_${rowIndex}`}>
         {/* Checkbox */}
-        <Table.Td style={{ cursor: "pointer" }} onClick={() => onToggleSelect(rowIndex)}>
+        <Table.Td style={{ cursor: "pointer" }}>
           <Checkbox
             styles={{ input: { cursor: "pointer" } }}
             checked={selected}
