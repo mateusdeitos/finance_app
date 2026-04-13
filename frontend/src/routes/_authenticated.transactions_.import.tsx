@@ -166,11 +166,30 @@ function ImportReviewPage() {
 
   // ─── Selection helpers ──────────────────────────────────────────────────────
 
-  const handleToggleSelect = useCallback((index: number) => {
-    setSelected((prev) => {
+  const handleToggleSelect = useCallback((index: number, shiftKey: boolean) => {
+    const getNewSet = (prev: Set<number>, index: number): Set<number> => {
       const next = new Set(prev);
       if (next.has(index)) next.delete(index);
       else next.add(index);
+      return next;
+    };
+
+    if (!shiftKey) {
+      setSelected((prev) => getNewSet(prev, index));
+      return;
+    }
+
+    setSelected((prev) => {
+      const next = getNewSet(prev, index);
+
+      for (let i = 0; i < index; i++) {
+        if (next.has(index)) {
+          next.add(i);
+        } else {
+          next.delete(i);
+        }
+      }
+
       return next;
     });
   }, []);
@@ -371,19 +390,17 @@ function ImportReviewPage() {
             )}
 
             {/* Bulk toolbar */}
-            {someSelected && !importing && (
-              <Paper p="xs" withBorder>
-                <ImportCSVBulkToolbar
-                  selectedCount={selected.size}
-                  onRemove={handleRemoveSelected}
-                  onBulkSetAction={handleBulkSetAction}
-                  onBulkSetDate={handleBulkSetDate}
-                  onBulkSetCategory={handleBulkSetCategory}
-                  onBulkSetTransactionType={handleBulkSetTransactionType}
-                  onBulkSetDescription={handleSetDescription}
-                />
-              </Paper>
-            )}
+            <Paper p="xs" withBorder style={{ visibility: someSelected && !importing ? "visible" : "hidden" }}>
+              <ImportCSVBulkToolbar
+                selectedCount={selected.size}
+                onRemove={handleRemoveSelected}
+                onBulkSetAction={handleBulkSetAction}
+                onBulkSetDate={handleBulkSetDate}
+                onBulkSetCategory={handleBulkSetCategory}
+                onBulkSetTransactionType={handleBulkSetTransactionType}
+                onBulkSetDescription={handleSetDescription}
+              />
+            </Paper>
 
             {/* Table */}
             <ScrollArea>

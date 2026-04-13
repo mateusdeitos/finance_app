@@ -38,7 +38,7 @@ interface Props {
   rowIndex: number;
   selected: boolean;
   disabled: boolean;
-  onToggleSelect: (index: number) => void;
+  onToggleSelect: (index: number, shiftKey: boolean) => void;
 }
 
 export const ImportReviewRow = memo(
@@ -186,7 +186,7 @@ export const ImportReviewRow = memo(
           <Checkbox
             styles={{ input: { cursor: "pointer" } }}
             checked={selected}
-            onChange={() => onToggleSelect(rowIndex)}
+            onClick={(e) => onToggleSelect(rowIndex, e.shiftKey)}
             disabled={disabled}
             size="xs"
           />

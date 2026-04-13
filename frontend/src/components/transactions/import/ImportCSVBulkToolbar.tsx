@@ -133,7 +133,11 @@ export function ImportCSVBulkToolbar({
 
       <Menu>
         <Menu.Target>
-          <Button size="compact-xs" leftSection={selectedAction ? propsByType[selectedAction.type]?.icon : undefined}>
+          <Button
+            variant="subtle"
+            size="compact-xs"
+            leftSection={selectedAction ? propsByType[selectedAction.type]?.icon : undefined}
+          >
             {menuLabel}
           </Button>
         </Menu.Target>
@@ -218,8 +222,8 @@ export function ImportCSVBulkToolbar({
 
       <Button
         size="compact-xs"
-        variant="light"
-        color="green"
+        variant="filled"
+        color="blue"
         leftSection={<IconHammer size={14} />}
         onClick={applySelectedAction}
         disabled={!selectedAction?.value}
