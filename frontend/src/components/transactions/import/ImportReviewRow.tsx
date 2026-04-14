@@ -284,6 +284,7 @@ export const ImportReviewRow = memo(
                   clearable
                   placeholder="Selecionar..."
                   withCheckIcon={false}
+                  data-testid={`select_category_${rowIndex}`}
                 />
               )}
             />

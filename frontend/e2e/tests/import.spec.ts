@@ -85,6 +85,9 @@ test.describe("Import transactions", () => {
     const rowCount = await importPage.getRowCount();
     expect(rowCount).toBe(1);
 
+    // Category is required for non-transfer rows before confirming
+    await importPage.setRowCategory(0, testCategoryName);
+
     await importPage.confirmImport();
 
     // Transaction should appear somewhere on the transactions page
@@ -142,6 +145,9 @@ test.describe("Import transactions", () => {
 
     // Change row 1 action to "skip"
     await importPage.setRowAction(1, "skip");
+
+    // Category is required for the row being imported
+    await importPage.setRowCategory(0, testCategoryName);
 
     await importPage.confirmImport();
 
