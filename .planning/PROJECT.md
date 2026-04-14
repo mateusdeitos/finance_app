@@ -2,22 +2,11 @@
 
 ## What This Is
 
-A Go REST API backend for a couples' finance management app. It lets two users (partners) track shared and individual transactions, split expenses, transfer funds between accounts, manage recurring installment purchases, and settle debts via charges. Deployed on Google Cloud Run with PostgreSQL.
+A Go REST API backend for a couples' finance management app. It lets two users (partners) track shared and individual transactions, split expenses, transfer funds between accounts, and manage recurring installment purchases. Deployed on Google Cloud Run with PostgreSQL.
 
 ## Core Value
 
 Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-
-## Current Milestone: v1.1 Charges
-
-**Goal:** Allow connected users to settle financial debts by creating, accepting, rejecting, and auto-executing transfer charges between their accounts.
-
-**Target features:**
-- Charge entity + backend CRUD API (create, list, accept, reject, cancel)
-- Accept charge → auto-create transfers for both users (debtor→connection, connection→creditor)
-- List charges (sent + received)
-- Frontend: charges listing page + create/accept/reject/cancel forms
-- Sidebar badge for pending charges requiring action
 
 ## Requirements
 
@@ -45,7 +34,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-_(Defined in REQUIREMENTS.md — v1.1 Charges milestone)_
+_(None — clean slate for next milestone)_
 
 ### Out of Scope
 
@@ -54,11 +43,10 @@ _(Defined in REQUIREMENTS.md — v1.1 Charges milestone)_
 - Open-ended recurrences (subscriptions with no end) — not part of this change
 - Backwards compatibility shim — breaking API change accepted
 - `end_date` as recurrence input — removed; fixed-count only going forward
-- Balance validation on charge creation — deferred; user decided not to implement now
 
 ## Context
 
-**Current state (v1.1 in progress):** Starting Charges milestone. Charges allow connected users to settle debts: one user creates a charge, the other accepts (triggering auto-transfers) or rejects. v1.0 shipped the recurrence redesign.
+**Current state (v1.0):** Recurrence redesign shipped. `RecurrenceSettings` now uses `CurrentInstallment + TotalInstallments`. The create loop starts from `current_installment`, date offsets are relative, and `TransactionRecurrence.Installments` stores the full series total. Frontend updated with new form inputs and Zod validation. All existing tests migrated; new integration + unit + e2e tests added.
 
 **Tech stack:** Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine, Zod, React Hook Form (frontend) · Playwright (e2e)
 
@@ -80,10 +68,21 @@ _(Defined in REQUIREMENTS.md — v1.1 Charges milestone)_
 
 ## Constraints
 
-- **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL — minimize new dependencies
+- **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL — no new dependencies for this change
 - **Breaking change**: API clients must update their request format; no transition period
 - **DB migration**: `transaction_recurrence.installments` column stores total installments — semantics unchanged, no schema migration needed
+  <<<<<<< HEAD
 - **No end_date**: Removed from RecurrenceSettings; only fixed-count recurrences supported going forward
+
+## Key Decisions
+
+| Decision                                                          | Rationale                                                                    | Outcome   |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------- |
+| `current_installment` lives inside `RecurrenceSettings`           | Keeps recurrence concerns together; consistent with existing pattern         | — Pending |
+| `total_installments` replaces `repetitions` (rename for clarity)  | More expressive; removes ambiguity about what the count means                | — Pending |
+| Remove `end_date` from RecurrenceSettings                         | User chose fixed-count only; breaking change accepted; simplifies validation | — Pending |
+| Only create installments from current to total                    | Past installments are irrelevant to users at registration time               | — Pending |
+| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series    | — Pending |
 
 ## Evolution
 
@@ -106,4 +105,10 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-14 after v1.1 milestone start_
+# _Last updated: 2026-04-09 after initialization_
+
+---
+
+_Last updated: 2026-04-10 after v1.0 milestone_
+
+> > > > > > > 837c2a8b4c46821fa710ca140091445d8383fbd4

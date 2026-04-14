@@ -1,109 +1,90 @@
-# Requirements: v1.1 Charges
+# Requirements: Recurrence Input Model — current_installment + total_installments
 
-**Defined:** 2026-04-14
+**Defined:** 2026-04-09
 **Core Value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
 
----
+## v1 Requirements
 
-## Active Requirements
+### Domain Model
 
-### Backend — Charge Entity & Persistence
+- [ ] **DOM-01**: `RecurrenceSettings` struct accepts `current_installment` (int, required) and `total_installments` (int, required) instead of `repetitions | end_date`
+- [ ] **DOM-02**: `RecurrenceFromSettings()` uses `total_installments` to populate `TransactionRecurrence.Installments`
+- [ ] **DOM-03**: `end_date` field is removed from `RecurrenceSettings`
 
-- [ ] **CHG-01**: System provides a `Charge` entity with fields: `id`, `author_user_id`, `author_destination_account_id` (nullable), `connection_id`, `period_month`, `period_year`, `status` (pending/paid/rejected/cancelled)
-- [ ] **CHG-02**: DB migration creates the `charges` table with FK on `connection_id` (ON DELETE RESTRICT)
+### Validation
 
-### Backend — Charge Lifecycle API
+- [ ] **VAL-01**: Both `current_installment` and `total_installments` are required when recurrence is provided
+- [ ] **VAL-02**: `current_installment` must be ≥ 1
+- [ ] **VAL-03**: `total_installments` must be ≥ `current_installment`
+- [ ] **VAL-04**: `total_installments` must be ≤ 1000
+- [ ] **VAL-05**: Existing validation error codes/tags updated or replaced for new fields
+- [ ] **VAL-06**: Old validation rules for `end_date` and `repetitions` are removed
 
-- [ ] **CHG-03**: User can create a charge linked to one of their active connections for a given period
-- [ ] **CHG-04**: User can accept a pending charge received from a connected user, providing a source account for the debtor transfer
-- [ ] **CHG-05**: User can reject a pending charge received from a connected user
-- [ ] **CHG-06**: User (author only) can cancel a pending charge they created
-- [ ] **CHG-07**: System validates status transitions in the domain layer (only `pending` charges can be accepted/rejected/cancelled; terminal states have no valid exits)
-- [ ] **CHG-08**: System enforces IDOR protection — only parties to the charge (author or recipient via connection) can view or act on it
+### Transaction Create
 
-### Backend — Auto-Transfer on Accept
+- [ ] **CRE-01**: When creating a recurring transaction with `current_installment = 3, total_installments = 10`, installments 3–10 are created (8 transactions)
+- [ ] **CRE-02**: Each created transaction's `InstallmentNumber` matches its position in the full series (3, 4, 5, …, 10)
+- [ ] **CRE-03**: Date offset for each installment is calculated relative to `current_installment` as the base (installment 3 gets the provided date, installment 4 gets date + 1 interval, etc.)
+- [ ] **CRE-04**: `TransactionRecurrence.Installments` stores `total_installments` (10), not the count of created transactions (8)
+- [ ] **CRE-05**: Linked transactions (splits, transfers) inherit the correct `InstallmentNumber` per installment
 
-- [ ] **CHG-09**: On charge acceptance, system atomically creates two transfers inside a single DB transaction: debtor→connection account and connection→creditor account
-- [ ] **CHG-10**: Acceptance uses a conditional UPDATE (`WHERE status = 'pending'`) to prevent double-accept race conditions; returns error if `RowsAffected == 0`
-- [ ] **CHG-11**: Auto-created transfers have `charge_id` set to link them back to the originating charge
+### Transaction Update
 
-### Backend — Transaction Enhancement
+- [ ] **UPD-01**: Update recurrence validation reuses the same new validation rules (no end_date, requires current_installment + total_installments)
 
-- [ ] **TXN-01**: DB migration adds nullable `charge_id` column (FK to `charges.id`) to the `transactions` table
-- [ ] **TXN-02**: Transaction domain model and GORM entity include `charge_id` field
+### API / Swagger
 
-### Backend — Charge Listing
+- [ ] **API-01**: Handler request structs and Swagger annotations updated to reflect new `RecurrenceSettings` shape
+- [ ] **API-02**: Swagger docs regenerated (`just generate-docs`)
 
-- [ ] **CHG-12**: User can list charges they authored (sent), filterable by status and period
-- [ ] **CHG-13**: User can list charges they received (as the other party in the connection), filterable by status and period
-- [ ] **CHG-14**: System provides an endpoint returning the count of pending charges requiring the authenticated user's action (for the sidebar badge)
+### Frontend
 
-### Frontend — Charges Page
+- [ ] **FE-01**: `RecurrenceSettings` TypeScript type in `src/types/transactions.ts` updated: replace `repetitions?` and `end_date?` with `current_installment` and `total_installments`
+- [ ] **FE-02**: `buildTransactionPayload.ts` sends `current_installment` and `total_installments` instead of `repetitions` / `end_date`
+- [ ] **FE-03**: `transactionFormSchema.ts` base fields updated: replace `recurrenceEndDateMode`, `recurrenceEndDate`, `recurrenceRepetitions` with `recurrenceCurrentInstallment` and `recurrenceTotalInstallments`
+- [ ] **FE-04**: `RecurrenceFields.tsx` UI replaced: remove end-date toggle and repetitions input; show two number inputs — "Parcela atual" and "Total de parcelas"
+- [ ] **FE-05**: Validation in `applySharedRefinements` updated: require both `recurrenceCurrentInstallment` and `recurrenceTotalInstallments`, validate current ≤ total
+- [ ] **FE-06**: Import form schema (`importFormSchema.ts`) updated to align with new recurrence fields if it uses recurrence
 
-- [ ] **FE-01**: User can navigate to a charges listing page via a sidebar link
-- [ ] **FE-02**: Charges page displays sent and received charges in separate sections with status indicators
-- [ ] **FE-03**: User can create a charge via a form (select connection, period, destination account)
-- [ ] **FE-04**: User can accept a received charge via a form (specifying source account for the debtor transfer)
-- [ ] **FE-05**: User can reject a received charge with a single action
-- [ ] **FE-06**: User (author only) can cancel a sent pending charge with a single action
+### Tests
 
-### Frontend — Sidebar Badge
-
-- [ ] **FE-07**: Sidebar nav link for charges displays a badge showing the count of pending charges requiring the logged-in user's action
-- [ ] **FE-08**: Badge is hidden when there are no pending charges to act on
-
----
-
-## Future Requirements
-
-_(Deferred — not in v1.1 scope)_
-
-- Balance validation before charge creation (user explicitly deferred)
-- Charge amount field (current design derives value from connection balance at settle time)
-- Push/email notifications for charge events
-- Charge dispute flow beyond reject (e.g., counter-offer)
-
----
+- [ ] **TST-01**: Integration test: create expense with `current_installment=1, total_installments=5` → 5 installments created, numbered 1–5
+- [ ] **TST-02**: Integration test: create expense with `current_installment=3, total_installments=10` → 8 installments created, numbered 3–10, `TransactionRecurrence.Installments = 10`
+- [ ] **TST-03**: Integration test: date of installment N is `base_date + (N - current_installment) * interval`
+- [ ] **TST-04**: Unit test: validation rejects missing `current_installment`
+- [ ] **TST-05**: Unit test: validation rejects `current_installment > total_installments`
+- [ ] **TST-06**: Unit test: validation rejects `total_installments > 1000`
+- [ ] **TST-07**: Existing tests updated to remove `end_date` / `repetitions` inputs
+- [ ] **TST-08**: Frontend: form validation rejects `current_installment > total_installments`
 
 ## Out of Scope
 
-- **Balance validation on charge creation** — user explicitly excluded; no blocking check on connection balance
-- **author_transaction_id / destination_user_transaction_id on Charge** — redundant given `charge_id` on transactions; dropped for simpler schema
-- **Push notifications** — sidebar badge via polling is sufficient for v1.1
-
----
+| Feature | Reason |
+|---------|--------|
+| Backwards compatibility for old `repetitions \| end_date` format | Breaking change explicitly accepted |
+| Creating past installments (1–2 in a 3-of-10 scenario) | Users only need to track from current position forward |
+| Migrating existing recurring transaction data | Old records stay as-is; new input model applies only to new transactions |
+| Open-ended recurrences (no total count) | Not part of this change; out of scope for fixed-count model |
+| `end_date` as recurrence input | Removed; fixed-count only going forward |
+| Import CSV recurrence changes | The import flow uses a separate schema; only minimal alignment needed if recurrence fields overlap |
 
 ## Traceability
 
-| REQ-ID | Phase | Notes |
-|--------|-------|-------|
-| CHG-01 | Phase 5 | Charge domain struct and GORM entity |
-| CHG-02 | Phase 5 | DB migration: charges table |
-| CHG-03 | Phase 6 | ChargeService.Create + handler |
-| CHG-04 | Phase 7 | ChargeService.Accept + handler (depends on atomic transfer) |
-| CHG-05 | Phase 6 | ChargeService.Reject + handler |
-| CHG-06 | Phase 6 | ChargeService.Cancel + handler |
-| CHG-07 | Phase 5 | ValidateTransition in domain layer |
-| CHG-08 | Phase 6 | IDOR checks in all service methods |
-| CHG-09 | Phase 7 | Atomic dual-transfer in single DB transaction |
-| CHG-10 | Phase 7 | Conditional UPDATE WHERE status='pending' + RowsAffected check |
-| CHG-11 | Phase 7 | charge_id set on auto-created transfer transactions |
-| TXN-01 | Phase 5 | DB migration: charge_id column on transactions |
-| TXN-02 | Phase 5 | Transaction domain model + entity charge_id field |
-| CHG-12 | Phase 6 | ChargeService.List (sent) + handler |
-| CHG-13 | Phase 6 | ChargeService.List (received) + handler |
-| CHG-14 | Phase 6 | Pending-count endpoint + handler |
-| FE-01  | Phase 8 | Sidebar link + page routing |
-| FE-02  | Phase 8 | Charges listing page (sent/received sections) |
-| FE-03  | Phase 8 | Create charge form |
-| FE-04  | Phase 8 | Accept charge form |
-| FE-05  | Phase 8 | Reject charge action |
-| FE-06  | Phase 8 | Cancel charge action |
-| FE-07  | Phase 8 | Sidebar badge with pending count |
-| FE-08  | Phase 8 | Badge hidden when count is zero |
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DOM-01, DOM-02, DOM-03 | Phase 1 | Pending |
+| VAL-01 – VAL-06 | Phase 1 | Pending |
+| CRE-01 – CRE-05 | Phase 1 | Pending |
+| UPD-01 | Phase 1 | Pending |
+| API-01, API-02 | Phase 1 | Pending |
+| FE-01 – FE-06 | Phase 2 | Pending |
+| TST-01 – TST-08 | Phase 3 | Pending |
 
-**Coverage:** 24/24 requirements mapped ✓
+**Coverage:**
+- v1 requirements: 29 total
+- Mapped to phases: 29
+- Unmapped: 0
 
 ---
-
-*Requirements defined: 2026-04-14*
+*Requirements defined: 2026-04-09*
+*Last updated: 2026-04-09 after initialization*
