@@ -38,7 +38,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. The `transactions` table has a nullable `charge_id` FK column and the Go domain/entity models reflect this field
   4. Domain-layer status transition validation rejects any transition from a terminal state (paid/rejected/cancelled) and any invalid forward transition
   5. Running `just migrate-up` on a fresh DB applies both migrations without errors
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Charge domain model, GORM entity, and Transaction ChargeID enhancement
+- [ ] 05-02-PLAN.md — DB migrations (charges table + transactions charge_id column)
 
 ### Phase 6: Charge Repository, Service & API (CRUD + Listing)
 **Goal**: Users can create, reject, cancel, and list charges through a working API with IDOR protection
@@ -89,7 +92,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 2. Service & API | v1.0 | 2/2 | Complete | 2026-04-09 |
 | 3. Frontend | v1.0 | 1/1 | Complete | 2026-04-10 |
 | 4. Tests | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Charge Domain & DB | v1.1 | 0/? | Not started | - |
+| 5. Charge Domain & DB | v1.1 | 0/2 | Planning complete | - |
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1 | 0/? | Not started | - |
 | 7. Accept + Atomic Transfer | v1.1 | 0/? | Not started | - |
 | 8. Frontend | v1.1 | 0/? | Not started | - |
