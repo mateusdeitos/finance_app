@@ -75,36 +75,34 @@ _(Deferred — not in v1.1 scope)_
 
 ## Traceability
 
-_(Filled by roadmapper)_
-
 | REQ-ID | Phase | Notes |
 |--------|-------|-------|
-| CHG-01 | — | |
-| CHG-02 | — | |
-| CHG-03 | — | |
-| CHG-04 | — | |
-| CHG-05 | — | |
-| CHG-06 | — | |
-| CHG-07 | — | |
-| CHG-08 | — | |
-| CHG-09 | — | |
-| CHG-10 | — | |
-| CHG-11 | — | |
-| TXN-01 | — | |
-| TXN-02 | — | |
-| CHG-12 | — | |
-| CHG-13 | — | |
-| CHG-14 | — | |
-| FE-01  | — | |
-| FE-02  | — | |
-| FE-03  | — | |
-| FE-04  | — | |
-| FE-05  | — | |
-| FE-06  | — | |
-| FE-07  | — | |
-| FE-08  | — | |
+| CHG-01 | Phase 5 | Charge domain struct and GORM entity |
+| CHG-02 | Phase 5 | DB migration: charges table |
+| CHG-03 | Phase 6 | ChargeService.Create + handler |
+| CHG-04 | Phase 7 | ChargeService.Accept + handler (depends on atomic transfer) |
+| CHG-05 | Phase 6 | ChargeService.Reject + handler |
+| CHG-06 | Phase 6 | ChargeService.Cancel + handler |
+| CHG-07 | Phase 5 | ValidateTransition in domain layer |
+| CHG-08 | Phase 6 | IDOR checks in all service methods |
+| CHG-09 | Phase 7 | Atomic dual-transfer in single DB transaction |
+| CHG-10 | Phase 7 | Conditional UPDATE WHERE status='pending' + RowsAffected check |
+| CHG-11 | Phase 7 | charge_id set on auto-created transfer transactions |
+| TXN-01 | Phase 5 | DB migration: charge_id column on transactions |
+| TXN-02 | Phase 5 | Transaction domain model + entity charge_id field |
+| CHG-12 | Phase 6 | ChargeService.List (sent) + handler |
+| CHG-13 | Phase 6 | ChargeService.List (received) + handler |
+| CHG-14 | Phase 6 | Pending-count endpoint + handler |
+| FE-01  | Phase 8 | Sidebar link + page routing |
+| FE-02  | Phase 8 | Charges listing page (sent/received sections) |
+| FE-03  | Phase 8 | Create charge form |
+| FE-04  | Phase 8 | Accept charge form |
+| FE-05  | Phase 8 | Reject charge action |
+| FE-06  | Phase 8 | Cancel charge action |
+| FE-07  | Phase 8 | Sidebar badge with pending count |
+| FE-08  | Phase 8 | Badge hidden when count is zero |
 
-**Coverage:** 24 requirements — 0 unmapped (roadmapper fills phase column)
+**Coverage:** 24/24 requirements mapped ✓
 
 ---
 
