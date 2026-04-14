@@ -24,7 +24,7 @@ type csvColumnIndex struct {
 	amount      int
 }
 
-func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator ImportDecimalSeparatorValue, typeDefinitionRule ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
+func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
 	// Valida propriedade da conta
 	if _, err := s.services.Account.GetByID(ctx, userID, accountID); err != nil {
 		return nil, err
@@ -174,8 +174,8 @@ func parseCSVRow(
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
-	decimalSeparator ImportDecimalSeparatorValue,
-	typeDefinitionRule ImportTypeDefinitionRule,
+	decimalSeparator domain.ImportDecimalSeparatorValue,
+	typeDefinitionRule domain.ImportTypeDefinitionRule,
 ) domain.ParsedImportRow {
 	row := domain.ParsedImportRow{
 		RowIndex: rowIndex,
@@ -251,7 +251,7 @@ func parseCSVRow(
 }
 
 // parseAmountSigned converte uma string numérica para centavos (int64) mantendo o sinal.
-func parseAmountSigned(s string, decimalSeparator ImportDecimalSeparatorValue) (int64, error) {
+func parseAmountSigned(s string, decimalSeparator domain.ImportDecimalSeparatorValue) (int64, error) {
 	s = strings.TrimSpace(s)
 	if decimalSeparator == "dot" {
 		// Padrão Internacional: 1,234.56 -> Remove vírgulas de milhar

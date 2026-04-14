@@ -2,6 +2,22 @@ package domain
 
 import "time"
 
+// ImportDecimalSeparatorValue controls how decimal numbers are parsed in CSV imports.
+type ImportDecimalSeparatorValue string
+
+const (
+	DecimalSeparatorComma ImportDecimalSeparatorValue = "comma"
+	DecimalSeparatorDot   ImportDecimalSeparatorValue = "dot"
+)
+
+// ImportTypeDefinitionRule controls how transaction type is inferred from CSV amount sign.
+type ImportTypeDefinitionRule string
+
+const (
+	TypeDefinitionPositiveAsIncome  ImportTypeDefinitionRule = "positive_as_income"
+	TypeDefinitionPositiveAsExpense ImportTypeDefinitionRule = "positive_as_expense"
+)
+
 // ImportRowStatus indicates whether a parsed CSV row is new or a duplicate.
 type ImportRowStatus string
 
