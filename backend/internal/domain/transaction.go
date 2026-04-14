@@ -87,6 +87,7 @@ type Transaction struct {
 	LinkedTransactions      []Transaction          `json:"linked_transactions,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	SettlementsFromSource   []Settlement           `json:"settlements_from_source,omitempty"`
+	ChargeID                *int                   `json:"charge_id,omitempty"`
 	CreatedAt               *time.Time             `json:"created_at"`
 	UpdatedAt               *time.Time             `json:"updated_at"`
 	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
