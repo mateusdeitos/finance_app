@@ -21,7 +21,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v1.1 Charges (Phases 5–8)
 
-- [ ] **Phase 5: Charge Domain & DB** — Charge entity, status machine, DB migrations, and transaction charge_id enhancement
+- [x] **Phase 5: Charge Domain & DB** — Charge entity, status machine, DB migrations, and transaction charge_id enhancement
 - [ ] **Phase 6: Charge Repository, Service & API (CRUD + Listing)** — Repository, create/reject/cancel/list service methods with handlers, IDOR protection, badge endpoint
 - [ ] **Phase 7: Accept + Atomic Transfer** — Charge acceptance triggers atomic dual-transfer creation with race-condition guard
 - [ ] **Phase 8: Frontend** — Charges listing page, create/accept/reject/cancel forms, sidebar badge
@@ -40,8 +40,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   5. Running `just migrate-up` on a fresh DB applies both migrations without errors
 **Plans:** 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Charge domain model, GORM entity, and Transaction ChargeID enhancement
-- [ ] 05-02-PLAN.md — DB migrations (charges table + transactions charge_id column)
+- [x] 05-01-PLAN.md — Charge domain model, GORM entity, and Transaction ChargeID enhancement
+- [x] 05-02-PLAN.md — DB migrations (charges table + transactions charge_id column)
 
 ### Phase 6: Charge Repository, Service & API (CRUD + Listing)
 **Goal**: Users can create, reject, cancel, and list charges through a working API with IDOR protection
@@ -92,7 +92,7 @@ Plans:
 | 2. Service & API | v1.0 | 2/2 | Complete | 2026-04-09 |
 | 3. Frontend | v1.0 | 1/1 | Complete | 2026-04-10 |
 | 4. Tests | v1.0 | 2/2 | Complete | 2026-04-10 |
-| 5. Charge Domain & DB | v1.1 | 0/2 | Planning complete | - |
+| 5. Charge Domain & DB | v1.1 | 2/2 | Complete | 2026-04-14 |
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1 | 0/? | Not started | - |
 | 7. Accept + Atomic Transfer | v1.1 | 0/? | Not started | - |
 | 8. Frontend | v1.1 | 0/? | Not started | - |

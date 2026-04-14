@@ -2,37 +2,37 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Charges
-status: executing
-last_updated: "2026-04-14T19:33:21.842Z"
-last_activity: 2026-04-14 -- Phase 5 planning complete
+status: active
+last_updated: "2026-04-14T20:00:00.000Z"
+last_activity: 2026-04-14 -- Phase 05 complete (2/2 plans)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 ## Current Position
 
-Phase: 5 — Charge Domain & DB
+Phase: 06 — Charge Repository, Service & API (CRUD + Listing)
 Plan: —
-Status: Ready to execute
-Last activity: 2026-04-14 -- Phase 5 planning complete
+Status: Phase 05 complete — ready to plan Phase 06
+Last activity: 2026-04-14 — Phase 05 complete (2/2 plans)
 
-Progress: ░░░░░░░░░░ 0% (0/4 phases complete)
+Progress: ██░░░░░░░░ 25% (1/4 phases complete)
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-14)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** v1.1 Charges — allow connected users to settle debts via charges and auto-transfers
+**Current focus:** v1.1 Charges — Phase 06 next (Repository, Service & API)
 
 ## Performance Metrics
 
 - v1.0: 4 phases, 8 plans, 1 day (2026-04-09 → 2026-04-10)
-- v1.1: 4 phases planned, 0 complete
+- v1.1: 4 phases planned, 1 complete
 
 ## Accumulated Context
 
@@ -65,4 +65,4 @@ None
 
 ## Session Continuity
 
-Next: `/gsd-plan-phase 5`
+Next: `/gsd-plan-phase 6`
