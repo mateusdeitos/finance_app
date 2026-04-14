@@ -69,6 +69,7 @@ func main() {
 		Transaction:           repository.NewTransactionRepository(db),
 		TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
 		Settlement:            repository.NewSettlementRepository(db),
+		Charge:                repository.NewChargeRepository(db),
 		// 	UserSettings:          repository.NewUserSettingsRepository(db),
 	}
 
@@ -80,6 +81,7 @@ func main() {
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
 		Settlement: service.NewSettlementService(repos),
+		Charge:     service.NewChargeService(repos),
 	}
 
 	services.UserConnection = service.NewUserConnectionService(repos, services)
@@ -92,6 +94,7 @@ func main() {
 	tagHandler := handler.NewTagHandler(services)
 	transactionHandler := handler.NewTransactionHandler(services)
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
+	chargeHandler := handler.NewChargeHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -176,6 +179,14 @@ func main() {
 	transactions.POST("/check-duplicate", transactionHandler.CheckDuplicate)
 	// transactions.GET("/suggest-category", transactionHandler.SuggestCategory)
 	// transactions.POST("/recurring", transactionHandler.CreateRecurring)
+
+	// Charges
+	charges := api.Group("/charges")
+	charges.GET("/pending-count", chargeHandler.PendingCount)
+	charges.POST("", chargeHandler.Create)
+	charges.GET("", chargeHandler.List)
+	charges.POST("/:id/cancel", chargeHandler.Cancel)
+	charges.POST("/:id/reject", chargeHandler.Reject)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
