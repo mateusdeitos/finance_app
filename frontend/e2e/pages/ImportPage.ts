@@ -31,7 +31,6 @@ export class ImportPage {
   async selectAccount(accountName: string) {
     const input = this.uploadStep.getByTestId("select_import_account");
     await input.click();
-    await input.fill(accountName);
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
@@ -72,10 +71,15 @@ export class ImportPage {
    */
   async confirmImport() {
     await this.confirmButton.click();
-    // Wait for the summary alert that appears after the import loop finishes
-    await expect(this.finishedStep.getByText("Importação concluída")).toBeVisible({
-      timeout: 30000,
-    });
+    // Wait for the import loop to finish. Two possible completion states:
+    // - allImportedSuccess: finished_import_successfully_step replaces review_step
+    //   ("Importação concluída com sucesso!") — page then navigates away after 3s.
+    // - done with errors: review_step stays and shows an Alert
+    //   ("Importação concluída com erros").
+    // Search the whole page so both cases are covered.
+    await expect(
+      this.page.getByText("Importação concluída", { exact: false }).first(),
+    ).toBeVisible({ timeout: 30000 });
     await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 
@@ -108,6 +112,14 @@ export class ImportPage {
       .inputValue()
       .catch(() => "");
     return value || "pending";
+  }
+
+  /** Set the category for a row via the searchable category select. */
+  async setRowCategory(rowIndex: number, categoryName: string) {
+    const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
+    await select.click();
+    await select.fill(categoryName);
+    await this.page.getByRole("option", { name: categoryName }).click();
   }
 
   /** Change the action for a row via the action select. */
