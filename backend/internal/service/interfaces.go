@@ -70,6 +70,14 @@ type SettlementService interface {
 	Delete(ctx context.Context, ids []int) error
 }
 
+type ChargeService interface {
+	Create(ctx context.Context, callerUserID int, req *domain.CreateChargeRequest) (*domain.Charge, error)
+	Cancel(ctx context.Context, callerUserID, chargeID int) error
+	Reject(ctx context.Context, callerUserID, chargeID int) error
+	List(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
+	PendingCount(ctx context.Context, callerUserID int) (int64, error)
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
@@ -80,4 +88,5 @@ type Services struct {
 	Transaction    TransactionService
 	UserConnection UserConnectionService
 	Settlement     SettlementService
+	Charge         ChargeService
 }

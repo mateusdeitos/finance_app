@@ -93,6 +93,14 @@ type SettlementRepository interface {
 	Delete(ctx context.Context, ids []int) error
 }
 
+type ChargeRepository interface {
+	Create(ctx context.Context, charge *domain.Charge) (*domain.Charge, error)
+	GetByID(ctx context.Context, id int) (*domain.Charge, error)
+	Search(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
+	Update(ctx context.Context, charge *domain.Charge) error
+	Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error)
+}
+
 // Repositories contains all repository interfaces
 type Repositories struct {
 	DBTransaction         DBTransaction
@@ -106,4 +114,5 @@ type Repositories struct {
 	UserSettings          UserSettingsRepository
 	UserConnection        UserConnectionRepository
 	Settlement            SettlementRepository
+	Charge                ChargeRepository
 }

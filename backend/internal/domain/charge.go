@@ -45,3 +45,21 @@ func (c *Charge) ValidateTransition(newStatus ChargeStatus) error {
 	}
 	return ErrInvalidStatusTransition
 }
+
+type ChargeSearchOptions struct {
+	UserID       int          `json:"user_id" query:"user_id"`
+	Direction    string       `json:"direction" query:"direction"`        // "sent" | "received" | "" (all)
+	Status       ChargeStatus `json:"status" query:"status"`             // "" means no filter
+	ConnectionID int          `json:"connection_id" query:"connection_id"` // 0 means no filter
+	Limit        int          `json:"limit" query:"limit"`
+	Offset       int          `json:"offset" query:"offset"`
+}
+
+type CreateChargeRequest struct {
+	ConnectionID int     `json:"connection_id"`
+	Role         string  `json:"role"`          // "charger" | "payer"
+	MyAccountID  *int    `json:"my_account_id"` // nullable
+	PeriodMonth  int     `json:"period_month"`
+	PeriodYear   int     `json:"period_year"`
+	Description  *string `json:"description"`
+}
