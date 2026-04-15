@@ -100,10 +100,10 @@ The charger/payer roles stored on the charge were inferred from the connection a
 **Re-inference logic:**
 1. Compute current connection account balance for the charge's period for the stored `ChargerUserID`
 2. If balance is still positive → roles are still valid, proceed
-3. If balance has flipped to negative → the stored charger is now actually the payer; swap `ChargerUserID` ↔ `PayerUserID` and `ChargerAccountID` ↔ `PayerAccountID` in-memory before building transfers (do NOT persist the swap to the charge row — the charge retains the original roles for audit purposes)
+3. If balance has flipped to negative → the stored charger is now actually the payer; swap `ChargerUserID` ↔ `PayerUserID` and `ChargerAccountID` ↔ `PayerAccountID` on the charge row (persist the swap inside the same DB transaction as the transfers and status update)
 4. If balance is now zero and no `amount` override provided → reject with 400 (nothing to settle)
 
-**Note on stored vs. live roles:** The charge entity retains the original charger/payer assignment for record-keeping. The live re-inference is used only to determine transfer direction at accept time.
+**Note:** The swap is persisted inside the same atomic DB transaction as the status update and transfers — if anything fails, the role swap is also rolled back.
 
 ### 6. Settlement Amount Computation
 
