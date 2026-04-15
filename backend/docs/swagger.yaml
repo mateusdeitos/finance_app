@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  domain.AcceptChargeRequest:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: integer
+      date:
+        type: string
+    type: object
   domain.Account:
     properties:
       created_at:
@@ -59,6 +68,8 @@ definitions:
         type: integer
       createdAt:
         type: string
+      date:
+        type: string
       description:
         type: string
       id:
@@ -106,18 +117,16 @@ definitions:
     properties:
       connection_id:
         type: integer
+      date:
+        type: string
       description:
         type: string
       my_account_id:
-        description: nullable
         type: integer
       period_month:
         type: integer
       period_year:
         type: integer
-      role:
-        description: '"charger" | "payer"'
-        type: string
     type: object
   domain.DeleteCategoryRequest:
     properties:
@@ -315,6 +324,8 @@ definitions:
       amount:
         type: integer
       category_id:
+        type: integer
+      charge_id:
         type: integer
       date:
         type: string
@@ -852,6 +863,56 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Create a charge
+      tags:
+      - charges
+  /api/charges/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      description: Atomically settles a pending charge by creating two linked transfer
+        transactions. Caller must be the non-initiating party (the one whose account
+        field is nil on the charge).
+      parameters:
+      - description: Charge ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Accept request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AcceptChargeRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "409":
+          description: Charge already accepted or not pending
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Accept a charge (non-initiating party only)
       tags:
       - charges
   /api/charges/{id}/cancel:

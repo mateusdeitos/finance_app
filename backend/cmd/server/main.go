@@ -187,6 +187,7 @@ func main() {
 	charges.GET("", chargeHandler.List)
 	charges.POST("/:id/cancel", chargeHandler.Cancel)
 	charges.POST("/:id/reject", chargeHandler.Reject)
+	charges.POST("/:id/accept", chargeHandler.Accept)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)

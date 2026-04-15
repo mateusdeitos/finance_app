@@ -154,3 +154,40 @@ func (h *ChargeHandler) Reject(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
+
+// Accept godoc
+// @Summary      Accept a charge (non-initiating party only)
+// @Description  Atomically settles a pending charge by creating two linked transfer transactions. Caller must be the non-initiating party (the one whose account field is nil on the charge).
+// @Tags         charges
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id       path  int                         true  "Charge ID"
+// @Param        request  body  domain.AcceptChargeRequest  true  "Accept request"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      403  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Failure      409  {object}  middleware.ErrorResponse  "Charge already accepted or not pending"
+// @Router       /api/charges/{id}/accept [post]
+func (h *ChargeHandler) Accept(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid charge ID")
+	}
+
+	var req domain.AcceptChargeRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := h.chargeService.Accept(c.Request().Context(), userID, id, &req); err != nil {
+		return HandleServiceError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}

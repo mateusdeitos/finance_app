@@ -670,6 +670,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/charges/{id}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atomically settles a pending charge by creating two linked transfer transactions. Caller must be the non-initiating party (the one whose account field is nil on the charge).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Accept a charge (non-initiating party only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Charge ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Accept request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AcceptChargeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Charge already accepted or not pending",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/charges/{id}/cancel": {
             "post": {
                 "security": [
@@ -2028,6 +2104,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.AcceptChargeRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Account": {
             "type": "object",
             "properties": {
@@ -2118,6 +2208,9 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "date": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -2185,11 +2278,13 @@ const docTemplate = `{
                 "connection_id": {
                     "type": "integer"
                 },
+                "date": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
                 "my_account_id": {
-                    "description": "nullable",
                     "type": "integer"
                 },
                 "period_month": {
@@ -2197,10 +2292,6 @@ const docTemplate = `{
                 },
                 "period_year": {
                     "type": "integer"
-                },
-                "role": {
-                    "description": "\"charger\" | \"payer\"",
-                    "type": "string"
                 }
             }
         },
@@ -2494,6 +2585,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "category_id": {
+                    "type": "integer"
+                },
+                "charge_id": {
                     "type": "integer"
                 },
                 "date": {
