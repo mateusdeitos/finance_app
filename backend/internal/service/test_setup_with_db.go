@@ -60,6 +60,7 @@ type ServiceTestWithDBSuite struct {
 	UserSettingsRepository          repository.UserSettingsRepository
 	UserConnectionRepository        repository.UserConnectionRepository
 	SettlementRepository            repository.SettlementRepository
+	ChargeRepository                repository.ChargeRepository
 }
 
 var initDb sync.Once
@@ -98,6 +99,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.UserSettingsRepository = repository.NewUserSettingsRepository(suite.DB)
 	suite.UserConnectionRepository = repository.NewUserConnectionRepository(suite.DB)
 	suite.SettlementRepository = repository.NewSettlementRepository(suite.DB)
+	suite.ChargeRepository = repository.NewChargeRepository(suite.DB)
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -112,6 +114,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		UserSettings:          suite.UserSettingsRepository,
 		UserConnection:        suite.UserConnectionRepository,
 		Settlement:            suite.SettlementRepository,
+		Charge:                suite.ChargeRepository,
 	}
 
 	// Create test config for AuthService
@@ -145,6 +148,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	// Add the remaining services to the Services struct
 	suite.Services.Transaction = transactionService
 	suite.Services.UserConnection = userConnectionService
+	suite.Services.Charge = NewChargeService(suite.Repos, suite.Services)
 }
 
 func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domain.User, error) {
