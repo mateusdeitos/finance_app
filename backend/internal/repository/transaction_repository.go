@@ -90,7 +90,7 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("SourceTransactions").Preload("Tags").Preload("LinkedTransactions.Tags").Preload("SourceTransactions.Tags")
 
-	if filter.WithSettlements {
+	if filter.WithSettlements || len(filter.AccountIDs) > 0 {
 		query = query.Preload("SettlementsFromSource")
 	}
 
@@ -118,7 +118,26 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		Joins("JOIN accounts ON accounts.id = transactions.account_id")
 
 	if len(filter.AccountIDs) > 0 {
-		query = query.Where("accounts.id IN ?", filter.AccountIDs)
+		// Include transactions that either:
+		//   a) live directly on one of the filtered accounts, OR
+		//   b) have a settlement (owned by the requesting user) whose
+		//      account_id is in the filter — the shared-account case.
+		// Mirrors the settlement leg of GetBalance (see below).
+		if filter.UserID != nil {
+			query = query.Where(
+				"accounts.id IN ? OR EXISTS (SELECT 1 FROM settlements s "+
+					"WHERE s.source_transaction_id = transactions.id "+
+					"AND s.user_id = ? AND s.account_id IN ?)",
+				filter.AccountIDs, *filter.UserID, filter.AccountIDs,
+			)
+		} else {
+			query = query.Where(
+				"accounts.id IN ? OR EXISTS (SELECT 1 FROM settlements s "+
+					"WHERE s.source_transaction_id = transactions.id "+
+					"AND s.account_id IN ?)",
+				filter.AccountIDs, filter.AccountIDs,
+			)
+		}
 	} else {
 		query = query.Where("accounts.is_active = true")
 	}

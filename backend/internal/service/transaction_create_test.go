@@ -912,6 +912,89 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 }
 
+func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAccountID() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	amount := int64(100)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          amount,
+		Date:            d,
+		Description:     "Shared expense",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: userConnection.ID,
+				Percentage:   lo.ToPtr(50),
+			},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Filter user1's transactions by the SHARED account only. The source
+	// transaction lives on user1's personal account, but the settlement is
+	// bound to userConnection.FromAccountID. The search must still return
+	// the source transaction, with its settlement preloaded.
+	results, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user1.ID,
+		AccountIDs: []int{userConnection.FromAccountID},
+	})
+	suite.Require().NoError(err)
+
+	suite.Require().Len(results, 1, "source transaction should be returned via its settlement")
+	tr := results[0]
+	suite.Assert().Equal(account.ID, tr.AccountID, "source lives on personal account")
+	suite.Assert().Equal(user1.ID, tr.UserID)
+	suite.Assert().Equal(amount, tr.Amount)
+
+	// Settlements must be preloaded because AccountIDs is set.
+	suite.Require().Len(tr.SettlementsFromSource, 1)
+	settlement := tr.SettlementsFromSource[0]
+	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
+	suite.Assert().Equal(user1.ID, settlement.UserID)
+	suite.Assert().Equal(int64(amount/2), settlement.Amount)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
+	suite.Assert().Equal(tr.ID, settlement.SourceTransactionID)
+
+	// Negative check: when user1 filters by the personal account only,
+	// the transaction must still be returned once (no duplication from the
+	// EXISTS clause), and the settlement should still be preloaded.
+	personalOnly, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user1.ID,
+		AccountIDs: []int{account.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(personalOnly, 1, "should not duplicate rows")
+	suite.Assert().Equal(tr.ID, personalOnly[0].ID)
+	suite.Require().Len(personalOnly[0].SettlementsFromSource, 1)
+
+	// Negative check: user2 filtering by user1's FromAccountID must NOT see it,
+	// because the settlement's user_id is user1 — verifies user scoping.
+	crossUser, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user2.ID,
+		AccountIDs: []int{userConnection.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(crossUser, 0, "user2 must not see user1's settlement-bound source transaction")
+}
+
 func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUserAsOwner() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)
