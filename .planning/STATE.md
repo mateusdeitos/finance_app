@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Charges
 status: executing
-last_updated: "2026-04-15T16:37:37.155Z"
-last_activity: 2026-04-15 -- Phase 7 planning complete
+last_updated: "2026-04-15T18:17:36.328Z"
+last_activity: 2026-04-15
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_plans: 6
+  percent: 100
 ---
 
 ## Current Position
 
-Phase: 07 — Accept + Atomic Transfer
-Plan: —
+Phase: 07 (accept-atomic-transfer) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-04-15 -- Phase 7 planning complete
+Last activity: 2026-04-15
 
 Progress: █████░░░░░ 50% (2/4 phases complete, Phase 07 in discuss)
 
@@ -27,7 +27,7 @@ Progress: █████░░░░░ 50% (2/4 phases complete, Phase 07 in d
 See: .planning/PROJECT.md (updated 2026-04-14)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** v1.1 Charges — Phase 06 complete, ready for verification
+**Current focus:** Phase 07 — accept-atomic-transfer
 
 ## Performance Metrics
 
@@ -46,6 +46,8 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 - `transactions.charge_id` is nullable FK — set on auto-created transfers, null on all manually created transactions
 - Phase 8 (Frontend) uses non-optimistic mutation pattern — no optimistic updates for financial state transitions
 - Import cycle fix: moved `ImportDecimalSeparatorValue`/`ImportTypeDefinitionRule` to `domain/transaction_import.go` — mockery v2 generates mock_TransactionService with a service import, causing a cycle; domain is the correct home
+- [Phase 07]: Mock-based handler tests (Path A) used for charge handler — no existing handler test files in repo
+- [Phase 07]: HandleServiceError returns *echo.HTTPError for no-tag errors (Forbidden/AlreadyExists); *TaggedHTTPError for tag-bearing validation errors
 
 ### Critical pitfalls noted (see .planning/research/PITFALLS.md)
 
