@@ -22,6 +22,55 @@ func (_m *MockChargeService) EXPECT() *MockChargeService_Expecter {
 	return &MockChargeService_Expecter{mock: &_m.Mock}
 }
 
+// Accept provides a mock function with given fields: ctx, callerUserID, chargeID, req
+func (_m *MockChargeService) Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error {
+	ret := _m.Called(ctx, callerUserID, chargeID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Accept")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, *domain.AcceptChargeRequest) error); ok {
+		r0 = rf(ctx, callerUserID, chargeID, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockChargeService_Accept_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Accept'
+type MockChargeService_Accept_Call struct {
+	*mock.Call
+}
+
+// Accept is a helper method to define mock.On call
+//   - ctx context.Context
+//   - callerUserID int
+//   - chargeID int
+//   - req *domain.AcceptChargeRequest
+func (_e *MockChargeService_Expecter) Accept(ctx interface{}, callerUserID interface{}, chargeID interface{}, req interface{}) *MockChargeService_Accept_Call {
+	return &MockChargeService_Accept_Call{Call: _e.mock.On("Accept", ctx, callerUserID, chargeID, req)}
+}
+
+func (_c *MockChargeService_Accept_Call) Run(run func(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest)) *MockChargeService_Accept_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*domain.AcceptChargeRequest))
+	})
+	return _c
+}
+
+func (_c *MockChargeService_Accept_Call) Return(_a0 error) *MockChargeService_Accept_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockChargeService_Accept_Call) RunAndReturn(run func(context.Context, int, int, *domain.AcceptChargeRequest) error) *MockChargeService_Accept_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Cancel provides a mock function with given fields: ctx, callerUserID, chargeID
 func (_m *MockChargeService) Cancel(ctx context.Context, callerUserID int, chargeID int) error {
 	ret := _m.Called(ctx, callerUserID, chargeID)

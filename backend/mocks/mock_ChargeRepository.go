@@ -22,6 +22,53 @@ func (_m *MockChargeRepository) EXPECT() *MockChargeRepository_Expecter {
 	return &MockChargeRepository_Expecter{mock: &_m.Mock}
 }
 
+// ConditionalAccept provides a mock function with given fields: ctx, id
+func (_m *MockChargeRepository) ConditionalAccept(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ConditionalAccept")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockChargeRepository_ConditionalAccept_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ConditionalAccept'
+type MockChargeRepository_ConditionalAccept_Call struct {
+	*mock.Call
+}
+
+// ConditionalAccept is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int
+func (_e *MockChargeRepository_Expecter) ConditionalAccept(ctx interface{}, id interface{}) *MockChargeRepository_ConditionalAccept_Call {
+	return &MockChargeRepository_ConditionalAccept_Call{Call: _e.mock.On("ConditionalAccept", ctx, id)}
+}
+
+func (_c *MockChargeRepository_ConditionalAccept_Call) Run(run func(ctx context.Context, id int)) *MockChargeRepository_ConditionalAccept_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockChargeRepository_ConditionalAccept_Call) Return(_a0 error) *MockChargeRepository_ConditionalAccept_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockChargeRepository_ConditionalAccept_Call) RunAndReturn(run func(context.Context, int) error) *MockChargeRepository_ConditionalAccept_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Count provides a mock function with given fields: ctx, options
 func (_m *MockChargeRepository) Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error) {
 	ret := _m.Called(ctx, options)
