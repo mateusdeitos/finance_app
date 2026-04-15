@@ -81,11 +81,11 @@ func main() {
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
 		Settlement: service.NewSettlementService(repos),
-		Charge:     service.NewChargeService(repos),
 	}
 
 	services.UserConnection = service.NewUserConnectionService(repos, services)
 	services.Transaction = service.NewTransactionService(repos, services)
+	services.Charge = service.NewChargeService(repos, services)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)

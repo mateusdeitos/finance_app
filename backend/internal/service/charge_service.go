@@ -11,19 +11,34 @@ import (
 type chargeService struct {
 	chargeRepo         repository.ChargeRepository
 	userConnectionRepo repository.UserConnectionRepository
+	transactionRepo    repository.TransactionRepository
+	dbTransaction      repository.DBTransaction
+	services           *Services
 }
 
-func NewChargeService(repos *repository.Repositories) ChargeService {
+func NewChargeService(repos *repository.Repositories, services *Services) ChargeService {
 	return &chargeService{
 		chargeRepo:         repos.Charge,
 		userConnectionRepo: repos.UserConnection,
+		transactionRepo:    repos.Transaction,
+		dbTransaction:      repos.DBTransaction,
+		services:           services,
 	}
 }
 
 func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domain.CreateChargeRequest) (*domain.Charge, error) {
-	// Validate role
-	if req.Role != "charger" && req.Role != "payer" {
-		return nil, pkgErrors.BadRequest("role must be 'charger' or 'payer'")
+	// Basic validation
+	if req.MyAccountID <= 0 {
+		return nil, pkgErrors.BadRequest("my_account_id is required")
+	}
+	if req.Date.IsZero() {
+		return nil, pkgErrors.BadRequest("date is required")
+	}
+	if req.PeriodMonth < 1 || req.PeriodMonth > 12 {
+		return nil, pkgErrors.BadRequest("period_month must be 1-12")
+	}
+	if req.PeriodYear <= 0 {
+		return nil, pkgErrors.BadRequest("period_year is required")
 	}
 
 	// Fetch connection
@@ -38,17 +53,15 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	}
 	conn := conns[0]
 
-	// Validate connection is accepted
 	if conn.ConnectionStatus != domain.UserConnectionStatusAccepted {
 		return nil, pkgErrors.BadRequest("connection is not accepted")
 	}
 
-	// Validate caller is a party to the connection
 	if conn.FromUserID != callerUserID && conn.ToUserID != callerUserID {
 		return nil, pkgErrors.Forbidden("caller is not a party to this connection")
 	}
 
-	// Resolve the other party
+	// Determine other party
 	var otherPartyID int
 	if conn.FromUserID == callerUserID {
 		otherPartyID = conn.ToUserID
@@ -56,23 +69,43 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		otherPartyID = conn.FromUserID
 	}
 
-	// Build charge based on caller's declared role
+	// Resolve caller's connection account via SwapIfNeeded
+	conn.SwapIfNeeded(callerUserID)
+	callerConnAccountID := conn.FromAccountID
+
+	// Infer role from balance in the charge's period
+	period := domain.Period{Month: req.PeriodMonth, Year: req.PeriodYear}
+	balResult, err := s.services.Transaction.GetBalance(ctx, callerUserID, period, domain.BalanceFilter{
+		UserID:     callerUserID,
+		AccountIDs: []int{callerConnAccountID},
+	})
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to compute balance", err)
+	}
+
 	charge := &domain.Charge{
 		ConnectionID: req.ConnectionID,
 		PeriodMonth:  req.PeriodMonth,
 		PeriodYear:   req.PeriodYear,
 		Description:  req.Description,
 		Status:       domain.ChargeStatusPending,
+		Date:         &req.Date,
 	}
 
-	if req.Role == "charger" {
+	myAccID := req.MyAccountID
+	switch {
+	case balResult.Balance > 0:
+		// caller is owed → caller is charger
 		charge.ChargerUserID = callerUserID
 		charge.PayerUserID = otherPartyID
-		charge.ChargerAccountID = req.MyAccountID
-	} else { // "payer"
+		charge.ChargerAccountID = &myAccID
+	case balResult.Balance < 0:
+		// caller owes → caller is payer
 		charge.PayerUserID = callerUserID
 		charge.ChargerUserID = otherPartyID
-		charge.PayerAccountID = req.MyAccountID
+		charge.PayerAccountID = &myAccID
+	default:
+		return nil, pkgErrors.BadRequest("cannot create charge when balance is zero")
 	}
 
 	return s.chargeRepo.Create(ctx, charge)
