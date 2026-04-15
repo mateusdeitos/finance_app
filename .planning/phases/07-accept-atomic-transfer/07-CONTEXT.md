@@ -93,15 +93,28 @@ Both transfers are created atomically at accept time, but each uses the date fro
 
 Nullable `my_account_id` was in the original Phase 6 design. It is now required — the initiating party must always provide their private account at creation time.
 
-### 5. Settlement Amount Computation
+### 5. Role Re-inference at Accept Time
+
+The charger/payer roles stored on the charge were inferred from the connection account balance at creation time. Because new transactions may have been added to the period between creation and acceptance, **the balance must be re-evaluated at accept time** before building the transfers.
+
+**Re-inference logic:**
+1. Compute current connection account balance for the charge's period for the stored `ChargerUserID`
+2. If balance is still positive → roles are still valid, proceed
+3. If balance has flipped to negative → the stored charger is now actually the payer; swap `ChargerUserID` ↔ `PayerUserID` and `ChargerAccountID` ↔ `PayerAccountID` in-memory before building transfers (do NOT persist the swap to the charge row — the charge retains the original roles for audit purposes)
+4. If balance is now zero and no `amount` override provided → reject with 400 (nothing to settle)
+
+**Note on stored vs. live roles:** The charge entity retains the original charger/payer assignment for record-keeping. The live re-inference is used only to determine transfer direction at accept time.
+
+### 6. Settlement Amount Computation
 
 At accept time (when `amount` is omitted from request):
-1. Call `TransactionRepository.GetBalance` (or `TransactionService.GetBalance`) with:
-   - `UserID = chargerUserID`
+1. Re-infer roles as described in §5 above
+2. Call `TransactionRepository.GetBalance` (or `TransactionService.GetBalance`) with:
+   - `UserID = (live) chargerUserID`
    - `Period = charge.PeriodMonth / charge.PeriodYear`
-   - `AccountIDs = [charger_connection_account_id]`
-2. Use `abs(result.Balance)` as the transfer amount
-3. If computed balance is zero at accept time and no `amount` provided → reject (no transfer to make)
+   - `AccountIDs = [(live) charger_connection_account_id]`
+3. Use `abs(result.Balance)` as the transfer amount
+4. If computed balance is zero at accept time and no `amount` provided → reject (no transfer to make)
 
 ### 6. Race Condition Guard (already decided in STATE.md)
 
