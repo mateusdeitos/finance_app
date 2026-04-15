@@ -32,6 +32,7 @@ type Charge struct {
 	PeriodYear       int
 	Description      *string
 	Status           ChargeStatus
+	Date             *time.Time
 	CreatedAt        *time.Time
 	UpdatedAt        *time.Time
 }
@@ -56,10 +57,16 @@ type ChargeSearchOptions struct {
 }
 
 type CreateChargeRequest struct {
-	ConnectionID int     `json:"connection_id"`
-	Role         string  `json:"role"`          // "charger" | "payer"
-	MyAccountID  *int    `json:"my_account_id"` // nullable
-	PeriodMonth  int     `json:"period_month"`
-	PeriodYear   int     `json:"period_year"`
-	Description  *string `json:"description"`
+	ConnectionID int       `json:"connection_id"`
+	MyAccountID  int       `json:"my_account_id"`
+	PeriodMonth  int       `json:"period_month"`
+	PeriodYear   int       `json:"period_year"`
+	Description  *string   `json:"description"`
+	Date         time.Time `json:"date"`
+}
+
+type AcceptChargeRequest struct {
+	AccountID int       `json:"account_id"`
+	Amount    *int64    `json:"amount,omitempty"`
+	Date      time.Time `json:"date"`
 }

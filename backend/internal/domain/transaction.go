@@ -109,6 +109,7 @@ type TransactionCreateRequest struct {
 	Tags                 []Tag               `json:"tags,omitempty"`
 	RecurrenceSettings   *RecurrenceSettings `json:"recurrence_settings,omitempty"`
 	SplitSettings        []SplitSettings     `json:"split_settings,omitempty"`
+	ChargeID             *int                `json:"charge_id,omitempty"`
 }
 
 type TransactionUpdateRequest struct {
