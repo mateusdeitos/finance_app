@@ -99,6 +99,7 @@ type ChargeRepository interface {
 	Search(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
 	Update(ctx context.Context, charge *domain.Charge) error
 	Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error)
+	ConditionalAccept(ctx context.Context, id int) error
 }
 
 // Repositories contains all repository interfaces

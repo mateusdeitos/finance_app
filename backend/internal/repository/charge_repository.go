@@ -2,11 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
 	"gorm.io/gorm"
 )
+
+// ErrChargeNotPending is returned by ConditionalAccept when the charge was
+// not in pending status at the moment of the update. The service layer
+// maps this to pkgErrors.AlreadyExists to yield HTTP 409.
+var ErrChargeNotPending = errors.New("charge is not pending")
 
 type chargeRepository struct {
 	db *gorm.DB
@@ -78,6 +84,20 @@ func (r *chargeRepository) Search(ctx context.Context, options domain.ChargeSear
 		result[i] = ent.ToDomain()
 	}
 	return result, nil
+}
+
+func (r *chargeRepository) ConditionalAccept(ctx context.Context, id int) error {
+	result := GetTxFromContext(ctx, r.db).Exec(
+		"UPDATE charges SET status = ?, updated_at = NOW() WHERE id = ? AND status = ?",
+		domain.ChargeStatusPaid, id, domain.ChargeStatusPending,
+	)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrChargeNotPending
+	}
+	return nil
 }
 
 func (r *chargeRepository) Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error) {
