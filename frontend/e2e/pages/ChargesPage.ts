@@ -15,7 +15,7 @@ export class ChargesPage {
 
   /** Get the currently visible tab panel (Mantine hides inactive panels via display:none) */
   get activePanel(): Locator {
-    return this.page.locator('[role="tabpanel"]:visible')
+    return this.page.locator('[role="tabpanel"]').filter({ visible: true })
   }
 
   async goto() {
