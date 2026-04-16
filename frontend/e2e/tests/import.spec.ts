@@ -162,6 +162,55 @@ test.describe("Import transactions", () => {
     await expect(importPage.page.getByText(description2)).not.toBeVisible();
   });
 
+  // ── Inline category creation ────────────────────────────────────────────────
+  test("create category inline during import", async () => {
+    const description = `Cat Inline ${Date.now()}`;
+    const newCategoryName = `Nova Cat ${Date.now()}`;
+    const txDate = new Date(2026, 3, 20); // 20/04/2026
+
+    const csv = buildCsvContent([
+      [formatDateBR(txDate), description, "-30,00"],
+    ]);
+
+    await importPage.uploadCSV(csv, testAccountName);
+
+    // Open category drawer from the + button on row 0
+    await importPage.openCreateCategoryDrawer(0);
+
+    // Create a category inside the drawer
+    await importPage.createCategoryInDrawer(newCategoryName);
+
+    // The new category should now appear in the category select
+    await importPage.setRowCategory(0, newCategoryName);
+
+    // Confirm import succeeds with the new category
+    await importPage.confirmImport();
+
+    const month = txDate.getMonth() + 1;
+    const year = txDate.getFullYear();
+    await importPage.page.goto(`/transactions?month=${month}&year=${year}`);
+    await importPage.page.waitForLoadState("networkidle");
+    await expect(importPage.page.getByText(description)).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  // ── Inline account creation ────────────────────────────────────────────────
+  test("create account inline from import header", async () => {
+    const newAccountName = `Nova Conta Import ${Date.now()}`;
+
+    // Open account drawer from the + button in the upload step header
+    await importPage.openCreateAccountDrawerFromHeader();
+
+    // Create account inside the drawer
+    await importPage.createAccountInDrawer(newAccountName);
+
+    // The new account should now appear in the account select
+    const select = importPage.uploadStep.getByTestId("select_import_account");
+    await select.click();
+    await expect(importPage.page.getByRole("option", { name: newAccountName })).toBeVisible({ timeout: 5000 });
+  });
+
   // ── Invalid CSV ────────────────────────────────────────────────────────────
   test("invalid CSV: shows error message when header is missing required column", async () => {
     const invalidCsv = "Data;Descrição\n15/01/2026;Teste";
