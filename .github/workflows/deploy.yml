@@ -3,6 +3,16 @@ name: Deploy
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      force_backend:
+        description: "Force backend deploy (skip change detection)"
+        type: boolean
+        default: false
+      force_frontend:
+        description: "Force frontend deploy (skip change detection)"
+        type: boolean
+        default: false
 
 jobs:
   detect-changes:
@@ -17,7 +27,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check force deploy overrides
+        id: force
+        run: |
+          echo "backend=${{ inputs.force_backend || false }}" >> $GITHUB_OUTPUT
+          echo "frontend=${{ inputs.force_frontend || false }}" >> $GITHUB_OUTPUT
+
       - name: Get previous tag
+        if: github.event_name == 'release'
         id: prev-tag
         run: |
           CURRENT_TAG=${{ github.event.release.tag_name }}
@@ -28,6 +45,24 @@ jobs:
       - name: Check changed paths
         id: filter
         run: |
+          # Force deploy overrides
+          if [ "${{ steps.force.outputs.backend }}" = "true" ]; then
+            echo "Force backend deploy requested"
+            FORCE_BACKEND=true
+          fi
+          if [ "${{ steps.force.outputs.frontend }}" = "true" ]; then
+            echo "Force frontend deploy requested"
+            FORCE_FRONTEND=true
+          fi
+
+          # On workflow_dispatch without force flags, deploy nothing (require explicit choice)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "backend=${FORCE_BACKEND:-false}" >> $GITHUB_OUTPUT
+            echo "frontend=${FORCE_FRONTEND:-false}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Release-based change detection
           PREV_TAG=${{ steps.prev-tag.outputs.prev_tag }}
           CURRENT_TAG=${{ steps.prev-tag.outputs.current_tag }}
 
@@ -40,13 +75,13 @@ jobs:
             echo "Changed files:"
             echo "$CHANGED"
 
-            if echo "$CHANGED" | grep -qE '^(backend|infra|\.github)/'; then
+            if [ "${FORCE_BACKEND}" = "true" ] || echo "$CHANGED" | grep -qE '^(backend|infra|\.github)/'; then
               echo "backend=true" >> $GITHUB_OUTPUT
             else
               echo "backend=false" >> $GITHUB_OUTPUT
             fi
 
-            if echo "$CHANGED" | grep -qE '^(frontend|infra|\.github)/'; then
+            if [ "${FORCE_FRONTEND}" = "true" ] || echo "$CHANGED" | grep -qE '^(frontend|infra|\.github)/'; then
               echo "frontend=true" >> $GITHUB_OUTPUT
             else
               echo "frontend=false" >> $GITHUB_OUTPUT
@@ -63,6 +98,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "value=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=manual-$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+          fi
+
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -77,14 +121,14 @@ jobs:
           IMAGE=${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend
           docker build \
             -f backend/docker/Dockerfile \
-            -t $IMAGE:${{ github.event.release.tag_name }} \
+            -t $IMAGE:${{ steps.tag.outputs.value }} \
             -t $IMAGE:latest \
             ./backend
 
       - name: Push Docker image
         run: |
           IMAGE=${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend
-          docker push $IMAGE:${{ github.event.release.tag_name }}
+          docker push $IMAGE:${{ steps.tag.outputs.value }}
           docker push $IMAGE:latest
 
       - name: Deploy to Cloud Run
@@ -92,7 +136,7 @@ jobs:
         with:
           service: ${{ vars.CLOUD_RUN_SERVICE_NAME }}
           region: ${{ vars.GCP_REGION }}
-          image: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend:${{ github.event.release.tag_name }}
+          image: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend:${{ steps.tag.outputs.value }}
 
   frontend-deploy:
     name: Frontend → Firebase Hosting
