@@ -49,6 +49,12 @@ export function mapTagsToFieldErrors(
     'TRANSACTION.RECURRENCE_REPETITIONS_MUST_BE_LESS_THAN_OR_EQUAL_TO': 'recurrence_settings.repetitions',
     'TAG.NAME_CANNOT_BE_EMPTY': 'tags',
     'TAG.FAILED_TO_CREATE': 'tags',
+    'CHARGE.INVALID_CONNECTION_ID': 'connection_id',
+    'CHARGE.CONNECTION_NOT_ACCEPTED': 'connection_id',
+    'CHARGE.INVALID_ACCOUNT_ID': 'my_account_id',
+    'CHARGE.INVALID_PAYER': '_general',
+    'CHARGE.CHARGE_NOT_PENDING': '_general',
+    'CHARGE.AMOUNT_MUST_BE_POSITIVE': 'amount',
   }
 
   // Indexed split-setting tags (require INDEX_N to resolve field path)
