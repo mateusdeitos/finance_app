@@ -120,6 +120,40 @@ export class ImportPage {
     await this.page.getByRole("option", { name: categoryName }).click();
   }
 
+  /** Click the + button next to the category select to open the category creation drawer. */
+  async openCreateCategoryDrawer(rowIndex: number) {
+    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
+    await row.getByRole("button", { name: "Criar categoria" }).click();
+    await expect(this.page.getByRole("dialog", { name: "Categorias" })).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Click the + button next to the account select in the upload step header. */
+  async openCreateAccountDrawerFromHeader() {
+    await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
+    await expect(this.page.getByRole("dialog", { name: "Nova Conta" })).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Create a new category inside the category drawer and close it. */
+  async createCategoryInDrawer(name: string) {
+    const drawer = this.page.getByRole("dialog", { name: "Categorias" });
+    const input = drawer.getByTestId("input_new_category_name");
+    await input.fill(name);
+    await input.press("Enter");
+    // Wait for the category to appear in the tree (input disappears after save)
+    await expect(drawer.getByText(name)).toBeVisible({ timeout: 5000 });
+    // Close the drawer
+    await drawer.getByRole("button", { name: "Fechar" }).click();
+    await expect(drawer).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /** Create a new account inside the account drawer. */
+  async createAccountInDrawer(name: string) {
+    const drawer = this.page.getByRole("dialog", { name: "Nova Conta" });
+    await drawer.getByTestId("input_account_name").fill(name);
+    await drawer.getByTestId("btn_account_save").click();
+    await expect(drawer).not.toBeVisible({ timeout: 10000 });
+  }
+
   /** Change the action for a row via the action select. */
   async setRowAction(rowIndex: number, action: "import" | "skip" | "duplicate") {
     const labels: Record<string, string> = {

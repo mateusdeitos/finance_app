@@ -70,7 +70,7 @@ export function CreateCategoryDrawer() {
 
             {pendingParentId === 'root' && (
               <InlineNewCategory
-                isLoading={createMutation.isPending}
+                depth={0}
                 onSave={(name) => handleCreateInline(name)}
                 onCancel={() => setPendingParentId(null)}
               />
