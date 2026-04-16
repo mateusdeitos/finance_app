@@ -136,10 +136,17 @@ export class ImportPage {
   /** Create a new category inside the category drawer and close it. */
   async createCategoryInDrawer(name: string) {
     const drawer = this.page.getByRole("dialog", { name: "Categorias" });
+    // Click "Nova Categoria" to show the inline input (may already be visible)
+    const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
+    if (await newButton.isVisible()) {
+      await newButton.click();
+    }
+    // Wait for and fill the inline input
     const input = drawer.getByTestId("input_new_category_name");
+    await expect(input).toBeVisible({ timeout: 5000 });
     await input.fill(name);
     await input.press("Enter");
-    // Wait for the category to appear in the tree (input disappears after save)
+    // Wait for the category to appear in the tree
     await expect(drawer.getByText(name)).toBeVisible({ timeout: 5000 });
     // Close the drawer
     await drawer.getByRole("button", { name: "Fechar" }).click();
