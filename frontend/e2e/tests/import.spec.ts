@@ -163,7 +163,7 @@ test.describe("Import transactions", () => {
   });
 
   // ── Inline category creation ────────────────────────────────────────────────
-  test("create category inline during import", async () => {
+  test("create category inline: auto-selects in row after drawer close", async () => {
     const description = `Cat Inline ${Date.now()}`;
     const newCategoryName = `Nova Cat ${Date.now()}`;
     const txDate = new Date(2026, 3, 20); // 20/04/2026
@@ -174,16 +174,21 @@ test.describe("Import transactions", () => {
 
     await importPage.uploadCSV(csv, testAccountName);
 
+    // Row 0 category should be empty initially
+    const valueBefore = await importPage.getRowCategoryValue(0);
+    expect(valueBefore).toBe("");
+
     // Open category drawer from the + button on row 0
     await importPage.openCreateCategoryDrawer(0);
 
-    // Create a category inside the drawer
+    // Create a category inside the drawer and close it
     await importPage.createCategoryInDrawer(newCategoryName);
 
-    // The new category should now appear in the category select
-    await importPage.setRowCategory(0, newCategoryName);
+    // Category should be auto-selected in row 0 after drawer close
+    const valueAfter = await importPage.getRowCategoryValue(0);
+    expect(valueAfter).toBe(newCategoryName);
 
-    // Confirm import succeeds with the new category
+    // Confirm import succeeds with the auto-selected category
     await importPage.confirmImport();
 
     const month = txDate.getMonth() + 1;
@@ -196,7 +201,7 @@ test.describe("Import transactions", () => {
   });
 
   // ── Inline account creation ────────────────────────────────────────────────
-  test("create account inline from import header", async () => {
+  test("create account inline: auto-selects in header after drawer close", async () => {
     const newAccountName = `Nova Conta Import ${Date.now()}`;
 
     // Open account drawer from the + button in the upload step header
@@ -205,10 +210,9 @@ test.describe("Import transactions", () => {
     // Create account inside the drawer
     await importPage.createAccountInDrawer(newAccountName);
 
-    // The new account should now appear in the account select
-    const select = importPage.uploadStep.getByTestId("select_import_account");
-    await select.click();
-    await expect(importPage.page.getByRole("option", { name: newAccountName })).toBeVisible({ timeout: 5000 });
+    // Account should be auto-selected in the header select after drawer close
+    const selectedValue = await importPage.getHeaderAccountValue();
+    expect(selectedValue).toBe(newAccountName);
   });
 
   // ── Invalid CSV ────────────────────────────────────────────────────────────
