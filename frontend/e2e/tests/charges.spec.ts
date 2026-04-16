@@ -97,15 +97,41 @@ test.describe('Charges', () => {
     if (!connAccount) throw new Error(`No connection account found for connection ${connectionId}`)
     primaryConnAccountId = connAccount.id
 
-    // Create an expense on the connection account to produce a non-zero balance
+    // Create an expense on the primary user's connection account
     await apiCreateTransaction({
       account_id: primaryConnAccountId,
       transaction_type: 'expense',
       category_id: seedCategoryId,
       amount: 50000,
       date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
-      description: 'E2E seed for charges',
+      description: 'E2E seed for charges (primary)',
     })
+
+    // Also seed the partner's connection account (partner-created charges check partner's balance)
+    const partnerAccountsRes = await apiFetchAs(partnerToken, '/api/accounts')
+    const partnerAllAccounts = await partnerAccountsRes.json()
+    const partnerConnAccount = partnerAllAccounts.find(
+      (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
+    )
+    if (partnerConnAccount) {
+      // Partner needs a category too
+      const partnerCatRes = await apiFetchAs(partnerToken, '/api/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name: `Partner Seed ${Date.now()}` }),
+      })
+      const partnerCat = await partnerCatRes.json()
+      await apiFetchAs(partnerToken, '/api/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          account_id: partnerConnAccount.id,
+          transaction_type: 'expense',
+          category_id: partnerCat.id,
+          amount: 50000,
+          date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
+          description: 'E2E seed for charges (partner)',
+        }),
+      })
+    }
   })
 
   test.afterAll(async () => {

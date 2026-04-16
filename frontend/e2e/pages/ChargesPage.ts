@@ -118,6 +118,6 @@ export class ChargesPage {
   // --- Notifications ---
 
   async expectNotification(text: string | RegExp) {
-    await expect(this.page.locator('[class*="notification"], [class*="Notification"]').filter({ hasText: text })).toBeVisible({ timeout: 5000 })
+    await expect(this.page.getByText(text).first()).toBeVisible({ timeout: 5000 })
   }
 }
