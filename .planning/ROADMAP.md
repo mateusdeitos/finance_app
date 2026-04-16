@@ -83,7 +83,7 @@ Plans:
   6. After any accept/reject/cancel action, the sidebar badge count updates without requiring a full page reload
 **Plans:** 3 plans
 Plans:
-- [ ] 08-01-PLAN.md — Types, API client, hooks, query keys, and error tag mappings (data layer)
+- [x] 08-01-PLAN.md — Types, API client, hooks, query keys, and error tag mappings (data layer)
 - [ ] 08-02-PLAN.md — ChargeCard, ChargeStatusBadge, CreateChargeDrawer, AcceptChargeDrawer, sidebar badge
 - [ ] 08-03-PLAN.md — Charges page route with tabs, period navigator, reject/cancel confirmation
 
