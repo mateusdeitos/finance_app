@@ -128,6 +128,65 @@ func (_c *MockTransactionRepository_Delete_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// FindOrphanedSettlementTransactions provides a mock function with given fields: ctx, filter
+func (_m *MockTransactionRepository) FindOrphanedSettlementTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	ret := _m.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindOrphanedSettlementTransactions")
+	}
+
+	var r0 []*domain.Transaction
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) ([]*domain.Transaction, error)); ok {
+		return rf(ctx, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) []*domain.Transaction); ok {
+		r0 = rf(ctx, filter)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.Transaction)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TransactionFilter) error); ok {
+		r1 = rf(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_FindOrphanedSettlementTransactions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindOrphanedSettlementTransactions'
+type MockTransactionRepository_FindOrphanedSettlementTransactions_Call struct {
+	*mock.Call
+}
+
+// FindOrphanedSettlementTransactions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.TransactionFilter
+func (_e *MockTransactionRepository_Expecter) FindOrphanedSettlementTransactions(ctx interface{}, filter interface{}) *MockTransactionRepository_FindOrphanedSettlementTransactions_Call {
+	return &MockTransactionRepository_FindOrphanedSettlementTransactions_Call{Call: _e.mock.On("FindOrphanedSettlementTransactions", ctx, filter)}
+}
+
+func (_c *MockTransactionRepository_FindOrphanedSettlementTransactions_Call) Run(run func(ctx context.Context, filter domain.TransactionFilter)) *MockTransactionRepository_FindOrphanedSettlementTransactions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.TransactionFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_FindOrphanedSettlementTransactions_Call) Return(_a0 []*domain.Transaction, _a1 error) *MockTransactionRepository_FindOrphanedSettlementTransactions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_FindOrphanedSettlementTransactions_Call) RunAndReturn(run func(context.Context, domain.TransactionFilter) ([]*domain.Transaction, error)) *MockTransactionRepository_FindOrphanedSettlementTransactions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBalance provides a mock function with given fields: ctx, filter
 func (_m *MockTransactionRepository) GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
 	ret := _m.Called(ctx, filter)

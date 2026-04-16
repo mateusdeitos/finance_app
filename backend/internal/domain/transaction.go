@@ -88,9 +88,14 @@ type Transaction struct {
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	SettlementsFromSource   []Settlement           `json:"settlements_from_source,omitempty"`
 	ChargeID                *int                   `json:"charge_id,omitempty"`
-	CreatedAt               *time.Time             `json:"created_at"`
-	UpdatedAt               *time.Time             `json:"updated_at"`
-	DeletedAt               *time.Time             `json:"deleted_at,omitempty"`
+	// OriginSettlementID is set only on synthetic Transaction entries produced
+	// by the listing endpoint to surface settlements whose source transaction
+	// lives on a different (non-filtered) account. The ID field of such entries
+	// is a negative sentinel; the row is read-only and should not be edited.
+	OriginSettlementID *int       `json:"origin_settlement_id,omitempty"`
+	CreatedAt          *time.Time `json:"created_at"`
+	UpdatedAt          *time.Time `json:"updated_at"`
+	DeletedAt          *time.Time `json:"deleted_at,omitempty"`
 }
 
 func (t *Transaction) SetType(newType TransactionType) {

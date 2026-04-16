@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -39,7 +40,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 
 	// 1. Infere o separador do CSV a partir da primeira linha
 	firstLineEnd := bytes.IndexByte(csvData, '\n')
-	firstLine := ""
+	var firstLine string
 	if firstLineEnd == -1 {
 		firstLine = string(csvData)
 	} else {
@@ -85,7 +86,8 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 
 		if err != nil {
 			errorMessage := "Erro de formatação na linha"
-			if parseErr, ok := err.(*csv.ParseError); ok {
+			var parseErr *csv.ParseError
+			if errors.As(err, &parseErr) {
 				errorMessage = fmt.Sprintf("Erro na linha %d: %v", parseErr.Line, parseErr.Err)
 			}
 
