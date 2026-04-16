@@ -84,6 +84,7 @@ export function TransactionGroup({
                 settlement={syntheticSettlement}
                 groupBy={groupBy}
                 accounts={accounts}
+                description={tx.description}
               />
             );
           }
