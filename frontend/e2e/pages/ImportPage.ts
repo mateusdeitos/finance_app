@@ -161,7 +161,7 @@ export class ImportPage {
       await emojiDrawer.getByText(opts.emoji, { exact: true }).click();
       // Emoji drawer closes, category now shows the emoji
       await expect(emojiDrawer).not.toBeVisible({ timeout: 5000 });
-      await expect(drawer.getByText(opts.emoji)).toBeVisible({ timeout: 5000 });
+      await expect(drawer.getByText(opts.emoji).first()).toBeVisible({ timeout: 5000 });
     }
 
     // Close the drawer
