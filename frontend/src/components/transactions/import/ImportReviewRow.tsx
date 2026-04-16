@@ -17,7 +17,7 @@ import { SplitPopover } from "./SplitPopover";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
-import { CreateAccountDrawer } from "./CreateAccountDrawer";
+import { AccountDrawer } from "@/components/accounts/AccountDrawer";
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -337,7 +337,7 @@ export const ImportReviewRow = memo(
                 size="xs"
                 variant="subtle"
                 color="gray"
-                onClick={() => void renderDrawer(() => <CreateAccountDrawer />)}
+                onClick={() => void renderDrawer(() => <AccountDrawer />)}
                 disabled={disabled || isSkipped}
                 aria-label="Criar conta"
               >

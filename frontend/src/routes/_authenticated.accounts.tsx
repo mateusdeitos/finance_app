@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { Stack, Group, Button, Text, Skeleton } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
 import { createFileRoute } from '@tanstack/react-router'
 import { IconPlus } from '@tabler/icons-react'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -8,6 +6,7 @@ import { useActivateAccount } from '@/hooks/useActivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
 import { AccountCard } from '@/components/accounts/AccountCard'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
+import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 
 export const Route = createFileRoute('/_authenticated/accounts')({
@@ -45,25 +44,16 @@ function AccountSection({
 
 function AccountsPage() {
   const { query, invalidate } = useAccounts()
-  const [drawerOpened, { open: openDrawer, close: closeDrawer }] = useDisclosure(false)
-  const [editing, setEditing] = useState<Transactions.Account | undefined>()
 
   const { mutation: deactivateMutation } = useDeleteAccount({ onSuccess: invalidate })
   const { mutation: activateMutation } = useActivateAccount({ onSuccess: invalidate })
 
   function handleEdit(account: Transactions.Account) {
-    setEditing(account)
-    openDrawer()
+    void renderDrawer(() => <AccountDrawer account={account} />)
   }
 
   function handleAdd() {
-    setEditing(undefined)
-    openDrawer()
-  }
-
-  function handleClose() {
-    setEditing(undefined)
-    closeDrawer()
+    void renderDrawer(() => <AccountDrawer />)
   }
 
   const accounts = query.data ?? []
@@ -115,11 +105,6 @@ function AccountsPage() {
         </Stack>
       )}
 
-      <AccountDrawer
-        opened={drawerOpened}
-        onClose={handleClose}
-        account={editing}
-      />
     </Stack>
   )
 }
