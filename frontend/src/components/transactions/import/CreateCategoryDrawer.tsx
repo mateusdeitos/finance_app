@@ -39,7 +39,7 @@ export function CreateCategoryDrawer() {
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Categorias" position="right" size="md">
+    <Drawer opened={opened} onClose={reject} title="Categorias" position="right" size="md" data-testid="drawer_create_category">
       <Stack gap="sm">
         <Button
           leftSection={<IconPlus size={16} />}

@@ -124,18 +124,18 @@ export class ImportPage {
   async openCreateCategoryDrawer(rowIndex: number) {
     const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
     await row.getByRole("button", { name: "Criar categoria" }).click();
-    await expect(this.page.getByRole("dialog", { name: "Categorias" })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByTestId("drawer_create_category")).toBeVisible({ timeout: 5000 });
   }
 
   /** Click the + button next to the account select in the upload step header. */
   async openCreateAccountDrawerFromHeader() {
     await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
-    await expect(this.page.getByRole("dialog", { name: "Nova Conta" })).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByTestId("drawer_account")).toBeVisible({ timeout: 5000 });
   }
 
   /** Create a new category inside the category drawer and close it. */
   async createCategoryInDrawer(name: string) {
-    const drawer = this.page.getByRole("dialog", { name: "Categorias" });
+    const drawer = this.page.getByTestId("drawer_create_category");
     // Click "Nova Categoria" to show the inline input (may already be visible)
     const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
     if (await newButton.isVisible()) {
@@ -155,7 +155,7 @@ export class ImportPage {
 
   /** Create a new account inside the account drawer. */
   async createAccountInDrawer(name: string) {
-    const drawer = this.page.getByRole("dialog", { name: "Nova Conta" });
+    const drawer = this.page.getByTestId("drawer_account");
     await drawer.getByTestId("input_account_name").fill(name);
     await drawer.getByTestId("btn_account_save").click();
     await expect(drawer).not.toBeVisible({ timeout: 10000 });
