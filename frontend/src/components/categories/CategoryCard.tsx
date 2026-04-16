@@ -194,7 +194,7 @@ export function CategoryCard({
       )}
 
       {/* emoji picker drawer */}
-      <Drawer opened={emojiOpen} onClose={closeEmoji} title="Escolher emoji" position="right" size="sm" data-testid="drawer_emoji_picker">
+      <Drawer opened={emojiOpen} onClose={closeEmoji} title="Escolher emoji" position="right" size="sm" data-testid={`drawer_emoji_picker_${category.id}`}>
         <Stack gap="md">
           <ScrollArea>
             <SimpleGrid cols={7} spacing="xs">
