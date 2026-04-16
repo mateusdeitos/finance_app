@@ -1,7 +1,7 @@
 import { ActionIcon, Box, Button, Drawer, Group, Menu, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconDots, IconFilter, IconPlus, IconTableImport } from '@tabler/icons-react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useCallback, useState } from 'react'
 import { z } from 'zod'
@@ -44,7 +44,8 @@ export const Route = createFileRoute('/_authenticated/transactions')({
 function TransactionsPage() {
   const search = Route.useSearch()
   const isMobile = useIsMobile()
-  const navigate = Route.useNavigate()
+  const routeNavigate = Route.useNavigate()
+  const navigate = useNavigate()
   const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
 
   const { query: meQuery } = useMe((me) => me.id)
@@ -123,7 +124,7 @@ function TransactionsPage() {
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
             <Group justify="space-between" align="center">
-              <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })} />
+              <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
               <Group gap="xs">
                 <Button
                   size="xs"
@@ -213,7 +214,7 @@ function TransactionsPage() {
       >
         <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
           <Group justify="space-between" align="center">
-            <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })} />
+            <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
             <Group gap="xs">
               <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
                 Nova Transação
