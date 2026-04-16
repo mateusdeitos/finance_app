@@ -1,26 +1,30 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Button, Drawer, Stack, Text } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/useCategories'
 import { CategoryCard } from '@/components/categories/CategoryCard'
 import { InlineNewCategory } from '@/components/categories/InlineNewCategory'
+import { Transactions } from '@/types/transactions'
 
 type PendingParentId = number | 'root' | null
 
 export function CreateCategoryDrawer() {
-  const { opened, close, reject } = useDrawerContext<void>()
+  const { opened, close, reject } = useDrawerContext<Transactions.Category | void>()
   const { query, invalidate } = useCategories()
-  const { mutation: createMutation } = useCreateCategory({
-    onSuccess: () => { invalidate(); setPendingParentId(null) },
-  })
+  const lastCreatedRef = useRef<Transactions.Category | null>(null)
+
+  const { mutation: createMutation } = useCreateCategory()
   const { mutation: updateMutation } = useUpdateCategory({ onSuccess: invalidate })
 
   const [pendingParentId, setPendingParentId] = useState<PendingParentId>('root')
   const categories = query.data ?? []
 
   async function handleCreateInline(name: string, parentId?: number) {
-    await createMutation.mutateAsync({ name, parent_id: parentId })
+    const created = await createMutation.mutateAsync({ name, parent_id: parentId })
+    lastCreatedRef.current = created
+    invalidate()
+    setPendingParentId(null)
   }
 
   async function handleSaveName(category: { id: number; emoji?: string; parent_id?: number | null }, name: string) {
@@ -78,7 +82,7 @@ export function CreateCategoryDrawer() {
           </Stack>
         )}
 
-        <Button onClick={() => close()} mt="md">
+        <Button onClick={() => close(lastCreatedRef.current ?? undefined)} mt="md">
           Fechar
         </Button>
       </Stack>
