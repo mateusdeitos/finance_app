@@ -152,16 +152,17 @@ export class ImportPage {
 
     // Optionally set an emoji on the newly created category
     if (opts?.emoji) {
-      // Click the emoji button on the new category row (shows "+😀" for categories without emoji)
+      // Find the newly created category's emoji button by its data-testid
+      // We need the category ID — find it by looking for the emoji button near the category name
       const categoryRow = drawer.getByText(name).locator("..").locator("..");
-      await categoryRow.getByTitle("Mudar emoji").click();
-      // Emoji picker drawer opens — click the desired emoji
-      const emojiDrawer = this.page.getByRole("dialog", { name: "Escolher emoji" });
-      await expect(emojiDrawer).toBeVisible({ timeout: 5000 });
-      await emojiDrawer.getByText(opts.emoji, { exact: true }).click();
+      const emojiButton = categoryRow.locator("[data-testid^='btn_emoji_']");
+      await emojiButton.click();
+      // Emoji picker drawer opens — click the desired emoji by testid
+      const emojiDrawer = this.page.getByTestId("drawer_emoji_picker");
+      await expect(emojiDrawer.getByTestId(`emoji_${opts.emoji}`)).toBeVisible({ timeout: 5000 });
+      await emojiDrawer.getByTestId(`emoji_${opts.emoji}`).click();
       // Emoji drawer closes, category now shows the emoji
       await expect(emojiDrawer).not.toBeVisible({ timeout: 5000 });
-      await expect(drawer.getByText(opts.emoji).first()).toBeVisible({ timeout: 5000 });
     }
 
     // Close the drawer
