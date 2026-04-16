@@ -337,7 +337,13 @@ export const ImportReviewRow = memo(
                 size="xs"
                 variant="subtle"
                 color="gray"
-                onClick={() => void renderDrawer(() => <AccountDrawer />)}
+                onClick={() => {
+                  renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
+                    .then((created) => {
+                      if (created) form.setValue(`rows.${rowIndex}.destination_account_id`, created.id);
+                    })
+                    .catch(() => {});
+                }}
                 disabled={disabled || isSkipped}
                 aria-label="Criar conta"
               >

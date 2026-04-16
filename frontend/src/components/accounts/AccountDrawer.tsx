@@ -11,13 +11,10 @@ interface Props {
 }
 
 export function AccountDrawer({ account }: Props) {
-  const { opened, close, reject } = useDrawerContext<void>()
+  const { opened, close, reject } = useDrawerContext<Transactions.Account | void>()
   const { invalidate } = useAccounts()
 
-  const { mutation: createMutation } = useCreateAccount({
-    onSuccess: () => { invalidate(); close() },
-  })
-
+  const { mutation: createMutation } = useCreateAccount()
   const { mutation: updateMutation } = useUpdateAccount({
     onSuccess: () => { invalidate(); close() },
   })
@@ -34,7 +31,9 @@ export function AccountDrawer({ account }: Props) {
     if (account) {
       updateMutation.mutate({ id: account.id, payload })
     } else {
-      createMutation.mutate(payload)
+      createMutation.mutate(payload, {
+        onSuccess: (created) => { invalidate(); close(created) },
+      })
     }
   }
 
