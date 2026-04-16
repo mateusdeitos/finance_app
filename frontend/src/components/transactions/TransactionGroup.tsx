@@ -58,9 +58,11 @@ export function TransactionGroup({
       <div className={classes.rows}>
         {isFirst && <OpeningBalanceRow />}
         {group.transactions.map((tx) => {
+          const isSynthetic = tx.origin_settlement_id !== undefined;
           const isOwner =
-            tx.original_user_id === currentUserId ||
-            tx.user_id === currentUserId;
+            !isSynthetic &&
+            (tx.original_user_id === currentUserId ||
+              tx.user_id === currentUserId);
           return (
             <Fragment key={tx.id}>
               <TransactionRow
@@ -70,8 +72,8 @@ export function TransactionGroup({
                 categories={categories}
                 currentUserId={currentUserId}
                 isSelected={selectedIds?.has(tx.id)}
-                isSelectionMode={isSelectionActive}
-                onSelect={onSelectTransaction}
+                isSelectionMode={isSelectionActive && !isSynthetic}
+                onSelect={isSynthetic ? undefined : onSelectTransaction}
                 onEdit={
                   !isSelectionActive && isOwner
                     ? (fieldClicked: FocusField) => openEditDrawer(tx, fieldClicked)

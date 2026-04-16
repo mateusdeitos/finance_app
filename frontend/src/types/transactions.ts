@@ -87,6 +87,14 @@ export namespace Transactions {
     linked_transactions?: Transaction[];
     transaction_recurrence?: TransactionRecurrence;
     settlements_from_source?: Settlement[];
+    /**
+     * When set, this row is not a real transaction but a synthetic entry
+     * produced by the listing endpoint to surface a settlement whose source
+     * transaction lives on a different (non-filtered) account. The row is
+     * read-only: it should not offer edit/delete, and its id is a negative
+     * sentinel that does not correspond to any real transaction.
+     */
+    origin_settlement_id?: number;
     created_at?: string;
     updated_at?: string;
   }

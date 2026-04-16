@@ -931,6 +931,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 
 	amount := int64(100)
 	d := now()
+	period := domain.Period{Month: int(d.Month()), Year: d.Year()}
 
 	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
@@ -948,51 +949,75 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	})
 	suite.Require().NoError(err)
 
-	// Filter user1's transactions by the SHARED account only. The source
-	// transaction lives on user1's personal account, but the settlement is
-	// bound to userConnection.FromAccountID. The search must still return
-	// the source transaction, with its settlement preloaded.
-	results, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID:     &user1.ID,
-		AccountIDs: []int{userConnection.FromAccountID},
+	// Case 1: user1 filters ONLY by the shared account (userConnection.FromAccountID).
+	// The source transaction lives on the personal account so it must NOT be
+	// returned; including it would make the shared-account balance double-count
+	// (source tx amount + settlement amount). Instead, the service surfaces the
+	// settlement as a synthetic Transaction entry: amount = settlement amount,
+	// operation_type = credit, origin_settlement_id set, empty SettlementsFromSource.
+	sharedOnly, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{userConnection.FromAccountID},
+		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
 
-	suite.Require().Len(results, 1, "source transaction should be returned via its settlement")
-	tr := results[0]
-	suite.Assert().Equal(account.ID, tr.AccountID, "source lives on personal account")
-	suite.Assert().Equal(user1.ID, tr.UserID)
-	suite.Assert().Equal(amount, tr.Amount)
+	suite.Require().Len(sharedOnly, 1, "shared-account view should surface the settlement as a synthetic entry")
+	synthetic := sharedOnly[0]
+	suite.Require().NotNil(synthetic.OriginSettlementID, "synthetic entry must carry origin_settlement_id")
+	suite.Assert().Less(synthetic.ID, 0, "synthetic entry must have a negative sentinel id")
+	suite.Assert().Equal(userConnection.FromAccountID, synthetic.AccountID, "synthetic entry lives on the shared account")
+	suite.Assert().Equal(int64(amount/2), synthetic.Amount, "synthetic entry amount equals the settlement amount")
+	suite.Assert().Equal(domain.OperationTypeCredit, synthetic.OperationType, "credit settlement maps to credit operation")
+	suite.Assert().Equal(domain.TransactionTypeIncome, synthetic.Type, "credit settlement maps to income type")
+	suite.Assert().Equal("Shared expense", synthetic.Description, "description is inherited from the source transaction")
+	suite.Assert().Equal(d, synthetic.Date, "date is inherited from the source transaction")
+	suite.Assert().Equal(user1.ID, synthetic.UserID)
+	suite.Assert().Empty(synthetic.SettlementsFromSource, "synthetic entry must not preload nested settlements (would double-count)")
 
-	// Settlements must be preloaded because AccountIDs is set.
-	suite.Require().Len(tr.SettlementsFromSource, 1)
-	settlement := tr.SettlementsFromSource[0]
-	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
-	suite.Assert().Equal(user1.ID, settlement.UserID)
-	suite.Assert().Equal(int64(amount/2), settlement.Amount)
-	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
-	suite.Assert().Equal(tr.ID, settlement.SourceTransactionID)
-
-	// Negative check: when user1 filters by the personal account only,
-	// the transaction must still be returned once (no duplication from the
-	// EXISTS clause), and the settlement should still be preloaded.
-	personalOnly, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID:     &user1.ID,
-		AccountIDs: []int{account.ID},
+	// Case 2: user1 filters ONLY by the personal account — the real source
+	// transaction is returned. The scoped preload must EXCLUDE the settlement
+	// (it's on the shared account, not the filter) so the balance on the
+	// personal account isn't polluted by unrelated settlements. No synthetic
+	// entries either.
+	personalOnly, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
+		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(personalOnly, 1, "should not duplicate rows")
-	suite.Assert().Equal(tr.ID, personalOnly[0].ID)
-	suite.Require().Len(personalOnly[0].SettlementsFromSource, 1)
+	suite.Require().Len(personalOnly, 1, "personal-only filter should return the source transaction exactly once")
+	personal := personalOnly[0]
+	suite.Assert().Nil(personal.OriginSettlementID)
+	suite.Assert().Equal(account.ID, personal.AccountID)
+	suite.Assert().Equal(amount, personal.Amount)
+	suite.Assert().Empty(personal.SettlementsFromSource, "settlement is on the shared account, must be excluded from the preload when filtering by personal account")
 
-	// Negative check: user2 filtering by user1's FromAccountID must NOT see it,
-	// because the settlement's user_id is user1 — verifies user scoping.
-	crossUser, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID:     &user2.ID,
-		AccountIDs: []int{userConnection.FromAccountID},
+	// Case 3: user1 filters by BOTH personal AND shared accounts — the source
+	// transaction is in the filter AND the settlement's account is in the
+	// filter. The source tx is returned with its settlement preloaded (scoped
+	// preload admits it), and NO synthetic entry is appended (would be a
+	// duplicate of the attached settlement).
+	both, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID, userConnection.FromAccountID},
+		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Len(crossUser, 0, "user2 must not see user1's settlement-bound source transaction")
+	suite.Require().Len(both, 1, "combined filter must not duplicate the source transaction")
+	suite.Assert().Equal(account.ID, both[0].AccountID)
+	suite.Require().Len(both[0].SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
+	suite.Assert().Equal(userConnection.FromAccountID, both[0].SettlementsFromSource[0].AccountID)
+
+	// Case 4: user2 filters by user1's FromAccountID — must return nothing,
+	// because the settlement's user_id scopes the query to user1.
+	crossUser, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{
+		UserID:          &user2.ID,
+		AccountIDs:      []int{userConnection.FromAccountID},
+		WithSettlements: true,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(crossUser, "user2 must not see user1's settlement-bound entries")
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUserAsOwner() {

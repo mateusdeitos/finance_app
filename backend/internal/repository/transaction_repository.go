@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
@@ -11,6 +12,12 @@ import (
 	"github.com/samber/lo"
 	"gorm.io/gorm"
 )
+
+// orphanedSettlementSyntheticIDOffset ensures synthetic IDs produced by
+// FindOrphanedSettlementTransactions don't collide with real transaction IDs.
+// Synthetic IDs are computed as -(settlement.id + offset); the negative value
+// also signals to API consumers that the row is read-only.
+const orphanedSettlementSyntheticIDOffset = 1000000
 
 type transactionRepository struct {
 	db *gorm.DB
@@ -90,8 +97,15 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("SourceTransactions").Preload("Tags").Preload("LinkedTransactions.Tags").Preload("SourceTransactions.Tags")
 
-	if filter.WithSettlements || len(filter.AccountIDs) > 0 {
-		query = query.Preload("SettlementsFromSource")
+	if filter.WithSettlements {
+		if len(filter.AccountIDs) > 0 {
+			accountIDs := filter.AccountIDs
+			query = query.Preload("SettlementsFromSource", func(db *gorm.DB) *gorm.DB {
+				return db.Where("account_id IN ?", accountIDs)
+			})
+		} else {
+			query = query.Preload("SettlementsFromSource")
+		}
 	}
 
 	if filter.UserID != nil {
@@ -118,26 +132,7 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		Joins("JOIN accounts ON accounts.id = transactions.account_id")
 
 	if len(filter.AccountIDs) > 0 {
-		// Include transactions that either:
-		//   a) live directly on one of the filtered accounts, OR
-		//   b) have a settlement (owned by the requesting user) whose
-		//      account_id is in the filter — the shared-account case.
-		// Mirrors the settlement leg of GetBalance (see below).
-		if filter.UserID != nil {
-			query = query.Where(
-				"accounts.id IN ? OR EXISTS (SELECT 1 FROM settlements s "+
-					"WHERE s.source_transaction_id = transactions.id "+
-					"AND s.user_id = ? AND s.account_id IN ?)",
-				filter.AccountIDs, *filter.UserID, filter.AccountIDs,
-			)
-		} else {
-			query = query.Where(
-				"accounts.id IN ? OR EXISTS (SELECT 1 FROM settlements s "+
-					"WHERE s.source_transaction_id = transactions.id "+
-					"AND s.account_id IN ?)",
-				filter.AccountIDs, filter.AccountIDs,
-			)
-		}
+		query = query.Where("accounts.id IN ?", filter.AccountIDs)
 	} else {
 		query = query.Where("accounts.is_active = true")
 	}
@@ -195,6 +190,116 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	result := lo.Map(ents, func(ent entity.Transaction, _ int) *domain.Transaction {
 		return ent.ToDomain()
 	})
+
+	return result, nil
+}
+
+// FindOrphanedSettlementTransactions returns synthetic Transaction entries
+// that represent settlements bound to one of filter.AccountIDs whose source
+// transaction lives on a different (non-filtered) account. This surfaces
+// shared-account settlement rows in a list view without double-counting the
+// source transaction (which is not on the filtered account and therefore
+// shouldn't contribute to its balance).
+//
+// Each returned Transaction has:
+//   - ID: a negative sentinel computed from the settlement id (not a real row)
+//   - OriginSettlementID: set to the backing settlement id
+//   - Amount, AccountID: from the settlement
+//   - OperationType / Type: derived from SettlementType (credit -> income,
+//     debit -> expense)
+//   - Date, Description, CategoryID, OriginalUserID: inherited from the
+//     source transaction for display + grouping purposes
+//   - SettlementsFromSource: empty (the row *is* the settlement; the frontend
+//     should not render a nested SettlementRow beneath it)
+//
+// A settlement whose source transaction's own account_id IS in
+// filter.AccountIDs is intentionally excluded: that source transaction is
+// already in the Search result with the settlement preloaded alongside it,
+// and including it here as well would double-count.
+func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	if filter.UserID == nil || len(filter.AccountIDs) == 0 {
+		return nil, nil
+	}
+
+	type row struct {
+		SettlementID   int             `gorm:"column:settlement_id"`
+		SettlementType string          `gorm:"column:settlement_type"`
+		UserID         int             `gorm:"column:user_id"`
+		OriginalUserID *int            `gorm:"column:original_user_id"`
+		AccountID      int             `gorm:"column:account_id"`
+		CategoryID     *int            `gorm:"column:category_id"`
+		Amount         int64           `gorm:"column:amount"`
+		Date           time.Time       `gorm:"column:date"`
+		Description    string          `gorm:"column:description"`
+		CreatedAt      *time.Time      `gorm:"column:created_at"`
+		UpdatedAt      *time.Time      `gorm:"column:updated_at"`
+		_              gorm.DeletedAt  `gorm:"-"`
+		_              struct{}        `gorm:"-"`
+	}
+
+	var rows []row
+	query := GetTxFromContext(ctx, r.db).
+		Table("settlements s").
+		Select(`s.id AS settlement_id,
+			s.type AS settlement_type,
+			s.user_id AS user_id,
+			t.original_user_id AS original_user_id,
+			s.account_id AS account_id,
+			t.category_id AS category_id,
+			s.amount AS amount,
+			t.date AS date,
+			t.description AS description,
+			s.created_at AS created_at,
+			s.updated_at AS updated_at`).
+		Joins("JOIN transactions t ON t.id = s.source_transaction_id").
+		Where("t.deleted_at IS NULL").
+		Where("s.user_id = ?", *filter.UserID).
+		Where("s.account_id IN ?", filter.AccountIDs).
+		Where("t.account_id NOT IN ?", filter.AccountIDs)
+
+	if filter.StartDate != nil && filter.StartDate.IsValid() {
+		query = query.Where(filter.StartDate.ToSQL("t.date"))
+	}
+	if filter.EndDate != nil && filter.EndDate.IsValid() {
+		query = query.Where(filter.EndDate.ToSQL("t.date"))
+	}
+
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	result := make([]*domain.Transaction, 0, len(rows))
+	for _, r := range rows {
+		settlementType := domain.SettlementType(r.SettlementType)
+		var (
+			opType  domain.OperationType
+			txType  domain.TransactionType
+		)
+		if settlementType == domain.SettlementTypeCredit {
+			opType = domain.OperationTypeCredit
+			txType = domain.TransactionTypeIncome
+		} else {
+			opType = domain.OperationTypeDebit
+			txType = domain.TransactionTypeExpense
+		}
+
+		settlementID := r.SettlementID
+		result = append(result, &domain.Transaction{
+			ID:                 -(settlementID + orphanedSettlementSyntheticIDOffset),
+			OriginSettlementID: &settlementID,
+			UserID:             r.UserID,
+			OriginalUserID:     r.OriginalUserID,
+			Type:               txType,
+			OperationType:      opType,
+			AccountID:          r.AccountID,
+			CategoryID:         r.CategoryID,
+			Amount:             r.Amount,
+			Date:               r.Date,
+			Description:        r.Description,
+			CreatedAt:          r.CreatedAt,
+			UpdatedAt:          r.UpdatedAt,
+		})
+	}
 
 	return result, nil
 }

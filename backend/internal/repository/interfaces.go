@@ -61,11 +61,12 @@ type TagRepository interface {
 	Search(ctx context.Context, options domain.TagSearchOptions) ([]*domain.Tag, error)
 }
 
-type TransactionRepository interface {
+type TransactionRepository interface { //nolint:interfacebloat // transaction is the domain root; related reads/writes naturally cluster here
 	Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error)
 	Update(ctx context.Context, transaction *domain.Transaction) error
 	Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
+	FindOrphanedSettlementTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
