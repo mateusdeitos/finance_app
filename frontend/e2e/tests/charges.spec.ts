@@ -6,6 +6,7 @@ import {
   apiCreateCharge,
   apiCancelCharge,
   apiCreateUserConnection,
+  apiCreateTransaction,
   getAuthTokenForUser,
   apiFetchAs,
 } from '../helpers/api'
@@ -33,6 +34,7 @@ test.describe('Charges', () => {
   let partnerToken: string
   let partnerAccountId: number
   let connectionId: number
+  let primaryConnAccountId: number
   const createdChargeIds: number[] = []
 
   test.beforeAll(async () => {
@@ -73,6 +75,29 @@ test.describe('Charges', () => {
       } else {
         throw err
       }
+    }
+
+    // 6. Find the primary user's connection account (created by connection setup)
+    //    and seed an expense so balance is non-zero (charges require balance != 0)
+    const accountsRes = await apiFetchAs(
+      // Use primary user's token (from global storage state)
+      (await getAuthTokenForUser('e2e-test@financeapp.local')),
+      '/api/accounts',
+    )
+    const allAccounts = await accountsRes.json()
+    const connAccount = allAccounts.find(
+      (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
+    )
+    if (connAccount) {
+      primaryConnAccountId = connAccount.id
+      // Create an expense on the connection account to produce a non-zero balance
+      await apiCreateTransaction({
+        account_id: primaryConnAccountId,
+        transaction_type: 'expense',
+        amount: 50000,
+        date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
+        description: 'E2E seed for charges',
+      }).catch(() => undefined) // may already exist from a previous run
     }
   })
 
