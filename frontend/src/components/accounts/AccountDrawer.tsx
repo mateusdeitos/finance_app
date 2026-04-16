@@ -1,4 +1,5 @@
 import { Drawer } from '@mantine/core'
+import { useDrawerContext } from '@/utils/renderDrawer'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCreateAccount } from '@/hooks/useCreateAccount'
 import { useUpdateAccount } from '@/hooks/useUpdateAccount'
@@ -6,20 +7,19 @@ import { Transactions } from '@/types/transactions'
 import { AccountForm, AccountFormValues } from './AccountForm'
 
 interface Props {
-  opened: boolean
-  onClose: () => void
   account?: Transactions.Account
 }
 
-export function AccountDrawer({ opened, onClose, account }: Props) {
+export function AccountDrawer({ account }: Props) {
+  const { opened, close, reject } = useDrawerContext<void>()
   const { invalidate } = useAccounts()
 
   const { mutation: createMutation } = useCreateAccount({
-    onSuccess: () => { invalidate(); onClose() },
+    onSuccess: () => { invalidate(); close() },
   })
 
   const { mutation: updateMutation } = useUpdateAccount({
-    onSuccess: () => { invalidate(); onClose() },
+    onSuccess: () => { invalidate(); close() },
   })
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -45,19 +45,17 @@ export function AccountDrawer({ opened, onClose, account }: Props) {
   return (
     <Drawer
       opened={opened}
-      onClose={onClose}
+      onClose={reject}
       title={account ? 'Editar Conta' : 'Nova Conta'}
       position="right"
       size="md"
     >
-      {opened && (
-        <AccountForm
-          initialValues={initialValues}
-          onSubmit={handleSubmit}
-          isPending={isPending}
-          error={error}
-        />
-      )}
+      <AccountForm
+        initialValues={initialValues}
+        onSubmit={handleSubmit}
+        isPending={isPending}
+        error={error}
+      />
     </Drawer>
   )
 }

@@ -29,7 +29,7 @@ import { useParseImportCSV } from "@/hooks/useParseImportCSV";
 import { Transactions } from "@/types/transactions";
 import { parseApiError } from "@/utils/apiErrors";
 import { ImportReviewRow } from "@/components/transactions/import/ImportReviewRow";
-import { CreateAccountDrawer } from "@/components/transactions/import/CreateAccountDrawer";
+import { AccountDrawer } from "@/components/accounts/AccountDrawer";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { ImportCSVBulkToolbar } from "@/components/transactions/import/ImportCSVBulkToolbar";
 import { ImportConfirmButton } from "@/components/transactions/import/ImportConfirmButton";
@@ -579,7 +579,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         <ActionIcon
           variant="subtle"
           color="gray"
-          onClick={() => void renderDrawer(() => <CreateAccountDrawer />)}
+          onClick={() => void renderDrawer(() => <AccountDrawer />)}
           aria-label="Criar conta"
           mb={2}
         >
