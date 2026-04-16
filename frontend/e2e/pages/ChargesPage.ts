@@ -13,11 +13,6 @@ export class ChargesPage {
     this.confirmModal = page.getByRole('dialog')
   }
 
-  /** Find a visible charge card by its description text */
-  chargeCard(description: string): Locator {
-    return this.page.getByText(description, { exact: false }).locator('visible=true').first()
-  }
-
   async goto() {
     await this.page.goto('/charges')
     await this.page.waitForLoadState('networkidle')
@@ -30,6 +25,13 @@ export class ChargesPage {
 
   // --- Tabs ---
 
+  /** Get the active tab panel (Mantine uses aria-selected on tab, panel linked via aria-labelledby) */
+  private async getActivePanel(): Promise<Locator> {
+    const activeTab = this.page.locator('[role="tab"][aria-selected="true"]')
+    const tabId = await activeTab.getAttribute('id')
+    return this.page.locator(`[role="tabpanel"][aria-labelledby="${tabId}"]`)
+  }
+
   async selectReceivedTab() {
     await this.page.getByRole('tab', { name: 'Recebidas' }).click()
     await this.page.waitForLoadState('networkidle')
@@ -38,6 +40,13 @@ export class ChargesPage {
   async selectSentTab() {
     await this.page.getByRole('tab', { name: 'Enviadas' }).click()
     await this.page.waitForLoadState('networkidle')
+  }
+
+  // --- Assertions ---
+
+  async expectChargeVisible(description: string) {
+    const panel = await this.getActivePanel()
+    await expect(panel.getByText(description)).toBeVisible({ timeout: 5000 })
   }
 
   // --- Create ---
@@ -51,7 +60,6 @@ export class ChargesPage {
     accountName: string
     description?: string
   }) {
-    // Account select
     const accountSelect = this.createDrawer.getByRole('textbox', { name: 'Minha conta' })
     await accountSelect.click()
     await this.page.getByRole('option', { name: opts.accountName }).click()
@@ -68,8 +76,9 @@ export class ChargesPage {
 
   // --- Accept ---
 
-  async clickAccept(chargeDescription: string) {
-    await this.page.getByRole('button', { name: 'Aceitar' }).locator('visible=true').first().click()
+  async clickAccept() {
+    const panel = await this.getActivePanel()
+    await panel.getByRole('button', { name: 'Aceitar' }).first().click()
     await expect(this.acceptDrawer).toBeVisible({ timeout: 5000 })
   }
 
@@ -86,8 +95,9 @@ export class ChargesPage {
 
   // --- Reject / Cancel ---
 
-  async clickReject(chargeDescription: string) {
-    await this.page.getByRole('button', { name: 'Recusar' }).locator('visible=true').first().click()
+  async clickReject() {
+    const panel = await this.getActivePanel()
+    await panel.getByRole('button', { name: 'Recusar' }).first().click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
 
@@ -96,8 +106,9 @@ export class ChargesPage {
     await expect(this.confirmModal).not.toBeVisible({ timeout: 10000 })
   }
 
-  async clickCancel(chargeDescription: string) {
-    await this.page.getByRole('button', { name: 'Cancelar' }).locator('visible=true').first().click()
+  async clickCancel() {
+    const panel = await this.getActivePanel()
+    await panel.getByRole('button', { name: 'Cancelar' }).first().click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
 

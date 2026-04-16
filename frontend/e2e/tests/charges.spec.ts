@@ -177,7 +177,7 @@ test.describe('Charges', () => {
 
     // Charge visible in sent tab
     await chargesPage.selectSentTab()
-    await expect(chargesPage.chargeCard(description)).toBeVisible({ timeout: 5000 })
+    await chargesPage.expectChargeVisible(description)
   })
 
   test('reject a received charge', async ({ page, context }) => {
@@ -201,7 +201,7 @@ test.describe('Charges', () => {
     await chargesPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR)
     await chargesPage.selectReceivedTab()
 
-    await chargesPage.clickReject(description)
+    await chargesPage.clickReject()
     await chargesPage.confirmReject()
 
     await chargesPage.expectNotification(/Cobranca recusada/)
@@ -226,7 +226,7 @@ test.describe('Charges', () => {
     await chargesPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR)
     await chargesPage.selectSentTab()
 
-    await chargesPage.clickCancel(description)
+    await chargesPage.clickCancel()
     await chargesPage.confirmCancel()
 
     await chargesPage.expectNotification(/Cobranca cancelada/)
