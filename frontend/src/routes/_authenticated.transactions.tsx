@@ -1,7 +1,7 @@
 import { ActionIcon, Box, Button, Drawer, Group, Menu, Stack } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconDots, IconFilter, IconPlus, IconTableImport } from '@tabler/icons-react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useCallback, useState } from 'react'
 import { z } from 'zod'
@@ -44,7 +44,7 @@ export const Route = createFileRoute('/_authenticated/transactions')({
 function TransactionsPage() {
   const search = Route.useSearch()
   const isMobile = useIsMobile()
-  const navigate = useNavigate()
+  const navigate = Route.useNavigate()
   const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
 
   const { query: meQuery } = useMe((me) => me.id)

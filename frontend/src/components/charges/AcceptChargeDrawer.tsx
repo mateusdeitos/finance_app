@@ -21,8 +21,8 @@ import { formatBalance } from '@/utils/formatCents'
 import { Charges } from '@/types/charges'
 
 const acceptChargeSchema = z.object({
-  account_id: z.number({ required_error: 'Selecione uma conta' }),
-  date: z.date({ required_error: 'Selecione uma data' }),
+  account_id: z.number('Selecione uma conta'),
+  date: z.date({ error: 'Selecione uma data' }),
   amount: z.number().positive().optional(),
 })
 

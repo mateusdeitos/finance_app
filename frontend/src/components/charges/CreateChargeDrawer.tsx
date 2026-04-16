@@ -21,12 +21,12 @@ import { formatBalance } from '@/utils/formatCents'
 import { Charges } from '@/types/charges'
 
 const createChargeSchema = z.object({
-  connection_id: z.number({ required_error: 'Selecione uma conexao' }),
-  my_account_id: z.number({ required_error: 'Selecione uma conta' }),
+  connection_id: z.number('Selecione uma conexao'),
+  my_account_id: z.number('Selecione uma conta'),
   period_month: z.number().min(1).max(12),
   period_year: z.number(),
   description: z.string().optional(),
-  date: z.date({ required_error: 'Selecione uma data' }),
+  date: z.date({ error: 'Selecione uma data' }),
 })
 
 type CreateChargeFormValues = z.infer<typeof createChargeSchema>

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useMemo, useState } from 'react'
 import { z } from 'zod'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -36,7 +36,7 @@ export const Route = createFileRoute('/_authenticated/charges')({
 
 function ChargesPage() {
   const search = Route.useSearch()
-  const navigate = useNavigate()
+  const navigate = Route.useNavigate()
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data
   const { query: chargesQuery, invalidate: invalidateCharges } = useCharges({
