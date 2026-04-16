@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.1 Charges (Shipped: 2026-04-16)
+
+**Phases completed:** 4 phases, 9 plans, 2 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- One-liner:
+- Assembled complete charges page with createAuthenticatedRoute utility, two-tab layout (Recebidas/Enviadas), period navigation, ChargeCards with balance amounts, reject/cancel confirmation modals with success notifications, skeleton loading, and empty states.
+
+---
+
 ## v1.0 Recurrence Redesign (Shipped: 2026-04-10)
 
 **Phases completed:** 4 phases, 8 plans

@@ -34,7 +34,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-- [ ] Charges frontend: listing page, create/accept/reject/cancel forms, sidebar badge — Phase 8
+(None — v1.1 complete, next milestone not yet defined)
 
 ### v1.1 Validated
 
@@ -45,6 +45,8 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ Race-condition guard: conditional UPDATE prevents double-accept — Phase 7
 - ✓ ChargeID propagation to all transfer transactions — Phase 7
 - ✓ Role re-inference from live balance during accept — Phase 7
+- ✓ Charges frontend: listing page with tabs, create/accept/reject/cancel forms, sidebar badge — Phase 8
+- ✓ E2E Playwright tests for charges feature (multi-user setup) — Phase 8
 
 ### Out of Scope
 
@@ -56,7 +58,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 ## Context
 
-**Current state (v1.1, Phase 7 complete):** Charges backend fully implemented. Charge entity with status machine, CRUD API with IDOR protection, and atomic accept flow (dual-transfer creation with race guard) all shipped. Phase 8 (frontend) is next.
+**Current state (v1.1 complete):** Charges feature fully shipped — backend and frontend. Charge entity with status machine, CRUD API with IDOR protection, atomic accept flow with race guard, and full web UI (listing, create/accept/reject/cancel, sidebar badge). E2E Playwright tests cover the complete flow with multi-user setup.
 
 **Tech stack:** Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine, Zod, React Hook Form (frontend) · Playwright (e2e)
 
@@ -80,6 +82,9 @@ Partners can accurately track shared finances, including in-progress installment
 | Role re-inference from live balance during accept                 | Balance may flip between charge creation and acceptance; swap in same tx    | ✓ Good  |
 | charges.date as TIMESTAMPTZ (initiator + acceptor each provide)   | Both parties need their own transaction date for their respective transfers  | ✓ Good  |
 | Mock-based handler tests (not integration) for charge handler     | No existing handler test patterns; mock approach avoids Docker dependency    | ✓ Good  |
+| Removed createAuthenticatedRoute wrapper, use createFileRoute directly | Template literal loses TanStack Router type inference; `_authenticated` prefix handles auth | ✓ Good |
+| Shared PeriodNavigator with onPeriodChange callback               | Reuse over copy; both transactions and charges pages use same component      | ✓ Good  |
+| Charge mutations invalidate Transactions + Balance queries         | Accept creates transfers; stale transaction list without cross-invalidation  | ✓ Good  |
 
 ## Constraints
 
@@ -109,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-16 after Phase 7 (accept-atomic-transfer)_
+_Last updated: 2026-04-16 after v1.1 Charges milestone complete_
