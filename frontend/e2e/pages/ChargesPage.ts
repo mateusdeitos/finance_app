@@ -13,9 +13,9 @@ export class ChargesPage {
     this.confirmModal = page.getByRole('dialog')
   }
 
-  /** Get the currently visible tab panel content */
+  /** Get the currently visible tab panel (Mantine hides inactive panels via display:none) */
   get activePanel(): Locator {
-    return this.page.locator('[role="tabpanel"]:not([hidden])')
+    return this.page.locator('[role="tabpanel"]:visible')
   }
 
   async goto() {
