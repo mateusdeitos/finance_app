@@ -23,7 +23,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 - [x] **Phase 5: Charge Domain & DB** — Charge entity, status machine, DB migrations, and transaction charge_id enhancement
 - [x] **Phase 6: Charge Repository, Service & API (CRUD + Listing)** — Repository, create/reject/cancel/list service methods with handlers, IDOR protection, badge endpoint
-- [ ] **Phase 7: Accept + Atomic Transfer** — Charge acceptance triggers atomic dual-transfer creation with race-condition guard
+- [x] **Phase 7: Accept + Atomic Transfer** — Charge acceptance triggers atomic dual-transfer creation with race-condition guard (completed 2026-04-16)
 - [ ] **Phase 8: Frontend** — Charges listing page, create/accept/reject/cancel forms, sidebar badge
 
 ## Phase Details
@@ -81,8 +81,11 @@ Plans:
   4. User can reject a received pending charge with a single confirmation action; user (author) can cancel a sent pending charge with a single confirmation action
   5. The sidebar nav badge displays the count of received pending charges requiring the user's action and disappears when no pending charges exist
   6. After any accept/reject/cancel action, the sidebar badge count updates without requiring a full page reload
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 3 plans
+Plans:
+- [ ] 08-01-PLAN.md — Types, API client, hooks, query keys, and error tag mappings (data layer)
+- [ ] 08-02-PLAN.md — ChargeCard, ChargeStatusBadge, CreateChargeDrawer, AcceptChargeDrawer, sidebar badge
+- [ ] 08-03-PLAN.md — Charges page route with tabs, period navigator, reject/cancel confirmation
 
 ## Progress
 
@@ -94,8 +97,8 @@ Plans:
 | 4. Tests | v1.0 | 2/2 | Complete | 2026-04-10 |
 | 5. Charge Domain & DB | v1.1 | 2/2 | Complete | 2026-04-14 |
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1 | 2/2 | Complete | 2026-04-15 |
-| 7. Accept + Atomic Transfer | v1.1 | 0/? | Not started | - |
-| 8. Frontend | v1.1 | 0/? | Not started | - |
+| 7. Accept + Atomic Transfer | v1.1 | 2/2 | Complete    | 2026-04-16 |
+| 8. Frontend | v1.1 | 0/3 | Not started | - |
 
 ---
 *Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 started: 2026-04-14*
