@@ -123,7 +123,7 @@ function TransactionsPage() {
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
             <Group justify="space-between" align="center">
-              <PeriodNavigator month={search.month} year={search.year} />
+              <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })} />
               <Group gap="xs">
                 <Button
                   size="xs"
@@ -213,7 +213,7 @@ function TransactionsPage() {
       >
         <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
           <Group justify="space-between" align="center">
-            <PeriodNavigator month={search.month} year={search.year} />
+            <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })} />
             <Group gap="xs">
               <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
                 Nova Transação
