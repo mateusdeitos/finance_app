@@ -22,20 +22,23 @@ type TestDatabase struct {
 }
 
 func NewTestDatabase(ctx context.Context) (*TestDatabase, error) {
-	postgresContainer, err := postgres.Run(ctx,
-		"postgres:15-alpine",
-		postgres.WithDatabase("test_db"),
-		postgres.WithUsername("test_user"),
-		postgres.WithPassword("test_password"),
-		postgres.BasicWaitStrategies(),
-	)
-	if err != nil {
-		return nil, err
-	}
+	connStr := os.Getenv("TEST_DB_DSN")
+	if connStr == "" {
+		postgresContainer, err := postgres.Run(ctx,
+			"postgres:15-alpine",
+			postgres.WithDatabase("test_db"),
+			postgres.WithUsername("test_user"),
+			postgres.WithPassword("test_password"),
+			postgres.BasicWaitStrategies(),
+		)
+		if err != nil {
+			return nil, err
+		}
 
-	connStr, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		return nil, err
+		connStr, err = postgresContainer.ConnectionString(ctx, "sslmode=disable")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	logLevel := logger.Silent
