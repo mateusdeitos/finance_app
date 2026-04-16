@@ -51,7 +51,7 @@ test.describe('Charges', () => {
     partnerAccountId = partnerAccount.id
 
     // 3. Get partner user ID
-    const meRes = await apiFetchAs(partnerToken, '/api/me')
+    const meRes = await apiFetchAs(partnerToken, '/api/auth/me')
     const partnerUser = await meRes.json()
 
     // 4. Primary user creates connection to partner
