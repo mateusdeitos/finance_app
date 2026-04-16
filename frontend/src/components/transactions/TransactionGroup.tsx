@@ -112,6 +112,7 @@ export function TransactionGroup({
                   settlement={s}
                   groupBy={groupBy}
                   accounts={accounts}
+                  description={tx.description}
                   onEdit={
                     !isSelectionActive && isOwner
                       ? () => openEditDrawer(tx, "split_settings.0.amount")
