@@ -7,8 +7,6 @@ import {
   apiCancelCharge,
   apiCreateUserConnection,
   apiCreateTransaction,
-  apiCreateCategory,
-  apiDeleteCategory,
   getAuthTokenForUser,
   apiFetchAs,
 } from '../helpers/api'
@@ -37,7 +35,6 @@ test.describe('Charges', () => {
   let partnerAccountId: number
   let connectionId: number
   let primaryConnAccountId: number
-  let seedCategoryId: number
   const createdChargeIds: number[] = []
 
   test.beforeAll(async () => {
@@ -80,12 +77,8 @@ test.describe('Charges', () => {
       }
     }
 
-    // 6. Create a seed category (expenses require category_id)
-    const seedCat = await apiCreateCategory({ name: `Charges Seed ${Date.now()}` })
-    seedCategoryId = seedCat.id
-
-    // 7. Find the primary user's connection account (created by connection setup)
-    //    and seed an expense so balance is non-zero (charges require balance != 0)
+    // 6. Find the primary user's connection account (created by connection setup)
+    //    and seed income so balance > 0 (charges require balance != 0)
     const accountsRes = await apiFetchAs(
       (await getAuthTokenForUser('e2e-test@financeapp.local')),
       '/api/accounts',
@@ -97,11 +90,11 @@ test.describe('Charges', () => {
     if (!connAccount) throw new Error(`No connection account found for connection ${connectionId}`)
     primaryConnAccountId = connAccount.id
 
-    // Create an expense on the primary user's connection account
+    // Create an income on the primary user's connection account so balance > 0
+    // Positive balance means "partner owes primary" → primary is charger when creating charges
     await apiCreateTransaction({
       account_id: primaryConnAccountId,
-      transaction_type: 'expense',
-      category_id: seedCategoryId,
+      transaction_type: 'income',
       amount: 50000,
       date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
       description: 'E2E seed for charges (primary)',
@@ -114,18 +107,12 @@ test.describe('Charges', () => {
       (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
     )
     if (partnerConnAccount) {
-      // Partner needs a category too
-      const partnerCatRes = await apiFetchAs(partnerToken, '/api/categories', {
-        method: 'POST',
-        body: JSON.stringify({ name: `Partner Seed ${Date.now()}` }),
-      })
-      const partnerCat = await partnerCatRes.json()
+      // Income on partner's connection account → partner's balance > 0 → partner is charger
       await apiFetchAs(partnerToken, '/api/transactions', {
         method: 'POST',
         body: JSON.stringify({
           account_id: partnerConnAccount.id,
-          transaction_type: 'expense',
-          category_id: partnerCat.id,
+          transaction_type: 'income',
           amount: 50000,
           date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01T00:00:00Z`,
           description: 'E2E seed for charges (partner)',
@@ -144,7 +131,6 @@ test.describe('Charges', () => {
     await apiFetchAs(partnerToken, `/api/accounts/${partnerAccountId}`, {
       method: 'DELETE',
     }).catch(() => undefined)
-    await apiDeleteCategory(seedCategoryId).catch(() => undefined)
   })
 
   test.beforeEach(async ({ page }) => {
