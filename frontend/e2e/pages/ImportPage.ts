@@ -161,6 +161,18 @@ export class ImportPage {
     await expect(drawer).not.toBeVisible({ timeout: 10000 });
   }
 
+  /** Get the current value of the category select for a row. */
+  async getRowCategoryValue(rowIndex: number): Promise<string> {
+    const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
+    return select.locator("input").inputValue();
+  }
+
+  /** Get the current value of the main account select in the upload step. */
+  async getHeaderAccountValue(): Promise<string> {
+    const select = this.uploadStep.getByTestId("select_import_account");
+    return select.locator("input").inputValue();
+  }
+
   /** Change the action for a row via the action select. */
   async setRowAction(rowIndex: number, action: "import" | "skip" | "duplicate") {
     const labels: Record<string, string> = {
