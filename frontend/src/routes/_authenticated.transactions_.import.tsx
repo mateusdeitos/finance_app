@@ -579,7 +579,13 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         <ActionIcon
           variant="subtle"
           color="gray"
-          onClick={() => void renderDrawer(() => <AccountDrawer />)}
+          onClick={() => {
+            renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
+              .then((created) => {
+                if (created) setAccountId(created.id);
+              })
+              .catch(() => {});
+          }}
           aria-label="Criar conta"
           mb={2}
         >
