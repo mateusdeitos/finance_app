@@ -124,7 +124,8 @@ export class ImportPage {
   async openCreateCategoryDrawer(rowIndex: number) {
     const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
     await row.getByRole("button", { name: "Criar categoria" }).click();
-    await expect(this.page.getByTestId("drawer_create_category")).toBeVisible({ timeout: 5000 });
+    // Wait for drawer content (root div starts hidden during Mantine transition)
+    await expect(this.page.getByTestId("drawer_create_category").getByRole("button", { name: "Nova Categoria" })).toBeVisible({ timeout: 5000 });
   }
 
   /** Click the + button next to the account select in the upload step header. */
