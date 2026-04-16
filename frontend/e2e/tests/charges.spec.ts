@@ -160,6 +160,8 @@ test.describe('Charges', () => {
   })
 
   test('show empty state when no charges exist', async () => {
+    // Navigate to a far-future period where no data exists
+    await chargesPage.gotoMonth(1, 2099)
     await chargesPage.selectSentTab()
     await expect(chargesPage.page.getByText('Nenhuma cobranca enviada')).toBeVisible({ timeout: 5000 })
   })
@@ -252,8 +254,10 @@ test.describe('Charges', () => {
     // Reload and check badge
     await chargesPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR)
 
-    // Badge should show at least 1
-    const badgeCount = await chargesPage.getSidebarBadgeCount()
-    expect(badgeCount).toBeGreaterThanOrEqual(1)
+    // Badge should show at least 1 — Mantine Badge inside NavLink for /charges
+    const badge = page.locator('a[href="/charges"]').locator('[class*="mantine-Badge-root"]').first()
+    await expect(badge).toBeVisible({ timeout: 5000 })
+    const text = await badge.textContent()
+    expect(parseInt(text ?? '0')).toBeGreaterThanOrEqual(1)
   })
 })

@@ -120,9 +120,10 @@ export class ChargesPage {
   // --- Sidebar Badge ---
 
   async getSidebarBadgeCount(): Promise<number | null> {
-    const navLink = this.page.locator('nav').getByText(/Cobran/).first()
-    const badge = navLink.locator('..').locator('[class*="badge"], [class*="Badge"]').first()
-    if (await badge.isVisible()) {
+    // Mantine NavLink renders badge in rightSection. Look for a small red badge near "Cobrancas"
+    const navLink = this.page.locator('a[href="/charges"]').first()
+    const badge = navLink.locator('[class*="mantine-Badge-root"]').first()
+    if (await badge.isVisible({ timeout: 3000 }).catch(() => false)) {
       const text = await badge.textContent()
       return text ? parseInt(text) : null
     }
