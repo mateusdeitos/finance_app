@@ -84,8 +84,8 @@ Plans:
 **Plans:** 3 plans
 Plans:
 - [x] 08-01-PLAN.md — Types, API client, hooks, query keys, and error tag mappings (data layer)
-- [ ] 08-02-PLAN.md — ChargeCard, ChargeStatusBadge, CreateChargeDrawer, AcceptChargeDrawer, sidebar badge
-- [ ] 08-03-PLAN.md — Charges page route with tabs, period navigator, reject/cancel confirmation
+- [x] 08-02-PLAN.md — ChargeCard, ChargeStatusBadge, CreateChargeDrawer, AcceptChargeDrawer, sidebar badge
+- [x] 08-03-PLAN.md — Charges page route with tabs, period navigator, reject/cancel confirmation
 
 ## Progress
 
