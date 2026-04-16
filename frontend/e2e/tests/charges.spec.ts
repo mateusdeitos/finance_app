@@ -127,7 +127,7 @@ test.describe('Charges', () => {
           transaction_type: 'expense',
           category_id: partnerCat.id,
           amount: 50000,
-          date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
+          date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01T00:00:00Z`,
           description: 'E2E seed for charges (partner)',
         }),
       })
