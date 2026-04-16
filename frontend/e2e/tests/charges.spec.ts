@@ -159,11 +159,34 @@ test.describe('Charges', () => {
     await expect(chargesPage.page.getByRole('tab', { name: 'Enviadas' })).toBeVisible()
   })
 
-  test('show empty state when no charges exist', async () => {
-    // Navigate to a far-future period where no data exists
-    await chargesPage.gotoMonth(1, 2099)
-    await chargesPage.selectSentTab()
-    await expect(chargesPage.page.getByText('Nenhuma cobranca enviada')).toBeVisible({ timeout: 5000 })
+  test('show empty state when no charges exist', async ({ browser }) => {
+    // Use a fresh user with no charges to guarantee empty state
+    const freshToken = await getAuthTokenForUser(`e2e-empty-charges-${Date.now()}@financeapp.local`)
+    const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
+    const url = new URL(baseURL)
+    const context = await browser.newContext({
+      storageState: {
+        cookies: [{
+          name: 'auth_token',
+          value: freshToken,
+          domain: url.hostname,
+          path: '/',
+          expires: -1,
+          httpOnly: true,
+          secure: false,
+          sameSite: 'Lax' as const,
+        }],
+        origins: [],
+      },
+    })
+    const page = await context.newPage()
+    await page.goto(`/charges?month=${PERIOD_MONTH}&year=${PERIOD_YEAR}`)
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('tab', { name: 'Enviadas' }).click()
+    await expect(page.getByText('Nenhuma cobranca enviada')).toBeVisible({ timeout: 5000 })
+
+    await context.close()
   })
 
   test('create a charge and see it in sent tab', async ({ page }) => {
