@@ -43,17 +43,19 @@ func (c *Charge) ValidateTransition(newStatus ChargeStatus) error {
 		if newStatus == ChargeStatusPaid || newStatus == ChargeStatusRejected || newStatus == ChargeStatusCancelled {
 			return nil
 		}
+	case ChargeStatusPaid, ChargeStatusRejected, ChargeStatusCancelled:
+		// Terminal states — no transitions allowed
 	}
 	return ErrInvalidStatusTransition
 }
 
 type ChargeSearchOptions struct {
-	UserID       int          `json:"user_id" query:"user_id"`
-	Direction    string       `json:"direction" query:"direction"`        // "sent" | "received" | "" (all)
-	Status       ChargeStatus `json:"status" query:"status"`             // "" means no filter
-	ConnectionID int          `json:"connection_id" query:"connection_id"` // 0 means no filter
-	Limit        int          `json:"limit" query:"limit"`
-	Offset       int          `json:"offset" query:"offset"`
+	UserID       int          `json:"user_id"       query:"user_id"`
+	Direction    string       `json:"direction"     query:"direction"`      // "sent" | "received" | "" (all)
+	Status       ChargeStatus `json:"status"        query:"status"`         // "" means no filter
+	ConnectionID int          `json:"connection_id" query:"connection_id"`  // 0 means no filter
+	Limit        int          `json:"limit"         query:"limit"`
+	Offset       int          `json:"offset"        query:"offset"`
 }
 
 type CreateChargeRequest struct {

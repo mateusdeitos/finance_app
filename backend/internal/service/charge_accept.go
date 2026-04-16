@@ -18,6 +18,7 @@ import (
 //
 // IMPORTANT: This method calls transactionRepo.Create directly — NOT transactionService.Create —
 // to avoid nested DB transactions (transactionService.Create owns its own Begin/Commit scope).
+//nolint:maintidx // Atomic accept with validation, role inference, race guard, and dual transfer — splitting would obscure the transaction boundary.
 func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error {
 	// ---- Validate request shape ----
 	if req == nil {

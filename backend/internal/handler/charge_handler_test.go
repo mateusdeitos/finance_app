@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+const testAcceptBody = `{"account_id":5,"date":"2026-04-01T00:00:00Z"}`
 
 func setupChargeHandlerTest(t *testing.T) (*echo.Echo, *mocks.MockChargeService, *ChargeHandler) {
 	t.Helper()
@@ -35,7 +38,7 @@ func TestChargeHandler_Accept_Success(t *testing.T) {
 	mockSvc.EXPECT().Accept(mock.Anything, 42, 7, mock.AnythingOfType("*domain.AcceptChargeRequest")).Return(nil).Once()
 
 	body := `{"account_id":5,"amount":12000,"date":"2026-04-01T00:00:00Z"}`
-	req := injectUserCtx(httptest.NewRequest(http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -52,8 +55,7 @@ func TestChargeHandler_Accept_Forbidden(t *testing.T) {
 	e, mockSvc, h := setupChargeHandlerTest(t)
 	mockSvc.EXPECT().Accept(mock.Anything, 42, 7, mock.Anything).Return(pkgErrors.Forbidden("charge")).Once()
 
-	body := `{"account_id":5,"date":"2026-04-01T00:00:00Z"}`
-	req := injectUserCtx(httptest.NewRequest(http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(testAcceptBody)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -62,8 +64,8 @@ func TestChargeHandler_Accept_Forbidden(t *testing.T) {
 
 	err := h.Accept(c)
 	assert.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
-	assert.True(t, ok)
+	var httpErr *echo.HTTPError
+	assert.True(t, errors.As(err, &httpErr))
 	assert.Equal(t, http.StatusForbidden, httpErr.Code)
 }
 
@@ -71,8 +73,7 @@ func TestChargeHandler_Accept_Conflict(t *testing.T) {
 	e, mockSvc, h := setupChargeHandlerTest(t)
 	mockSvc.EXPECT().Accept(mock.Anything, 42, 7, mock.Anything).Return(pkgErrors.AlreadyExists("charge")).Once()
 
-	body := `{"account_id":5,"date":"2026-04-01T00:00:00Z"}`
-	req := injectUserCtx(httptest.NewRequest(http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(testAcceptBody)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -81,8 +82,8 @@ func TestChargeHandler_Accept_Conflict(t *testing.T) {
 
 	err := h.Accept(c)
 	assert.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
-	assert.True(t, ok)
+	var httpErr *echo.HTTPError
+	assert.True(t, errors.As(err, &httpErr))
 	assert.Equal(t, http.StatusConflict, httpErr.Code)
 }
 
@@ -90,8 +91,7 @@ func TestChargeHandler_Accept_BadID(t *testing.T) {
 	_, _, h := setupChargeHandlerTest(t)
 	e := echo.New()
 
-	body := `{"account_id":5,"date":"2026-04-01T00:00:00Z"}`
-	req := injectUserCtx(httptest.NewRequest(http.MethodPost, "/api/charges/abc/accept", bytes.NewBufferString(body)), 42)
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/charges/abc/accept", bytes.NewBufferString(testAcceptBody)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -100,8 +100,8 @@ func TestChargeHandler_Accept_BadID(t *testing.T) {
 
 	err := h.Accept(c)
 	assert.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
-	assert.True(t, ok)
+	var httpErr *echo.HTTPError
+	assert.True(t, errors.As(err, &httpErr))
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 }
 
@@ -110,7 +110,7 @@ func TestChargeHandler_Accept_BadJSON(t *testing.T) {
 	// No mock expectations — service should NOT be called
 
 	body := `{not-valid-json}`
-	req := injectUserCtx(httptest.NewRequest(http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/charges/7/accept", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -119,8 +119,8 @@ func TestChargeHandler_Accept_BadJSON(t *testing.T) {
 
 	err := h.Accept(c)
 	assert.Error(t, err)
-	httpErr, ok := err.(*echo.HTTPError)
-	assert.True(t, ok)
+	var httpErr *echo.HTTPError
+	assert.True(t, errors.As(err, &httpErr))
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 	mockSvc.AssertNotCalled(t, "Accept")
 }
