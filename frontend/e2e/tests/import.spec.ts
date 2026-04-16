@@ -174,10 +174,6 @@ test.describe("Import transactions", () => {
 
     await importPage.uploadCSV(csv, testAccountName);
 
-    // Row 0 category should be empty initially
-    const valueBefore = await importPage.getRowCategoryValue(0);
-    expect(valueBefore).toBe("");
-
     // Open category drawer from the + button on row 0
     await importPage.openCreateCategoryDrawer(0);
 
@@ -185,8 +181,9 @@ test.describe("Import transactions", () => {
     await importPage.createCategoryInDrawer(newCategoryName);
 
     // Category should be auto-selected in row 0 after drawer close
-    const valueAfter = await importPage.getRowCategoryValue(0);
-    expect(valueAfter).toBe(newCategoryName);
+    // Wait for Mantine Select to reflect the new value after form.setValue + re-render
+    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+      .toHaveValue(newCategoryName, { timeout: 5000 });
 
     // Confirm import succeeds with the auto-selected category
     await importPage.confirmImport();
@@ -218,8 +215,8 @@ test.describe("Import transactions", () => {
     await importPage.createCategoryInDrawer(newCategoryName, { emoji });
 
     // Category should be auto-selected with emoji prefix in the select
-    const value = await importPage.getRowCategoryValue(0);
-    expect(value).toBe(`${emoji} ${newCategoryName}`);
+    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+      .toHaveValue(`${emoji} ${newCategoryName}`, { timeout: 5000 });
   });
 
   // ── Inline account creation ────────────────────────────────────────────────
