@@ -13,9 +13,9 @@ export class ChargesPage {
     this.confirmModal = page.getByRole('dialog')
   }
 
-  /** Get the currently visible tab panel (Mantine hides inactive panels via display:none) */
-  get activePanel(): Locator {
-    return this.page.locator('[role="tabpanel"]').filter({ visible: true })
+  /** Find a visible charge card by its description text */
+  chargeCard(description: string): Locator {
+    return this.page.getByText(description, { exact: false }).locator('visible=true').first()
   }
 
   async goto() {
@@ -69,8 +69,7 @@ export class ChargesPage {
   // --- Accept ---
 
   async clickAccept(chargeDescription: string) {
-    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
-    await card.getByRole('button', { name: 'Aceitar' }).click()
+    await this.page.getByRole('button', { name: 'Aceitar' }).locator('visible=true').first().click()
     await expect(this.acceptDrawer).toBeVisible({ timeout: 5000 })
   }
 
@@ -88,8 +87,7 @@ export class ChargesPage {
   // --- Reject / Cancel ---
 
   async clickReject(chargeDescription: string) {
-    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
-    await card.getByRole('button', { name: 'Recusar' }).click()
+    await this.page.getByRole('button', { name: 'Recusar' }).locator('visible=true').first().click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
 
@@ -99,8 +97,7 @@ export class ChargesPage {
   }
 
   async clickCancel(chargeDescription: string) {
-    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
-    await card.getByRole('button', { name: 'Cancelar' }).click()
+    await this.page.getByRole('button', { name: 'Cancelar' }).locator('visible=true').first().click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
 

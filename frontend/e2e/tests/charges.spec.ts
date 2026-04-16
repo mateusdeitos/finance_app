@@ -177,7 +177,7 @@ test.describe('Charges', () => {
 
     // Charge visible in sent tab
     await chargesPage.selectSentTab()
-    await expect(chargesPage.activePanel.getByText(description)).toBeVisible({ timeout: 5000 })
+    await expect(chargesPage.chargeCard(description)).toBeVisible({ timeout: 5000 })
   })
 
   test('reject a received charge', async ({ page, context }) => {
