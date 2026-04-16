@@ -196,6 +196,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 				CategoryID:              lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, nil, &req.CategoryID),
 				Amount:                  req.Amount,
 				Tags:                    req.Tags,
+				ChargeID:                req.ChargeID,
 			})
 		}
 	} else {
@@ -213,6 +214,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			CategoryID:              lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, nil, &req.CategoryID),
 			Amount:                  req.Amount,
 			Tags:                    req.Tags,
+			ChargeID:                req.ChargeID,
 		})
 	}
 
@@ -378,6 +380,7 @@ func (s *transactionService) injectLinkedTransactions(
 				CategoryID:              nil,
 				Amount:                  transaction.Amount,
 				Tags:                    transaction.Tags,
+				ChargeID:                transaction.ChargeID,
 			})
 
 			return nil
@@ -425,6 +428,7 @@ func (s *transactionService) injectLinkedTransactions(
 			Tags:              nil,
 			CreatedAt:         nil,
 			UpdatedAt:         nil,
+			ChargeID:          transaction.ChargeID,
 		}
 
 		if hasRecurrence {

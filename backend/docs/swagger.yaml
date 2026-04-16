@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  domain.AcceptChargeRequest:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: integer
+      date:
+        type: string
+    type: object
   domain.Account:
     properties:
       created_at:
@@ -49,6 +58,47 @@ definitions:
       user_id:
         type: integer
     type: object
+  domain.Charge:
+    properties:
+      charger_account_id:
+        type: integer
+      charger_user_id:
+        type: integer
+      connection_id:
+        type: integer
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      payer_account_id:
+        type: integer
+      payer_user_id:
+        type: integer
+      period_month:
+        type: integer
+      period_year:
+        type: integer
+      status:
+        $ref: '#/definitions/domain.ChargeStatus'
+      updated_at:
+        type: string
+    type: object
+  domain.ChargeStatus:
+    enum:
+    - pending
+    - paid
+    - rejected
+    - cancelled
+    type: string
+    x-enum-varnames:
+    - ChargeStatusPending
+    - ChargeStatusPaid
+    - ChargeStatusRejected
+    - ChargeStatusCancelled
   domain.CheckDuplicateRequest:
     properties:
       account_id:
@@ -62,6 +112,21 @@ definitions:
         type: string
       description:
         type: string
+    type: object
+  domain.CreateChargeRequest:
+    properties:
+      connection_id:
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      my_account_id:
+        type: integer
+      period_month:
+        type: integer
+      period_year:
+        type: integer
     type: object
   domain.DeleteCategoryRequest:
     properties:
@@ -211,6 +276,8 @@ definitions:
         type: integer
       category_id:
         type: integer
+      charge_id:
+        type: integer
       created_at:
         type: string
       date:
@@ -257,6 +324,8 @@ definitions:
       amount:
         type: integer
       category_id:
+        type: integer
+      charge_id:
         type: integer
       date:
         type: string
@@ -709,6 +778,230 @@ paths:
       summary: Update category
       tags:
       - categories
+  /api/charges:
+    get:
+      parameters:
+      - description: Filter direction
+        enum:
+        - sent
+        - received
+        in: query
+        name: direction
+        type: string
+      - description: Filter status
+        enum:
+        - pending
+        - paid
+        - rejected
+        - cancelled
+        in: query
+        name: status
+        type: string
+      - description: Filter by connection ID
+        in: query
+        name: connection_id
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/domain.Charge'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List charges
+      tags:
+      - charges
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Charge data
+        in: body
+        name: charge
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateChargeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Charge'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create a charge
+      tags:
+      - charges
+  /api/charges/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      description: Atomically settles a pending charge by creating two linked transfer
+        transactions. Caller must be the non-initiating party (the one whose account
+        field is nil on the charge).
+      parameters:
+      - description: Charge ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Accept request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AcceptChargeRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "409":
+          description: Charge already accepted or not pending
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Accept a charge (non-initiating party only)
+      tags:
+      - charges
+  /api/charges/{id}/cancel:
+    post:
+      parameters:
+      - description: Charge ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Cancel a charge (charger only)
+      tags:
+      - charges
+  /api/charges/{id}/reject:
+    post:
+      parameters:
+      - description: Charge ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Reject a charge (payer only)
+      tags:
+      - charges
+  /api/charges/pending-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Count pending charges requiring caller's action
+      tags:
+      - charges
   /api/tags:
     get:
       produces:

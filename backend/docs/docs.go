@@ -495,6 +495,364 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/charges": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "List charges",
+                "parameters": [
+                    {
+                        "enum": [
+                            "sent",
+                            "received"
+                        ],
+                        "type": "string",
+                        "description": "Filter direction",
+                        "name": "direction",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "rejected",
+                            "cancelled"
+                        ],
+                        "type": "string",
+                        "description": "Filter status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by connection ID",
+                        "name": "connection_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/domain.Charge"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Create a charge",
+                "parameters": [
+                    {
+                        "description": "Charge data",
+                        "name": "charge",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateChargeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Charge"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/charges/pending-count": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Count pending charges requiring caller's action",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/charges/{id}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atomically settles a pending charge by creating two linked transfer transactions. Caller must be the non-initiating party (the one whose account field is nil on the charge).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Accept a charge (non-initiating party only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Charge ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Accept request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AcceptChargeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Charge already accepted or not pending",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/charges/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Cancel a charge (charger only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Charge ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/charges/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Reject a charge (payer only)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Charge ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/tags": {
             "get": {
                 "security": [
@@ -1745,6 +2103,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.AcceptChargeRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Account": {
             "type": "object",
             "properties": {
@@ -1820,6 +2192,65 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.Charge": {
+            "type": "object",
+            "properties": {
+                "charger_account_id": {
+                    "type": "integer"
+                },
+                "charger_user_id": {
+                    "type": "integer"
+                },
+                "connection_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "payer_account_id": {
+                    "type": "integer"
+                },
+                "payer_user_id": {
+                    "type": "integer"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.ChargeStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ChargeStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "paid",
+                "rejected",
+                "cancelled"
+            ],
+            "x-enum-varnames": [
+                "ChargeStatusPending",
+                "ChargeStatusPaid",
+                "ChargeStatusRejected",
+                "ChargeStatusCancelled"
+            ]
+        },
         "domain.CheckDuplicateRequest": {
             "type": "object",
             "properties": {
@@ -1837,6 +2268,29 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.CreateChargeRequest": {
+            "type": "object",
+            "properties": {
+                "connection_id": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "my_account_id": {
+                    "type": "integer"
+                },
+                "period_month": {
+                    "type": "integer"
+                },
+                "period_year": {
+                    "type": "integer"
                 }
             }
         },
@@ -2058,6 +2512,9 @@ const docTemplate = `{
                 "category_id": {
                     "type": "integer"
                 },
+                "charge_id": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2127,6 +2584,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "category_id": {
+                    "type": "integer"
+                },
+                "charge_id": {
                     "type": "integer"
                 },
                 "date": {

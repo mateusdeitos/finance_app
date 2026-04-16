@@ -27,7 +27,7 @@ export class ImportPage {
     await expect(this.uploadStep).toBeVisible({ timeout: 8000 });
   }
 
-  /** Select the account in the upload step. */
+  /** Select the account in the upload step (Mantine Select is readonly, use click+option). */
   async selectAccount(accountName: string) {
     const input = this.uploadStep.getByTestId("select_import_account");
     await input.click();
@@ -77,9 +77,7 @@ export class ImportPage {
     // - done with errors: review_step stays and shows an Alert
     //   ("Importação concluída com erros").
     // Search the whole page so both cases are covered.
-    await expect(
-      this.page.getByText("Importação concluída", { exact: false }).first(),
-    ).toBeVisible({ timeout: 30000 });
+    await expect(this.page.getByText("Importação concluída", { exact: false }).first()).toBeVisible({ timeout: 30000 });
     await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 

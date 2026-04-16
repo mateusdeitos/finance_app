@@ -34,7 +34,17 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-_(None — clean slate for next milestone)_
+- [ ] Charges frontend: listing page, create/accept/reject/cancel forms, sidebar badge — Phase 8
+
+### v1.1 Validated
+
+- ✓ Charge entity with status machine (pending → paid/rejected/cancelled) and DB schema — Phase 5
+- ✓ Charge CRUD API: create, reject, cancel, list with IDOR protection — Phase 6
+- ✓ Pending charge badge count endpoint — Phase 6
+- ✓ Atomic charge acceptance: dual-transfer creation in single DB transaction — Phase 7
+- ✓ Race-condition guard: conditional UPDATE prevents double-accept — Phase 7
+- ✓ ChargeID propagation to all transfer transactions — Phase 7
+- ✓ Role re-inference from live balance during accept — Phase 7
 
 ### Out of Scope
 
@@ -46,14 +56,14 @@ _(None — clean slate for next milestone)_
 
 ## Context
 
-**Current state (v1.0):** Recurrence redesign shipped. `RecurrenceSettings` now uses `CurrentInstallment + TotalInstallments`. The create loop starts from `current_installment`, date offsets are relative, and `TransactionRecurrence.Installments` stores the full series total. Frontend updated with new form inputs and Zod validation. All existing tests migrated; new integration + unit + e2e tests added.
+**Current state (v1.1, Phase 7 complete):** Charges backend fully implemented. Charge entity with status machine, CRUD API with IDOR protection, and atomic accept flow (dual-transfer creation with race guard) all shipped. Phase 8 (frontend) is next.
 
 **Tech stack:** Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine, Zod, React Hook Form (frontend) · Playwright (e2e)
 
 **Known open items:**
 
+- Integration tests for accept flow require Docker (testcontainers) — pass locally, blocked in CI without Docker
 - E2E tests (recurrence.spec.ts) require a live app to confirm — not runnable in CI without Docker/server
-- WR-04: error message in form uses unaccented "nao" — should be confirmed matches rendered UI text
 
 ## Key Decisions
 
@@ -65,24 +75,18 @@ _(None — clean slate for next milestone)_
 | Only create installments from current to total                    | Past installments are irrelevant to users at registration time                         | ✓ Good  |
 | `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series              | ✓ Good  |
 | E2E tests seed via API (not UI) for recurrence assertions         | Shared test DB makes row-count assertions unreliable; badge assertions prove numbering | ✓ Good  |
+| Direct transactionRepo.Create in accept (bypass service)          | Avoids nested DB transactions; PostgreSQL doesn't support them natively     | ✓ Good  |
+| Conditional UPDATE WHERE status='pending' for race guard          | Single atomic fence; no SELECT FOR UPDATE needed; cleaner than read-check-write | ✓ Good  |
+| Role re-inference from live balance during accept                 | Balance may flip between charge creation and acceptance; swap in same tx    | ✓ Good  |
+| charges.date as TIMESTAMPTZ (initiator + acceptor each provide)   | Both parties need their own transaction date for their respective transfers  | ✓ Good  |
+| Mock-based handler tests (not integration) for charge handler     | No existing handler test patterns; mock approach avoids Docker dependency    | ✓ Good  |
 
 ## Constraints
 
 - **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL — no new dependencies for this change
 - **Breaking change**: API clients must update their request format; no transition period
 - **DB migration**: `transaction_recurrence.installments` column stores total installments — semantics unchanged, no schema migration needed
-  <<<<<<< HEAD
 - **No end_date**: Removed from RecurrenceSettings; only fixed-count recurrences supported going forward
-
-## Key Decisions
-
-| Decision                                                          | Rationale                                                                    | Outcome   |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------- |
-| `current_installment` lives inside `RecurrenceSettings`           | Keeps recurrence concerns together; consistent with existing pattern         | — Pending |
-| `total_installments` replaces `repetitions` (rename for clarity)  | More expressive; removes ambiguity about what the count means                | — Pending |
-| Remove `end_date` from RecurrenceSettings                         | User chose fixed-count only; breaking change accepted; simplifies validation | — Pending |
-| Only create installments from current to total                    | Past installments are irrelevant to users at registration time               | — Pending |
-| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series    | — Pending |
 
 ## Evolution
 
@@ -105,10 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-# _Last updated: 2026-04-09 after initialization_
-
----
-
-_Last updated: 2026-04-10 after v1.0 milestone_
-
-> > > > > > > 837c2a8b4c46821fa710ca140091445d8383fbd4
+_Last updated: 2026-04-16 after Phase 7 (accept-atomic-transfer)_

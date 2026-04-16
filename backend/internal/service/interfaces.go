@@ -24,7 +24,7 @@ type TransactionService interface {
 	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
-	ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator ImportDecimalSeparatorValue, typeDefinitionRule ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
+	ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
 	CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error)
 }
 
@@ -70,6 +70,15 @@ type SettlementService interface {
 	Delete(ctx context.Context, ids []int) error
 }
 
+type ChargeService interface {
+	Create(ctx context.Context, callerUserID int, req *domain.CreateChargeRequest) (*domain.Charge, error)
+	Cancel(ctx context.Context, callerUserID, chargeID int) error
+	Reject(ctx context.Context, callerUserID, chargeID int) error
+	List(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
+	PendingCount(ctx context.Context, callerUserID int) (int64, error)
+	Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
@@ -80,4 +89,5 @@ type Services struct {
 	Transaction    TransactionService
 	UserConnection UserConnectionService
 	Settlement     SettlementService
+	Charge         ChargeService
 }

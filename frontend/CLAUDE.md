@@ -76,10 +76,10 @@ export function useCreateTransaction() {
 
 ## Authentication / Route Protection
 
-Use `createAuthenticatedRoute` (in `src/utils/createAuthenticatedRoute.ts`) instead of `createFileRoute` for protected routes. It wraps `beforeLoad` to call `ensureQueryData` for the `me` query and redirect to `/login` if unauthenticated.
+Protected routes use `createFileRoute` with the `/_authenticated` prefix. The parent `_authenticated.tsx` layout route handles auth via `beforeLoad` + `ensureQueryData` for the `me` query, redirecting to `/login` if unauthenticated.
 
 ```ts
-export const Route = createAuthenticatedRoute('/transactions')({
+export const Route = createFileRoute('/_authenticated/transactions')({
   component: TransactionsPage,
 })
 ```

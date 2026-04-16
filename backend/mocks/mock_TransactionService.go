@@ -22,6 +22,67 @@ func (_m *MockTransactionService) EXPECT() *MockTransactionService_Expecter {
 	return &MockTransactionService_Expecter{mock: &_m.Mock}
 }
 
+// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, description, amount, accountID
+func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error) {
+	ret := _m.Called(ctx, userID, date, description, amount, accountID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckDuplicateTransaction")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) (bool, error)); ok {
+		return rf(ctx, userID, date, description, amount, accountID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) bool); ok {
+		r0 = rf(ctx, userID, date, description, amount, accountID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, string, string, int64, *int) error); ok {
+		r1 = rf(ctx, userID, date, description, amount, accountID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_CheckDuplicateTransaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckDuplicateTransaction'
+type MockTransactionService_CheckDuplicateTransaction_Call struct {
+	*mock.Call
+}
+
+// CheckDuplicateTransaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - date string
+//   - description string
+//   - amount int64
+//   - accountID *int
+func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, description interface{}, amount interface{}, accountID interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
+	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, description, amount, accountID)}
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date string, description string, amount int64, accountID *int)) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(int64), args[5].(*int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 bool, _a1 error) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, string, string, int64, *int) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: ctx, userID, transaction
 func (_m *MockTransactionService) Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) (int, error) {
 	ret := _m.Called(ctx, userID, transaction)
@@ -190,9 +251,9 @@ func (_c *MockTransactionService_GetBalance_Call) RunAndReturn(run func(context.
 	return _c
 }
 
-// ParseImportCSV provides a mock function with given fields: ctx, userID, accountID, csvData
-func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, csvData []byte) (*domain.ImportCSVResponse, error) {
-	ret := _m.Called(ctx, userID, accountID, csvData)
+// ParseImportCSV provides a mock function with given fields: ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData
+func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
+	ret := _m.Called(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ParseImportCSV")
@@ -200,19 +261,19 @@ func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int
 
 	var r0 *domain.ImportCSVResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, []byte) (*domain.ImportCSVResponse, error)); ok {
-		return rf(ctx, userID, accountID, csvData)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)); ok {
+		return rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, []byte) *domain.ImportCSVResponse); ok {
-		r0 = rf(ctx, userID, accountID, csvData)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) *domain.ImportCSVResponse); ok {
+		r0 = rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.ImportCSVResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, int, []byte) error); ok {
-		r1 = rf(ctx, userID, accountID, csvData)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) error); ok {
+		r1 = rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -229,14 +290,16 @@ type MockTransactionService_ParseImportCSV_Call struct {
 //   - ctx context.Context
 //   - userID int
 //   - accountID int
+//   - decimalSeparator domain.ImportDecimalSeparatorValue
+//   - typeDefinitionRule domain.ImportTypeDefinitionRule
 //   - csvData []byte
-func (_e *MockTransactionService_Expecter) ParseImportCSV(ctx interface{}, userID interface{}, accountID interface{}, csvData interface{}) *MockTransactionService_ParseImportCSV_Call {
-	return &MockTransactionService_ParseImportCSV_Call{Call: _e.mock.On("ParseImportCSV", ctx, userID, accountID, csvData)}
+func (_e *MockTransactionService_Expecter) ParseImportCSV(ctx interface{}, userID interface{}, accountID interface{}, decimalSeparator interface{}, typeDefinitionRule interface{}, csvData interface{}) *MockTransactionService_ParseImportCSV_Call {
+	return &MockTransactionService_ParseImportCSV_Call{Call: _e.mock.On("ParseImportCSV", ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)}
 }
 
-func (_c *MockTransactionService_ParseImportCSV_Call) Run(run func(ctx context.Context, userID int, accountID int, csvData []byte)) *MockTransactionService_ParseImportCSV_Call {
+func (_c *MockTransactionService_ParseImportCSV_Call) Run(run func(ctx context.Context, userID int, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte)) *MockTransactionService_ParseImportCSV_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].([]byte))
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.ImportDecimalSeparatorValue), args[4].(domain.ImportTypeDefinitionRule), args[5].([]byte))
 	})
 	return _c
 }
@@ -246,7 +309,7 @@ func (_c *MockTransactionService_ParseImportCSV_Call) Return(_a0 *domain.ImportC
 	return _c
 }
 
-func (_c *MockTransactionService_ParseImportCSV_Call) RunAndReturn(run func(context.Context, int, int, []byte) (*domain.ImportCSVResponse, error)) *MockTransactionService_ParseImportCSV_Call {
+func (_c *MockTransactionService_ParseImportCSV_Call) RunAndReturn(run func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)) *MockTransactionService_ParseImportCSV_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -417,67 +480,6 @@ func (_c *MockTransactionService_Update_Call) Return(_a0 error) *MockTransaction
 }
 
 func (_c *MockTransactionService_Update_Call) RunAndReturn(run func(context.Context, int, int, *domain.TransactionUpdateRequest) error) *MockTransactionService_Update_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, description, amount, accountID
-func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date string, description string, amount int64, accountID *int) (bool, error) {
-	ret := _m.Called(ctx, userID, date, description, amount, accountID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CheckDuplicateTransaction")
-	}
-
-	var r0 bool
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) (bool, error)); ok {
-		return rf(ctx, userID, date, description, amount, accountID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, string, string, int64, *int) bool); ok {
-		r0 = rf(ctx, userID, date, description, amount, accountID)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int, string, string, int64, *int) error); ok {
-		r1 = rf(ctx, userID, date, description, amount, accountID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTransactionService_CheckDuplicateTransaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckDuplicateTransaction'
-type MockTransactionService_CheckDuplicateTransaction_Call struct {
-	*mock.Call
-}
-
-// CheckDuplicateTransaction is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID int
-//   - date string
-//   - description string
-//   - amount int64
-//   - accountID *int
-func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, description interface{}, amount interface{}, accountID interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
-	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, description, amount, accountID)}
-}
-
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date string, description string, amount int64, accountID *int)) *MockTransactionService_CheckDuplicateTransaction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(string), args[3].(string), args[4].(int64), args[5].(*int))
-	})
-	return _c
-}
-
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 bool, _a1 error) *MockTransactionService_CheckDuplicateTransaction_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, string, string, int64, *int) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

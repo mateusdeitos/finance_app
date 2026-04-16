@@ -118,6 +118,81 @@ export async function apiDeleteTag(id: number): Promise<void> {
   await apiFetch(`/api/tags/${id}`, { method: 'DELETE' })
 }
 
+// --- User Connections ---
+
+export async function apiCreateUserConnection(toUserId: number, splitPercentage = 50): Promise<{ id: number }> {
+  const res = await apiFetch('/api/user-connections', {
+    method: 'POST',
+    body: JSON.stringify({
+      to_user_id: toUserId,
+      from_default_split_percentage: splitPercentage,
+    }),
+  })
+  return res.json()
+}
+
+export async function apiAcceptConnection(connectionId: number): Promise<void> {
+  await apiFetch(`/api/user-connections/${connectionId}/accepted`, {
+    method: 'PATCH',
+  })
+}
+
+// --- Charges ---
+
+export interface ChargePayload {
+  connection_id: number
+  my_account_id: number
+  period_month: number
+  period_year: number
+  description?: string
+  date: string
+}
+
+export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number }> {
+  const res = await apiFetch('/api/charges', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return res.json()
+}
+
+export async function apiCancelCharge(id: number): Promise<void> {
+  await apiFetch(`/api/charges/${id}/cancel`, { method: 'POST' })
+}
+
+// --- Auth helpers for multi-user tests ---
+
+/** Get auth token for a specific user email via test-login */
+export async function getAuthTokenForUser(email: string): Promise<string> {
+  const res = await fetch(`${BACKEND_URL}/auth/test-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  if (!res.ok) throw new Error(`Test login failed for ${email}: ${res.status}`)
+  const setCookie = res.headers.get('set-cookie')
+  const match = setCookie?.match(/auth_token=([^;]+)/)
+  if (!match) throw new Error('No auth_token in response')
+  return match[1]
+}
+
+/** Make an API call authenticated as a specific user */
+export async function apiFetchAs(token: string, path: string, options: RequestInit = {}) {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`API ${options.method ?? 'GET'} ${path} failed: ${res.status} ${text}`)
+  }
+  return res
+}
+
 export async function apiUpdateTransaction(
   id: number,
   payload: Partial<Transactions.CreateTransactionPayload>,

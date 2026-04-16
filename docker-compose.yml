@@ -11,7 +11,6 @@ services:
       - .:/workspace
       # Persist Claude config and memory across sessions
       - ~/.claude:/home/node/.claude
+      - ~/.claude.json:/home/node/.claude.json
       # Mount Docker socket to allow running docker/just commands inside the container
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}

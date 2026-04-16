@@ -1,7 +1,6 @@
 import { ActionIcon, Group } from '@mantine/core'
 import { DateValue, MonthPickerInput } from '@mantine/dates'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
 import classes from './PeriodNavigator.module.css'
 
 import '@mantine/dates/styles.css'
@@ -9,26 +8,24 @@ import '@mantine/dates/styles.css'
 interface PeriodNavigatorProps {
   month: number
   year: number
+  onPeriodChange: (month: number, year: number) => void
 }
 
-export function PeriodNavigator({ month, year }: PeriodNavigatorProps) {
-  const navigate = useNavigate({ from: '/transactions' })
-  const search = useSearch({ from: '/_authenticated/transactions' })
-
+export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigatorProps) {
   const value = new Date(year, month - 1)
 
   function goToPrev() {
     let m = month - 1
     let y = year
     if (m < 1) { m = 12; y -= 1 }
-    navigate({ search: { ...search, month: m, year: y } })
+    onPeriodChange(m, y)
   }
 
   function goToNext() {
     let m = month + 1
     let y = year
     if (m > 12) { m = 1; y += 1 }
-    navigate({ search: { ...search, month: m, year: y } })
+    onPeriodChange(m, y)
   }
 
   function handleChange(date: DateValue) {
@@ -36,7 +33,7 @@ export function PeriodNavigator({ month, year }: PeriodNavigatorProps) {
     // date is an ISO string like "2011-02-01T00:00:00.000Z"
     // Parse year/month directly to avoid UTC→local timezone shift
     const [year, month] = date.toISOString().split('-').map(Number)
-    navigate({ search: { ...search, month, year } })
+    onPeriodChange(month, year)
   }
 
   return (

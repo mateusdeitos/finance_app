@@ -87,6 +87,7 @@ type Transaction struct {
 	LinkedTransactions      []Transaction          `json:"linked_transactions,omitempty"`
 	TransactionRecurrence   *TransactionRecurrence `json:"transaction_recurrence,omitempty"`
 	SettlementsFromSource   []Settlement           `json:"settlements_from_source,omitempty"`
+	ChargeID                *int                   `json:"charge_id,omitempty"`
 	// OriginSettlementID is set only on synthetic Transaction entries produced
 	// by the listing endpoint to surface settlements whose source transaction
 	// lives on a different (non-filtered) account. The ID field of such entries
@@ -113,6 +114,7 @@ type TransactionCreateRequest struct {
 	Tags                 []Tag               `json:"tags,omitempty"`
 	RecurrenceSettings   *RecurrenceSettings `json:"recurrence_settings,omitempty"`
 	SplitSettings        []SplitSettings     `json:"split_settings,omitempty"`
+	ChargeID             *int                `json:"charge_id,omitempty"`
 }
 
 type TransactionUpdateRequest struct {

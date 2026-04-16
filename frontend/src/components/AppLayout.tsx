@@ -1,16 +1,18 @@
-import { AppShell, Burger, Group, Text, NavLink, Avatar, Menu } from "@mantine/core";
+import { AppShell, Badge, Burger, Group, Text, NavLink, Avatar, Menu } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree } from "@tabler/icons-react";
+import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree, IconCreditCard } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
+import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
-const navLinks = [
+const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> = [
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
   { label: "Contas", icon: IconWallet, to: "/accounts" },
   { label: "Categorias", icon: IconTree, to: "/categories" },
+  { label: "Cobrancas", icon: IconCreditCard, to: "/charges" },
 ];
 
 export function AppLayout() {
@@ -21,6 +23,15 @@ export function AppLayout() {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
   const { mutation: logoutMutation } = useLogout();
+
+  const { query: pendingCountQuery } = useChargesPendingCount();
+  const pendingCount = pendingCountQuery.data?.count ?? 0;
+
+  const chargeNavLinks = navLinks.map((link) =>
+    link.to === "/charges" && pendingCount > 0
+      ? { ...link, badge: pendingCount }
+      : { ...link, badge: undefined },
+  );
 
   const initials = user?.name
     ? user.name
@@ -86,13 +97,14 @@ export function AppLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="xs">
-        {navLinks.map(({ label, icon: Icon, to }) => (
+        {chargeNavLinks.map(({ label, icon: Icon, to, badge }) => (
           <NavLink
             key={to}
             component={Link}
             to={to}
             label={label}
             leftSection={<Icon size={18} />}
+            rightSection={badge ? <Badge size="xs" circle color="red">{badge}</Badge> : undefined}
             active={currentPath === to}
             onClick={close}
           />
