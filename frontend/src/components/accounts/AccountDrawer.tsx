@@ -16,7 +16,7 @@ export function AccountDrawer({ account }: Props) {
 
   const { mutation: createMutation } = useCreateAccount()
   const { mutation: updateMutation } = useUpdateAccount({
-    onSuccess: () => { invalidate(); close() },
+    onSuccess: async () => { await invalidate(); close() },
   })
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -32,7 +32,7 @@ export function AccountDrawer({ account }: Props) {
       updateMutation.mutate({ id: account.id, payload })
     } else {
       createMutation.mutate(payload, {
-        onSuccess: (created) => { invalidate(); close(created) },
+        onSuccess: async (created) => { await invalidate(); close(created) },
       })
     }
   }

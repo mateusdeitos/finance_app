@@ -23,7 +23,7 @@ export function CreateCategoryDrawer() {
   async function handleCreateInline(name: string, parentId?: number) {
     const created = await createMutation.mutateAsync({ name, parent_id: parentId })
     lastCreatedRef.current = created
-    invalidate()
+    await invalidate()
     setPendingParentId(null)
   }
 
@@ -39,7 +39,7 @@ export function CreateCategoryDrawer() {
       id: category.id,
       payload: { name: category.name, emoji, parent_id: category.parent_id ?? undefined },
     })
-    invalidate()
+    await invalidate()
   }
 
   return (
