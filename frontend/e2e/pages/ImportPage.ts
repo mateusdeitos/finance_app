@@ -130,7 +130,7 @@ export class ImportPage {
   /** Click the + button next to the account select in the upload step header. */
   async openCreateAccountDrawerFromHeader() {
     await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
-    await expect(this.page.getByTestId("drawer_account")).toBeVisible({ timeout: 5000 });
+    await expect(this.page.getByTestId("account_form")).toBeVisible({ timeout: 5000 });
   }
 
   /** Create a new category inside the category drawer and close it. */
@@ -155,22 +155,22 @@ export class ImportPage {
 
   /** Create a new account inside the account drawer. */
   async createAccountInDrawer(name: string) {
-    const drawer = this.page.getByTestId("drawer_account");
-    await drawer.getByTestId("input_account_name").fill(name);
-    await drawer.getByTestId("btn_account_save").click();
-    await expect(drawer).not.toBeVisible({ timeout: 10000 });
+    const form = this.page.getByTestId("account_form");
+    await form.getByTestId("input_account_name").fill(name);
+    await form.getByTestId("btn_account_save").click();
+    await expect(form).not.toBeVisible({ timeout: 10000 });
   }
 
   /** Get the current value of the category select for a row. */
   async getRowCategoryValue(rowIndex: number): Promise<string> {
     const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
-    return select.locator("input").inputValue();
+    return select.inputValue();
   }
 
   /** Get the current value of the main account select in the upload step. */
   async getHeaderAccountValue(): Promise<string> {
     const select = this.uploadStep.getByTestId("select_import_account");
-    return select.locator("input").inputValue();
+    return select.inputValue();
   }
 
   /** Change the action for a row via the action select. */
