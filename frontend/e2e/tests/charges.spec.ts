@@ -7,6 +7,8 @@ import {
   apiCancelCharge,
   apiCreateUserConnection,
   apiCreateTransaction,
+  apiCreateCategory,
+  apiDeleteCategory,
   getAuthTokenForUser,
   apiFetchAs,
 } from '../helpers/api'
@@ -35,6 +37,7 @@ test.describe('Charges', () => {
   let partnerAccountId: number
   let connectionId: number
   let primaryConnAccountId: number
+  let seedCategoryId: number
   const createdChargeIds: number[] = []
 
   test.beforeAll(async () => {
@@ -77,10 +80,13 @@ test.describe('Charges', () => {
       }
     }
 
-    // 6. Find the primary user's connection account (created by connection setup)
+    // 6. Create a seed category (expenses require category_id)
+    const seedCat = await apiCreateCategory({ name: `Charges Seed ${Date.now()}` })
+    seedCategoryId = seedCat.id
+
+    // 7. Find the primary user's connection account (created by connection setup)
     //    and seed an expense so balance is non-zero (charges require balance != 0)
     const accountsRes = await apiFetchAs(
-      // Use primary user's token (from global storage state)
       (await getAuthTokenForUser('e2e-test@financeapp.local')),
       '/api/accounts',
     )
@@ -88,17 +94,18 @@ test.describe('Charges', () => {
     const connAccount = allAccounts.find(
       (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
     )
-    if (connAccount) {
-      primaryConnAccountId = connAccount.id
-      // Create an expense on the connection account to produce a non-zero balance
-      await apiCreateTransaction({
-        account_id: primaryConnAccountId,
-        transaction_type: 'expense',
-        amount: 50000,
-        date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
-        description: 'E2E seed for charges',
-      }).catch(() => undefined) // may already exist from a previous run
-    }
+    if (!connAccount) throw new Error(`No connection account found for connection ${connectionId}`)
+    primaryConnAccountId = connAccount.id
+
+    // Create an expense on the connection account to produce a non-zero balance
+    await apiCreateTransaction({
+      account_id: primaryConnAccountId,
+      transaction_type: 'expense',
+      category_id: seedCategoryId,
+      amount: 50000,
+      date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
+      description: 'E2E seed for charges',
+    })
   })
 
   test.afterAll(async () => {
@@ -106,11 +113,12 @@ test.describe('Charges', () => {
     for (const id of createdChargeIds) {
       await apiCancelCharge(id).catch(() => undefined)
     }
-    // Clean up accounts
+    // Clean up accounts and category
     await apiDeleteAccount(primaryAccountId).catch(() => undefined)
     await apiFetchAs(partnerToken, `/api/accounts/${partnerAccountId}`, {
       method: 'DELETE',
     }).catch(() => undefined)
+    await apiDeleteCategory(seedCategoryId).catch(() => undefined)
   })
 
   test.beforeEach(async ({ page }) => {
