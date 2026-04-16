@@ -52,19 +52,23 @@ Source: existing usage in `_authenticated.transactions.tsx`, `TransactionRow.tsx
 
 All typography uses Mantine's `Text` and `Title` components with the following size/weight constraints. These match the patterns established in `TransactionRow.tsx` and `AppLayout.tsx`.
 
+Two weights only: 400 (regular) for body and metadata; 700 (bold) for emphasized values and headings.
+
 | Role | Mantine Size | Weight | Line Height | Usage |
 |------|-------------|--------|-------------|-------|
 | Body | `size="sm"` (14px) | 400 regular | 1.5 | Charge description, partner name, period label |
 | Label | `size="xs"` (12px) | 400 regular | 1.4 | Secondary metadata, date labels, status badge text |
-| Heading | `size="md"` (16px) | 500 medium (`fw={500}`) | 1.4 | Card title / amount display |
+| Heading | `size="md"` (16px) | 700 bold (`fw={700}`) | 1.4 | Amount display on ChargeCard |
 | Display | `size="lg"` (18px) | 700 bold (`fw={700}`) | 1.2 | Page heading, drawer title, balance preview amount |
 
 Constraints:
 - Do NOT introduce new font sizes. Use only the four sizes declared above.
-- Body copy: weight 400. Amount values: weight 600 (`fw={600}`) to match `TransactionRow` pattern.
+- Do NOT introduce new weights. Use only 400 and 700.
+- Partner name on ChargeCard: `size="md" fw={400}` — the larger size provides sufficient hierarchy over `size="sm"` metadata without a separate weight.
+- Amount values: `fw={700}` — aligns with the Display tier and creates a clear two-tier weight system: regular text vs. emphasized values.
 - Input labels use Mantine's built-in label styling — do not override.
 
-Source: `TransactionRow.tsx` line 181 (`size="sm" fw={500}`), line 237 (`size="sm" fw={600}`), `AppLayout.tsx` line 57 (`fw={700} size="lg"`)
+Source: `AppLayout.tsx` line 57 (`fw={700} size="lg"`); weight reduction from 4→2 is a UI-SPEC decision (checker fix 2026-04-16).
 
 ---
 
@@ -76,14 +80,14 @@ Mantine semantic color tokens are used exclusively. Raw hex values are not used 
 |------|--------------|-------|
 | Dominant (60%) | `var(--mantine-color-body)` | Page background, drawer background, card background |
 | Secondary (30%) | `var(--mantine-color-default)` / `c="dimmed"` | Card surfaces, metadata text, secondary labels |
-| Accent (10%) | `blue.7` (`#457b9d`) | Primary action buttons, active nav link, sidebar badge |
+| Accent (10%) | `blue.7` (`#457b9d`) | Primary action buttons, active nav link, accept action button |
 | Success/Credit | `teal` / `green.8` | Positive balance preview ("Devem a você"), paid status badge |
-| Destructive | `red` / `red.6` (`#e63946`) | Reject and cancel action buttons, reject confirmation, destructive badge |
+| Destructive | `red` / `red.6` (`#e63946`) | Reject and cancel action buttons, reject confirmation, destructive badge, sidebar pending-count badge |
 | Warning/Pending | `yellow.6` (`#ef8019`) | Pending status badge background |
 
-Accent reserved for: primary CTA button ("Nova Cobrança"), active NavLink highlight, sidebar pending-count badge, accept action button.
+Accent reserved for: primary CTA button ("Nova Cobrança"), active NavLink highlight, accept action button.
 
-Destructive reserved for: reject button, cancel button, reject/cancel confirmation dialogs only.
+Destructive (`red`) reserved for: reject button, cancel button, reject/cancel confirmation dialogs, sidebar pending-count badge (standard notification convention — red signals required user action).
 
 Status badge color mapping (Mantine `Badge` component):
 - `pending` → `color="yellow"` variant `light`
@@ -91,7 +95,22 @@ Status badge color mapping (Mantine `Badge` component):
 - `rejected` → `color="red"` variant `light`
 - `cancelled` → `color="gray"` variant `light`
 
-Source: `theme.ts` (color palette), `TransactionRow.tsx` line 238 (credit/debit teal/red pattern)
+Source: `theme.ts` (color palette), `TransactionRow.tsx` line 238 (credit/debit teal/red pattern); sidebar badge color corrected to red (checker fix 2026-04-16 — red is the standard notification convention).
+
+---
+
+## Focal Point
+
+**Primary screen focal point: the Charges listing page.**
+
+The visual hierarchy anchors on the two-tab strip ("Recebidas" / "Enviadas") immediately below the sticky header. Within each tab, ChargeCards with pending status are the dominant visual targets: the yellow "Pendente" badge draws the eye first, the bold amount (`fw={700}`) is the second anchor, and the teal "Aceitar" / red "Recusar" action buttons are the call-to-action terminus. The "Nova Cobrança" button in the sticky header is the page-level primary action and uses accent blue to stay distinct from card-level actions.
+
+Single-screen hierarchy order:
+1. Sticky header — "Nova Cobrança" CTA (accent blue, top-right)
+2. Tabs strip — orientation anchor (received vs. sent)
+3. ChargeCard amount (`fw={700}`) — value prominence
+4. ChargeCard status badge (color-coded) — state recognition
+5. Action buttons (teal / red) — task completion
 
 ---
 
@@ -159,12 +178,12 @@ Mobile: same layout. `PeriodNavigator` and "Nova Cobrança" button stack vertica
 Card withBorder radius="md" p="md"
   ├── Group justify="space-between" align="flex-start"
   │     ├── Stack gap={2}
-  │     │     ├── Text size="md" fw={500}  — partner name
+  │     │     ├── Text size="md" fw={400}  — partner name
   │     │     ├── Text size="sm" c="dimmed" — period label "MM/YYYY"
   │     │     └── Text size="sm" c="dimmed" lineClamp={1} — description (if present)
   │     └── ChargeStatusBadge (status)
   └── Group justify="space-between" align="center" mt="sm"
-        ├── Text size="md" fw={600} — amount (from balance preview or charge amount)
+        ├── Text size="md" fw={700} — amount (from balance preview or charge amount)
         └── Group gap="xs" — action buttons (context-sensitive, see below)
 ```
 
@@ -248,7 +267,7 @@ NavLink render with badge:
 />
 ```
 
-Badge uses `color="red"` to signal required user action (matches standard notification convention). Disappears when `pendingCount === 0`.
+Badge uses `color="red"` to signal required user action (standard notification convention). Disappears when `pendingCount === 0`.
 
 ---
 
