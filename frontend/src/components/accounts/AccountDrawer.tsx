@@ -49,6 +49,7 @@ export function AccountDrawer({ account }: Props) {
       title={account ? 'Editar Conta' : 'Nova Conta'}
       position="right"
       size="md"
+      data-testid="drawer_account"
     >
       <AccountForm
         initialValues={initialValues}
