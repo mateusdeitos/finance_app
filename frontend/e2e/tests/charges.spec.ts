@@ -54,14 +54,26 @@ test.describe('Charges', () => {
     const meRes = await apiFetchAs(partnerToken, '/api/auth/me')
     const partnerUser = await meRes.json()
 
-    // 4. Primary user creates connection to partner
-    const conn = await apiCreateUserConnection(partnerUser.id, 50)
-    connectionId = conn.id
-
-    // 5. Partner accepts the connection
-    await apiFetchAs(partnerToken, `/api/user-connections/${connectionId}/accepted`, {
-      method: 'PATCH',
-    })
+    // 4. Primary user creates connection to partner (idempotent — may already exist)
+    try {
+      const conn = await apiCreateUserConnection(partnerUser.id, 50)
+      connectionId = conn.id
+      // 5. Partner accepts the connection
+      await apiFetchAs(partnerToken, `/api/user-connections/${connectionId}/accepted`, {
+        method: 'PATCH',
+      })
+    } catch (err) {
+      if (String(err).includes('ALREADY_EXISTS')) {
+        // Connection already exists — find it
+        const connRes = await apiFetchAs(partnerToken, '/api/user-connections')
+        const connections = await connRes.json()
+        const existing = connections.find((c: { connection_status: string }) => c.connection_status === 'accepted')
+        if (!existing) throw new Error('Connection exists but none are accepted')
+        connectionId = existing.id
+      } else {
+        throw err
+      }
+    }
   })
 
   test.afterAll(async () => {
@@ -88,9 +100,7 @@ test.describe('Charges', () => {
 
   test('show empty state when no charges exist', async () => {
     await chargesPage.selectSentTab()
-    // One of these should be visible depending on tab
-    const emptyMsg = chargesPage.page.getByText(/Nenhuma cobranca/)
-    await expect(emptyMsg).toBeVisible({ timeout: 5000 })
+    await expect(chargesPage.page.getByText('Nenhuma cobranca enviada')).toBeVisible({ timeout: 5000 })
   })
 
   test('create a charge and see it in sent tab', async ({ page }) => {

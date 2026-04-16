@@ -11,7 +11,7 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const CSV_HEADER = "Data;Descrição;Tipo;Valor;Categoria;Conta Destino;Tipo de Parcelamento;Quantidade de Parcelas";
+const CSV_HEADER = "Data;Descrição;Valor";
 
 function buildCsvContent(rows: string[][]): string {
   return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
@@ -76,7 +76,7 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 0, 15); // 15/01/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "150,00", testCategoryName, "", "", ""],
+      [formatDateBR(txDate), description, "-150,00"],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -115,7 +115,7 @@ test.describe("Import transactions", () => {
 
     // Now try to import the same transaction
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "despesa", "80,00", testCategoryName, "", "", ""],
+      [formatDateBR(txDate), description, "-80,00"],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -134,8 +134,8 @@ test.describe("Import transactions", () => {
     const txDate = new Date(2026, 2, 10); // 10/03/2026
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description1, "despesa", "50,00", testCategoryName, "", "", ""],
-      [formatDateBR(txDate), description2, "despesa", "75,00", testCategoryName, "", "", ""],
+      [formatDateBR(txDate), description1, "-50,00"],
+      [formatDateBR(txDate), description2, "-75,00"],
     ]);
 
     await importPage.uploadCSV(csv, testAccountName);
@@ -158,7 +158,7 @@ test.describe("Import transactions", () => {
 
   // ── Invalid CSV ────────────────────────────────────────────────────────────
   test("invalid CSV: shows error message when header is missing required column", async () => {
-    const invalidCsv = "Data;Descrição;Tipo\n15/01/2026;Teste;despesa";
+    const invalidCsv = "Data;Descrição\n15/01/2026;Teste";
 
     await importPage.selectAccount(testAccountName);
     await importPage.uploadCSVContent(invalidCsv);

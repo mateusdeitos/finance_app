@@ -27,11 +27,10 @@ export class ImportPage {
     await expect(this.uploadStep).toBeVisible({ timeout: 8000 });
   }
 
-  /** Select the account in the upload step. */
+  /** Select the account in the upload step (Mantine Select is readonly, use click+option). */
   async selectAccount(accountName: string) {
-    const input = this.uploadStep.getByTestId("select_import_account");
-    await input.click();
-    await input.fill(accountName);
+    const select = this.uploadStep.getByTestId("select_import_account");
+    await select.click();
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
