@@ -7,6 +7,8 @@ import {
   apiCancelCharge,
   apiCreateUserConnection,
   apiCreateTransaction,
+  apiCreateCategory,
+  apiDeleteCategory,
   getAuthTokenForUser,
   apiFetchAs,
 } from '../helpers/api'
@@ -35,6 +37,7 @@ test.describe('Charges', () => {
   let partnerAccountId: number
   let connectionId: number
   let primaryConnAccountId: number
+  let seedCategoryId: number
   const createdChargeIds: number[] = []
 
   test.beforeAll(async () => {
@@ -77,7 +80,11 @@ test.describe('Charges', () => {
       }
     }
 
-    // 6. Find the primary user's connection account (created by connection setup)
+    // 6. Create seed category (all non-transfer transactions require category_id)
+    const seedCat = await apiCreateCategory({ name: `Charges Seed ${Date.now()}` })
+    seedCategoryId = seedCat.id
+
+    // 7. Find the primary user's connection account (created by connection setup)
     //    and seed income so balance > 0 (charges require balance != 0)
     const accountsRes = await apiFetchAs(
       (await getAuthTokenForUser('e2e-test@financeapp.local')),
@@ -95,6 +102,7 @@ test.describe('Charges', () => {
     await apiCreateTransaction({
       account_id: primaryConnAccountId,
       transaction_type: 'income',
+      category_id: seedCategoryId,
       amount: 50000,
       date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01`,
       description: 'E2E seed for charges (primary)',
@@ -107,12 +115,19 @@ test.describe('Charges', () => {
       (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
     )
     if (partnerConnAccount) {
+      // Partner needs their own category
+      const partnerCatRes = await apiFetchAs(partnerToken, '/api/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name: `Partner Seed ${Date.now()}` }),
+      })
+      const partnerCat = await partnerCatRes.json()
       // Income on partner's connection account → partner's balance > 0 → partner is charger
       await apiFetchAs(partnerToken, '/api/transactions', {
         method: 'POST',
         body: JSON.stringify({
           account_id: partnerConnAccount.id,
           transaction_type: 'income',
+          category_id: partnerCat.id,
           amount: 50000,
           date: `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, '0')}-01T00:00:00Z`,
           description: 'E2E seed for charges (partner)',
@@ -131,6 +146,7 @@ test.describe('Charges', () => {
     await apiFetchAs(partnerToken, `/api/accounts/${partnerAccountId}`, {
       method: 'DELETE',
     }).catch(() => undefined)
+    await apiDeleteCategory(seedCategoryId).catch(() => undefined)
   })
 
   test.beforeEach(async ({ page }) => {
