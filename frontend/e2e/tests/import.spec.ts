@@ -200,6 +200,28 @@ test.describe("Import transactions", () => {
     });
   });
 
+  // ── Inline category creation with emoji ─────────────────────────────────────
+  test("create category with emoji inline: emoji appears in select label", async () => {
+    const description = `Cat Emoji ${Date.now()}`;
+    const newCategoryName = `Emoji Cat ${Date.now()}`;
+    const emoji = "🏠";
+    const txDate = new Date(2026, 4, 5); // 05/05/2026
+
+    const csv = buildCsvContent([
+      [formatDateBR(txDate), description, "-45,00"],
+    ]);
+
+    await importPage.uploadCSV(csv, testAccountName);
+
+    // Open category drawer and create a category with emoji
+    await importPage.openCreateCategoryDrawer(0);
+    await importPage.createCategoryInDrawer(newCategoryName, { emoji });
+
+    // Category should be auto-selected with emoji prefix in the select
+    const value = await importPage.getRowCategoryValue(0);
+    expect(value).toBe(`${emoji} ${newCategoryName}`);
+  });
+
   // ── Inline account creation ────────────────────────────────────────────────
   test("create account inline: auto-selects in header after drawer close", async () => {
     const newAccountName = `Nova Conta Import ${Date.now()}`;

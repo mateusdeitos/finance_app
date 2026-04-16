@@ -135,7 +135,7 @@ export class ImportPage {
   }
 
   /** Create a new category inside the category drawer and close it. */
-  async createCategoryInDrawer(name: string) {
+  async createCategoryInDrawer(name: string, opts?: { emoji?: string }) {
     const drawer = this.page.getByTestId("drawer_create_category");
     // Click "Nova Categoria" to show the inline input (may already be visible)
     const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
@@ -149,6 +149,21 @@ export class ImportPage {
     await input.press("Enter");
     // Wait for the category to appear in the tree
     await expect(drawer.getByText(name)).toBeVisible({ timeout: 5000 });
+
+    // Optionally set an emoji on the newly created category
+    if (opts?.emoji) {
+      // Click the emoji button on the new category row (shows "+😀" for categories without emoji)
+      const categoryRow = drawer.getByText(name).locator("..").locator("..");
+      await categoryRow.getByTitle("Mudar emoji").click();
+      // Emoji picker drawer opens — click the desired emoji
+      const emojiDrawer = this.page.getByRole("dialog", { name: "Escolher emoji" });
+      await expect(emojiDrawer).toBeVisible({ timeout: 5000 });
+      await emojiDrawer.getByText(opts.emoji, { exact: true }).click();
+      // Emoji drawer closes, category now shows the emoji
+      await expect(emojiDrawer).not.toBeVisible({ timeout: 5000 });
+      await expect(drawer.getByText(opts.emoji)).toBeVisible({ timeout: 5000 });
+    }
+
     // Close the drawer
     await drawer.getByRole("button", { name: "Fechar" }).click();
     await expect(drawer).not.toBeVisible({ timeout: 5000 });
