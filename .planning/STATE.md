@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Charges
 status: executing
-last_updated: "2026-04-15T18:17:36.328Z"
-last_activity: 2026-04-15
+last_updated: "2026-04-16T01:55:52.816Z"
+last_activity: 2026-04-16
 progress:
   total_phases: 4
   completed_phases: 3
@@ -15,24 +15,24 @@ progress:
 
 ## Current Position
 
-Phase: 07 (accept-atomic-transfer) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-04-15
+Phase: 8 (frontend)
+Plan: Not started
+Status: Ready to discuss
+Last activity: 2026-04-16
 
-Progress: █████░░░░░ 50% (2/4 phases complete, Phase 07 in discuss)
+Progress: ███████░░░ 75% (3/4 phases complete)
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-14)
+See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Phase 07 — accept-atomic-transfer
+**Current focus:** Phase 08 — frontend (charges UI)
 
 ## Performance Metrics
 
 - v1.0: 4 phases, 8 plans, 1 day (2026-04-09 → 2026-04-10)
-- v1.1: 4 phases planned, 2 complete
+- v1.1: 4 phases planned, 3 complete
 
 ## Accumulated Context
 
@@ -40,7 +40,7 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 - v1.0 Recurrence Redesign shipped 2026-04-10. 4 phases, 8 plans completed. Archived: `.planning/milestones/v1.0-ROADMAP.md`
 - Charge entity uses `payer_user_id` / `charger_user_id` (explicit directional fields, not connection orientation) — no SwapIfNeeded needed for ownership checks
-- Accept flow reuses `TransactionService.Create` with type=transfer + DestinationAccountID — avoids duplicating linked-transaction logic
+- Accept flow uses `transactionRepo.Create` directly (NOT transactionService.Create) to avoid nested DB transactions
 - Race condition guard: conditional UPDATE `WHERE status='pending'` + affected-rows check (not SELECT FOR UPDATE) — cleaner, no read-check-write window
 - `charges` table uses ON DELETE RESTRICT on connection_id — connection cannot be deleted while pending charges exist
 - `transactions.charge_id` is nullable FK — set on auto-created transfers, null on all manually created transactions
@@ -58,8 +58,7 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 ### Todos
 
-- Run `just migrate-up` to apply charges table migration before integration tests
-- Run `just generate-docs` to verify Swagger docs are up to date
+- Run integration tests with Docker when available (4 UAT items blocked)
 
 ### Blockers
 
@@ -67,4 +66,6 @@ None
 
 ## Session Continuity
 
-Next: `/gsd-plan-phase 7`
+Last session: 2026-04-16
+Stopped at: Phase 7 complete, ready to discuss Phase 8
+Resume file: None
