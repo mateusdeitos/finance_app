@@ -13,6 +13,11 @@ export class ChargesPage {
     this.confirmModal = page.getByRole('dialog')
   }
 
+  /** Get the currently visible tab panel content */
+  get activePanel(): Locator {
+    return this.page.locator('[role="tabpanel"]:not([hidden])')
+  }
+
   async goto() {
     await this.page.goto('/charges')
     await this.page.waitForLoadState('networkidle')
@@ -64,7 +69,7 @@ export class ChargesPage {
   // --- Accept ---
 
   async clickAccept(chargeDescription: string) {
-    const card = this.page.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
+    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
     await card.getByRole('button', { name: 'Aceitar' }).click()
     await expect(this.acceptDrawer).toBeVisible({ timeout: 5000 })
   }
@@ -83,7 +88,7 @@ export class ChargesPage {
   // --- Reject / Cancel ---
 
   async clickReject(chargeDescription: string) {
-    const card = this.page.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
+    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
     await card.getByRole('button', { name: 'Recusar' }).click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
@@ -94,7 +99,7 @@ export class ChargesPage {
   }
 
   async clickCancel(chargeDescription: string) {
-    const card = this.page.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
+    const card = this.activePanel.locator('[class*="Card"], [class*="card"]').filter({ hasText: chargeDescription })
     await card.getByRole('button', { name: 'Cancelar' }).click()
     await expect(this.confirmModal).toBeVisible({ timeout: 5000 })
   }
@@ -107,7 +112,8 @@ export class ChargesPage {
   // --- Sidebar Badge ---
 
   async getSidebarBadgeCount(): Promise<number | null> {
-    const badge = this.page.locator('nav').getByText(/Cobran/).locator('..').locator('[class*="badge"], [class*="Badge"]')
+    const navLink = this.page.locator('nav').getByText(/Cobran/).first()
+    const badge = navLink.locator('..').locator('[class*="badge"], [class*="Badge"]').first()
     if (await badge.isVisible()) {
       const text = await badge.textContent()
       return text ? parseInt(text) : null

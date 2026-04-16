@@ -177,7 +177,7 @@ test.describe('Charges', () => {
 
     // Charge visible in sent tab
     await chargesPage.selectSentTab()
-    await expect(page.getByText(description)).toBeVisible({ timeout: 5000 })
+    await expect(chargesPage.activePanel.getByText(description)).toBeVisible({ timeout: 5000 })
   })
 
   test('reject a received charge', async ({ page, context }) => {
@@ -251,7 +251,7 @@ test.describe('Charges', () => {
     await chargesPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR)
 
     // Badge should show at least 1
-    const badge = page.locator('nav').locator('[class*="badge"], [class*="Badge"]')
-    await expect(badge).toBeVisible({ timeout: 5000 })
+    const badgeCount = await chargesPage.getSidebarBadgeCount()
+    expect(badgeCount).toBeGreaterThanOrEqual(1)
   })
 })
