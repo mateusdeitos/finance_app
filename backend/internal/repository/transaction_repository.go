@@ -98,14 +98,17 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	query = query.Preload("TransactionRecurrence").Preload("LinkedTransactions").Preload("SourceTransactions").Preload("Tags").Preload("LinkedTransactions.Tags").Preload("SourceTransactions.Tags")
 
 	if filter.WithSettlements {
-		if len(filter.AccountIDs) > 0 {
-			accountIDs := filter.AccountIDs
-			query = query.Preload("SettlementsFromSource", func(db *gorm.DB) *gorm.DB {
-				return db.Where("account_id IN ?", accountIDs)
-			})
-		} else {
-			query = query.Preload("SettlementsFromSource")
-		}
+		// Preload ALL settlements attached to returned source transactions,
+		// regardless of the settlement's own account_id. The listing view
+		// displays settlements inline under their source transaction even
+		// when the active filter doesn't target the settlement's account —
+		// it provides context about the split. The frontend is responsible
+		// for excluding out-of-scope settlements from the group net total so
+		// the displayed sum stays consistent with GetBalance (whose settlements
+		// leg is filtered by s.account_id). Double-counting in the combined-
+		// filter case is still prevented by FindOrphanedSettlementTransactions
+		// via its `t.account_id NOT IN filter` guard.
+		query = query.Preload("SettlementsFromSource")
 	}
 
 	if filter.UserID != nil {

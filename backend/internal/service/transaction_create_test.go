@@ -976,22 +976,37 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Empty(synthetic.SettlementsFromSource, "synthetic entry must not preload nested settlements (would double-count)")
 
 	// Case 2: user1 filters ONLY by the personal account — the real source
-	// transaction is returned. The scoped preload must EXCLUDE the settlement
-	// (it's on the shared account, not the filter) so the balance on the
-	// personal account isn't polluted by unrelated settlements. No synthetic
-	// entries either.
+	// transaction is returned, and its settlement MUST be preloaded inline
+	// so the UI can display it as context beneath the source row (the user
+	// sees "I spent 100, of which 50 is coming back to me"). The settlement's
+	// own account is the shared account, NOT the personal one, so the
+	// frontend is expected to exclude it from the group net total; this
+	// backend test only verifies that the data is there for display and
+	// that no synthetic duplicate is appended.
 	personalOnly, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
 		UserID:          &user1.ID,
 		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(personalOnly, 1, "personal-only filter should return the source transaction exactly once")
+	suite.Require().Len(personalOnly, 1, "personal-only filter should return the source transaction exactly once (no synthetic dup)")
 	personal := personalOnly[0]
-	suite.Assert().Nil(personal.OriginSettlementID)
+	suite.Assert().Nil(personal.OriginSettlementID, "real source transaction must not be tagged as a synthetic entry")
 	suite.Assert().Equal(account.ID, personal.AccountID)
 	suite.Assert().Equal(amount, personal.Amount)
-	suite.Assert().Empty(personal.SettlementsFromSource, "settlement is on the shared account, must be excluded from the preload when filtering by personal account")
+	suite.Require().Len(personal.SettlementsFromSource, 1, "settlement must be preloaded inline for display context under the source transaction")
+	suite.Assert().Equal(userConnection.FromAccountID, personal.SettlementsFromSource[0].AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
+
+	// Case 2b (balance consistency): GetBalance filtered by the personal
+	// account must return exactly the source transaction's contribution
+	// (-amount) — the settlement is NOT part of this leg because its
+	// account_id isn't in the filter. The frontend's group-total must match
+	// this value after excluding out-of-scope nested settlements.
+	balancePersonal, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs: []int{account.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(-amount, balancePersonal.Balance, "personal-only balance must equal just the source tx amount; nested settlement stays informational")
 
 	// Case 3: user1 filters by BOTH personal AND shared accounts — the source
 	// transaction is in the filter AND the settlement's account is in the

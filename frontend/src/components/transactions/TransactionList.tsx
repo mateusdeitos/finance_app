@@ -16,15 +16,29 @@ interface TransactionListProps {
   onSelectTransaction?: (id: number) => void;
 }
 
-function groupNetTotal(group: Transactions.TransactionGroup, hideSettlements: boolean): number {
+function groupNetTotal(
+  group: Transactions.TransactionGroup,
+  hideSettlements: boolean,
+  accountFilter: number[],
+): number {
+  // When an account filter is active, only settlements bound to one of the
+  // filtered accounts contribute to the net total. Out-of-scope settlements
+  // are still rendered inline under their source transaction as context, but
+  // they do not move the balance — this keeps the listing total consistent
+  // with GetBalance, whose settlements leg is filtered by s.account_id.
+  const hasAccountFilter = accountFilter.length > 0;
+  const filterSet = hasAccountFilter ? new Set(accountFilter) : null;
+
   return group.transactions.reduce((sum, tx) => {
     const txAmount = tx.operation_type === "credit" ? tx.amount : -tx.amount;
     const settlementsAmount = hideSettlements
       ? 0
-      : (tx.settlements_from_source ?? []).reduce(
-          (s, settlement) => s + (settlement.type === "credit" ? settlement.amount : -settlement.amount),
-          0,
-        );
+      : (tx.settlements_from_source ?? []).reduce((s, settlement) => {
+          if (filterSet && !filterSet.has(settlement.account_id)) {
+            return s;
+          }
+          return s + (settlement.type === "credit" ? settlement.amount : -settlement.amount);
+        }, 0);
     return sum + txAmount + settlementsAmount;
   }, 0);
 }
@@ -64,8 +78,8 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
   );
 
   const groupTotals = useMemo(
-    () => groups.map((g) => groupNetTotal(g, search.hideSettlements)),
-    [groups, search.hideSettlements],
+    () => groups.map((g) => groupNetTotal(g, search.hideSettlements, filters.accountIds)),
+    [groups, search.hideSettlements, filters.accountIds],
   );
 
   const runningBalances = useMemo(() => {
