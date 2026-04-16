@@ -114,7 +114,7 @@ export function CategoryCard({
         )}
 
         {/* emoji button */}
-        <ActionIcon variant="subtle" color="gray" size="md" onClick={openEmoji} title="Mudar emoji">
+        <ActionIcon variant="subtle" color="gray" size="md" onClick={openEmoji} title="Mudar emoji" data-testid={`btn_emoji_${category.id}`}>
           {category.emoji ? (
             <Text size="md" lh={1}>{category.emoji}</Text>
           ) : (
@@ -194,7 +194,7 @@ export function CategoryCard({
       )}
 
       {/* emoji picker drawer */}
-      <Drawer opened={emojiOpen} onClose={closeEmoji} title="Escolher emoji" position="right" size="sm">
+      <Drawer opened={emojiOpen} onClose={closeEmoji} title="Escolher emoji" position="right" size="sm" data-testid={`drawer_emoji_picker_${category.id}`}>
         <Stack gap="md">
           <ScrollArea>
             <SimpleGrid cols={7} spacing="xs">
@@ -202,6 +202,7 @@ export function CategoryCard({
                 <UnstyledButton
                   key={e}
                   onClick={() => handleEmojiSelect(e)}
+                  data-testid={`emoji_${e}`}
                   style={{
                     fontSize: 24,
                     textAlign: 'center',

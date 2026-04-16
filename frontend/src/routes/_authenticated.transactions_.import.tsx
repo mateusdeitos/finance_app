@@ -16,9 +16,10 @@ import {
   Table,
   Text,
   Title,
+  ActionIcon,
   Flex,
 } from "@mantine/core";
-import { IconAlertCircle, IconArrowLeft, IconCircleCheck, IconFileTypeCsv } from "@tabler/icons-react";
+import { IconAlertCircle, IconArrowLeft, IconCircleCheck, IconFileTypeCsv, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useForm, useFieldArray, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +29,8 @@ import { useParseImportCSV } from "@/hooks/useParseImportCSV";
 import { Transactions } from "@/types/transactions";
 import { parseApiError } from "@/utils/apiErrors";
 import { ImportReviewRow } from "@/components/transactions/import/ImportReviewRow";
+import { AccountDrawer } from "@/components/accounts/AccountDrawer";
+import { renderDrawer } from "@/utils/renderDrawer";
 import { ImportCSVBulkToolbar } from "@/components/transactions/import/ImportCSVBulkToolbar";
 import { ImportConfirmButton } from "@/components/transactions/import/ImportConfirmButton";
 import {
@@ -563,7 +566,7 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
         <Title order={4}>Importar Transações</Title>
       </Group>
 
-      <Flex direction="row" gap="xs">
+      <Flex direction="row" gap="xs" align="flex-end">
         <Select
           label="Conta"
           placeholder="Selecione uma conta"
@@ -573,6 +576,21 @@ function UploadStep({ onParsed, onBack }: UploadStepProps) {
           onChange={(val) => setAccountId(val ? Number(val) : null)}
           data-testid="select_import_account"
         />
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          onClick={() => {
+            renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
+              .then((created) => {
+                if (created) setAccountId(created.id);
+              })
+              .catch(() => {});
+          }}
+          aria-label="Criar conta"
+          mb={2}
+        >
+          <IconPlus size={16} />
+        </ActionIcon>
 
         <Select
           label="Formato da coluna 'Valor'"

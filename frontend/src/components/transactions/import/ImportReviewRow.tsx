@@ -1,8 +1,8 @@
 import { forwardRef, memo, useEffect, useRef } from "react";
-import { Box, Button, Checkbox, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
+import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
-import { IconAlertCircle, IconCheck, IconX } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -15,6 +15,9 @@ import { checkDuplicateTransaction } from "@/api/transactions";
 import classes from "./ImportReviewRow.module.css";
 import { SplitPopover } from "./SplitPopover";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
+import { renderDrawer } from "@/utils/renderDrawer";
+import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
+import { AccountDrawer } from "@/components/accounts/AccountDrawer";
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -269,25 +272,44 @@ export const ImportReviewRow = memo(
         {/* Category (hidden for transfers) */}
         <Table.Td miw={140}>
           {!isTransfer ? (
-            <Controller
-              name={`rows.${rowIndex}.category_id`}
-              render={({ field }) => (
-                <Select
-                  ref={field.ref}
-                  size="xs"
-                  data={categoryOptions}
-                  error={rowErrors?.category_id?.message}
-                  value={field.value ? String(field.value) : null}
-                  onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  disabled={disabled || isSkipped}
-                  searchable
-                  clearable
-                  placeholder="Selecionar..."
-                  withCheckIcon={false}
-                  data-testid={`select_category_${rowIndex}`}
-                />
-              )}
-            />
+            <Group gap={4} wrap="nowrap">
+              <Controller
+                name={`rows.${rowIndex}.category_id`}
+                render={({ field }) => (
+                  <Select
+                    ref={field.ref}
+                    size="xs"
+                    data={categoryOptions}
+                    error={rowErrors?.category_id?.message}
+                    value={field.value ? String(field.value) : null}
+                    onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    disabled={disabled || isSkipped}
+                    searchable
+                    clearable
+                    placeholder="Selecionar..."
+                    withCheckIcon={false}
+                    data-testid={`select_category_${rowIndex}`}
+                    style={{ flex: 1 }}
+                  />
+                )}
+              />
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  renderDrawer<import("@/types/transactions").Transactions.Category | void>(() => <CreateCategoryDrawer />)
+                    .then((created) => {
+                      if (created) form.setValue(`rows.${rowIndex}.category_id`, created.id);
+                    })
+                    .catch(() => {});
+                }}
+                disabled={disabled || isSkipped}
+                aria-label="Criar categoria"
+              >
+                <IconPlus size={14} />
+              </ActionIcon>
+            </Group>
           ) : (
             <Text fz="xs" c="dimmed">
               —
@@ -298,23 +320,42 @@ export const ImportReviewRow = memo(
         {/* Destination account (only for transfers) */}
         <Table.Td miw={140}>
           {isTransfer ? (
-            <Controller
-              name={`rows.${rowIndex}.destination_account_id`}
-              render={({ field }) => (
-                <Select
-                  ref={field.ref}
-                  size="xs"
-                  data={accountOptions}
-                  value={field.value ? String(field.value) : null}
-                  onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  disabled={disabled || isSkipped}
-                  searchable
-                  placeholder="Selecionar..."
-                  withCheckIcon={false}
-                  error={rowErrors?.destination_account_id?.message}
-                />
-              )}
-            />
+            <Group gap={4} wrap="nowrap">
+              <Controller
+                name={`rows.${rowIndex}.destination_account_id`}
+                render={({ field }) => (
+                  <Select
+                    ref={field.ref}
+                    size="xs"
+                    data={accountOptions}
+                    value={field.value ? String(field.value) : null}
+                    onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    disabled={disabled || isSkipped}
+                    searchable
+                    placeholder="Selecionar..."
+                    withCheckIcon={false}
+                    error={rowErrors?.destination_account_id?.message}
+                    style={{ flex: 1 }}
+                  />
+                )}
+              />
+              <ActionIcon
+                size="xs"
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
+                    .then((created) => {
+                      if (created) form.setValue(`rows.${rowIndex}.destination_account_id`, created.id);
+                    })
+                    .catch(() => {});
+                }}
+                disabled={disabled || isSkipped}
+                aria-label="Criar conta"
+              >
+                <IconPlus size={14} />
+              </ActionIcon>
+            </Group>
           ) : (
             <Text fz="xs" c="dimmed">
               —

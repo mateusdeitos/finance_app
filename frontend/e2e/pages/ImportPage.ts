@@ -120,6 +120,75 @@ export class ImportPage {
     await this.page.getByRole("option", { name: categoryName }).click();
   }
 
+  /** Click the + button next to the category select to open the category creation drawer. */
+  async openCreateCategoryDrawer(rowIndex: number) {
+    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
+    await row.getByRole("button", { name: "Criar categoria" }).click();
+    // Wait for drawer content (root div starts hidden during Mantine transition)
+    await expect(this.page.getByTestId("drawer_create_category").getByRole("button", { name: "Nova Categoria" })).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Click the + button next to the account select in the upload step header. */
+  async openCreateAccountDrawerFromHeader() {
+    await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
+    await expect(this.page.getByTestId("account_form")).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Create a new category inside the category drawer and close it. */
+  async createCategoryInDrawer(name: string, opts?: { emoji?: string }) {
+    const drawer = this.page.getByTestId("drawer_create_category");
+    // Click "Nova Categoria" to show the inline input (may already be visible)
+    const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
+    if (await newButton.isVisible()) {
+      await newButton.click();
+    }
+    // Wait for and fill the inline input
+    const input = drawer.getByTestId("input_new_category_name");
+    await expect(input).toBeVisible({ timeout: 5000 });
+    await input.fill(name);
+    await input.press("Enter");
+    // Wait for the category to appear in the tree
+    await expect(drawer.getByText(name)).toBeVisible({ timeout: 5000 });
+
+    // Optionally set an emoji on the newly created category
+    if (opts?.emoji) {
+      // Find the newly created category's emoji button
+      const categoryRow = drawer.getByText(name).locator("..").locator("..");
+      const emojiButton = categoryRow.locator("[data-testid^='btn_emoji_']");
+      await emojiButton.click();
+      // Click the emoji option — it exists in exactly one open picker
+      const emojiOption = this.page.getByTestId(`emoji_${opts.emoji}`).first();
+      await expect(emojiOption).toBeVisible({ timeout: 5000 });
+      await emojiOption.click();
+      // Wait for save to complete
+      await this.page.waitForLoadState("networkidle");
+    }
+
+    // Close the drawer
+    await drawer.getByRole("button", { name: "Fechar" }).click();
+    await expect(drawer).not.toBeVisible({ timeout: 5000 });
+  }
+
+  /** Create a new account inside the account drawer. */
+  async createAccountInDrawer(name: string) {
+    const form = this.page.getByTestId("account_form");
+    await form.getByTestId("input_account_name").fill(name);
+    await form.getByTestId("btn_account_save").click();
+    await expect(form).not.toBeVisible({ timeout: 10000 });
+  }
+
+  /** Get the current value of the category select for a row. */
+  async getRowCategoryValue(rowIndex: number): Promise<string> {
+    const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
+    return select.inputValue();
+  }
+
+  /** Get the current value of the main account select in the upload step. */
+  async getHeaderAccountValue(): Promise<string> {
+    const select = this.uploadStep.getByTestId("select_import_account");
+    return select.inputValue();
+  }
+
   /** Change the action for a row via the action select. */
   async setRowAction(rowIndex: number, action: "import" | "skip" | "duplicate") {
     const labels: Record<string, string> = {

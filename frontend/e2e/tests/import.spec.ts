@@ -162,6 +162,78 @@ test.describe("Import transactions", () => {
     await expect(importPage.page.getByText(description2)).not.toBeVisible();
   });
 
+  // ── Inline category creation ────────────────────────────────────────────────
+  test("create category inline: auto-selects in row after drawer close", async () => {
+    const description = `Cat Inline ${Date.now()}`;
+    const newCategoryName = `Nova Cat ${Date.now()}`;
+    const txDate = new Date(2026, 3, 20); // 20/04/2026
+
+    const csv = buildCsvContent([
+      [formatDateBR(txDate), description, "-30,00"],
+    ]);
+
+    await importPage.uploadCSV(csv, testAccountName);
+
+    // Open category drawer from the + button on row 0
+    await importPage.openCreateCategoryDrawer(0);
+
+    // Create a category inside the drawer and close it
+    await importPage.createCategoryInDrawer(newCategoryName);
+
+    // Category should be auto-selected in row 0 after drawer close
+    // Wait for Mantine Select to reflect the new value after form.setValue + re-render
+    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+      .toHaveValue(newCategoryName, { timeout: 5000 });
+
+    // Confirm import succeeds with the auto-selected category
+    await importPage.confirmImport();
+
+    const month = txDate.getMonth() + 1;
+    const year = txDate.getFullYear();
+    await importPage.page.goto(`/transactions?month=${month}&year=${year}`);
+    await importPage.page.waitForLoadState("networkidle");
+    await expect(importPage.page.getByText(description)).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  // ── Inline category creation with emoji ─────────────────────────────────────
+  test("create category with emoji inline: emoji appears in select label", async () => {
+    const description = `Cat Emoji ${Date.now()}`;
+    const newCategoryName = `Emoji Cat ${Date.now()}`;
+    const emoji = "🏠";
+    const txDate = new Date(2026, 4, 5); // 05/05/2026
+
+    const csv = buildCsvContent([
+      [formatDateBR(txDate), description, "-45,00"],
+    ]);
+
+    await importPage.uploadCSV(csv, testAccountName);
+
+    // Open category drawer and create a category with emoji
+    await importPage.openCreateCategoryDrawer(0);
+    await importPage.createCategoryInDrawer(newCategoryName, { emoji });
+
+    // Category should be auto-selected with emoji prefix in the select
+    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+      .toHaveValue(`${emoji} ${newCategoryName}`, { timeout: 5000 });
+  });
+
+  // ── Inline account creation ────────────────────────────────────────────────
+  test("create account inline: auto-selects in header after drawer close", async () => {
+    const newAccountName = `Nova Conta Import ${Date.now()}`;
+
+    // Open account drawer from the + button in the upload step header
+    await importPage.openCreateAccountDrawerFromHeader();
+
+    // Create account inside the drawer
+    await importPage.createAccountInDrawer(newAccountName);
+
+    // Account should be auto-selected in the header select after drawer close
+    const selectedValue = await importPage.getHeaderAccountValue();
+    expect(selectedValue).toBe(newAccountName);
+  });
+
   // ── Invalid CSV ────────────────────────────────────────────────────────────
   test("invalid CSV: shows error message when header is missing required column", async () => {
     const invalidCsv = "Data;Descrição\n15/01/2026;Teste";
