@@ -6,4 +6,6 @@ export const QueryKeys = {
   Categories: 'categories',
   Tags: 'tags',
   InviteInfo: 'invite-info',
+  Charges: 'charges',
+  ChargesPendingCount: 'charges-pending-count',
 } as const
