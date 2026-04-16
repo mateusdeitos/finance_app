@@ -11,6 +11,7 @@ import { useDrawerContext } from '@/utils/renderDrawer'
 import { useCreateCharge } from '@/hooks/useCreateCharge'
 import { useCharges } from '@/hooks/useCharges'
 import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
+import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useMe } from '@/hooks/useMe'
 import { fetchBalance } from '@/api/transactions'
@@ -42,6 +43,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   const { mutation } = useCreateCharge()
   const { invalidate: invalidateCharges } = useCharges({ month: periodMonth, year: periodYear })
   const { invalidate: invalidatePendingCount } = useChargesPendingCount()
+  const { invalidate: invalidateTransactions } = useTransactions({ month: periodMonth, year: periodYear })
   const { query: accountsQuery } = useAccounts()
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data ?? 0
@@ -111,6 +113,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       onSuccess: () => {
         invalidateCharges()
         invalidatePendingCount()
+        invalidateTransactions()
         notifications.show({
           color: 'teal',
           title: 'Cobranca criada',

@@ -5,8 +5,9 @@ import { useQuery } from '@tanstack/react-query'
 import { zodValidator } from '@tanstack/zod-adapter'
 import { useMemo, useState } from 'react'
 import { z } from 'zod'
-import { createAuthenticatedRoute } from '@/utils/createAuthenticatedRoute'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
+import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCharges } from '@/hooks/useCharges'
 import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
@@ -17,7 +18,7 @@ import { QueryKeys } from '@/utils/queryKeys'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Charges } from '@/types/charges'
 import { ChargeCard } from '@/components/charges/ChargeCard'
-import { ChargePeriodNavigator } from '@/components/charges/ChargePeriodNavigator'
+import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { CreateChargeDrawer } from '@/components/charges/CreateChargeDrawer'
 import { AcceptChargeDrawer } from '@/components/charges/AcceptChargeDrawer'
 
@@ -28,13 +29,14 @@ const chargeSearchSchema = z.object({
   year: z.coerce.number().int().default(now.getFullYear()),
 })
 
-export const Route = createAuthenticatedRoute('/charges')({
+export const Route = createFileRoute('/_authenticated/charges')({
   validateSearch: zodValidator(chargeSearchSchema),
   component: ChargesPage,
 })
 
 function ChargesPage() {
   const search = Route.useSearch()
+  const navigate = useNavigate()
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data
   const { query: chargesQuery, invalidate: invalidateCharges } = useCharges({
@@ -42,6 +44,7 @@ function ChargesPage() {
     year: search.year,
   })
   const { invalidate: invalidatePendingCount } = useChargesPendingCount()
+  const { invalidate: invalidateTransactions } = useTransactions({ month: search.month, year: search.year })
   const { query: accountsQuery } = useAccounts()
   const { mutation: rejectMutation } = useRejectCharge()
   const { mutation: cancelMutation } = useCancelCharge()
@@ -108,6 +111,7 @@ function ChargesPage() {
       onSuccess: () => {
         invalidateCharges()
         invalidatePendingCount()
+        invalidateTransactions()
         notifications.show({
           color: 'teal',
           title: type === 'reject' ? 'Cobranca recusada' : 'Cobranca cancelada',
@@ -137,7 +141,7 @@ function ChargesPage() {
         }}
       >
         <Group justify="space-between" align="center">
-          <ChargePeriodNavigator month={search.month} year={search.year} />
+          <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })} />
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => void renderDrawer(() => (

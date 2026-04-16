@@ -11,6 +11,7 @@ import { useDrawerContext } from '@/utils/renderDrawer'
 import { useAcceptCharge } from '@/hooks/useAcceptCharge'
 import { useCharges } from '@/hooks/useCharges'
 import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
+import { useTransactions } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useMe } from '@/hooks/useMe'
 import { fetchBalance } from '@/api/transactions'
@@ -42,6 +43,10 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
     year: charge.period_year,
   })
   const { invalidate: invalidatePendingCount } = useChargesPendingCount()
+  const { invalidate: invalidateTransactions } = useTransactions({
+    month: charge.period_month,
+    year: charge.period_year,
+  })
   const { query: accountsQuery } = useAccounts()
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data ?? 0
@@ -90,6 +95,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
         onSuccess: () => {
           invalidateCharges()
           invalidatePendingCount()
+          invalidateTransactions()
           notifications.show({
             color: 'teal',
             title: 'Cobranca aceita',
