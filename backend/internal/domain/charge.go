@@ -22,19 +22,19 @@ func (s ChargeStatus) IsValid() bool {
 var ErrInvalidStatusTransition = errors.New("invalid charge status transition")
 
 type Charge struct {
-	ID               int
-	ChargerUserID    int
-	PayerUserID      int
-	ChargerAccountID *int
-	PayerAccountID   *int
-	ConnectionID     int
-	PeriodMonth      int
-	PeriodYear       int
-	Description      *string
-	Status           ChargeStatus
-	Date             *time.Time
-	CreatedAt        *time.Time
-	UpdatedAt        *time.Time
+	ID               int          `json:"id"`
+	ChargerUserID    int          `json:"charger_user_id"`
+	PayerUserID      int          `json:"payer_user_id"`
+	ChargerAccountID *int         `json:"charger_account_id"`
+	PayerAccountID   *int         `json:"payer_account_id"`
+	ConnectionID     int          `json:"connection_id"`
+	PeriodMonth      int          `json:"period_month"`
+	PeriodYear       int          `json:"period_year"`
+	Description      *string      `json:"description"`
+	Status           ChargeStatus `json:"status"`
+	Date             *time.Time   `json:"date"`
+	CreatedAt        *time.Time   `json:"created_at"`
+	UpdatedAt        *time.Time   `json:"updated_at"`
 }
 
 func (c *Charge) ValidateTransition(newStatus ChargeStatus) error {

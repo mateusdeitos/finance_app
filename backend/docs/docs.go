@@ -656,8 +656,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer",
-                                "format": "int64"
+                                "type": "integer"
                             }
                         }
                     },
@@ -2196,16 +2195,16 @@ const docTemplate = `{
         "domain.Charge": {
             "type": "object",
             "properties": {
-                "chargerAccountID": {
+                "charger_account_id": {
                     "type": "integer"
                 },
-                "chargerUserID": {
+                "charger_user_id": {
                     "type": "integer"
                 },
-                "connectionID": {
+                "connection_id": {
                     "type": "integer"
                 },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "date": {
@@ -2217,22 +2216,22 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
-                "payerAccountID": {
+                "payer_account_id": {
                     "type": "integer"
                 },
-                "payerUserID": {
+                "payer_user_id": {
                     "type": "integer"
                 },
-                "periodMonth": {
+                "period_month": {
                     "type": "integer"
                 },
-                "periodYear": {
+                "period_year": {
                     "type": "integer"
                 },
                 "status": {
                     "$ref": "#/definitions/domain.ChargeStatus"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 }
             }
