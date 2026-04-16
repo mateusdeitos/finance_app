@@ -297,7 +297,13 @@ export const ImportReviewRow = memo(
                 size="xs"
                 variant="subtle"
                 color="gray"
-                onClick={() => void renderDrawer(() => <CreateCategoryDrawer />)}
+                onClick={() => {
+                  renderDrawer<import("@/types/transactions").Transactions.Category | void>(() => <CreateCategoryDrawer />)
+                    .then((created) => {
+                      if (created) form.setValue(`rows.${rowIndex}.category_id`, created.id);
+                    })
+                    .catch(() => {});
+                }}
                 disabled={disabled || isSkipped}
                 aria-label="Criar categoria"
               >
