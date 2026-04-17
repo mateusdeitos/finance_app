@@ -193,6 +193,18 @@ export async function apiFetchAs(token: string, path: string, options: RequestIn
   return res
 }
 
+export async function apiGetTransaction(id: number): Promise<Transactions.Transaction> {
+  const res = await apiFetch(`/api/transactions/${id}`)
+  const transactions = await res.json()
+  // The endpoint returns an array; find the one with matching ID
+  if (Array.isArray(transactions)) {
+    const tx = transactions.find((t: { id: number }) => t.id === id)
+    if (!tx) throw new Error(`Transaction ${id} not found in response`)
+    return tx
+  }
+  return transactions
+}
+
 export async function apiUpdateTransaction(
   id: number,
   payload: Partial<Transactions.CreateTransactionPayload>,

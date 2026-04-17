@@ -198,7 +198,8 @@ export class TransactionsPage {
   }
 
   async selectPropagation(
-    option: "Somente esta" | "Esta e as próximas" | "Todas"
+    option: "Somente esta" | "Esta e as próximas" | "Todas",
+    action: "delete" | "update" = "delete"
   ) {
     const valueMap: Record<string, string> = {
       "Somente esta": "current",
@@ -208,7 +209,8 @@ export class TransactionsPage {
     await this.page
       .getByTestId(`propagation_option_${valueMap[option]}`)
       .click();
-    await this.page.getByTestId("btn_propagation_confirm").click();
+    const confirmTestId = action === "delete" ? "btn_propagation_confirm" : "btn_propagation_confirm_update";
+    await this.page.getByTestId(confirmTestId).click();
     await expect(this.page.getByTestId("bulk_success")).toBeVisible({
       timeout: 15000,
     });

@@ -52,6 +52,9 @@ export class ChargesPage {
   // --- Create ---
 
   async openCreateDrawer() {
+    // Wait for network to settle first so accounts/connections are loaded before the drawer mounts.
+    // This ensures singleConnection is computed correctly in the drawer's defaultValues.
+    await this.page.waitForLoadState('networkidle')
     await this.page.getByRole('button', { name: 'Nova Cobranca' }).click()
     await expect(this.createDrawer).toBeVisible({ timeout: 5000 })
   }
@@ -60,6 +63,14 @@ export class ChargesPage {
     accountName: string
     description?: string
   }) {
+    // If the connection dropdown is visible (multiple connections or accounts still loading),
+    // select the first available option so connection_id gets set.
+    const connectionSelect = this.createDrawer.getByRole('textbox', { name: 'Conexao' })
+    if (await connectionSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await connectionSelect.click()
+      await this.page.getByRole('option').first().click()
+    }
+
     const accountSelect = this.createDrawer.getByRole('textbox', { name: 'Minha conta' })
     await accountSelect.click()
     await this.page.getByRole('option', { name: opts.accountName }).click()

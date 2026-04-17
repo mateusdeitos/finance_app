@@ -9,6 +9,8 @@ import { useMe } from '@/hooks/useMe'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useAccounts } from '@/hooks/useAccounts'
+import { useTags } from '@/hooks/useTags'
 import { deleteTransaction, updateTransaction } from '@/api/transactions'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
@@ -67,6 +69,11 @@ function TransactionsPage() {
   }, [])
   const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
 
+  const { query: accountsQuery } = useAccounts()
+  const accounts = accountsQuery.data ?? []
+  const { query: tagsQuery } = useTags()
+  const existingTags = tagsQuery.data ?? []
+
   // Transactions data (needed to find full transaction objects for selected IDs)
   // Uses same params as TransactionList so they share the same query cache entry
   const filters = useActiveFilters()
@@ -88,6 +95,53 @@ function TransactionsPage() {
       const tx = allTransactions.find((t) => t.id === id)
       return tx?.original_user_id == null || tx?.original_user_id === currentUserId
     })
+  }
+
+  function buildFullPayload(
+    tx: Transactions.Transaction,
+    overrides: Partial<Transactions.UpdateTransactionPayload>,
+  ): Transactions.UpdateTransactionPayload {
+    const isTransfer = tx.type === 'transfer'
+    const destinationAccountId = isTransfer ? tx.linked_transactions?.[0]?.account_id : undefined
+
+    const splitSettings = isTransfer
+      ? undefined
+      : (tx.linked_transactions ?? [])
+          .filter((lt) => lt.user_id !== tx.user_id)
+          .flatMap((lt) => {
+            const acc = accounts.find(
+              (a) =>
+                a.user_connection?.from_account_id === lt.account_id ||
+                a.user_connection?.to_account_id === lt.account_id,
+            )
+            if (!acc?.user_connection) return []
+            return [{ connection_id: acc.user_connection.id, amount: lt.amount }]
+          })
+
+    const resolvedTags = (tx.tags ?? []).map((t) => {
+      const existing = existingTags.find((et) => et.name === t.name)
+      return existing ? { id: existing.id, name: t.name } : { name: t.name }
+    })
+
+    return {
+      transaction_type: tx.type,
+      account_id: tx.account_id,
+      category_id: isTransfer ? undefined : (tx.category_id ?? undefined),
+      amount: tx.amount,
+      date: tx.date,
+      description: tx.description,
+      destination_account_id: destinationAccountId,
+      tags: resolvedTags.length > 0 ? resolvedTags : undefined,
+      split_settings: splitSettings && splitSettings.length > 0 ? splitSettings : undefined,
+      recurrence_settings: tx.transaction_recurrence
+        ? {
+            type: tx.transaction_recurrence.type,
+            current_installment: tx.installment_number ?? 1,
+            total_installments: tx.transaction_recurrence.installments,
+          }
+        : undefined,
+      ...overrides,
+    }
   }
 
   async function handleDeleteClick() {
@@ -156,10 +210,9 @@ function TransactionsPage() {
           items={items}
           action={async (item) => {
             const tx = allTransactions.find((t) => t.id === item.id)
-            const payload: Transactions.UpdateTransactionPayload = {
-              category_id: category.id,
-            }
-            if (tx?.transaction_recurrence_id != null && propagation) {
+            if (!tx) return
+            const payload = buildFullPayload(tx, { category_id: category.id })
+            if (tx.transaction_recurrence_id != null && propagation) {
               payload.propagation_settings = propagation
             }
             await updateTransaction(item.id, payload)
@@ -214,10 +267,9 @@ function TransactionsPage() {
           items={items}
           action={async (item) => {
             const tx = allTransactions.find((t) => t.id === item.id)
-            const payload: Transactions.UpdateTransactionPayload = {
-              date: dateStr,
-            }
-            if (tx?.transaction_recurrence_id != null && propagation) {
+            if (!tx) return
+            const payload = buildFullPayload(tx, { date: dateStr })
+            if (tx.transaction_recurrence_id != null && propagation) {
               payload.propagation_settings = propagation
             }
             await updateTransaction(item.id, payload)
