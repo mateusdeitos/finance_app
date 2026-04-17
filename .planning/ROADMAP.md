@@ -55,7 +55,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 3/3            | Complete    | 2026-04-17 |
-| 10. User Avatar System                               | v1.2      | 3/3            | Complete    | 2026-04-17 |
+| 10. User Avatar System                               | v1.2      | 3/3 | Complete   | 2026-04-17 |
 
 ---
 
