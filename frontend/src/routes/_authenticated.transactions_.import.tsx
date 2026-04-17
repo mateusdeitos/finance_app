@@ -67,7 +67,7 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
     date: row.date,
     description: row.description,
   };
-  if (row.category_id) payload.category_id = row.category_id;
+  if (row.transaction_type !== "transfer" && row.category_id) payload.category_id = row.category_id;
   if (row.transaction_type === "transfer" && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id;
   }
