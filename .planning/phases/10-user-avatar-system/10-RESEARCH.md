@@ -503,17 +503,17 @@ Including `partner_name` (partner's name) alongside `partner_avatar_url` is wort
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does Microsoft OAuth via `markbates/goth/providers/microsoftonline` return AvatarURL?**
    - What we know: Google OAuth definitely returns profile photo URL via `email + profile` scopes. Microsoft uses `User.Read` scope.
    - What's unclear: Whether `goth` extracts the photo from Microsoft Graph into `AvatarURL` field, or leaves it empty.
-   - Recommendation: Treat `AvatarURL` as always-optional (`*string`). The feature degrades gracefully to initials for Microsoft users. Acceptable per D-03.
+   - RESOLVED: Treat `AvatarURL` as always-optional (`*string`). The feature degrades gracefully to initials for Microsoft users. Acceptable per D-03. No implementation change needed — the `*string` type and initials fallback in Mantine Avatar handle this automatically.
 
 2. **Should `partner_name` be added to the account connection response?**
    - What we know: Partner's initials are needed as fallback when `partner_avatar_url` is absent/broken.
    - What's unclear: Whether the partner name can be derived from existing data the frontend already has.
-   - Recommendation: Include `partner_name` in the SQL extension — one simple join addition, eliminates a potential future gap.
+   - RESOLVED: Include `partner_name` in the SQL extension — one simple join addition, eliminates a potential future gap. Planned in Plan 01 Task 2 (account_repository.go SQL extension) and Plan 02 (frontend type update).
 
 ---
 
