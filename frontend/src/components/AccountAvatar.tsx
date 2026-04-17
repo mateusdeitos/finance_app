@@ -13,8 +13,10 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
   const isShared = !!account.user_connection
 
   if (isShared) {
-    const partnerAvatarUrl = account.user_connection?.partner_avatar_url
-    const partnerName = account.user_connection?.partner_name ?? account.name
+    const conn = account.user_connection!
+    const isFromUser = conn.from_user_id === account.user_id
+    const partnerAvatarUrl = isFromUser ? conn.to_user_avatar_url : conn.from_user_avatar_url
+    const partnerName = (isFromUser ? conn.to_user_name : conn.from_user_name) ?? account.name
     return (
       <Avatar src={partnerAvatarUrl} size={size} radius="xl" color="grape">
         {getInitials(partnerName)}

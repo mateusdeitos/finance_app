@@ -211,7 +211,11 @@ function SplitRow({
               size="sm"
               radius="xl"
               color="blue"
-              src={selectedAccount.user_connection?.partner_avatar_url}
+              src={selectedAccount.user_connection
+                ? (selectedAccount.user_connection.from_user_id === selectedAccount.user_id
+                    ? selectedAccount.user_connection.to_user_avatar_url
+                    : selectedAccount.user_connection.from_user_avatar_url)
+                : undefined}
               style={{ cursor: "default" }}
             >
               {getInitials(selectedAccount.description || selectedAccount.name)}

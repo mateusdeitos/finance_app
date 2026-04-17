@@ -117,8 +117,10 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
                 'connection_status', user_connections.connection_status,
                 'created_at', user_connections.created_at,
                 'updated_at', user_connections.updated_at,
-                'partner_avatar_url', partner_user.avatar_url,
-                'partner_name', partner_user.name
+                'from_user_avatar_url', from_user.avatar_url,
+                'from_user_name', from_user.name,
+                'to_user_avatar_url', to_user.avatar_url,
+                'to_user_name', to_user.name
             )
         ELSE NULL
     END AS user_connection`)
@@ -133,11 +135,8 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 			options.UserIDs,
 		)
 
-		query = query.Joins(`LEFT JOIN users AS partner_user ON user_connections.id IS NOT NULL AND partner_user.id = CASE
-			WHEN user_connections.from_user_id IN ?
-				THEN user_connections.to_user_id
-			ELSE user_connections.from_user_id
-		END`, options.UserIDs)
+		query = query.Joins(`LEFT JOIN users AS from_user ON from_user.id = user_connections.from_user_id`)
+		query = query.Joins(`LEFT JOIN users AS to_user ON to_user.id = user_connections.to_user_id`)
 
 		query = query.Where("user_id IN ?", options.UserIDs)
 	}

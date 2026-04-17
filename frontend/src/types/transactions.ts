@@ -23,8 +23,10 @@ export namespace Transactions {
     connection_status: "pending" | "accepted" | "rejected";
     created_at?: string;
     updated_at?: string;
-    partner_avatar_url?: string;
-    partner_name?: string;
+    from_user_avatar_url?: string;
+    from_user_name?: string;
+    to_user_avatar_url?: string;
+    to_user_name?: string;
   }
 
   export interface Account {

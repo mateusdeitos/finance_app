@@ -18,8 +18,10 @@ type UserConnection struct {
 	ConnectionStatus           domain.UserConnectionStatusEnum `json:"connection_status"`
 	CreatedAt                  *time.Time                      `json:"created_at"`
 	UpdatedAt                  *time.Time                      `json:"updated_at"`
-	PartnerAvatarURL           *string                         `json:"partner_avatar_url" gorm:"-"`
-	PartnerName                *string                         `json:"partner_name" gorm:"-"`
+	FromUserAvatarURL          *string                         `json:"from_user_avatar_url" gorm:"-"`
+	FromUserName               *string                         `json:"from_user_name" gorm:"-"`
+	ToUserAvatarURL            *string                         `json:"to_user_avatar_url" gorm:"-"`
+	ToUserName                 *string                         `json:"to_user_name" gorm:"-"`
 }
 
 func (a *UserConnection) ToDomain() *domain.UserConnection {
@@ -34,8 +36,10 @@ func (a *UserConnection) ToDomain() *domain.UserConnection {
 		ConnectionStatus:           a.ConnectionStatus,
 		CreatedAt:                  a.CreatedAt,
 		UpdatedAt:                  a.UpdatedAt,
-		PartnerAvatarURL:           a.PartnerAvatarURL,
-		PartnerName:                a.PartnerName,
+		FromUserAvatarURL:          a.FromUserAvatarURL,
+		FromUserName:               a.FromUserName,
+		ToUserAvatarURL:            a.ToUserAvatarURL,
+		ToUserName:                 a.ToUserName,
 	}
 }
 
