@@ -71,7 +71,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
-| 10. User Avatar System                               | v1.2      | 2/3            | In Progress | -          |
+| 10. User Avatar System                               | v1.2      | 3/3            | In Progress | -          |
 
 ### Phase 10: User Avatar System
 
@@ -90,7 +90,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 Plans:
 - [x] 10-01-PLAN.md — Backend: migrations, domain/entity/service/handler for avatar storage and retrieval
 - [x] 10-02-PLAN.md — Frontend: shared components (UserAvatar, AccountAvatar, ColorSwatchPicker), types, header + split settings wiring
-- [ ] 10-03-PLAN.md — Frontend: TransactionRow avatars, AccountCard avatars, AccountForm color picker + visual verification
+- [x] 10-03-PLAN.md — Frontend: TransactionRow avatars, AccountCard avatars, AccountForm color picker + visual verification
 
 ---
 
