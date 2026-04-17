@@ -12,6 +12,7 @@ export interface AccountPayload {
   name: string
   description?: string
   initial_balance: number
+  avatar_background_color: string
 }
 
 export async function createAccount(payload: AccountPayload): Promise<Transactions.Account> {

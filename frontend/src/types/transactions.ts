@@ -23,6 +23,8 @@ export namespace Transactions {
     connection_status: "pending" | "accepted" | "rejected";
     created_at?: string;
     updated_at?: string;
+    partner_avatar_url?: string;
+    partner_name?: string;
   }
 
   export interface Account {
@@ -32,6 +34,7 @@ export namespace Transactions {
     description?: string;
     initial_balance: number;
     is_active: boolean;
+    avatar_background_color?: string;
     created_at?: string;
     updated_at?: string;
     user_connection?: UserConnection;

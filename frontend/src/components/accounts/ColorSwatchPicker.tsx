@@ -1,0 +1,46 @@
+import { ColorSwatch, SimpleGrid, Text, Stack } from "@mantine/core"
+
+const PRESET_COLORS = [
+  "#e63946",  // red
+  "#ef7819",  // orange
+  "#2a9d8f",  // teal
+  "#457b9d",  // blue
+  "#6a4c93",  // purple
+  "#e91e8c",  // pink
+  "#2d6a4f",  // forest
+  "#f4a261",  // sand
+  "#3d6b8c",  // steel
+  "#1a1a1a",  // charcoal
+  "#8b8b8b",  // grey
+  "#39b2a3",  // mint
+]
+
+interface ColorSwatchPickerProps {
+  value: string
+  onChange: (hex: string) => void
+  label?: string
+}
+
+export function ColorSwatchPicker({ value, onChange, label }: ColorSwatchPickerProps) {
+  return (
+    <Stack gap="xs">
+      {label && <Text size="sm" fw={600}>{label}</Text>}
+      <SimpleGrid cols={4} spacing={8}>
+        {PRESET_COLORS.map((color) => (
+          <ColorSwatch
+            key={color}
+            color={color}
+            size={28}
+            radius="xl"
+            onClick={() => onChange(color)}
+            aria-label={`Selecionar cor ${color}`}
+            style={{
+              cursor: "pointer",
+              boxShadow: value === color ? "0 0 0 2px var(--mantine-color-blue-7)" : "none",
+            }}
+          />
+        ))}
+      </SimpleGrid>
+    </Stack>
+  )
+}
