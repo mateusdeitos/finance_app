@@ -44,6 +44,7 @@ export interface AccountPayload {
   name: string
   description?: string
   initial_balance: number
+  avatar_background_color?: string
 }
 
 export async function apiCreateAccount(payload: AccountPayload): Promise<{ id: number; name: string }> {
