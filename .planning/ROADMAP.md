@@ -58,6 +58,23 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 - [x] 09-03-PLAN.md — Wire SelectionActionBar menu + bulk action handlers in transactions page
       **UI hint**: yes
 
+### Phase 10: Request Logging & Observability
+
+**Goal**: Structured request logging using zerolog with Stripe's single-log-per-request pattern, context-propagated logger accessible from all layers, dynamic log leveling, and configurable minimum level
+**Depends on**: None (cross-cutting concern, can be added independently)
+**Requirements**: TBD (to be defined during plan-phase)
+**Success Criteria** (what must be TRUE):
+
+1. Every HTTP request emits exactly one structured JSON log line on completion, containing method, path, status, latency, IP, and user_id
+2. Any layer (handler, service, repository) can append arbitrary fields to the request log via `context.Context` without importing HTTP packages
+3. Any layer can emit intermediate logs (debug/warn) that automatically carry all accumulated request context
+4. Final log level is dynamic: 2xx→info, 4xx→warn, 5xx→error
+5. Minimum log level is configurable via environment variable; requests below threshold are not emitted
+6. Existing request handling and error responses are unaffected
+
+**Plans**: TBD
+**UI hint**: no
+
 ## Progress
 
 | Phase                                                | Milestone | Plans Complete | Status      | Completed  |
@@ -71,6 +88,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
+| 10. Request Logging & Observability                  | v1.2      | 0/?            | Not started | -          |
 
 ---
 
