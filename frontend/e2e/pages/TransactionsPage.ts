@@ -184,7 +184,12 @@ export class TransactionsPage {
     return match ? parseInt(match[1]) : 0;
   }
 
+  async openBulkActionsMenu() {
+    await this.page.getByTestId("btn_bulk_actions_menu").click();
+  }
+
   async confirmBulkDelete() {
+    await this.openBulkActionsMenu();
     await this.page.getByTestId("btn_bulk_delete").click();
     await expect(this.page.getByTestId("bulk_delete_success")).toBeVisible({
       timeout: 15000,
@@ -211,7 +216,7 @@ export class TransactionsPage {
   }
 
   async closeBulkDeleteDrawer() {
-    await this.page.getByTestId("btn_bulk_delete_done").click();
+    await this.page.getByTestId("btn_bulk_done").click();
   }
 
   async deleteTransaction(description: string) {
