@@ -191,7 +191,7 @@ export class TransactionsPage {
   async confirmBulkDelete() {
     await this.openBulkActionsMenu();
     await this.page.getByTestId("btn_bulk_delete").click();
-    await expect(this.page.getByTestId("bulk_delete_success")).toBeVisible({
+    await expect(this.page.getByTestId("bulk_success")).toBeVisible({
       timeout: 15000,
     });
     await this.page.waitForLoadState("networkidle");
@@ -209,7 +209,7 @@ export class TransactionsPage {
       .getByTestId(`propagation_option_${valueMap[option]}`)
       .click();
     await this.page.getByTestId("btn_propagation_confirm").click();
-    await expect(this.page.getByTestId("bulk_delete_success")).toBeVisible({
+    await expect(this.page.getByTestId("bulk_success")).toBeVisible({
       timeout: 15000,
     });
     await this.page.waitForLoadState("networkidle");

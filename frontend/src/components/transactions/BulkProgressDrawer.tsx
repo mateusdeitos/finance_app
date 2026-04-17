@@ -101,7 +101,7 @@ export function BulkProgressDrawer({
       closeOnEscape={!isProcessing}
       closeOnClickOutside={!isProcessing}
       position="bottom"
-      data-testid={`${testIdPrefix}_${state}`}
+      data-testid={testIdPrefix}
       title={
         state === "success"
           ? titles.success
