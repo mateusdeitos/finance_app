@@ -1,16 +1,19 @@
 # Milestones
 
-## v1.2 Transactions Bulk Actions (Shipped: 2026-04-17)
+## v1.2 Bulk Actions & Observability (Shipped: 2026-04-17)
 
-**Phases completed:** 2 phases, 5 plans, 4 tasks
+**Phases completed:** 2 phases, 5 plans
+**Files changed:** 75 files, +7324 / -394 lines
+**Known deferred items at close:** 4 (see STATE.md Deferred Items)
 
 **Key accomplishments:**
 
-- BulkProgressDrawer.tsx
-- Two new input-gathering drawers for bulk actions: SelectCategoryDrawer (right-side read-only category list) and SelectDateDrawer (bottom date picker with Aplicar button), both using the renderDrawer promise pattern.
-- Wired SelectionActionBar with Acoes dropdown menu and integrated handleCategoryChange/handleDateChange handlers connecting all drawers (SelectCategoryDrawer, SelectDateDrawer, PropagationSettingsDrawer, BulkProgressDrawer) into complete end-to-end bulk action flows.
-- One-liner:
-- One-liner:
+1. Bulk transaction actions — category change, date change with per-transaction progress tracking via BulkProgressDrawer
+2. Input-gathering drawers (SelectCategoryDrawer, SelectDateDrawer) using renderDrawer promise pattern
+3. SelectionActionBar with Ações dropdown menu — end-to-end bulk action flows with propagation support
+4. Structured request logging with zerolog — Stripe's single-log-per-request pattern for Cloud Run
+5. Context-propagated logger (pkg/applog) with pointer-mutation field accumulation across all layers
+6. X-Request-ID headers and dynamic log leveling (2xx→info, 4xx→warn, 5xx→error)
 
 ---
 
