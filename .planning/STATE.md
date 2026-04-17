@@ -54,6 +54,10 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 
 - Run integration tests with Docker when available (4 UAT items blocked)
 
+### Roadmap Evolution
+
+- Phase 10 added: User Avatar System (Issue #60)
+
 ### Blockers
 
 None
