@@ -38,7 +38,7 @@ export function ColorSwatchPicker({ value, onChange, label }: ColorSwatchPickerP
             aria-label={`Selecionar cor ${color}`}
             style={{
               cursor: "pointer",
-              boxShadow: value === color ? "0 0 0 2px var(--mantine-color-blue-7)" : "none",
+              boxShadow: value === color ? "0 0 0 2px white, 0 0 0 4px var(--mantine-color-dark-4)" : "none",
             }}
           />
         ))}
