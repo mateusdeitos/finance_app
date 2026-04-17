@@ -27,6 +27,7 @@ export function AccountDrawer({ account }: Props) {
       name: values.name,
       description: values.description || undefined,
       initial_balance: values.initial_balance,
+      avatar_background_color: values.avatar_background_color,
     }
     if (account) {
       updateMutation.mutate({ id: account.id, payload })
@@ -38,7 +39,7 @@ export function AccountDrawer({ account }: Props) {
   }
 
   const initialValues = account
-    ? { name: account.name, description: account.description ?? '', initial_balance: account.initial_balance }
+    ? { name: account.name, description: account.description ?? '', initial_balance: account.initial_balance, avatar_background_color: account.avatar_background_color ?? '#457b9d' }
     : undefined
 
   return (
