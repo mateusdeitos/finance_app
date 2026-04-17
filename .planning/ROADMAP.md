@@ -74,8 +74,8 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Plans**: 2 plans
 Plans:
-- [ ] 10-01-PLAN.md — pkg/applog package: Logger wrapper, WithLogger, FromContext, field accumulation
-- [ ] 10-02-PLAN.md — LoggingMiddleware, ErrorHandler integration, auth user_id injection, config + main.go wiring
+- [x] 10-01-PLAN.md — pkg/applog package: Logger wrapper, WithLogger, FromContext, field accumulation
+- [x] 10-02-PLAN.md — LoggingMiddleware, ErrorHandler integration, auth user_id injection, config + main.go wiring
 **UI hint**: no
 
 ## Progress
@@ -91,7 +91,7 @@ Plans:
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
-| 10. Request Logging & Observability                  | v1.2      | 0/2            | Not started | -          |
+| 10. Request Logging & Observability                  | v1.2      | 2/2 | Complete   | 2026-04-17 |
 
 ---
 
