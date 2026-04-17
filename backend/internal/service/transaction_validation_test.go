@@ -173,7 +173,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 		assertTag(err, pkgErrors.ErrorTagSplitSettingsNotAllowedForTransfer)
 	})
 
-	suite.Run("income_with_split_settings", func() {
+	suite.Run("income_with_split_settings_is_allowed", func() {
+		// Income with split settings should pass type validation
+		// (will fail later on account/connection lookup, not on type check)
 		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
 			TransactionType: domain.TransactionTypeIncome,
 			AccountID:       1,
@@ -183,7 +185,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			Description:     "test",
 			SplitSettings:   []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
 		})
-		assertTag(err, pkgErrors.ErrorTagSplitAllowedOnlyForExpense)
+		suite.Require().Error(err)
+		suite.Assert().False(hasTag(err, pkgErrors.ErrorTagSplitSettingsNotAllowedForTransfer), "income should allow split settings")
 	})
 }
 

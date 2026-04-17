@@ -3,8 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Recurrence Redesign** — Phases 1–4 (shipped 2026-04-10)
-- ✅ **v1.1 Charges** — Phases 5–8 (completed 2026-04-16)
-- 🔄 **v1.2 Transactions Bulk Actions** — Phase 9 (in progress)
+- ✅ **v1.1 Charges** — Phases 5–8 (shipped 2026-04-16)
 
 ## Phases
 
@@ -21,10 +20,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v1.1 Charges (Phases 5–8) — COMPLETED 2026-04-16</summary>
+<summary>✅ v1.1 Charges (Phases 5–8) — SHIPPED 2026-04-16</summary>
 
 - [x] Phase 5: Charge Domain & DB (2/2 plans) — completed 2026-04-14
-- [x] Phase 6: Charge Repository, Service & API (2/2 plans) — completed 2026-04-15
+- [x] Phase 6: Repository, Service & API (2/2 plans) — completed 2026-04-15
 - [x] Phase 7: Accept + Atomic Transfer (2/2 plans) — completed 2026-04-16
 - [x] Phase 8: Frontend (3/3 plans) — completed 2026-04-16
 

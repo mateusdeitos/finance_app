@@ -912,6 +912,116 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 }
 
+func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	user2, err := suite.createTestUser(ctx)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test user: %v", err)
+	}
+
+	account, err := suite.createTestAccount(ctx, user1)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test account: %v", err)
+	}
+
+	category, err := suite.createTestCategory(ctx, user1)
+	if err != nil {
+		suite.T().Fatalf("Failed to create test category: %v", err)
+	}
+
+	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	if err != nil {
+		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
+	}
+
+	amount := int64(100)
+
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          amount,
+		Date:            d,
+		Description:     "Shared income",
+		TransactionType: domain.TransactionTypeIncome,
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: userConnection.ID,
+				Percentage:   lo.ToPtr(50),
+			},
+		},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to create transaction: %v", err)
+	}
+
+	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		WithSettlements: true,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	suite.Assert().Len(transactionsUser1, 1)
+
+	suite.Assert().Greater(transactionsUser1[0].ID, 0)
+	suite.Assert().Equal(account.ID, transactionsUser1[0].AccountID)
+	suite.Assert().Equal(category.ID, lo.FromPtr(transactionsUser1[0].CategoryID))
+	suite.Assert().Equal(amount, int64(transactionsUser1[0].Amount))
+	suite.Assert().Equal(d, transactionsUser1[0].Date)
+	suite.Assert().Equal("Shared income", transactionsUser1[0].Description)
+	suite.Assert().Equal(domain.TransactionTypeIncome, transactionsUser1[0].Type)
+	suite.Assert().Equal(user1.ID, transactionsUser1[0].UserID)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].OriginalUserID))
+
+	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 1)
+
+	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
+	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[0].CategoryID)
+	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[0].Amount))
+	suite.Assert().Equal(d, transactionsUser1[0].LinkedTransactions[0].Date)
+	suite.Assert().Equal("Shared income", transactionsUser1[0].LinkedTransactions[0].Description)
+	suite.Assert().Equal(domain.TransactionTypeIncome, transactionsUser1[0].LinkedTransactions[0].Type)
+	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[0].UserID)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[0].OriginalUserID))
+
+	// Settlement should be debit for income (author owes partner)
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
+	settlement := transactionsUser1[0].SettlementsFromSource[0]
+	suite.Assert().Equal(user1.ID, settlement.UserID)
+	suite.Assert().Equal(domain.SettlementTypeDebit, settlement.Type)
+	suite.Assert().Equal(int64(amount/2), settlement.Amount)
+	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
+	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
+	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
+
+	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user2.ID,
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to get transaction: %v", err)
+	}
+
+	suite.Assert().Len(transactionsUser2, 1)
+
+	suite.Assert().Greater(transactionsUser2[0].ID, 0)
+	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser2[0].AccountID)
+	suite.Assert().Nil(transactionsUser2[0].CategoryID)
+	suite.Assert().Equal(int64(amount/2), int64(transactionsUser2[0].Amount))
+	suite.Assert().Equal(d, transactionsUser2[0].Date)
+	suite.Assert().Equal("Shared income", transactionsUser2[0].Description)
+	suite.Assert().Equal(domain.TransactionTypeIncome, transactionsUser2[0].Type)
+	suite.Assert().Equal(user2.ID, transactionsUser2[0].UserID)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
+}
+
 func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAccountID() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)
