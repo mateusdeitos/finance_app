@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Go REST API backend for a couples' finance management app. It lets two users (partners) track shared and individual transactions, split expenses, transfer funds between accounts, and manage recurring installment purchases. Deployed on Google Cloud Run with PostgreSQL.
+A Go REST API backend for a couples' finance management app. It lets two users (partners) track shared and individual transactions, split expenses, transfer funds between accounts, and manage recurring installment purchases. Includes a charges system for requesting payments between partners, and a user avatar system with OAuth photo support and customizable account colors. Deployed on Google Cloud Run with PostgreSQL.
 
 ## Core Value
 
@@ -27,66 +27,47 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ CSV transaction import — existing
 - ✓ Hide settlements filter in advanced search — existing
 - ✓ Recurrence input model: `current_installment + total_installments` replaces `repetitions | end_date` — v1.0
-- ✓ Create loop produces correct installment series from `current_installment` (e.g. 3–10 for `current=3, total=10`) — v1.0
-- ✓ `TransactionRecurrence.Installments` stores `total_installments` (total series size, not count created) — v1.0
-- ✓ Frontend form: "Parcela atual" + "Total de parcelas" inputs with cross-field Zod validation — v1.0
+- ✓ Create loop produces correct installment series from `current_installment` — v1.0
+- ✓ `TransactionRecurrence.Installments` stores `total_installments` — v1.0
+- ✓ Frontend form: "Parcela atual" + "Total de parcelas" inputs with Zod validation — v1.0
 - ✓ TypeScript types and payload builder updated for new recurrence fields — v1.0
+- ✓ Charge entity with status machine (pending → paid/rejected/cancelled) and DB schema — v1.1
+- ✓ Charge CRUD API: create, reject, cancel, list with IDOR protection — v1.1
+- ✓ Pending charge badge count endpoint — v1.1
+- ✓ Atomic charge acceptance: dual-transfer creation in single DB transaction — v1.1
+- ✓ Race-condition guard: conditional UPDATE prevents double-accept — v1.1
+- ✓ Charges frontend: listing, create/accept/reject/cancel, sidebar badge — v1.1
+- ✓ Bulk selection mode on transactions list — v1.2
+- ✓ Bulk category change for selected transactions — v1.2
+- ✓ Bulk date change for selected transactions — v1.2
+- ✓ Progress drawer showing update progress per transaction — v1.2
+- ✓ Propagation settings drawer when selected transactions have installments — v1.2
+- ✓ Silent skip of linked transactions (user is not original_user_id) — v1.2
+- ✓ Query invalidation on completion — v1.2
+- ✓ Save avatar URL from OAuth provider on login — v1.2
+- ✓ Display user avatar in header, split settings, transaction rows, account cards — v1.2
+- ✓ Customizable background color for private account avatars — v1.2
 
 ### Active
 
-- [ ] Bulk selection mode on transactions list
-- [ ] Bulk category change for selected transactions
-- [ ] Bulk date change for selected transactions
-- [ ] Progress drawer showing update progress per transaction
-- [ ] Propagation settings drawer when selected transactions have installments
-- [ ] Silent skip of linked transactions (user is not original_user_id)
-- [ ] Query invalidation on completion
-
-## Current Milestone: v1.2 Transactions Bulk Actions
-
-**Goal:** Enable bulk actions (category change, date change) on transaction list with progress tracking and installment propagation support.
-
-**Target features:**
-
-- Bulk selection mode on transactions list
-- Bulk category change action
-- Bulk date change action
-- Toolbar similar to import transactions toolbar
-- Progress drawer showing update progress per transaction
-- Propagation settings drawer for installment transactions
-- Silent skip of linked transactions
-- Query invalidation on completion
-
-### v1.1 Validated
-
-- ✓ Charge entity with status machine (pending → paid/rejected/cancelled) and DB schema — Phase 5
-- ✓ Charge CRUD API: create, reject, cancel, list with IDOR protection — Phase 6
-- ✓ Pending charge badge count endpoint — Phase 6
-- ✓ Atomic charge acceptance: dual-transfer creation in single DB transaction — Phase 7
-- ✓ Race-condition guard: conditional UPDATE prevents double-accept — Phase 7
-- ✓ ChargeID propagation to all transfer transactions — Phase 7
-- ✓ Role re-inference from live balance during accept — Phase 7
-- ✓ Charges frontend: listing page with tabs, create/accept/reject/cancel forms, sidebar badge — Phase 8
-- ✓ E2E Playwright tests for charges feature (multi-user setup) — Phase 8
+(None — planning next milestone)
 
 ### Out of Scope
 
-- Backdating or creating past installments (1–2 in a 3-of-10 scenario) — user only needs future tracking
+- Backdating or creating past installments — user only needs future tracking
 - Migrating existing transaction data to the new format — old records stay as-is
-- Open-ended recurrences (subscriptions with no end) — not part of this change
-- Backwards compatibility shim — breaking API change accepted
-- `end_date` as recurrence input — removed; fixed-count only going forward
+- Open-ended recurrences (subscriptions with no end) — not part of current scope
+- `end_date` as recurrence input — removed; fixed-count only
+- Mobile app — web-first approach
+- Offline mode — real-time sync not core to finance tracking
 
 ## Context
 
-**Current state (v1.1 complete):** Charges feature fully shipped — backend and frontend. Charge entity with status machine, CRUD API with IDOR protection, atomic accept flow with race guard, and full web UI (listing, create/accept/reject/cancel, sidebar badge). E2E Playwright tests cover the complete flow with multi-user setup.
-
-**Tech stack:** Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine, Zod, React Hook Form (frontend) · Playwright (e2e)
+**Current state (v1.2 complete):** Three milestones shipped. Recurrence redesign (v1.0), charges system (v1.1), and bulk actions + avatar system (v1.2). Backend: Go 1.24 with Echo v4, GORM, PostgreSQL. Frontend: React, TypeScript, Mantine, Zod, React Hook Form. E2E: Playwright.
 
 **Known open items:**
-
-- Integration tests for accept flow require Docker (testcontainers) — pass locally, blocked in CI without Docker
-- E2E tests (recurrence.spec.ts) require a live app to confirm — not runnable in CI without Docker/server
+- Integration tests for accept flow require Docker (testcontainers) — blocked in CI without Docker
+- UAT gaps in phases 7, 9; verification gaps in phases 8, 9, 10 (human_needed)
 
 ## Key Decisions
 
@@ -94,45 +75,26 @@ Partners can accurately track shared finances, including in-progress installment
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------- |
 | `current_installment` lives inside `RecurrenceSettings`                | Keeps recurrence concerns together; consistent with existing pattern                        | ✓ Good  |
 | `total_installments` replaces `repetitions` (rename for clarity)       | More expressive; removes ambiguity about what the count means                               | ✓ Good  |
-| Remove `end_date` from RecurrenceSettings                              | User chose fixed-count only; breaking change accepted; simplifies validation                | ✓ Good  |
-| Only create installments from current to total                         | Past installments are irrelevant to users at registration time                              | ✓ Good  |
-| `TransactionRecurrence.Installments` stores total (not remaining)      | Preserves existing semantics; recurrence record describes the full series                   | ✓ Good  |
-| E2E tests seed via API (not UI) for recurrence assertions              | Shared test DB makes row-count assertions unreliable; badge assertions prove numbering      | ✓ Good  |
+| Remove `end_date` from RecurrenceSettings                              | Fixed-count only; breaking change accepted; simplifies validation                           | ✓ Good  |
+| Only create installments from current to total                         | Past installments irrelevant at registration time                                           | ✓ Good  |
 | Direct transactionRepo.Create in accept (bypass service)               | Avoids nested DB transactions; PostgreSQL doesn't support them natively                     | ✓ Good  |
-| Conditional UPDATE WHERE status='pending' for race guard               | Single atomic fence; no SELECT FOR UPDATE needed; cleaner than read-check-write             | ✓ Good  |
-| Role re-inference from live balance during accept                      | Balance may flip between charge creation and acceptance; swap in same tx                    | ✓ Good  |
-| charges.date as TIMESTAMPTZ (initiator + acceptor each provide)        | Both parties need their own transaction date for their respective transfers                 | ✓ Good  |
-| Mock-based handler tests (not integration) for charge handler          | No existing handler test patterns; mock approach avoids Docker dependency                   | ✓ Good  |
-| Removed createAuthenticatedRoute wrapper, use createFileRoute directly | Template literal loses TanStack Router type inference; `_authenticated` prefix handles auth | ✓ Good  |
-| Shared PeriodNavigator with onPeriodChange callback                    | Reuse over copy; both transactions and charges pages use same component                     | ✓ Good  |
-| Charge mutations invalidate Transactions + Balance queries             | Accept creates transfers; stale transaction list without cross-invalidation                 | ✓ Good  |
+| Conditional UPDATE WHERE status='pending' for race guard               | Single atomic fence; cleaner than read-check-write                                          | ✓ Good  |
+| Role re-inference from live balance during accept                      | Balance may flip between charge creation and acceptance                                     | ✓ Good  |
+| *string for AvatarURL (NULL not empty string)                          | OAuth providers may return empty; NULL distinguishes "no avatar" from "empty"               | ✓ Good  |
+| Correlated subqueries for partner avatar/name in account search        | Avoids additional JOINs; partner data resolved in single query                              | ✓ Good  |
+| SEL-02 silent skip for linked transactions                             | User shouldn't see errors for transactions they can't modify; cleaner UX                    | ✓ Good  |
+| Single propagation choice for entire batch                             | Per-transaction propagation would be confusing UX; one choice covers all                    | ✓ Good  |
 
 ## Constraints
 
-- **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL — no new dependencies for this change
-- **Breaking change**: API clients must update their request format; no transition period
-- **DB migration**: `transaction_recurrence.installments` column stores total installments — semantics unchanged, no schema migration needed
-- **No end_date**: Removed from RecurrenceSettings; only fixed-count recurrences supported going forward
+- **Tech stack**: Go 1.24, Echo v4, GORM, PostgreSQL (backend) · React, TypeScript, Mantine (frontend)
+- **Breaking change**: API clients must update request format for recurrence; no transition period
+- **DB**: `transaction_recurrence.installments` stores total installments
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
 
-_Last updated: 2026-04-16 after v1.1 Charges milestone complete_
+_Last updated: 2026-04-17 after v1.2 Transactions Bulk Actions milestone complete_
