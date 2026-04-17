@@ -50,24 +50,24 @@ None — milestone is self-contained.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEL-01 | — | Pending |
-| SEL-02 | — | Pending |
-| BAR-01 | — | Pending |
-| BAR-02 | — | Pending |
-| BAR-03 | — | Pending |
-| BAR-04 | — | Pending |
-| PROP-01 | — | Pending |
-| PROP-02 | — | Pending |
-| PROG-01 | — | Pending |
-| PROG-02 | — | Pending |
-| PROG-03 | — | Pending |
-| PROG-04 | — | Pending |
+| SEL-01 | Phase 9 | Pending |
+| SEL-02 | Phase 9 | Pending |
+| BAR-01 | Phase 9 | Pending |
+| BAR-02 | Phase 9 | Pending |
+| BAR-03 | Phase 9 | Pending |
+| BAR-04 | Phase 9 | Pending |
+| PROP-01 | Phase 9 | Pending |
+| PROP-02 | Phase 9 | Pending |
+| PROG-01 | Phase 9 | Pending |
+| PROG-02 | Phase 9 | Pending |
+| PROG-03 | Phase 9 | Pending |
+| PROG-04 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 after initial definition*
+*Last updated: 2026-04-17 after roadmap creation*
