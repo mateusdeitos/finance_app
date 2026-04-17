@@ -162,8 +162,8 @@ export function BulkDeleteProgressDrawer({
                 <Text size="xs" c="dimmed" mt="xs">
                   Não processadas ({errorInfo.remaining.length}):
                 </Text>
-                {errorInfo.remaining.map((desc) => (
-                  <Text key={desc} size="xs" c="dimmed" pl="sm">
+                {errorInfo.remaining.map((desc, idx) => (
+                  <Text key={`${idx}-${desc}`} size="xs" c="dimmed" pl="sm">
                     • {desc}
                   </Text>
                 ))}

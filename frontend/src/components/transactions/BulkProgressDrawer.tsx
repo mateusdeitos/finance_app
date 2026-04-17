@@ -168,8 +168,8 @@ export function BulkProgressDrawer({
                 <Text size="xs" c="dimmed" mt="xs">
                   Não processadas ({errorInfo.remaining.length}):
                 </Text>
-                {errorInfo.remaining.map((label) => (
-                  <Text key={label} size="xs" c="dimmed" pl="sm">
+                {errorInfo.remaining.map((label, idx) => (
+                  <Text key={`${idx}-${label}`} size="xs" c="dimmed" pl="sm">
                     {"\u2022"} {label}
                   </Text>
                 ))}
