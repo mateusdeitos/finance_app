@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Transactions Bulk Actions
-status: complete
-stopped_at: Phase 10 complete
-last_updated: "2026-04-17T21:00:00.000Z"
-last_activity: 2026-04-17 -- Phase 10 verified and complete
+status: verifying
+stopped_at: Phase 10 context gathered
+last_updated: "2026-04-17T23:31:11.285Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 2
   completed_phases: 2
@@ -19,7 +19,7 @@ progress:
 Phase: 10 (Request Logging & Observability) — COMPLETE
 Plan: 2 of 2
 Status: Phase 10 verified and complete
-Last activity: 2026-04-17 -- Phase 10 verified and complete
+Last activity: 2026-04-17
 
 ## Project Reference
 
@@ -57,6 +57,17 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 ### Blockers
 
 None
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-04-17:
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat | Phase 07: 07-UAT.md | partial |
+| uat | Phase 09: 09-HUMAN-UAT.md | partial (5 pending scenarios) |
+| verification | Phase 08: 08-VERIFICATION.md | human_needed |
+| verification | Phase 09: 09-VERIFICATION.md | human_needed |
 
 ## Session Continuity
 
