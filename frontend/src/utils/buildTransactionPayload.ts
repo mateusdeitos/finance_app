@@ -23,7 +23,10 @@ export function buildTransactionPayload(
     category_id: isTransfer || !values.category_id ? undefined : values.category_id,
     destination_account_id: isTransfer ? (values.destination_account_id ?? undefined) : undefined,
     tags: resolvedTags.length > 0 ? resolvedTags : undefined,
-    split_settings: !isTransfer && values.split_settings.length > 0 ? values.split_settings : undefined,
+    split_settings:
+      !isTransfer && values.split_settings.length > 0
+        ? values.split_settings.map((s) => ({ connection_id: s.connection_id, amount: s.amount }))
+        : undefined,
     recurrence_settings: values.recurrenceEnabled
       ? {
           type: values.recurrenceType ?? "monthly",
