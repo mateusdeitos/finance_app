@@ -36,7 +36,6 @@ const (
 	ErrorTagIndex                                               ErrorTag = "INDEX_%d"
 	ErrorTagMissingDestinationAccount                           ErrorTag = "TRANSACTION.MISSING_DESTINATION_ACCOUNT"
 	ErrorTagSplitSettingsNotAllowedForTransfer                  ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_FOR_TRANSFER"
-	ErrorTagSplitAllowedOnlyForExpense                          ErrorTag = "TRANSACTION.SPLIT_ALLOWED_ONLY_FOR_EXPENSE"
 	ErrorTagAmountMustBeGreaterThanZero                         ErrorTag = "TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"
 	ErrorTagDateIsRequired                                      ErrorTag = "TRANSACTION.DATE_IS_REQUIRED"
 	ErrorTagDescriptionIsRequired                               ErrorTag = "TRANSACTION.DESCRIPTION_IS_REQUIRED"
@@ -74,7 +73,6 @@ const (
 var (
 	ErrMissingDestinationAccount          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagMissingDestinationAccount)}, "missing destination account")
 	ErrSplitSettingsNotAllowedForTransfer = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedForTransfer)}, "split settings are not allowed for transfer transactions")
-	ErrSplitAllowedOnlyForExpense         = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitAllowedOnlyForExpense)}, "split settings are allowed only for expense transactions")
 	ErrAmountMustBeGreaterThanZero        = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAmountMustBeGreaterThanZero)}, "amount must be greater than zero")
 	ErrDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDateIsRequired)}, "date is required")
 	ErrDescriptionIsRequired              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDescriptionIsRequired)}, "description is required")

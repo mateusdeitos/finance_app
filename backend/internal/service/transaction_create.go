@@ -98,9 +98,7 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 		}
 	}
 
-	if len(transaction.SplitSettings) > 0 && transaction.TransactionType != domain.TransactionTypeExpense {
-		errs = append(errs, pkgErrors.ErrSplitAllowedOnlyForExpense)
-	} else if len(transaction.SplitSettings) > 0 {
+	if len(transaction.SplitSettings) > 0 {
 		for i, splitSetting := range transaction.SplitSettings {
 			if splitSetting.ConnectionID <= 0 {
 				errs = append(errs, pkgErrors.ErrSplitSettingInvalidConnectionID(i))
