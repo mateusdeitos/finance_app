@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/finance_app/backend/pkg/applog"
+	apperrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog"
@@ -44,14 +45,17 @@ func LoggingMiddleware(globalLogger zerolog.Logger) echo.MiddlewareFunc {
 
 			// Per D-07: middleware reads accumulated fields and emits final log
 			// Per Pitfall 5: treat status 0 as 500.
-			// In echo, when a handler returns an error, the HTTPErrorHandler runs AFTER
-			// the entire middleware chain returns, so c.Response().Status may still reflect
-			// the pre-error value (e.g., 200) when we read it here. Derive status from the
-			// returned error if the response hasn't been committed with a non-2xx code.
+			// Echo's HTTPErrorHandler runs inside next(c), but c.Response().Status may
+			// still reflect the pre-error value (200) because the error handler calls
+			// c.JSON which sets the status on the response writer, not on the returned
+			// error. Derive status from the returned error for accurate level selection.
 			status := c.Response().Status
 			if err != nil {
-				// Derive the HTTP status from the error type for accurate level selection
-				if he, ok := err.(*echo.HTTPError); ok {
+				// Derive the HTTP status from the error type for accurate level selection.
+				// Check TaggedHTTPError first — it's what application handlers return via ToHTTPError().
+				if tagged, ok := err.(*apperrors.TaggedHTTPError); ok {
+					status = tagged.Code
+				} else if he, ok := err.(*echo.HTTPError); ok {
 					status = he.Code
 				} else {
 					status = http.StatusInternalServerError

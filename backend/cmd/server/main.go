@@ -58,6 +58,7 @@ func main() {
 	// Initialize zerolog global logger (per D-15, D-16)
 	logLevel, parseErr := zerolog.ParseLevel(cfg.App.LogLevel)
 	if parseErr != nil {
+		log.Printf("WARNING: invalid LOG_LEVEL %q, defaulting to info: %v", cfg.App.LogLevel, parseErr)
 		logLevel = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(logLevel)
