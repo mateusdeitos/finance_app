@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.2 Transactions Bulk Actions (Shipped: 2026-04-17)
+
+**Phases completed:** 2 phases, 6 plans
+**Commits:** 93
+**Files changed:** 88 files, +8967 / -279 lines
+**Timeline:** 2026-04-17 (1 day)
+**Known deferred items at close:** 5 (see STATE.md Deferred Items)
+
+**Key accomplishments:**
+
+1. Generic BulkProgressDrawer with sequential processing, stop-on-error, and parameterized PropagationSettingsDrawer for update vs delete wording
+2. SelectCategoryDrawer (read-only category hierarchy) and SelectDateDrawer (bottom date picker) as renderDrawer-promise-based input components
+3. Bulk category/date change wired into SelectionActionBar with SEL-02 silent skip and per-item propagation settings
+4. Backend avatar infrastructure — OAuth avatar extraction on login, account background color column, partner avatar/name in shared account queries
+5. Frontend avatar components (UserAvatar, AccountAvatar, ColorSwatchPicker) with initials fallback, wired into header, split settings, transaction rows, and account cards
+6. TransactionRow account cell rewrite — avatars with tooltips, transfer rows show source→dest avatar pair
+
+---
+
 ## v1.1 Charges (Shipped: 2026-04-16)
 
 **Phases completed:** 4 phases, 9 plans, 2 tasks
