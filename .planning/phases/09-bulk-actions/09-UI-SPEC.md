@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-17
+revised: 2026-04-17
 ---
 
 # Phase 9 — UI Design Contract
@@ -47,14 +48,16 @@ Exceptions: Touch targets for menu items and action buttons must be minimum 44px
 
 ## Typography
 
-Mantine type scale applied consistently with existing components:
+Mantine type scale applied consistently with existing components. Exactly 2 font weights are used in this phase.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (sm) | 400 (regular) | 1.5 |
 | Label / count | 14px (sm) | 700 (bold) | 1.5 |
-| Drawer title | 16px (md) | 600 (semibold) | 1.2 |
+| Drawer title | 16px (md) | 700 (bold) | 1.2 |
 | Dimmed / secondary | 14px (sm) | 400 (regular) | 1.5 |
+
+Weights: **400** (body, dimmed) and **700** (bold labels, drawer titles). No intermediate weight (600) is used.
 
 Source: Existing component patterns in `BulkDeleteProgressDrawer.tsx`, `PropagationSettingsDrawer.tsx` — replicate exactly.
 
@@ -68,11 +71,13 @@ Tokens from `frontend/src/theme.ts` (Mantine color palette):
 |------|-------|-------|
 | Dominant (60%) | `var(--mantine-color-body)` (white / dark-9) | Page background, SelectionActionBar background |
 | Secondary (30%) | `var(--mantine-color-gray-2)` / dark-5 | Toolbar top border, drawer header separator |
-| Accent (10%) | `blue[7]` (#457b9d) | Progress bar fill (processing state), primary confirm buttons |
+| Accent (10%) | `blue[7]` (#457b9d) — equals Mantine primary | Progress bar fill (processing state), primary confirm buttons |
 | Destructive | `red[5]` (#e63946) | "Excluir" menu item icon, delete confirm button, error progress bar fill |
 | Success | `teal` (Mantine alias) | Success ThemeIcon in progress drawer completion state |
 
-Accent reserved for: progress bar during in-progress state only. Primary confirm buttons ("Aplicar", "Confirmar") use Mantine default primary (blue). The "Excluir" action within the menu uses `color="red"` only on the button/icon, not on the menu item text.
+Accent reserved for: progress bar fill during in-progress state, and primary CTA buttons ("Aplicar", "Confirmar"). Accent = Mantine primary = `blue[7]` — these are the same token; no separate override needed.
+
+The "Excluir" action within the menu uses `color="red"` only on the icon, not on the menu item text.
 
 ---
 
@@ -87,6 +92,8 @@ New and modified components for this phase:
 **New state:** Mantine `Menu` component replacing the button.
 
 Layout: `[X close icon] [count text] [Ações menu button]`
+
+Primary visual anchor: the "Ações" menu button is the focal point of the bar. The adjacent count text (e.g. "3 selecionadas") provides noun context that makes the bare verb label "Ações" unambiguous.
 
 Menu items (in order):
 1. "Alterar categoria" — `IconCategory` or `IconTag` icon (left section, 14px)
@@ -215,7 +222,7 @@ Same as Flow 1, replacing step 4 with `renderDrawer<Date>(() => <SelectDateDrawe
 
 ### Flow 3: Bulk Delete (unchanged)
 
-Existing `handleDeleteClick` flow — `BulkDeleteProgressDrawer` continues to work independently until executor decides to migrate it to the generic `BulkProgressDrawer`. Migration is optional.
+Existing `handleDeleteClick` flow — `BulkDeleteProgressDrawer` continues to work independently until executor decides to migrate it to the generic `BulkProgressDrawer`. Migration is optional. Confirmation is handled by the existing `handleDeleteClick` flow (no new confirmation UI needed for this phase).
 
 ---
 
@@ -245,6 +252,7 @@ All copy in Portuguese (pt-BR). Source: established pattern from existing compon
 | Progress drawer title (error) | "Erro ao atualizar" |
 | Progress success message | "{N} transação atualizada com sucesso" / "{N} transações atualizadas com sucesso" |
 | Progress error prefix | 'Falha ao atualizar "{description}"' |
+| Progress error guidance | "Verifique sua conexão e tente novamente" |
 | Progress close button | "Fechar" |
 | Clear selection aria-label | "Limpar seleção" (unchanged) |
 
