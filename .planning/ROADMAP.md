@@ -62,7 +62,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 **Goal**: Structured request logging using zerolog with Stripe's single-log-per-request pattern, context-propagated logger accessible from all layers, dynamic log leveling, and configurable minimum level
 **Depends on**: None (cross-cutting concern, can be added independently)
-**Requirements**: TBD (to be defined during plan-phase)
+**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05, LOG-06, LOG-07, LOG-08, LOG-09, LOG-10
 **Success Criteria** (what must be TRUE):
 
 1. Every HTTP request emits exactly one structured JSON log line on completion, containing method, path, status, latency, IP, and user_id
@@ -72,7 +72,10 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 5. Minimum log level is configurable via environment variable; requests below threshold are not emitted
 6. Existing request handling and error responses are unaffected
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — pkg/applog package: Logger wrapper, WithLogger, FromContext, field accumulation
+- [ ] 10-02-PLAN.md — LoggingMiddleware, ErrorHandler integration, auth user_id injection, config + main.go wiring
 **UI hint**: no
 
 ## Progress
@@ -88,7 +91,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
-| 10. Request Logging & Observability                  | v1.2      | 0/?            | Not started | -          |
+| 10. Request Logging & Observability                  | v1.2      | 0/2            | Not started | -          |
 
 ---
 
