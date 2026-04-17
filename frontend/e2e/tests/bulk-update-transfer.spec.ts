@@ -283,7 +283,7 @@ test.describe('Bulk Update — data preservation', () => {
     // If propagation appears, select "Somente esta"
     const propagationVisible = await propagationOption.isVisible().catch(() => false)
     if (propagationVisible) {
-      await transactionsPage.selectPropagation('Somente esta')
+      await transactionsPage.selectPropagation('Somente esta', 'update')
     }
 
     await expect(page.getByTestId('bulk_success')).toBeVisible({ timeout: 15000 })
