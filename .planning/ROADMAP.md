@@ -56,7 +56,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 - [x] 09-01-PLAN.md — Generic BulkProgressDrawer + parameterized PropagationSettingsDrawer
 - [x] 09-02-PLAN.md — SelectCategoryDrawer + SelectDateDrawer input drawers
-- [ ] 09-03-PLAN.md — Wire SelectionActionBar menu + bulk action handlers in transactions page
+- [x] 09-03-PLAN.md — Wire SelectionActionBar menu + bulk action handlers in transactions page
       **UI hint**: yes
 
 ## Progress
