@@ -117,25 +117,11 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
                 'connection_status', user_connections.connection_status,
                 'created_at', user_connections.created_at,
                 'updated_at', user_connections.updated_at,
-                'partner_avatar_url', (
-                    SELECT u.avatar_url FROM users u
-                    WHERE u.id = CASE
-                        WHEN user_connections.from_user_id = ANY(?)
-                            THEN user_connections.to_user_id
-                        ELSE user_connections.from_user_id
-                    END
-                ),
-                'partner_name', (
-                    SELECT u.name FROM users u
-                    WHERE u.id = CASE
-                        WHEN user_connections.from_user_id = ANY(?)
-                            THEN user_connections.to_user_id
-                        ELSE user_connections.from_user_id
-                    END
-                )
+                'partner_avatar_url', partner_user.avatar_url,
+                'partner_name', partner_user.name
             )
         ELSE NULL
-    END AS user_connection`, options.UserIDs, options.UserIDs)
+    END AS user_connection`)
 
 		query = query.Joins(`LEFT JOIN user_connections ON user_connections.connection_status = ?
 		AND (
@@ -146,6 +132,12 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 			options.UserIDs,
 			options.UserIDs,
 		)
+
+		query = query.Joins(`LEFT JOIN users AS partner_user ON user_connections.id IS NOT NULL AND partner_user.id = CASE
+			WHEN user_connections.from_user_id IN ?
+				THEN user_connections.to_user_id
+			ELSE user_connections.from_user_id
+		END`, options.UserIDs)
 
 		query = query.Where("user_id IN ?", options.UserIDs)
 	}
