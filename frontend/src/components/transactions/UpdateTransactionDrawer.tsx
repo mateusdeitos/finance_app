@@ -109,7 +109,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           onSaveAndCreateAnother={handleSaveAndCreateAnother as (values: TransactionFormValues) => void}
           isPending={mutation.isPending}
           submitError={submitError}
-          isUpdate
+          isUpdate={isRecurring}
           extraContent={
             isRecurring ? (
               <Stack gap="md">
