@@ -33,7 +33,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### v1.2 Transactions Bulk Actions (Phase 9)
 
-- [ ] **Phase 9: Bulk Actions** — Selection, toolbar with category/date pickers, propagation drawer, and progress tracking for bulk transaction updates
+- [x] **Phase 9: Bulk Actions** — Selection, toolbar with category/date pickers, propagation drawer, and progress tracking for bulk transaction updates
 
 Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
@@ -70,8 +70,8 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1      | 2/2            | Complete    | 2026-04-15 |
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
-| 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
-| 10. User Avatar System                               | v1.2      | 3/3            | In Progress | -          |
+| 9. Bulk Actions                                      | v1.2      | 3/3            | Complete    | 2026-04-17 |
+| 10. User Avatar System                               | v1.2      | 3/3            | Complete    | 2026-04-17 |
 
 ### Phase 10: User Avatar System
 
