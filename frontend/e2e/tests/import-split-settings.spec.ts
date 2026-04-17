@@ -97,29 +97,33 @@ test.describe("Import with split settings", () => {
     const splitButton = row.locator("td").nth(9).getByRole("button");
     await splitButton.click();
 
-    // Wait for popover dropdown to appear
-    const popover = importPage.page.locator(".mantine-Popover-dropdown");
+    // The split popover renders as a dialog (not a Select dropdown),
+    // so use role="dialog" to avoid matching Mantine Select popovers.
+    const popover = importPage.page.locator(
+      '.mantine-Popover-dropdown[role="dialog"]',
+    );
     await expect(popover).toBeVisible({ timeout: 5000 });
 
     // Add a split entry
     await popover.getByText("+ Adicionar divisão").click();
 
     // Select the connection account
-    await popover.getByPlaceholder("Selecionar conta").click();
+    const selectInput = popover.getByPlaceholder("Selecionar conta");
+    await selectInput.click();
     await importPage.page.getByRole("option").first().click();
 
     // Default mode is "percentage" — split is now configured
-    // Close the popover by pressing Escape
-    await importPage.page.keyboard.press("Escape");
-    await expect(popover).not.toBeVisible({ timeout: 3000 });
+    // Close the popover by clicking outside it
+    await importPage.reviewStep.click({ position: { x: 5, y: 5 }, force: true });
+    await expect(popover).not.toBeVisible({ timeout: 5000 });
 
     // Reopen the split popover (this is the bug trigger)
     await splitButton.click();
     await expect(popover).toBeVisible({ timeout: 5000 });
 
     // Close again
-    await importPage.page.keyboard.press("Escape");
-    await expect(popover).not.toBeVisible({ timeout: 3000 });
+    await importPage.reviewStep.click({ position: { x: 5, y: 5 }, force: true });
+    await expect(popover).not.toBeVisible({ timeout: 5000 });
 
     // Confirm import — should succeed without percentage+amount error
     await importPage.confirmImport();
