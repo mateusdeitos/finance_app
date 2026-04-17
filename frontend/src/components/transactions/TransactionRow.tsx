@@ -52,13 +52,13 @@ function AccountCell({
       <Group gap={4} wrap="nowrap">
         <Tooltip label={fromAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
-            <AccountAvatar account={fromAccount} size="xs" />
+            <AccountAvatar account={fromAccount} size={32} />
           </span>
         </Tooltip>
         <IconArrowRight size={12} style={{ opacity: 0.5 }} />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
-            <AccountAvatar account={toAccount} size="xs" />
+            <AccountAvatar account={toAccount} size={32} />
           </span>
         </Tooltip>
       </Group>
@@ -67,8 +67,8 @@ function AccountCell({
 
   return (
     <Tooltip label={account?.name ?? "\u2014"} withArrow position="top">
-      <span>
-        <AccountAvatar account={account} size="xs" />
+      <span style={{ display: "inline-flex" }}>
+        <AccountAvatar account={account} size={32} />
       </span>
     </Tooltip>
   );
@@ -183,7 +183,7 @@ export function TransactionRow({
       {/* Col 2: date + description + tags */}
       <div className={classes.main} onClick={colClick("description")}>
         {groupBy !== "date" && (
-          <Text size="xs" c="dimmed">
+          <Text size={32} c="dimmed">
             {dateLabel}
           </Text>
         )}
@@ -201,12 +201,12 @@ export function TransactionRow({
         {tags.length > 0 && (
           <Group gap={4} mt={2}>
             {visibleTags.map((tag) => (
-              <Badge key={tag.id} size="xs" variant="outline" radius="sm">
+              <Badge key={tag.id} size={32} variant="outline" radius="sm">
                 {tag.name}
               </Badge>
             ))}
             {extraTags > 0 && (
-              <Text size="xs" c="dimmed">
+              <Text size={32} c="dimmed">
                 (...)
               </Text>
             )}

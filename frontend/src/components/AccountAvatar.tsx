@@ -5,7 +5,7 @@ import { Transactions } from "@/types/transactions"
 
 interface AccountAvatarProps {
   account: Transactions.Account | null | undefined
-  size: MantineSize
+  size: MantineSize | number
 }
 
 export function AccountAvatar({ account, size }: AccountAvatarProps) {
@@ -36,7 +36,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
       size={size}
       radius="xl"
       color={undefined}
-      style={{ backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR, color: "white" }}
+      styles={{ placeholder: { backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR, color: "white" } }}
     >
       {getInitials(account.name)}
     </Avatar>
