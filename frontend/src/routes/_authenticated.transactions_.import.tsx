@@ -83,7 +83,7 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
       total_installments: row.recurrenceTotalInstallments,
     };
   }
-  if (row.split_settings?.length) {
+  if (row.transaction_type !== "transfer" && row.split_settings?.length) {
     payload.split_settings = row.split_settings;
   }
   return payload;
