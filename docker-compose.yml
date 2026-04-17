@@ -14,3 +14,5 @@ services:
       - ~/.claude.json:/home/node/.claude.json
       # Mount Docker socket to allow running docker/just commands inside the container
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GH_TOKEN=${GH_TOKEN}
