@@ -183,7 +183,7 @@ export function TransactionRow({
       {/* Col 2: date + description + tags */}
       <div className={classes.main} onClick={colClick("description")}>
         {groupBy !== "date" && (
-          <Text size={28} c="dimmed">
+          <Text size="xs" c="dimmed">
             {dateLabel}
           </Text>
         )}
@@ -201,12 +201,12 @@ export function TransactionRow({
         {tags.length > 0 && (
           <Group gap={4} mt={2}>
             {visibleTags.map((tag) => (
-              <Badge key={tag.id} size={28} variant="outline" radius="sm">
+              <Badge key={tag.id} size="xs" variant="outline" radius="sm">
                 {tag.name}
               </Badge>
             ))}
             {extraTags > 0 && (
-              <Text size={28} c="dimmed">
+              <Text size="xs" c="dimmed">
                 (...)
               </Text>
             )}

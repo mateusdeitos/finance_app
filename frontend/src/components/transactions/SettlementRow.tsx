@@ -35,12 +35,12 @@ export function SettlementRow({ settlement, groupBy, accounts, onEdit, descripti
 
       <div className={classes.main}>
         {groupBy !== 'date' && dateLabel && (
-          <Text size={32} c="dimmed">{dateLabel}</Text>
+          <Text size="xs" c="dimmed">{dateLabel}</Text>
         )}
         <Group gap={6} wrap="nowrap">
           <IconReceipt size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
           <Text size="sm" fw={500} lineClamp={1}>{description ?? 'Acerto'}</Text>
-          <Badge size={32} variant="light" color="violet" radius="sm">acerto</Badge>
+          <Badge size="xs" variant="light" color="violet" radius="sm">acerto</Badge>
         </Group>
       </div>
 
