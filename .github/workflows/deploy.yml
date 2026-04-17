@@ -13,6 +13,10 @@ on:
         description: "Force frontend deploy (skip change detection)"
         type: boolean
         default: false
+      skip_migration_check:
+        description: "Skip pending migrations check (emergency use only)"
+        type: boolean
+        default: false
 
 jobs:
   detect-changes:
@@ -88,11 +92,47 @@ jobs:
             fi
           fi
 
+  check-migrations:
+    name: Check pending migrations
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: detect-changes
+    if: >-
+      !inputs.skip_migration_check &&
+      (needs.detect-changes.outputs.backend == 'true' ||
+       needs.detect-changes.outputs.frontend == 'true')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install goose
+        run: go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
+
+      - name: Check pending migrations
+        working-directory: backend
+        env:
+          DB_DSN: ${{ secrets.DB_DSN_PROD }}
+        run: |
+          STATUS=$(goose -dir migrations postgres "$DB_DSN" status)
+          echo "$STATUS"
+          PENDING=$(echo "$STATUS" | grep -c "Pending" || true)
+          if [ "$PENDING" -gt 0 ]; then
+            echo "::error::Found $PENDING pending migration(s). Run the 'Run DB Migrations' workflow before deploying, or rerun this workflow with skip_migration_check=true."
+            exit 1
+          fi
+          echo "No pending migrations. Deploy can proceed."
+
   backend-deploy:
     name: Backend → Cloud Run
     runs-on: ubuntu-latest
     environment: prod
-    needs: detect-changes
+    needs: [detect-changes, check-migrations]
     if: needs.detect-changes.outputs.backend == 'true'
 
     steps:
@@ -142,7 +182,7 @@ jobs:
     name: Frontend → Firebase Hosting
     runs-on: ubuntu-latest
     environment: prod
-    needs: detect-changes
+    needs: [detect-changes, check-migrations]
     if: needs.detect-changes.outputs.frontend == 'true'
 
     steps:
