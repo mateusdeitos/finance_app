@@ -125,9 +125,10 @@ test.describe('Bulk Update — data preservation', () => {
     await transactionsPage.openBulkActionsMenu()
     await page.getByTestId('btn_bulk_category').click()
 
-    // Category drawer lists categories — click the target one
-    await expect(page.getByTestId('drawer_select_category')).toBeVisible({ timeout: 5000 })
-    await page.getByTestId(`category_option_${targetCategoryId}`).click()
+    // Wait for a category option to appear (Mantine Drawer root stays hidden during animation)
+    const categoryOption = page.getByTestId(`category_option_${targetCategoryId}`)
+    await expect(categoryOption).toBeVisible({ timeout: 8000 })
+    await categoryOption.click()
 
     await expect(page.getByTestId('bulk_success').or(page.getByTestId('bulk_error'))).toBeVisible({ timeout: 15000 })
     await expect(page.getByTestId('bulk_error')).not.toBeVisible()
@@ -141,8 +142,10 @@ test.describe('Bulk Update — data preservation', () => {
     await transactionsPage.openBulkActionsMenu()
     await page.getByTestId('btn_bulk_date').click()
 
-    await expect(page.getByTestId('drawer_select_date')).toBeVisible({ timeout: 5000 })
-    await page.getByTestId('btn_apply_date').click()
+    // Wait for the apply button inside the date drawer (Mantine Drawer root stays hidden during animation)
+    const applyBtn = page.getByTestId('btn_apply_date')
+    await expect(applyBtn).toBeVisible({ timeout: 8000 })
+    await applyBtn.click()
 
     await expect(page.getByTestId('bulk_success').or(page.getByTestId('bulk_error'))).toBeVisible({ timeout: 15000 })
     await expect(page.getByTestId('bulk_error')).not.toBeVisible()
@@ -268,14 +271,17 @@ test.describe('Bulk Update — data preservation', () => {
     await transactionsPage.openBulkActionsMenu()
     await page.getByTestId('btn_bulk_category').click()
 
-    await expect(page.getByTestId('drawer_select_category')).toBeVisible({ timeout: 5000 })
-    await page.getByTestId(`category_option_${newCategoryId}`).click()
+    // Wait for category option inside drawer
+    const catOption = page.getByTestId(`category_option_${newCategoryId}`)
+    await expect(catOption).toBeVisible({ timeout: 8000 })
+    await catOption.click()
 
-    // Propagation drawer should appear for recurring tx
-    await expect(page.getByTestId('propagation_drawer_body').or(page.getByTestId('bulk_success'))).toBeVisible({ timeout: 8000 })
+    // Propagation drawer should appear for recurring tx — wait for option inside it
+    const propagationOption = page.getByTestId('propagation_option_current')
+    await expect(propagationOption.or(page.getByTestId('bulk_success'))).toBeVisible({ timeout: 8000 })
 
     // If propagation appears, select "Somente esta"
-    const propagationVisible = await page.getByTestId('propagation_option_current').isVisible().catch(() => false)
+    const propagationVisible = await propagationOption.isVisible().catch(() => false)
     if (propagationVisible) {
       await transactionsPage.selectPropagation('Somente esta')
     }
