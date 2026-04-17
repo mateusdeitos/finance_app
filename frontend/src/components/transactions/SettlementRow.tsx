@@ -49,8 +49,8 @@ export function SettlementRow({ settlement, groupBy, accounts, onEdit, descripti
       <div className={classes.account}>
         {groupBy !== 'account' && (
           <Tooltip label={account?.name ?? "\u2014"} withArrow position="top">
-            <span>
-              <AccountAvatar account={account} size={32} />
+            <span style={{ display: "inline-flex" }}>
+              <AccountAvatar account={account} size={28} />
             </span>
           </Tooltip>
         )}
