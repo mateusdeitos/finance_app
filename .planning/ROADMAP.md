@@ -71,7 +71,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
-| 10. User Avatar System                               | v1.2      | 0/0            | Not started | -          |
+| 10. User Avatar System                               | v1.2      | 0/3            | Not started | -          |
 
 ### Phase 10: User Avatar System
 
@@ -80,15 +80,17 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 - AVA-01: Save avatar URL from OAuth provider on login
 - AVA-02: Display user avatar in top header menu
 - AVA-03: Show avatars in split settings connection list
-- AVA-04: Show transfer indication as avatar → avatar in transaction list
+- AVA-04: Show transfer indication as avatar -> avatar in transaction list
 - AVA-05: Migrate account column in transaction list to always show avatar (initials for private accounts)
 - AVA-06: Allow user to set background color for private account avatars
 - AVA-07: Show avatar in account list (shared accounts show connected user avatar)
 **Depends on:** Phase 9
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 10 to break down)
+- [ ] 10-01-PLAN.md — Backend: migrations, domain/entity/service/handler for avatar storage and retrieval
+- [ ] 10-02-PLAN.md — Frontend: shared components (UserAvatar, AccountAvatar, ColorSwatchPicker), types, header + split settings wiring
+- [ ] 10-03-PLAN.md — Frontend: TransactionRow avatars, AccountCard avatars, AccountForm color picker + visual verification
 
 ---
 
