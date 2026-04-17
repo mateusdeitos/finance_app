@@ -36,7 +36,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
       size={size}
       radius="xl"
       color={undefined}
-      style={{ backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR }}
+      style={{ backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR, color: "white" }}
     >
       {getInitials(account.name)}
     </Avatar>
