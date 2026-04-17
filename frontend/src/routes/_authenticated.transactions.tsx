@@ -98,7 +98,8 @@ function TransactionsPage() {
         propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />)
       }
 
-      const txsToDelete = [...selectedIds].map((id) => {
+      const eligibleIds = getEligibleIds()
+      const txsToDelete = eligibleIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id)
         return {
           id,
@@ -106,6 +107,7 @@ function TransactionsPage() {
           propagationSettings: tx?.transaction_recurrence_id != null ? propagation : undefined,
         }
       })
+      if (txsToDelete.length === 0) return
 
       void renderDrawer(() => (
         <BulkDeleteProgressDrawer
