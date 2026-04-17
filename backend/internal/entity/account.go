@@ -65,10 +65,14 @@ func AccountFromDomain(d *domain.Account) *Account {
 	return a
 }
 
-func (Account) BeforeCreate(tx *gorm.DB) error {
+func (a Account) BeforeCreate(tx *gorm.DB) error {
 	now := time.Now()
 	tx.Statement.SetColumn("created_at", now)
 	tx.Statement.SetColumn("updated_at", now)
+	if a.AvatarBackgroundColor == nil {
+		defaultColor := "#457b9d"
+		tx.Statement.SetColumn("avatar_background_color", defaultColor)
+	}
 	return nil
 }
 

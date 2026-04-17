@@ -11,7 +11,7 @@ const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
   initial_balance: z.number().int(),
-  avatar_background_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default(DEFAULT_AVATAR_COLOR),
+  avatar_background_color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 })
 
 export type AccountFormValues = z.infer<typeof schema>
