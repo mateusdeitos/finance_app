@@ -1,4 +1,4 @@
-import { AppShell, Badge, Burger, Group, Text, NavLink, Avatar, Menu } from "@mantine/core";
+import { AppShell, Badge, Burger, Group, Text, NavLink, Menu } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree, IconCreditCard } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
@@ -7,6 +7,7 @@ import { useLogout } from "@/hooks/useLogout";
 import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> = [
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
@@ -32,15 +33,6 @@ export function AppLayout() {
       ? { ...link, badge: pendingCount }
       : { ...link, badge: undefined },
   );
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "?";
 
   return (
     <AppShell
@@ -72,9 +64,7 @@ export function AppLayout() {
             <Menu shadow="md" position="bottom-end">
               <Menu.Target>
                 <Group gap={4} wrap="nowrap" align="center" style={{ cursor: "pointer" }}>
-                  <Avatar color="blue" radius="xl" size="sm">
-                    {initials}
-                  </Avatar>
+                  <UserAvatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size="sm" />
                   <Text size="sm" fw={500} visibleFrom="sm">
                     {user.name.split(" ")[0]}
                   </Text>
