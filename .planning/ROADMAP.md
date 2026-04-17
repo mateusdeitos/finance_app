@@ -49,7 +49,11 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
   4. When any selected transaction belongs to a recurring series, the propagation settings drawer appears before the bulk action executes, and the user's single choice applies to all installment transactions in the batch
   5. During bulk update execution, user sees a progress drawer showing per-transaction status (in-progress, success, error) with a progress bar
   6. On completion, user sees a success state with the count of updated transactions; if an update fails, user sees the failed transaction and the remaining list; in both cases, the transactions query is invalidated so the list reflects current state
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 09-01-PLAN.md — Generic BulkProgressDrawer + parameterized PropagationSettingsDrawer
+- [ ] 09-02-PLAN.md — SelectCategoryDrawer + SelectDateDrawer input drawers
+- [ ] 09-03-PLAN.md — Wire SelectionActionBar menu + bulk action handlers in transactions page
 **UI hint**: yes
 
 ## Progress
@@ -64,7 +68,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1 | 2/2 | Complete | 2026-04-15 |
 | 7. Accept + Atomic Transfer | v1.1 | 2/2 | Complete | 2026-04-16 |
 | 8. Frontend | v1.1 | 3/3 | Complete | 2026-04-16 |
-| 9. Bulk Actions | v1.2 | 0/? | Not started | - |
+| 9. Bulk Actions | v1.2 | 0/3 | Not started | - |
 
 ---
 *Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 completed: 2026-04-16 · v1.2 started: 2026-04-17*
