@@ -24,7 +24,7 @@ import {
  * The partner user is set up in beforeAll via API calls.
  */
 
-const PARTNER_EMAIL = 'e2e-partner@financeapp.local'
+const PARTNER_EMAIL = `e2e-charges-partner-${Date.now()}@financeapp.local`
 const now = new Date()
 const PERIOD_MONTH = now.getMonth() + 1
 const PERIOD_YEAR = now.getFullYear()
@@ -59,26 +59,13 @@ test.describe('Charges', () => {
     const meRes = await apiFetchAs(partnerToken, '/api/auth/me')
     const partnerUser = await meRes.json()
 
-    // 4. Primary user creates connection to partner (idempotent — may already exist)
-    try {
-      const conn = await apiCreateUserConnection(partnerUser.id, 50)
-      connectionId = conn.id
-      // 5. Partner accepts the connection
-      await apiFetchAs(partnerToken, `/api/user-connections/${connectionId}/accepted`, {
-        method: 'PATCH',
-      })
-    } catch (err) {
-      if (String(err).includes('ALREADY_EXISTS')) {
-        // Connection already exists — find it
-        const connRes = await apiFetchAs(partnerToken, '/api/user-connections')
-        const connections = await connRes.json()
-        const existing = connections.find((c: { connection_status: string }) => c.connection_status === 'accepted')
-        if (!existing) throw new Error('Connection exists but none are accepted')
-        connectionId = existing.id
-      } else {
-        throw err
-      }
-    }
+    // 4. Primary user creates connection to partner (unique partner per run — no collision)
+    const conn = await apiCreateUserConnection(partnerUser.id, 50)
+    connectionId = conn.id
+    // 5. Partner accepts the connection
+    await apiFetchAs(partnerToken, `/api/user-connections/${connectionId}/accepted`, {
+      method: 'PATCH',
+    })
 
     // 6. Create seed category (all non-transfer transactions require category_id)
     const seedCat = await apiCreateCategory({ name: `Charges Seed ${Date.now()}` })
