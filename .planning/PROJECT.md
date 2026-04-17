@@ -34,7 +34,28 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-(None — v1.1 complete, next milestone not yet defined)
+- [ ] Bulk selection mode on transactions list
+- [ ] Bulk category change for selected transactions
+- [ ] Bulk date change for selected transactions
+- [ ] Progress drawer showing update progress per transaction
+- [ ] Propagation settings drawer when selected transactions have installments
+- [ ] Silent skip of linked transactions (user is not original_user_id)
+- [ ] Query invalidation on completion
+
+## Current Milestone: v1.2 Transactions Bulk Actions
+
+**Goal:** Enable bulk actions (category change, date change) on transaction list with progress tracking and installment propagation support.
+
+**Target features:**
+
+- Bulk selection mode on transactions list
+- Bulk category change action
+- Bulk date change action
+- Toolbar similar to import transactions toolbar
+- Progress drawer showing update progress per transaction
+- Propagation settings drawer for installment transactions
+- Silent skip of linked transactions
+- Query invalidation on completion
 
 ### v1.1 Validated
 
@@ -69,22 +90,22 @@ Partners can accurately track shared finances, including in-progress installment
 
 ## Key Decisions
 
-| Decision                                                          | Rationale                                                                              | Outcome |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------- |
-| `current_installment` lives inside `RecurrenceSettings`           | Keeps recurrence concerns together; consistent with existing pattern                   | ✓ Good  |
-| `total_installments` replaces `repetitions` (rename for clarity)  | More expressive; removes ambiguity about what the count means                          | ✓ Good  |
-| Remove `end_date` from RecurrenceSettings                         | User chose fixed-count only; breaking change accepted; simplifies validation           | ✓ Good  |
-| Only create installments from current to total                    | Past installments are irrelevant to users at registration time                         | ✓ Good  |
-| `TransactionRecurrence.Installments` stores total (not remaining) | Preserves existing semantics; recurrence record describes the full series              | ✓ Good  |
-| E2E tests seed via API (not UI) for recurrence assertions         | Shared test DB makes row-count assertions unreliable; badge assertions prove numbering | ✓ Good  |
-| Direct transactionRepo.Create in accept (bypass service)          | Avoids nested DB transactions; PostgreSQL doesn't support them natively     | ✓ Good  |
-| Conditional UPDATE WHERE status='pending' for race guard          | Single atomic fence; no SELECT FOR UPDATE needed; cleaner than read-check-write | ✓ Good  |
-| Role re-inference from live balance during accept                 | Balance may flip between charge creation and acceptance; swap in same tx    | ✓ Good  |
-| charges.date as TIMESTAMPTZ (initiator + acceptor each provide)   | Both parties need their own transaction date for their respective transfers  | ✓ Good  |
-| Mock-based handler tests (not integration) for charge handler     | No existing handler test patterns; mock approach avoids Docker dependency    | ✓ Good  |
-| Removed createAuthenticatedRoute wrapper, use createFileRoute directly | Template literal loses TanStack Router type inference; `_authenticated` prefix handles auth | ✓ Good |
-| Shared PeriodNavigator with onPeriodChange callback               | Reuse over copy; both transactions and charges pages use same component      | ✓ Good  |
-| Charge mutations invalidate Transactions + Balance queries         | Accept creates transfers; stale transaction list without cross-invalidation  | ✓ Good  |
+| Decision                                                               | Rationale                                                                                   | Outcome |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------- |
+| `current_installment` lives inside `RecurrenceSettings`                | Keeps recurrence concerns together; consistent with existing pattern                        | ✓ Good  |
+| `total_installments` replaces `repetitions` (rename for clarity)       | More expressive; removes ambiguity about what the count means                               | ✓ Good  |
+| Remove `end_date` from RecurrenceSettings                              | User chose fixed-count only; breaking change accepted; simplifies validation                | ✓ Good  |
+| Only create installments from current to total                         | Past installments are irrelevant to users at registration time                              | ✓ Good  |
+| `TransactionRecurrence.Installments` stores total (not remaining)      | Preserves existing semantics; recurrence record describes the full series                   | ✓ Good  |
+| E2E tests seed via API (not UI) for recurrence assertions              | Shared test DB makes row-count assertions unreliable; badge assertions prove numbering      | ✓ Good  |
+| Direct transactionRepo.Create in accept (bypass service)               | Avoids nested DB transactions; PostgreSQL doesn't support them natively                     | ✓ Good  |
+| Conditional UPDATE WHERE status='pending' for race guard               | Single atomic fence; no SELECT FOR UPDATE needed; cleaner than read-check-write             | ✓ Good  |
+| Role re-inference from live balance during accept                      | Balance may flip between charge creation and acceptance; swap in same tx                    | ✓ Good  |
+| charges.date as TIMESTAMPTZ (initiator + acceptor each provide)        | Both parties need their own transaction date for their respective transfers                 | ✓ Good  |
+| Mock-based handler tests (not integration) for charge handler          | No existing handler test patterns; mock approach avoids Docker dependency                   | ✓ Good  |
+| Removed createAuthenticatedRoute wrapper, use createFileRoute directly | Template literal loses TanStack Router type inference; `_authenticated` prefix handles auth | ✓ Good  |
+| Shared PeriodNavigator with onPeriodChange callback                    | Reuse over copy; both transactions and charges pages use same component                     | ✓ Good  |
+| Charge mutations invalidate Transactions + Balance queries             | Accept creates transfers; stale transaction list without cross-invalidation                 | ✓ Good  |
 
 ## Constraints
 
