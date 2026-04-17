@@ -216,6 +216,7 @@ function SplitRow({
                     ? selectedAccount.user_connection.to_user_avatar_url
                     : selectedAccount.user_connection.from_user_avatar_url)
                 : undefined}
+              imageProps={{ referrerPolicy: "no-referrer" }}
               style={{ cursor: "default" }}
             >
               {getInitials(selectedAccount.description || selectedAccount.name)}

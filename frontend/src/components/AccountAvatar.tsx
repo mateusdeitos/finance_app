@@ -19,7 +19,13 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
     const partnerAvatarUrl = isFromUser ? conn.to_user_avatar_url : conn.from_user_avatar_url
     const partnerName = (isFromUser ? conn.to_user_name : conn.from_user_name) ?? account.name
     return (
-      <Avatar src={partnerAvatarUrl} size={size} radius="xl" color="grape">
+      <Avatar
+        src={partnerAvatarUrl}
+        size={size}
+        radius="xl"
+        color={partnerAvatarUrl ? undefined : "grape"}
+        imageProps={{ referrerPolicy: "no-referrer" }}
+      >
         {getInitials(partnerName)}
       </Avatar>
     )

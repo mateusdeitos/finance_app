@@ -10,7 +10,13 @@ interface UserAvatarProps {
 
 export function UserAvatar({ name, avatarUrl, size, color = "blue" }: UserAvatarProps) {
   return (
-    <Avatar src={avatarUrl} size={size} radius="xl" color={avatarUrl ? undefined : color}>
+    <Avatar
+      src={avatarUrl}
+      size={size}
+      radius="xl"
+      color={avatarUrl ? undefined : color}
+      imageProps={{ referrerPolicy: "no-referrer" }}
+    >
       {getInitials(name)}
     </Avatar>
   )
