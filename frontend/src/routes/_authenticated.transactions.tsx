@@ -9,7 +9,7 @@ import { useMe } from '@/hooks/useMe'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { useTransactions } from '@/hooks/useTransactions'
-import { updateTransaction } from '@/api/transactions'
+import { deleteTransaction, updateTransaction } from '@/api/transactions'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
@@ -19,7 +19,6 @@ import { TransactionFilters } from '@/components/transactions/TransactionFilters
 import { TransactionList } from '@/components/transactions/TransactionList'
 import { SelectionActionBar } from '@/components/transactions/SelectionActionBar'
 import { PropagationSettingsDrawer, PropagationSetting } from '@/components/transactions/PropagationSettingsDrawer'
-import { BulkDeleteProgressDrawer } from '@/components/transactions/BulkDeleteProgressDrawer'
 import { BulkProgressDrawer, BulkProgressItem } from '@/components/transactions/BulkProgressDrawer'
 import { SelectCategoryDrawer } from '@/components/transactions/SelectCategoryDrawer'
 import { SelectDateDrawer } from '@/components/transactions/SelectDateDrawer'
@@ -99,21 +98,29 @@ function TransactionsPage() {
       }
 
       const eligibleIds = getEligibleIds()
-      const txsToDelete = eligibleIds.map((id) => {
+      const items: BulkProgressItem[] = eligibleIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id)
-        return {
-          id,
-          description: tx?.description ?? String(id),
-          propagationSettings: tx?.transaction_recurrence_id != null ? propagation : undefined,
-        }
+        return { id, label: tx?.description ?? String(id) }
       })
-      if (txsToDelete.length === 0) return
+      if (items.length === 0) return
 
       void renderDrawer(() => (
-        <BulkDeleteProgressDrawer
-          transactions={txsToDelete}
+        <BulkProgressDrawer
+          items={items}
+          action={async (item) => {
+            const tx = allTransactions.find((t) => t.id === item.id)
+            const prop = tx?.transaction_recurrence_id != null && propagation ? propagation : undefined
+            await deleteTransaction(item.id, prop)
+          }}
+          titles={{
+            processing: 'Excluindo transações...',
+            success: 'Transações excluídas',
+            error: 'Erro ao excluir',
+          }}
+          successMessage={(n) => n === 1 ? '1 transação excluída com sucesso' : `${n} transações excluídas com sucesso`}
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
+          testIdPrefix="bulk_delete"
         />
       ))
     } catch {
