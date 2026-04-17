@@ -1,5 +1,6 @@
-import { Badge, Checkbox, Group, Stack, Text, Tooltip } from "@mantine/core";
-import { IconAlertCircle, IconArrowDown, IconUsers } from "@tabler/icons-react";
+import { Badge, Checkbox, Group, Text, Tooltip } from "@mantine/core";
+import { IconAlertCircle, IconArrowRight, IconUsers } from "@tabler/icons-react";
+import { AccountAvatar } from "@/components/AccountAvatar";
 import { Transactions } from "@/types/transactions";
 import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
@@ -48,22 +49,28 @@ function AccountCell({
 
   if (tx.type === "transfer") {
     return (
-      <Stack gap={0} className={classes.transferAccounts}>
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {fromAccount?.name ?? "—"}
-        </Text>
-        <IconArrowDown size={12} style={{ opacity: 0.5 }} className={classes.transferArrow} />
-        <Text size="sm" c="dimmed" lineClamp={1}>
-          {toAccount?.name ?? "—"}
-        </Text>
-      </Stack>
+      <Group gap={4} wrap="nowrap">
+        <Tooltip label={fromAccount?.name ?? "\u2014"} withArrow position="top">
+          <span>
+            <AccountAvatar account={fromAccount} size={28} />
+          </span>
+        </Tooltip>
+        <IconArrowRight size={12} style={{ opacity: 0.5 }} />
+        <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
+          <span>
+            <AccountAvatar account={toAccount} size={28} />
+          </span>
+        </Tooltip>
+      </Group>
     );
   }
 
   return (
-    <Text size="sm" c="dimmed" lineClamp={1}>
-      {account?.name ?? "—"}
-    </Text>
+    <Tooltip label={account?.name ?? "\u2014"} withArrow position="top">
+      <span style={{ display: "inline-flex" }}>
+        <AccountAvatar account={account} size={28} />
+      </span>
+    </Tooltip>
   );
 }
 

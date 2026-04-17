@@ -5,6 +5,7 @@ export type Me = {
   external_id: string
   name: string
   email: string
+  avatar_url?: string
 }
 
 export async function fetchMe(): Promise<Me> {

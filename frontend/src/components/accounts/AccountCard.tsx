@@ -2,6 +2,7 @@ import { Card, Group, Text, ActionIcon, Badge, Stack } from '@mantine/core'
 import { IconPencil, IconTrash, IconRefresh } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatBalance } from '@/utils/formatCents'
+import { AccountAvatar } from '@/components/AccountAvatar'
 
 interface Props {
   account: Transactions.Account
@@ -16,9 +17,12 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
     <Card withBorder radius="md" p="md" data-account-name={account.name} data-testid="account_card">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={4}>
-          <Group gap="xs">
-            <Text fw={600}>{account.name}</Text>
-            {isShared && <Badge size="xs" variant="light" color="grape">Compartilhada</Badge>}
+          <Group gap="sm">
+            <AccountAvatar account={account} size="md" />
+            <Group gap="xs" style={{ flex: 1, minWidth: 0 }}>
+              <Text fw={600}>{account.name}</Text>
+              {isShared && <Badge size="xs" variant="light" color="grape">Compartilhada</Badge>}
+            </Group>
           </Group>
           {account.description && (
             <Text size="sm" c="dimmed">{account.description}</Text>

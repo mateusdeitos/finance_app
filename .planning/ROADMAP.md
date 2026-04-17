@@ -33,7 +33,7 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
 ### v1.2 Transactions Bulk Actions (Phase 9)
 
-- [ ] **Phase 9: Bulk Actions** — Selection, toolbar with category/date pickers, propagation drawer, and progress tracking for bulk transaction updates
+- [x] **Phase 9: Bulk Actions** — Selection, toolbar with category/date pickers, propagation drawer, and progress tracking for bulk transaction updates
 
 Full details: `.planning/milestones/v1.1-ROADMAP.md`
 
@@ -70,7 +70,27 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 | 6. Charge Repository, Service & API (CRUD + Listing) | v1.1      | 2/2            | Complete    | 2026-04-15 |
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
-| 9. Bulk Actions                                      | v1.2      | 0/3            | Not started | -          |
+| 9. Bulk Actions                                      | v1.2      | 3/3            | Complete    | 2026-04-17 |
+| 10. User Avatar System                               | v1.2      | 3/3            | Complete    | 2026-04-17 |
+
+### Phase 10: User Avatar System
+
+**Goal:** Save and display user avatars from OAuth providers across the app — header, split settings, transfers, and account lists. Also introduce avatar-style display for private accounts with customizable background colors.
+**Requirements**:
+- AVA-01: Save avatar URL from OAuth provider on login
+- AVA-02: Display user avatar in top header menu
+- AVA-03: Show avatars in split settings connection list
+- AVA-04: Show transfer indication as avatar -> avatar in transaction list
+- AVA-05: Migrate account column in transaction list to always show avatar (initials for private accounts)
+- AVA-06: Allow user to set background color for private account avatars
+- AVA-07: Show avatar in account list (shared accounts show connected user avatar)
+**Depends on:** Phase 9
+**Plans:** 3 plans
+
+Plans:
+- [x] 10-01-PLAN.md — Backend: migrations, domain/entity/service/handler for avatar storage and retrieval
+- [x] 10-02-PLAN.md — Frontend: shared components (UserAvatar, AccountAvatar, ColorSwatchPicker), types, header + split settings wiring
+- [x] 10-03-PLAN.md — Frontend: TransactionRow avatars, AccountCard avatars, AccountForm color picker + visual verification
 
 ---
 

@@ -90,9 +90,15 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to complete OAuth: "+err.Error())
 	}
 
+	var avatarURL *string
+	if user.AvatarURL != "" {
+		avatarURL = &user.AvatarURL
+	}
+
 	domainUser := &domain.User{
-		Name:  user.Name,
-		Email: user.Email,
+		Name:      user.Name,
+		Email:     user.Email,
+		AvatarURL: avatarURL,
 	}
 
 	_, token, err := h.authService.OAuthCallback(c.Request().Context(), provider, domainUser, user.UserID)

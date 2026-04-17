@@ -53,11 +53,18 @@ func (s *authService) OAuthCallback(ctx context.Context, provider string, user *
 		if err != nil {
 			return nil, "", apperrors.Internal("failed to get user", err)
 		}
+
+		// Overwrite avatar on every login (D-02)
+		dbUser.AvatarURL = user.AvatarURL
+		if err := s.userRepo.Update(ctx, dbUser); err != nil {
+			return nil, "", apperrors.Internal("failed to update user avatar", err)
+		}
 	} else {
 		// New social account, create user
 		dbUser = &domain.User{
 			Name:      user.Name,
 			Email:     user.Email,
+			AvatarURL: user.AvatarURL,
 			Password:  "", // No password for OAuth users
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
@@ -71,6 +78,11 @@ func (s *authService) OAuthCallback(ctx context.Context, provider string, user *
 
 		if existing != nil {
 			dbUser = existing
+			// Update avatar for existing email user linking new social
+			dbUser.AvatarURL = user.AvatarURL
+			if err := s.userRepo.Update(ctx, dbUser); err != nil {
+				return nil, "", apperrors.Internal("failed to update user avatar", err)
+			}
 		} else {
 			dbUser, err = s.userRepo.Create(ctx, dbUser)
 			if err != nil {

@@ -20,6 +20,7 @@ import { useWatch, useFieldArray, useFormContext } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
+import { getInitials } from "@/utils/getInitials";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFormValues = any;
@@ -29,14 +30,6 @@ function formatCurrency(cents: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function getInitials(text: string): string {
-  return text
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 // ─── SplitRowControls ─────────────────────────────────────────────────────────
@@ -214,7 +207,18 @@ function SplitRow({
       <Group gap="sm" align="center" wrap="nowrap">
         {selectedAccount && (
           <Tooltip label={selectedAccount.description ?? selectedAccount.name} withArrow>
-            <Avatar size="sm" radius="xl" color="blue" style={{ cursor: "default" }}>
+            <Avatar
+              size="sm"
+              radius="xl"
+              color="blue"
+              src={selectedAccount.user_connection
+                ? (selectedAccount.user_connection.from_user_id === selectedAccount.user_id
+                    ? selectedAccount.user_connection.to_user_avatar_url
+                    : selectedAccount.user_connection.from_user_avatar_url)
+                : undefined}
+              imageProps={{ referrerPolicy: "no-referrer" }}
+              style={{ cursor: "default" }}
+            >
               {getInitials(selectedAccount.description || selectedAccount.name)}
             </Avatar>
           </Tooltip>

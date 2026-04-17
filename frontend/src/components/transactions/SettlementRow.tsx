@@ -1,5 +1,6 @@
-import { Badge, Group, Text } from '@mantine/core'
+import { Badge, Group, Text, Tooltip } from '@mantine/core'
 import { IconReceipt } from '@tabler/icons-react'
+import { AccountAvatar } from '@/components/AccountAvatar'
 import { Transactions } from '@/types/transactions'
 import { formatCents } from '@/utils/formatCents'
 import classes from './TransactionRow.module.css'
@@ -47,7 +48,11 @@ export function SettlementRow({ settlement, groupBy, accounts, onEdit, descripti
 
       <div className={classes.account}>
         {groupBy !== 'account' && (
-          <Text size="sm" c="dimmed" lineClamp={1}>{account?.name ?? '—'}</Text>
+          <Tooltip label={account?.name ?? "\u2014"} withArrow position="top">
+            <span style={{ display: "inline-flex" }}>
+              <AccountAvatar account={account} size={28} />
+            </span>
+          </Tooltip>
         )}
       </div>
 

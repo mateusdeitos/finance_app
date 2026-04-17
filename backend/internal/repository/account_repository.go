@@ -69,7 +69,7 @@ func (r *accountRepository) Update(ctx context.Context, account *domain.Account)
 	ent := entity.AccountFromDomain(account)
 	return GetTxFromContext(ctx, r.db).
 		Model(ent).
-		Select("name", "description", "initial_balance", "updated_at").
+		Select("name", "description", "initial_balance", "avatar_background_color", "updated_at").
 		Updates(ent).Error
 }
 
@@ -116,7 +116,11 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
                 'to_default_split_percentage', user_connections.to_default_split_percentage,
                 'connection_status', user_connections.connection_status,
                 'created_at', user_connections.created_at,
-                'updated_at', user_connections.updated_at
+                'updated_at', user_connections.updated_at,
+                'from_user_avatar_url', from_user.avatar_url,
+                'from_user_name', from_user.name,
+                'to_user_avatar_url', to_user.avatar_url,
+                'to_user_name', to_user.name
             )
         ELSE NULL
     END AS user_connection`)
@@ -130,6 +134,9 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 			options.UserIDs,
 			options.UserIDs,
 		)
+
+		query = query.Joins(`LEFT JOIN users AS from_user ON from_user.id = user_connections.from_user_id`)
+		query = query.Joins(`LEFT JOIN users AS to_user ON to_user.id = user_connections.to_user_id`)
 
 		query = query.Where("user_id IN ?", options.UserIDs)
 	}
