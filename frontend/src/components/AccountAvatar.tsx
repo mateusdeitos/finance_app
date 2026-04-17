@@ -1,5 +1,6 @@
 import { Avatar, type MantineSize } from "@mantine/core"
 import { getInitials } from "@/utils/getInitials"
+import { DEFAULT_AVATAR_COLOR } from "@/components/accounts/ColorSwatchPicker"
 import { Transactions } from "@/types/transactions"
 
 interface AccountAvatarProps {
@@ -29,7 +30,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
       size={size}
       radius="xl"
       color={undefined}
-      style={{ backgroundColor: account.avatar_background_color ?? "#457b9d" }}
+      style={{ backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR }}
     >
       {getInitials(account.name)}
     </Avatar>

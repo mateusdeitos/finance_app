@@ -1,5 +1,7 @@
 import { ColorSwatch, SimpleGrid, Text, Stack } from "@mantine/core"
 
+export const DEFAULT_AVATAR_COLOR = "#457b9d"
+
 const PRESET_COLORS = [
   "#e63946",  // red
   "#ef7819",  // orange

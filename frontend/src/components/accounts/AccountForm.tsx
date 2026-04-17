@@ -4,14 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stack, TextInput, Textarea, Button, Group, Alert } from '@mantine/core'
 import { CurrencyInput } from '@/components/transactions/form/CurrencyInput'
-import { ColorSwatchPicker } from '@/components/accounts/ColorSwatchPicker'
+import { ColorSwatchPicker, DEFAULT_AVATAR_COLOR } from '@/components/accounts/ColorSwatchPicker'
 import { Transactions } from '@/types/transactions'
 
 const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
   initial_balance: z.number().int(),
-  avatar_background_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#457b9d'),
+  avatar_background_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default(DEFAULT_AVATAR_COLOR),
 })
 
 export type AccountFormValues = z.infer<typeof schema>
@@ -38,13 +38,13 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
       name: '',
       description: '',
       initial_balance: 0,
-      avatar_background_color: '#457b9d',
+      avatar_background_color: DEFAULT_AVATAR_COLOR,
       ...initialValues,
     },
   })
 
   useEffect(() => {
-    if (initialValues) reset({ name: '', description: '', initial_balance: 0, avatar_background_color: '#457b9d', ...initialValues })
+    if (initialValues) reset({ name: '', description: '', initial_balance: 0, avatar_background_color: DEFAULT_AVATAR_COLOR, ...initialValues })
   }, [initialValues, reset])
 
   const initialBalance = useWatch({ control, name: 'initial_balance' })

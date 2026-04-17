@@ -5,6 +5,7 @@ import { useCreateAccount } from '@/hooks/useCreateAccount'
 import { useUpdateAccount } from '@/hooks/useUpdateAccount'
 import { Transactions } from '@/types/transactions'
 import { AccountForm, AccountFormValues } from './AccountForm'
+import { DEFAULT_AVATAR_COLOR } from './ColorSwatchPicker'
 
 interface Props {
   account?: Transactions.Account
@@ -39,7 +40,7 @@ export function AccountDrawer({ account }: Props) {
   }
 
   const initialValues = account
-    ? { name: account.name, description: account.description ?? '', initial_balance: account.initial_balance, avatar_background_color: account.avatar_background_color ?? '#457b9d' }
+    ? { name: account.name, description: account.description ?? '', initial_balance: account.initial_balance, avatar_background_color: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR }
     : undefined
 
   return (
