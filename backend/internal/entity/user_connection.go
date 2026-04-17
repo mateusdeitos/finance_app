@@ -51,8 +51,6 @@ func UserConnectionFromDomain(d *domain.UserConnection) *UserConnection {
 		ConnectionStatus:           d.ConnectionStatus,
 		CreatedAt:                  d.CreatedAt,
 		UpdatedAt:                  d.UpdatedAt,
-		PartnerAvatarURL:           d.PartnerAvatarURL,
-		PartnerName:                d.PartnerName,
 	}
 }
 
