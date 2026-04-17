@@ -4,4 +4,4 @@ build:
 
 # Start an interactive Claude Code session inside the container
 claude *args:
-    docker compose run {{args}} --rm claude claude --dangerously-skip-permissions 
+    docker compose run -e GH_TOKEN=$(gh auth token) {{args}} --rm claude claude --dangerously-skip-permissions
