@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ActionIcon, Box, Collapse, Drawer, Group, Loader, ScrollArea, SimpleGrid, Stack, Text, TextInput, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Box, Button, Collapse, Drawer, Group, Loader, ScrollArea, SimpleGrid, Stack, Text, TextInput, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
@@ -41,6 +41,7 @@ export function CategoryCard({
 
   const [expanded, { toggle, open: forceExpand }] = useDisclosure(true)
   const [emojiOpen, { open: openEmoji, close: closeEmoji }] = useDisclosure(false)
+  const [stagedEmoji, setStagedEmoji] = useState<string | undefined>(category.emoji)
 
   // In-place name editing
   const [editingName, setEditingName] = useState(false)
@@ -79,14 +80,23 @@ export function CategoryCard({
     if (e.key === 'Escape') setEditingName(false)
   }
 
-  async function handleEmojiSelect(emoji: string) {
-    const next = emoji === category.emoji ? undefined : emoji
-    await onSaveEmoji(category, next)
-    closeEmoji()
+  function handleOpenEmoji() {
+    setStagedEmoji(category.emoji)
+    openEmoji()
   }
 
-  async function handleClearEmoji() {
-    await onSaveEmoji(category, undefined)
+  function handleEmojiSelect(emoji: string) {
+    setStagedEmoji(prev => prev === emoji ? undefined : emoji)
+  }
+
+  function handleClearEmoji() {
+    setStagedEmoji(undefined)
+  }
+
+  async function handleCloseEmojiDrawer() {
+    if (stagedEmoji !== category.emoji) {
+      await onSaveEmoji(category, stagedEmoji)
+    }
     closeEmoji()
   }
 
@@ -114,7 +124,7 @@ export function CategoryCard({
         )}
 
         {/* emoji button */}
-        <ActionIcon variant="subtle" color="gray" size="md" onClick={openEmoji} title="Mudar emoji" data-testid={`btn_emoji_${category.id}`}>
+        <ActionIcon variant="subtle" color="gray" size="md" onClick={handleOpenEmoji} title="Mudar emoji" data-testid={`btn_emoji_${category.id}`}>
           {category.emoji ? (
             <Text size="md" lh={1}>{category.emoji}</Text>
           ) : (
@@ -194,7 +204,7 @@ export function CategoryCard({
       )}
 
       {/* emoji picker drawer */}
-      <Drawer opened={emojiOpen} onClose={closeEmoji} title="Escolher emoji" position="right" size="sm" data-testid={`drawer_emoji_picker_${category.id}`}>
+      <Drawer opened={emojiOpen} onClose={handleCloseEmojiDrawer} title="Escolher emoji" position="right" size="sm" data-testid={`drawer_emoji_picker_${category.id}`}>
         <Stack gap="md">
           <ScrollArea>
             <SimpleGrid cols={7} spacing="xs">
@@ -208,7 +218,7 @@ export function CategoryCard({
                     textAlign: 'center',
                     padding: 4,
                     borderRadius: 6,
-                    background: e === category.emoji ? 'var(--mantine-color-blue-1)' : undefined,
+                    background: e === stagedEmoji ? 'var(--mantine-color-blue-1)' : undefined,
                   }}
                 >
                   {e}
@@ -216,7 +226,7 @@ export function CategoryCard({
               ))}
             </SimpleGrid>
           </ScrollArea>
-          {category.emoji && (
+          {stagedEmoji && (
             <UnstyledButton
               onClick={handleClearEmoji}
               style={{ color: 'var(--mantine-color-red-6)', fontSize: 14, textAlign: 'center' }}
@@ -224,6 +234,7 @@ export function CategoryCard({
               Remover emoji
             </UnstyledButton>
           )}
+          <Button onClick={handleCloseEmojiDrawer} fullWidth mt="md">Fechar</Button>
         </Stack>
       </Drawer>
     </Stack>
