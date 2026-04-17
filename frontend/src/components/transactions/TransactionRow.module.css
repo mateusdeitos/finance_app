@@ -82,14 +82,4 @@
     text-align: right;
   }
 
-  .transferAccounts {
-    flex-direction: row !important;
-    align-items: center;
-    gap: 0.25rem !important;
-  }
-
-  .transferArrow {
-    transform: rotate(-90deg);
-    flex-shrink: 0;
-  }
 }
