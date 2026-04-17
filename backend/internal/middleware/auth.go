@@ -7,6 +7,7 @@ import (
 	"github.com/finance_app/backend/internal/handler"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
+	"github.com/finance_app/backend/pkg/applog"
 	apperrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/labstack/echo/v4"
 )
@@ -41,6 +42,10 @@ func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 		ctx = appcontext.WithUserID(ctx, user.ID)
 
 		c.SetRequest(c.Request().WithContext(ctx))
+
+		// Inject user_id into request logger (per D-13)
+		applog.FromContext(c.Request().Context()).With("user_id", user.ID)
+
 		return next(c)
 	}
 }

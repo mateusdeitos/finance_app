@@ -37,6 +37,7 @@ Thumbs.db
 bin/
 dist/
 build/
+/server
 
 # Logs
 *.log

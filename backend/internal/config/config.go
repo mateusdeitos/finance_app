@@ -61,6 +61,7 @@ type AppConfig struct {
 	URL         string
 	FrontendURL string
 	Env         string
+	LogLevel    string
 }
 
 func Load(files ...string) (*Config, error) {
@@ -101,6 +102,7 @@ func Load(files ...string) (*Config, error) {
 			URL:         getEnv("APP_URL", "http://localhost:8080"),
 			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
 			Env:         getEnv("ENV", "development"),
+			LogLevel:    getEnv("LOG_LEVEL", "info"),
 		},
 	}
 

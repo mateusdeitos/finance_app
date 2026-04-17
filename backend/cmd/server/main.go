@@ -18,6 +18,7 @@ import (
 	"github.com/finance_app/backend/pkg/oauth"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog"
 )
 
 // @title          Finance App API
@@ -52,6 +53,23 @@ func main() {
 	db, err := database.NewPostgresDB(cfg.Database.DSN())
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	// Initialize zerolog global logger (per D-15, D-16)
+	logLevel, parseErr := zerolog.ParseLevel(cfg.App.LogLevel)
+	if parseErr != nil {
+		logLevel = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(logLevel)
+
+	var globalLogger zerolog.Logger
+	if cfg.App.Env == "development" {
+		globalLogger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+			With().Timestamp().Logger()
+	} else {
+		// Cloud Run: severity field maps to Cloud Logging severity
+		zerolog.LevelFieldName = "severity"
+		globalLogger = zerolog.New(os.Stdout).With().Timestamp().Logger()
 	}
 
 	// Setup OAuth providers
@@ -101,7 +119,7 @@ func main() {
 	e.HTTPErrorHandler = middleware.ErrorHandler
 
 	// Middleware
-	e.Use(echomiddleware.Logger())
+	e.Use(middleware.LoggingMiddleware(globalLogger))
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.App.FrontendURL},
