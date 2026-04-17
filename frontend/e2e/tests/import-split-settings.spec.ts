@@ -83,7 +83,9 @@ test.describe("Import with split settings", () => {
     await importPage.goto();
   });
 
-  test("reopening split popover does not cause percentage+amount conflict on import", async () => {
+  test("reopening split popover does not cause percentage+amount conflict on import", async ({
+    page,
+  }) => {
     const description = `Split Reopen ${Date.now()}`;
     const csv = buildCsvContent([["15/01/2026", description, "-100,00"]]);
 
@@ -92,37 +94,46 @@ test.describe("Import with split settings", () => {
     // Set category (required for expense)
     await importPage.setRowCategory(0, testCategoryName);
 
-    // Open split popover — the split button is inside the row's "Divisão" column
-    const row = importPage.reviewStep.locator('[data-row-index="0"]');
-    const splitButton = row.locator("td").nth(9).getByRole("button");
+    // The split popover button starts with text "Sem divisão"
+    const splitButton = importPage.reviewStep
+      .locator('[data-row-index="0"]')
+      .getByRole("button", { name: "Sem divisão" });
+    await expect(splitButton).toBeVisible({ timeout: 5000 });
     await splitButton.click();
 
-    // The split popover renders as a dialog (not a Select dropdown),
-    // so use role="dialog" to avoid matching Mantine Select popovers.
-    const popover = importPage.page.locator(
-      '.mantine-Popover-dropdown[role="dialog"]',
-    );
+    // The split popover renders as role="dialog" (unlike Mantine Select dropdowns)
+    const popover = page.locator('.mantine-Popover-dropdown[role="dialog"]');
     await expect(popover).toBeVisible({ timeout: 5000 });
 
     // Add a split entry
     await popover.getByText("+ Adicionar divisão").click();
 
-    // Select the connection account
-    const selectInput = popover.getByPlaceholder("Selecionar conta");
-    await selectInput.click();
-    await importPage.page.getByRole("option").first().click();
+    // Select the connection account from the dropdown inside the popover
+    await popover.getByPlaceholder("Selecionar conta").click();
+    await page.getByRole("option").first().click();
 
-    // Default mode is "percentage" — split is now configured
-    // Close the popover by clicking outside it
-    await importPage.reviewStep.click({ position: { x: 5, y: 5 }, force: true });
+    // Wait for the split to be configured (percentage input appears)
+    await expect(popover.locator('input[type="text"]').first()).toBeVisible();
+
+    // Close the popover — click the page title area which is always visible
+    await page.getByText("Revisão da importação").click({ force: true });
     await expect(popover).not.toBeVisible({ timeout: 5000 });
 
+    // After configuring, the button text changes from "Sem divisão" to a summary
+    // Re-locate the split button in the same cell
+    const splitButtonAfter = importPage.reviewStep
+      .locator('[data-row-index="0"]')
+      .locator("td")
+      .nth(9)
+      .getByRole("button");
+    await expect(splitButtonAfter).toBeVisible({ timeout: 5000 });
+
     // Reopen the split popover (this is the bug trigger)
-    await splitButton.click();
+    await splitButtonAfter.click();
     await expect(popover).toBeVisible({ timeout: 5000 });
 
     // Close again
-    await importPage.reviewStep.click({ position: { x: 5, y: 5 }, force: true });
+    await page.getByText("Revisão da importação").click({ force: true });
     await expect(popover).not.toBeVisible({ timeout: 5000 });
 
     // Confirm import — should succeed without percentage+amount error
@@ -130,7 +141,7 @@ test.describe("Import with split settings", () => {
 
     // Verify success (no error about percentage and amount together)
     await expect(
-      importPage.page.getByText("Importação concluída com sucesso"),
+      page.getByText("Importação concluída com sucesso"),
     ).toBeVisible({ timeout: 15000 });
   });
 });
