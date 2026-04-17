@@ -10,7 +10,7 @@ interface UserAvatarProps {
 
 export function UserAvatar({ name, avatarUrl, size, color = "blue" }: UserAvatarProps) {
   return (
-    <Avatar src={avatarUrl} size={size} radius="xl" color={color}>
+    <Avatar src={avatarUrl} size={size} radius="xl" color={avatarUrl ? undefined : color}>
       {getInitials(name)}
     </Avatar>
   )
