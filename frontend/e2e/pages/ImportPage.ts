@@ -189,6 +189,23 @@ export class ImportPage {
     return select.inputValue();
   }
 
+  /** Click a row's checkbox, optionally holding Shift. */
+  async toggleRowCheckbox(rowIndex: number, options?: { shiftKey?: boolean }) {
+    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
+    const checkbox = row.locator('input[type="checkbox"]');
+    if (options?.shiftKey) {
+      await checkbox.click({ modifiers: ['Shift'] });
+    } else {
+      await checkbox.click();
+    }
+  }
+
+  /** Return whether a row's checkbox is checked. */
+  async isRowSelected(rowIndex: number): Promise<boolean> {
+    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
+    return row.locator('input[type="checkbox"]').isChecked();
+  }
+
   /** Change the action for a row via the action select. */
   async setRowAction(rowIndex: number, action: "import" | "skip" | "duplicate") {
     const labels: Record<string, string> = {

@@ -67,7 +67,7 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
     date: row.date,
     description: row.description,
   };
-  if (row.category_id) payload.category_id = row.category_id;
+  if (row.transaction_type !== "transfer" && row.category_id) payload.category_id = row.category_id;
   if (row.transaction_type === "transfer" && row.destination_account_id) {
     payload.destination_account_id = row.destination_account_id;
   }
@@ -83,7 +83,7 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
       total_installments: row.recurrenceTotalInstallments,
     };
   }
-  if (row.split_settings?.length) {
+  if (row.transaction_type !== "transfer" && row.split_settings?.length) {
     payload.split_settings = row.split_settings;
   }
   return payload;
@@ -184,9 +184,21 @@ function ImportReviewPage() {
 
     setSelected((prev) => {
       const next = getNewSet(prev, index);
+      const selecting = next.has(index);
 
-      for (let i = 0; i < index; i++) {
-        if (next.has(index)) {
+      // Find nearest selected row above clicked index
+      let nearestAbove = -1;
+      for (let i = index - 1; i >= 0; i--) {
+        if (prev.has(i)) {
+          nearestAbove = i;
+          break;
+        }
+      }
+
+      // Fill range from nearest selected row (exclusive) to clicked index (exclusive)
+      const start = nearestAbove + 1;
+      for (let i = start; i < index; i++) {
+        if (selecting) {
           next.add(i);
         } else {
           next.delete(i);
