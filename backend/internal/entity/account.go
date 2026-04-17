@@ -16,8 +16,9 @@ type Account struct {
 	Name           string
 	Description    *string
 	InitialBalance int64
-	IsActive       bool
-	CreatedAt      *time.Time
+	IsActive              bool
+	AvatarBackgroundColor *string
+	CreatedAt             *time.Time
 	UpdatedAt      *time.Time
 	UserConnection *AccountUserConnection `gorm:"<-:false"`
 }
@@ -29,8 +30,9 @@ func (a *Account) ToDomain() *domain.Account {
 		Name:           a.Name,
 		Description:    a.Description,
 		InitialBalance: a.InitialBalance,
-		IsActive:       a.IsActive,
-		CreatedAt:      a.CreatedAt,
+		IsActive:              a.IsActive,
+		AvatarBackgroundColor: a.AvatarBackgroundColor,
+		CreatedAt:             a.CreatedAt,
 		UpdatedAt:      a.UpdatedAt,
 	}
 
@@ -48,8 +50,9 @@ func AccountFromDomain(d *domain.Account) *Account {
 		Name:           d.Name,
 		Description:    d.Description,
 		InitialBalance: d.InitialBalance,
-		IsActive:       d.IsActive,
-		CreatedAt:      d.CreatedAt,
+		IsActive:              d.IsActive,
+		AvatarBackgroundColor: d.AvatarBackgroundColor,
+		CreatedAt:             d.CreatedAt,
 		UpdatedAt:      d.UpdatedAt,
 	}
 
