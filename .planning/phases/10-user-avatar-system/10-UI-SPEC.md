@@ -54,9 +54,11 @@ Inherits existing Mantine typography from the project. No new sizes introduced.
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (sm) | 400 | 1.5 |
-| Label | 14px (sm) | 500 | 1.5 |
+| Label | 14px (sm) | 600 | 1.5 |
 | Tooltip | 12px (xs) | 400 | 1.4 |
 | Heading | 16px (md) | 600 | 1.2 |
+
+Declared weights: regular (400) and semibold (600) only. Weight 500 (medium) is not used.
 
 Source: existing TransactionRow, AccountCard patterns use Mantine `size="sm"` and `size="xs"` exclusively.
 
@@ -79,8 +81,10 @@ Avatar color mapping:
 - Private account initials avatar: user-chosen hex from ColorSwatch preset palette (stored in DB)
 - Shared account avatar: shows partner OAuth photo; fallback `color="grape"`
 
-ColorSwatch preset palette (12 colors, stored as hex in `accounts.avatar_background_color`):
-`#e63946` (red), `#ef7819` (orange/yellow), `#2a9d8f` (teal), `#457b9d` (blue), `#6a4c93` (purple), `#e91e8c` (pink), `#2d6a4f` (forest), `#f4a261` (sand), `#457b9d` (steel), `#1a1a1a` (charcoal), `#8b8b8b` (grey), `#39b2a3` (mint)
+ColorSwatch preset palette (12 colors, all unique, stored as hex in `accounts.avatar_background_color`):
+`#e63946` (red), `#ef7819` (orange), `#2a9d8f` (teal), `#457b9d` (blue), `#6a4c93` (purple), `#e91e8c` (pink), `#2d6a4f` (forest), `#f4a261` (sand), `#3d6b8c` (steel), `#1a1a1a` (charcoal), `#8b8b8b` (grey), `#39b2a3` (mint)
+
+Note: "steel" hex is `#3d6b8c` (distinct from "blue" `#457b9d`). All 12 entries are unique.
 
 Source: theme.ts color palette; colors chosen from existing theme tuples plus common distinct hues.
 
@@ -119,7 +123,7 @@ All avatars use `radius="xl"` (fully circular).
 |-----------|-------------|
 | `UserAvatar` | Shared wrapper around Mantine `Avatar`. Props: `name: string`, `avatarUrl?: string`, `size: MantineSize`, `color?: string`. Computes initials via unified `getInitials()`, passes `src` to Mantine Avatar. Used in all 5 locations. |
 | `AccountAvatar` | Extends `UserAvatar` for account context. Props: `account: Transactions.Account`, `partnerAvatarUrl?: string`, `size: MantineSize`. Handles private (initials + stored color) vs shared (partner photo) branching. |
-| `ColorSwatchPicker` | Grid of 12 `ColorSwatch` components in account create/edit form. Emits selected hex. Shows selected state with checkmark overlay. |
+| `ColorSwatchPicker` | Grid of 12 `ColorSwatch` components in account create/edit form. Emits selected hex. Shows selected state with checkmark overlay. Primary focal point of the account create/edit form — it is the most visually prominent interactive element, rendered below the account name field with a dedicated section label "Cor do avatar". The selected swatch is always highlighted with a 2px ring using `box-shadow: 0 0 0 2px var(--mantine-color-blue-7)` to draw immediate user attention. |
 
 ### Utility — unify
 
@@ -157,10 +161,11 @@ All avatars use `radius="xl"` (fully circular).
 ### ColorSwatch picker in account form
 
 - Rendered inside account create/edit drawer
+- Primary focal point: the ColorSwatch grid is the dominant interactive element of the account form, positioned directly below the name field. Its 4-column grid occupies full drawer width minus md padding on each side.
 - Grid layout: 4 columns × 3 rows, `gap={8}`
 - Each swatch: 28×28px, `radius="xl"`, clickable
 - Selected state: thin 2px ring using `box-shadow: 0 0 0 2px var(--mantine-color-blue-7)`
-- Label above grid: "Cor do avatar" (pt-BR)
+- Label above grid: "Cor do avatar" (pt-BR), weight 600 (Label role)
 - Default selection: auto-assigned from migration (no null state per D-07)
 
 ---
