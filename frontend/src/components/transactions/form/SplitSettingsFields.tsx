@@ -77,9 +77,18 @@ function SplitRowControls({
     }
   }, [calculatedAmount, mode, amountFieldName, setValue, percentageFieldName, percentage]);
 
+  useEffect(() => {
+    if (mode === "amount") {
+      setValue(percentageFieldName, undefined);
+    }
+  }, [mode, percentageFieldName, setValue]);
+
   function toggleMode() {
     const next = mode === "percentage" ? "amount" : "percentage";
-    if (next === "amount") setValue(amountFieldName, calculatedAmount);
+    if (next === "amount") {
+      setValue(amountFieldName, calculatedAmount);
+      setValue(percentageFieldName, undefined);
+    }
     setMode(next);
   }
 
@@ -110,7 +119,7 @@ function SplitRowControls({
             max={100}
             suffix="%"
             value={percentage}
-            onChange={(val) => setPercentage(Number(val))}
+            onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
             style={{ width: 90 }}
             size="sm"
           />

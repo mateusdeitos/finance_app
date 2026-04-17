@@ -84,7 +84,10 @@ function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionP
     };
   }
   if (row.transaction_type !== "transfer" && row.split_settings?.length) {
-    payload.split_settings = row.split_settings;
+    payload.split_settings = row.split_settings.map((s) => ({
+      connection_id: s.connection_id,
+      amount: s.amount,
+    }));
   }
   return payload;
 }
