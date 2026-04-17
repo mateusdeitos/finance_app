@@ -9,20 +9,25 @@ import {
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { deleteTransaction } from "@/api/transactions";
 import { useDrawerContext } from "@/utils/renderDrawer";
-import { PropagationSetting } from "./PropagationSettingsDrawer";
 
-interface TransactionToDelete {
+export interface BulkProgressItem {
   id: number;
-  description: string;
-  propagationSettings?: PropagationSetting;
+  label: string;
 }
 
-interface BulkDeleteProgressDrawerProps {
-  transactions: TransactionToDelete[];
-  onSuccess: () => void;
+interface BulkProgressDrawerProps {
+  items: BulkProgressItem[];
+  action: (item: BulkProgressItem) => Promise<void>;
+  titles: {
+    processing: string;
+    success: string;
+    error: string;
+  };
+  successMessage: (count: number) => string;
   onInvalidate: () => void;
+  onSuccess: () => void;
+  testIdPrefix?: string;
 }
 
 type ProcessState = "processing" | "success" | "error";
@@ -33,11 +38,15 @@ interface ErrorInfo {
   remaining: string[];
 }
 
-export function BulkDeleteProgressDrawer({
-  transactions,
-  onSuccess,
+export function BulkProgressDrawer({
+  items,
+  action,
+  titles,
+  successMessage,
   onInvalidate,
-}: BulkDeleteProgressDrawerProps) {
+  onSuccess,
+  testIdPrefix = "bulk_progress",
+}: BulkProgressDrawerProps) {
   const { opened, close } = useDrawerContext<void>();
   const [state, setState] = useState<ProcessState>("processing");
   const [progress, setProgress] = useState(0);
@@ -46,13 +55,12 @@ export function BulkDeleteProgressDrawer({
 
   useEffect(() => {
     async function run() {
-      for (let i = 0; i < transactions.length; i++) {
-        const tx = transactions[i];
-        setCurrentLabel(tx.description);
-        setProgress(Math.round((i / transactions.length) * 100));
+      for (let i = 0; i < items.length; i++) {
+        setCurrentLabel(items[i].label);
+        setProgress(Math.round((i / items.length) * 100));
 
         try {
-          await deleteTransaction(tx.id, tx.propagationSettings);
+          await action(items[i]);
         } catch (err) {
           let reason = "Erro desconhecido";
           if (err instanceof Response) {
@@ -64,9 +72,9 @@ export function BulkDeleteProgressDrawer({
             }
           }
           setErrorInfo({
-            description: tx.description,
+            description: items[i].label,
             reason,
-            remaining: transactions.slice(i + 1).map((t) => t.description),
+            remaining: items.slice(i + 1).map((t) => t.label),
           });
           setState("error");
           return;
@@ -93,13 +101,13 @@ export function BulkDeleteProgressDrawer({
       closeOnEscape={!isProcessing}
       closeOnClickOutside={!isProcessing}
       position="bottom"
-      data-testid={`drawer_bulk_delete_${state}`}
+      data-testid={testIdPrefix}
       title={
         state === "success"
-          ? "Transações excluídas"
+          ? titles.success
           : state === "error"
-            ? "Erro ao excluir"
-            : "Excluindo transações..."
+            ? titles.error
+            : titles.processing
       }
       withCloseButton={!isProcessing}
       styles={{
@@ -116,42 +124,40 @@ export function BulkDeleteProgressDrawer({
             value={progress}
             animated={isProcessing}
             color={state === "error" ? "red" : "blue"}
-            data-testid="bulk_delete_progress"
+            data-testid="bulk_progress_bar"
           />
         )}
 
         {isProcessing && (
-          <Text size="sm" c="dimmed" ta="center" data-testid="bulk_delete_current_label">
+          <Text size="sm" c="dimmed" ta="center" data-testid="bulk_current_label">
             {currentLabel}
           </Text>
         )}
 
         {state === "success" && (
-          <Stack gap="sm" align="center" data-testid="bulk_delete_success">
+          <Stack gap="sm" align="center" data-testid="bulk_success">
             <Group justify="center" gap="xs">
               <ThemeIcon color="teal" radius="xl" size="lg">
                 <IconCheck size={18} />
               </ThemeIcon>
-              <Text size="sm" fw={500}>
-                {transactions.length} transaç
-                {transactions.length !== 1 ? "ões excluídas" : "ão excluída"} com
-                sucesso
+              <Text size="sm" fw={700}>
+                {successMessage(items.length)}
               </Text>
             </Group>
-            <Button variant="default" onClick={() => close()} data-testid="btn_bulk_delete_done">
+            <Button variant="default" onClick={() => close()} data-testid="btn_bulk_done">
               Fechar
             </Button>
           </Stack>
         )}
 
         {state === "error" && errorInfo && (
-          <Stack gap="xs" data-testid="bulk_delete_error">
+          <Stack gap="xs" data-testid="bulk_error">
             <Group gap="xs">
               <ThemeIcon color="red" radius="xl" size="md">
                 <IconX size={14} />
               </ThemeIcon>
-              <Text size="sm" fw={500}>
-                Falha ao excluir &quot;{errorInfo.description}&quot;
+              <Text size="sm" fw={700}>
+                Falha ao atualizar &quot;{errorInfo.description}&quot;
               </Text>
             </Group>
             <Text size="sm" c="dimmed">
@@ -162,14 +168,14 @@ export function BulkDeleteProgressDrawer({
                 <Text size="xs" c="dimmed" mt="xs">
                   Não processadas ({errorInfo.remaining.length}):
                 </Text>
-                {errorInfo.remaining.map((desc) => (
-                  <Text key={desc} size="xs" c="dimmed" pl="sm">
-                    • {desc}
+                {errorInfo.remaining.map((label, idx) => (
+                  <Text key={`${idx}-${label}`} size="xs" c="dimmed" pl="sm">
+                    {"\u2022"} {label}
                   </Text>
                 ))}
               </>
             )}
-            <Button variant="default" onClick={() => close()} mt="xs" data-testid="btn_bulk_delete_close_error">
+            <Button variant="default" onClick={() => close()} mt="xs" data-testid="btn_bulk_close_error">
               Fechar
             </Button>
           </Stack>

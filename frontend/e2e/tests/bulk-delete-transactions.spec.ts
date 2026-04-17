@@ -102,7 +102,8 @@ test.describe('Bulk Delete Transactions', () => {
     await transactionsPage.selectTransaction(tx.id)
     expect(await transactionsPage.getSelectedCount()).toBeGreaterThanOrEqual(1)
 
-    // Tap delete — propagation drawer should appear
+    // Tap delete — open menu first, then propagation drawer should appear
+    await transactionsPage.openBulkActionsMenu()
     await transactionsPage.page.getByTestId('btn_bulk_delete').click()
     await expect(transactionsPage.page.getByTestId('propagation_drawer_body')).toBeVisible()
 
