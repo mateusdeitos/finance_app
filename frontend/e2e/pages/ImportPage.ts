@@ -160,6 +160,10 @@ export class ImportPage {
       const emojiOption = this.page.getByTestId(`emoji_${opts.emoji}`).first();
       await expect(emojiOption).toBeVisible({ timeout: 5000 });
       await emojiOption.click();
+      // Close the emoji picker drawer (saves on close)
+      const emojiDrawer = this.page.locator("[data-testid^='drawer_emoji_picker_']");
+      await emojiDrawer.getByRole("button", { name: "Fechar" }).click();
+      await expect(emojiDrawer).not.toBeVisible({ timeout: 5000 });
       // Wait for save to complete
       await this.page.waitForLoadState("networkidle");
     }
