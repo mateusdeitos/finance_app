@@ -179,6 +179,30 @@ export async function getAuthTokenForUser(email: string): Promise<string> {
   return match[1]
 }
 
+/** Open a new Playwright page authenticated as the given user token. */
+export async function openAuthedPage(browser: import('@playwright/test').Browser, token: string) {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
+  const url = new URL(baseURL)
+  const context = await browser.newContext({
+    storageState: {
+      cookies: [
+        {
+          name: 'auth_token',
+          value: token,
+          domain: url.hostname,
+          path: '/',
+          expires: -1,
+          httpOnly: true,
+          secure: false,
+          sameSite: 'Lax' as const,
+        },
+      ],
+      origins: [],
+    },
+  })
+  return context.newPage()
+}
+
 /** Make an API call authenticated as a specific user */
 export async function apiFetchAs(token: string, path: string, options: RequestInit = {}) {
   const res = await fetch(`${BACKEND_URL}${path}`, {

@@ -43,7 +43,7 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	if req.Amount != nil && *req.Amount <= 0 {
 		return nil, pkgErrors.BadRequest("amount must be greater than zero")
 	}
-	if req.Role != nil && !req.Role.IsValid() {
+	if req.Role == nil || !req.Role.IsValid() {
 		return nil, pkgErrors.BadRequest("role must be 'charger' or 'payer'")
 	}
 
@@ -75,34 +75,7 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		otherPartyID = conn.FromUserID
 	}
 
-	// Resolve caller's connection account via SwapIfNeeded
-	conn.SwapIfNeeded(callerUserID)
-	callerConnAccountID := conn.FromAccountID
-
-	// Infer role from balance in the charge's period
-	period := domain.Period{Month: req.PeriodMonth, Year: req.PeriodYear}
-	balResult, err := s.services.Transaction.GetBalance(ctx, callerUserID, period, domain.BalanceFilter{
-		UserID:     callerUserID,
-		AccountIDs: []int{callerConnAccountID},
-	})
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to compute balance", err)
-	}
-
-	// Role resolution — explicit role wins over balance inference.
-	// When unset, fall back to balance sign; zero balance requires either a
-	// role or the legacy "cannot create" error so intent stays unambiguous.
-	var callerIsCharger bool
-	switch {
-	case req.Role != nil:
-		callerIsCharger = *req.Role == domain.ChargeInitiatorRoleCharger
-	case balResult.Balance > 0:
-		callerIsCharger = true
-	case balResult.Balance < 0:
-		callerIsCharger = false
-	default:
-		return nil, pkgErrors.BadRequest("cannot infer role with zero balance; provide 'role'")
-	}
+	callerIsCharger := *req.Role == domain.ChargeInitiatorRoleCharger
 
 	charge := &domain.Charge{
 		ConnectionID: req.ConnectionID,

@@ -11,6 +11,7 @@ import {
   apiDeleteCategory,
   getAuthTokenForUser,
   apiFetchAs,
+  openAuthedPage,
 } from "../helpers/api";
 
 /**
@@ -181,6 +182,7 @@ test.describe("Charges", () => {
     await chargesPage.openCreateDrawer();
     await chargesPage.fillCreateForm({
       accountName: primaryAccountName,
+      role: "charger",
       description,
     });
     await chargesPage.submitCreate();
@@ -204,6 +206,7 @@ test.describe("Charges", () => {
         period_month: PERIOD_MONTH,
         period_year: PERIOD_YEAR,
         description,
+        role: "charger",
         date: new Date().toISOString(),
       }),
     });
@@ -230,6 +233,7 @@ test.describe("Charges", () => {
       period_month: PERIOD_MONTH,
       period_year: PERIOD_YEAR,
       description,
+      role: "charger" as const,
       date: new Date().toISOString(),
     };
     const charge = await apiCreateCharge(chargePayload);
@@ -245,149 +249,128 @@ test.describe("Charges", () => {
     await chargesPage.expectNotification(/Cobrança cancelada/);
   });
 
-  test("create charge with arbitrary amount on zero balance", async () => {
-    // Fresh partner + connection so the shared connection account has zero balance:
-    // no seeded transactions between the two users. Before issue #74 this would fail
-    // with "cannot create charge when balance is zero"; with arbitrary amount it succeeds.
-    const freshPartnerEmail = `e2e-arbitrary-amount-${Date.now()}@financeapp.local`;
+  test("create charge via UI with arbitrary amount + charger role on zero balance", async ({ browser }) => {
+    // Isolated user pair — the fresh primary will have exactly one connection and one account,
+    // so the drawer selectors are unambiguous.
+    const freshPrimaryEmail = `e2e-arb-charger-primary-${Date.now()}@financeapp.local`;
+    const freshPartnerEmail = `e2e-arb-charger-partner-${Date.now()}@financeapp.local`;
+    const freshPrimaryToken = await getAuthTokenForUser(freshPrimaryEmail);
     const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
 
-    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
-    const freshPartner = await freshPartnerMeRes.json();
+    const freshPartner = await (await apiFetchAs(freshPartnerToken, "/api/auth/me")).json();
 
-    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
+    const connRes = await apiFetchAs(freshPrimaryToken, "/api/user-connections", {
+      method: "POST",
+      body: JSON.stringify({ to_user_id: freshPartner.id, from_default_split_percentage: 50 }),
+    });
+    const freshConn = await connRes.json();
     await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
       method: "PATCH",
     });
 
-    // Primary user private account for the charger side.
-    const chargerPrivAcc = await apiCreateAccount({
-      name: `Arbitrary Amount Charger ${Date.now()}`,
-      initial_balance: 0,
+    const privAccName = `Arb Charger Acc ${Date.now()}`;
+    await apiFetchAs(freshPrimaryToken, "/api/accounts", {
+      method: "POST",
+      body: JSON.stringify({ name: privAccName, initial_balance: 0 }),
     });
 
-    const arbitraryAmount = 12345;
-    const description = `Arbitrary Amount ${Date.now()}`;
-    const charge = await apiCreateCharge({
-      connection_id: freshConn.id,
-      my_account_id: chargerPrivAcc.id,
-      period_month: PERIOD_MONTH,
-      period_year: PERIOD_YEAR,
-      description,
-      amount: arbitraryAmount,
+    // Drive the UI as the fresh primary
+    const page = await openAuthedPage(browser, freshPrimaryToken);
+    const pageCharges = new ChargesPage(page);
+    await pageCharges.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
+
+    const description = `UI Arb Charger ${Date.now()}`;
+    const arbitraryAmount = 123.45; // reais in the UI → 12345 cents in the DB
+    await pageCharges.openCreateDrawer();
+    await pageCharges.fillCreateForm({
+      accountName: privAccName,
       role: "charger",
-      date: new Date().toISOString(),
-    });
-    createdChargeIds.push(charge.id);
-
-    // Charge exists with the stored arbitrary amount and the caller is the charger
-    // (zero balance → caller defaults to charger).
-    expect(charge.amount).toBe(arbitraryAmount);
-
-    // Verify via the list endpoint too — round-trip through the DB.
-    const listRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@financeapp.local"), "/api/charges?direction=sent");
-    const listBody = await listRes.json();
-    const reloaded = (listBody.charges ?? []).find((c: { id: number }) => c.id === charge.id);
-    expect(reloaded).toBeDefined();
-    expect(reloaded.amount).toBe(arbitraryAmount);
-    expect(reloaded.status).toBe("pending");
-
-    // Partner accepts without overriding → settlement transfers must use stored amount.
-    const partnerPrivAccRes = await apiFetchAs(freshPartnerToken, "/api/accounts", {
-      method: "POST",
-      body: JSON.stringify({
-        name: `Arbitrary Amount Payer ${Date.now()}`,
-        initial_balance: 0,
-      }),
-    });
-    const partnerPrivAcc = await partnerPrivAccRes.json();
-
-    const acceptRes = await apiFetchAs(freshPartnerToken, `/api/charges/${charge.id}/accept`, {
-      method: "POST",
-      body: JSON.stringify({
-        account_id: partnerPrivAcc.id,
-        date: new Date().toISOString(),
-      }),
-    });
-    expect(acceptRes.status).toBe(204);
-
-    // Reload the charge — it should be paid, with amount unchanged.
-    const afterAcceptRes = await apiFetchAs(freshPartnerToken, "/api/charges");
-    const afterAcceptBody = await afterAcceptRes.json();
-    const settled = (afterAcceptBody.charges ?? []).find((c: { id: number }) => c.id === charge.id);
-    expect(settled).toBeDefined();
-    expect(settled.status).toBe("paid");
-    expect(settled.amount).toBe(arbitraryAmount);
-  });
-
-  test("payer can initiate charge with arbitrary amount on zero balance", async () => {
-    // Fresh partner so the shared connection account has zero balance.
-    // Caller explicitly creates as payer ("I owe you X"), bypassing balance-sign inference.
-    const freshPartnerEmail = `e2e-payer-init-${Date.now()}@financeapp.local`;
-    const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
-
-    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
-    const freshPartner = await freshPartnerMeRes.json();
-
-    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
-    await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
-      method: "PATCH",
-    });
-
-    const payerPrivAcc = await apiCreateAccount({
-      name: `Payer Init ${Date.now()}`,
-      initial_balance: 0,
-    });
-
-    const arbitraryAmount = 6789;
-    const charge = await apiCreateCharge({
-      connection_id: freshConn.id,
-      my_account_id: payerPrivAcc.id,
-      period_month: PERIOD_MONTH,
-      period_year: PERIOD_YEAR,
-      description: `Payer Init ${Date.now()}`,
       amount: arbitraryAmount,
-      role: "payer",
-      date: new Date().toISOString(),
+      description,
     });
-    createdChargeIds.push(charge.id);
+    await pageCharges.submitCreate();
+    await pageCharges.expectNotification(/Cobrança criada/);
 
-    // Caller was saved as the payer, not the charger.
-    const meRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@financeapp.local"), "/api/auth/me");
-    const me = await meRes.json();
-    expect(charge.payer_user_id).toBe(me.id);
-    expect(charge.charger_user_id).toBe(freshPartner.id);
-    expect(charge.amount).toBe(arbitraryAmount);
+    // Verify via API — the charge was saved with caller as charger and stored amount in cents.
+    const listRes = await apiFetchAs(freshPrimaryToken, "/api/charges?direction=sent");
+    const listBody = await listRes.json();
+    const created = (listBody.charges ?? []).find((c: { description?: string }) => c.description === description);
+    expect(created).toBeDefined();
+    expect(created.amount).toBe(12345);
+    expect(created.status).toBe("pending");
+    const me = await (await apiFetchAs(freshPrimaryToken, "/api/auth/me")).json();
+    expect(created.charger_user_id).toBe(me.id);
+    expect(created.payer_user_id).toBe(freshPartner.id);
+
+    await page.context().close();
   });
 
-  test("reject charge creation with zero balance and no role/amount", async () => {
-    // Regression: without an arbitrary amount, zero-balance creation must still fail.
-    const freshPartnerEmail = `e2e-zero-balance-${Date.now()}@financeapp.local`;
+  test("payer can initiate charge via UI on zero balance", async ({ browser }) => {
+    // Isolated pair — caller is the payer ("I owe you X"). Saved with caller in payer fields.
+    const freshPrimaryEmail = `e2e-arb-payer-primary-${Date.now()}@financeapp.local`;
+    const freshPartnerEmail = `e2e-arb-payer-partner-${Date.now()}@financeapp.local`;
+    const freshPrimaryToken = await getAuthTokenForUser(freshPrimaryEmail);
     const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
 
-    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
-    const freshPartner = await freshPartnerMeRes.json();
+    const freshPartner = await (await apiFetchAs(freshPartnerToken, "/api/auth/me")).json();
 
-    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
+    const connRes = await apiFetchAs(freshPrimaryToken, "/api/user-connections", {
+      method: "POST",
+      body: JSON.stringify({ to_user_id: freshPartner.id, from_default_split_percentage: 50 }),
+    });
+    const freshConn = await connRes.json();
     await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
       method: "PATCH",
     });
 
-    const privAcc = await apiCreateAccount({
-      name: `Zero Balance Guard ${Date.now()}`,
-      initial_balance: 0,
+    const privAccName = `Arb Payer Acc ${Date.now()}`;
+    await apiFetchAs(freshPrimaryToken, "/api/accounts", {
+      method: "POST",
+      body: JSON.stringify({ name: privAccName, initial_balance: 0 }),
     });
 
-    await expect(
-      apiCreateCharge({
-        connection_id: freshConn.id,
-        my_account_id: privAcc.id,
-        period_month: PERIOD_MONTH,
-        period_year: PERIOD_YEAR,
-        description: `Zero balance ${Date.now()}`,
-        date: new Date().toISOString(),
-      }),
-    ).rejects.toThrow(/400/);
+    const page = await openAuthedPage(browser, freshPrimaryToken);
+    const pageCharges = new ChargesPage(page);
+    await pageCharges.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
+
+    const description = `UI Arb Payer ${Date.now()}`;
+    const arbitraryAmount = 67.89;
+    await pageCharges.openCreateDrawer();
+    await pageCharges.fillCreateForm({
+      accountName: privAccName,
+      role: "payer",
+      amount: arbitraryAmount,
+      description,
+    });
+    await pageCharges.submitCreate();
+    await pageCharges.expectNotification(/Cobrança criada/);
+
+    const me = await (await apiFetchAs(freshPrimaryToken, "/api/auth/me")).json();
+    // Caller is now the payer → the charge lands in "received" for them.
+    const listRes = await apiFetchAs(freshPrimaryToken, "/api/charges?direction=received");
+    const listBody = await listRes.json();
+    const created = (listBody.charges ?? []).find((c: { description?: string }) => c.description === description);
+    expect(created).toBeDefined();
+    expect(created.amount).toBe(6789);
+    expect(created.payer_user_id).toBe(me.id);
+    expect(created.charger_user_id).toBe(freshPartner.id);
+
+    await page.context().close();
+  });
+
+  test("submitting the create drawer without selecting a role is rejected", async () => {
+    // The radio is required in the schema, so submit without picking charger/payer stays on-form.
+    await chargesPage.openCreateDrawer();
+    // Fill everything except role
+    const accountSelect = chargesPage.createDrawer.getByRole("textbox", { name: "Minha conta" });
+    await accountSelect.click();
+    await chargesPage.page.getByRole("option", { name: primaryAccountName }).click();
+
+    await chargesPage.createDrawer.getByRole("button", { name: "Criar Cobrança" }).click();
+
+    // The drawer must stay open and show a validation error for the role field.
+    await expect(chargesPage.createDrawer).toBeVisible();
+    await expect(chargesPage.createDrawer.getByText("Selecione seu papel")).toBeVisible();
   });
 
   test("sidebar badge shows pending count", async ({ page }) => {
@@ -401,6 +384,7 @@ test.describe("Charges", () => {
         period_month: PERIOD_MONTH,
         period_year: PERIOD_YEAR,
         description,
+        role: "charger",
         date: new Date().toISOString(),
       }),
     });

@@ -446,9 +446,8 @@ func (s *ChargeServiceTestSuite) TestCreate_PayerRole_ZeroBalance() {
 	assert.Nil(s.T(), created.ChargerAccountID)
 }
 
-// TestCreate_ZeroBalance_NoAmount preserves the existing behavior: if the balance
-// is zero and no arbitrary amount is provided, creation fails.
-func (s *ChargeServiceTestSuite) TestCreate_ZeroBalance_NoAmount() {
+// TestCreate_MissingRole rejects charge creation without an explicit role.
+func (s *ChargeServiceTestSuite) TestCreate_MissingRole() {
 	ctx := context.Background()
 
 	charger, err := s.createTestUser(ctx)
@@ -473,6 +472,12 @@ func (s *ChargeServiceTestSuite) TestCreate_ZeroBalance_NoAmount() {
 		Date:         chargeDate,
 	})
 	s.Require().Error(err)
+
+	var svcErr *pkgErrors.ServiceError
+	if assert.ErrorAs(s.T(), err, &svcErr) {
+		assert.Equal(s.T(), pkgErrors.ErrCodeBadRequest, svcErr.Code)
+		assert.Contains(s.T(), svcErr.Message, "role")
+	}
 }
 
 // TestCreate_InvalidAmount rejects non-positive arbitrary amounts.
@@ -494,12 +499,14 @@ func (s *ChargeServiceTestSuite) TestCreate_InvalidAmount() {
 	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
 
 	badAmount := int64(0)
+	chargerRole := domain.ChargeInitiatorRoleCharger
 	_, err = s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
 		ConnectionID: conn.ID,
 		MyAccountID:  chargerPrivAcc.ID,
 		PeriodMonth:  periodMonth,
 		PeriodYear:   periodYear,
 		Amount:       &badAmount,
+		Role:         &chargerRole,
 		Date:         chargeDate,
 	})
 	s.Require().Error(err)
