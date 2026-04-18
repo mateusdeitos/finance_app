@@ -55,6 +55,9 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return err
 	}
 
+	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, data.previousTransaction.ID)
+	isLinkedTxEdit := len(sourceIDs) > 0
+
 	// atualiza/remove a recorrência de acordo com o recurrenceSettings enviado
 	err = s.handlerRecurrenceUpdate(ctx, data)
 	if err != nil {
@@ -98,16 +101,20 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		if req.Date != nil && !req.Date.IsZero() {
 			own.Date = own.Date.AddDate(0, 0, dateDiffDays)
 
-			for i := range own.LinkedTransactions {
-				own.LinkedTransactions[i].Date = own.LinkedTransactions[i].Date.AddDate(0, 0, dateDiffDays)
+			if !isLinkedTxEdit {
+				for i := range own.LinkedTransactions {
+					own.LinkedTransactions[i].Date = own.LinkedTransactions[i].Date.AddDate(0, 0, dateDiffDays)
+				}
 			}
 		}
 
 		if req.Description != nil && strings.TrimSpace(*req.Description) != "" {
 			own.Description = *req.Description
 
-			for i := range own.LinkedTransactions {
-				own.LinkedTransactions[i].Description = *req.Description
+			if !isLinkedTxEdit {
+				for i := range own.LinkedTransactions {
+					own.LinkedTransactions[i].Description = *req.Description
+				}
 			}
 		}
 
@@ -947,12 +954,21 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	}
 
 	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, transaction.ID)
-	if len(sourceIDs) > 0 {
-		errs = append(errs, pkgErrors.ErrChildTransactionCannotBeUpdated)
+	isLinkedTransaction := len(sourceIDs) > 0
+	if isLinkedTransaction {
+		disallowedFieldSet := req.Amount != nil ||
+			lo.FromPtr(req.AccountID) > 0 ||
+			req.TransactionType != nil ||
+			req.RecurrenceSettings != nil ||
+			len(req.SplitSettings) > 0 ||
+			req.DestinationAccountID != nil
+		if disallowedFieldSet {
+			errs = append(errs, pkgErrors.ErrLinkedTransactionDisallowedFieldChanged)
+		}
 	}
 
 	if lo.FromPtr(req.AccountID) > 0 {
-		if len(sourceIDs) > 0 {
+		if isLinkedTransaction {
 			errs = append(errs, pkgErrors.ErrAccountCannotBeChangedForSharedTransactions)
 		} else {
 			_, err := s.services.Account.GetByID(ctx, userID, *req.AccountID)
