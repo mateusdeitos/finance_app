@@ -3606,6 +3606,326 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	}
 }
 
+// TestOffsetInstallments_PropagationAll_PreservesNumbers: update a recurrence created with
+// current_installment=4, total=12 using propagation=all — installment numbers must stay 4-12.
+func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_PropagationAll_PreservesNumbers() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          150000,
+		Date:            d,
+		Description:     "Offset installment test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 9, "should create 9 installments (4 through 12)")
+	suite.Assert().Equal(4, lo.FromPtr(before[0].InstallmentNumber))
+	suite.Assert().Equal(12, lo.FromPtr(before[8].InstallmentNumber))
+
+	// Update description with propagation=all — should NOT change installment numbers or count
+	err = suite.Services.Transaction.Update(ctx, before[0].ID, user.ID, &domain.TransactionUpdateRequest{
+		Description:         lo.ToPtr("Updated description"),
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 9, "should still have 9 installments after update")
+
+	for i, t := range after {
+		expectedNum := 4 + i
+		suite.Assert().Equal(expectedNum, lo.FromPtr(t.InstallmentNumber), "installment[%d] should be %d", i, expectedNum)
+		suite.Assert().Equal("Updated description", t.Description, "installment[%d] description", i)
+	}
+
+	// Recurrence record should still have Installments=12
+	recurrences, err := suite.Repos.TransactionRecurrence.Search(ctx, domain.TransactionRecurrenceFilter{
+		IDs: []int{*after[0].TransactionRecurrenceID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(12, recurrences[0].Installments)
+}
+
+// TestOffsetInstallments_PropagationAll_IncreaseTotalInstallments: increase total from 12 to 15
+// on a recurrence with current_installment=4 — should add 3 new installments (13, 14, 15).
+func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_PropagationAll_IncreaseTotalInstallments() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "Increase total test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 9)
+
+	err = suite.Services.Transaction.Update(ctx, before[0].ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  15,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 12, "should have 12 installments (4 through 15)")
+	suite.Assert().Equal(4, lo.FromPtr(after[0].InstallmentNumber))
+	suite.Assert().Equal(15, lo.FromPtr(after[11].InstallmentNumber))
+
+	for i, t := range after {
+		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "installment[%d]", i)
+	}
+}
+
+// TestOffsetInstallments_PropagationAll_DecreaseTotalInstallments: decrease total from 12 to 8
+// on a recurrence with current_installment=4 — should keep 5 installments (4-8), remove 9-12.
+func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_PropagationAll_DecreaseTotalInstallments() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "Decrease total test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 9)
+
+	err = suite.Services.Transaction.Update(ctx, before[0].ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  8,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 5, "should have 5 installments (4 through 8)")
+	suite.Assert().Equal(4, lo.FromPtr(after[0].InstallmentNumber))
+	suite.Assert().Equal(8, lo.FromPtr(after[4].InstallmentNumber))
+}
+
+// TestOffsetInstallments_StandaloneToRecurrenceWithOffset: standalone transaction converted to
+// recurrence with current_installment=4, total=12 — should create 9 installments numbered 4-12.
+func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_StandaloneToRecurrenceWithOffset() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     "Standalone to recurrence test",
+	})
+	suite.Require().NoError(err)
+
+	standalone, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Nil(standalone.TransactionRecurrenceID)
+
+	err = suite.Services.Transaction.Update(ctx, standalone.ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 9, "should have 9 installments (4 through 12)")
+
+	for i, t := range after {
+		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "installment[%d] should be %d", i, 4+i)
+	}
+
+	suite.Assert().Equal(standalone.ID, after[0].ID, "first installment should be the original transaction")
+}
+
+// TestOffsetInstallments_WithSplit_PropagationAll: update a split expense with offset installments
+// — both user's and partner's installment numbers should be preserved.
+func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_PropagationAll() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          150000,
+		Date:            d,
+		Description:     "Split offset test",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Amount: lo.ToPtr(int64(60000))},
+		},
+	})
+	suite.Require().NoError(err)
+
+	beforeA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(beforeA, 9, "userA should have 9 installments")
+
+	// Update description with propagation=all
+	err = suite.Services.Transaction.Update(ctx, beforeA[0].ID, userA.ID, &domain.TransactionUpdateRequest{
+		Description:         lo.ToPtr("Updated split offset"),
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 4,
+			TotalInstallments:  12,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Amount: lo.ToPtr(int64(60000))},
+		},
+	})
+	suite.Require().NoError(err)
+
+	afterA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterA, 9, "userA should still have 9 installments")
+
+	for i, t := range afterA {
+		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "userA installment[%d]", i)
+		suite.Assert().Len(t.LinkedTransactions, 1, "userA installment[%d] should have 1 linked tx", i)
+		suite.Assert().Equal(4+i, lo.FromPtr(t.LinkedTransactions[0].InstallmentNumber), "userB linked installment[%d]", i)
+	}
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
