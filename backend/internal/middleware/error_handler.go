@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/finance_app/backend/pkg/applog"
 	apperrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/labstack/echo/v4"
 )
@@ -27,9 +28,20 @@ func ErrorHandler(err error, c echo.Context) {
 		message = he.Message.(string)
 	}
 
-	// Log error in production
-	if !c.Echo().Debug {
-		c.Logger().Error(err)
+	// Append error details to request logger (per D-06).
+	// Middleware emits the final log line AFTER this function returns (per D-07).
+	if tagged, ok := err.(*apperrors.TaggedHTTPError); ok {
+		applog.FromContext(c.Request().Context()).
+			With("error_code", http.StatusText(tagged.Code)).
+			With("error_message", tagged.Message).
+			With("error_tags", tagged.Tags)
+	} else if he, ok := err.(*echo.HTTPError); ok {
+		applog.FromContext(c.Request().Context()).
+			With("error_code", http.StatusText(he.Code)).
+			With("error_message", he.Message)
+	} else {
+		applog.FromContext(c.Request().Context()).
+			With("error_message", err.Error())
 	}
 
 	response := ErrorResponse{

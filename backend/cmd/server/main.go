@@ -18,6 +18,7 @@ import (
 	"github.com/finance_app/backend/pkg/oauth"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/rs/zerolog"
 )
 
 // @title          Finance App API
@@ -53,6 +54,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+
+	globalLogger := initLogger(cfg)
 
 	// Setup OAuth providers
 	oauth.SetupProviders(cfg)
@@ -101,7 +104,7 @@ func main() {
 	e.HTTPErrorHandler = middleware.ErrorHandler
 
 	// Middleware
-	e.Use(echomiddleware.Logger())
+	e.Use(middleware.LoggingMiddleware(globalLogger))
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.App.FrontendURL},
@@ -214,4 +217,21 @@ func main() {
 	}
 
 	log.Println("Server exited")
+}
+
+func initLogger(cfg *config.Config) zerolog.Logger {
+	logLevel, parseErr := zerolog.ParseLevel(cfg.App.LogLevel)
+	if parseErr != nil {
+		log.Printf("WARNING: invalid LOG_LEVEL %q, defaulting to info: %v", cfg.App.LogLevel, parseErr)
+		logLevel = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(logLevel)
+
+	if cfg.App.Env == "development" {
+		return zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+			With().Timestamp().Logger()
+	}
+	// Cloud Run: severity field maps to Cloud Logging severity
+	zerolog.LevelFieldName = "severity"
+	return zerolog.New(os.Stdout).With().Timestamp().Logger()
 }
