@@ -3926,6 +3926,366 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 	}
 }
 
+// TestLinkedTransactionValidation_RejectsDisallowedFields verifies that attempting to update
+// fields that are not allowed on a linked (partner-side split) transaction returns
+// ErrorTagLinkedTransactionDisallowedFieldChanged.
+func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_RejectsDisallowedFields() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            time.Now(),
+		Description:     "shared expense",
+		Amount:          10000,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Fetch the created transaction for userA to get LinkedTransactions
+	txA, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txA.LinkedTransactions, 1, "split transaction should have 1 linked transaction")
+
+	linkedTxID := txA.LinkedTransactions[0].ID
+
+	assertLinkedTxError := func(name string, req *domain.TransactionUpdateRequest) {
+		suite.Run(name, func() {
+			err := suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, req)
+			suite.Require().Error(err)
+			serviceErrs, ok := err.(pkgErrors.ServiceErrors)
+			suite.Require().True(ok, "expected ServiceErrors type, got %T", err)
+			suite.Require().True(lo.SomeBy(serviceErrs, func(e *pkgErrors.ServiceError) bool {
+				return lo.Contains(e.Tags, string(pkgErrors.ErrorTagLinkedTransactionDisallowedFieldChanged))
+			}), "expected ErrorTagLinkedTransactionDisallowedFieldChanged in error tags, got %v", serviceErrs)
+		})
+	}
+
+	newAmount := int64(20000)
+	assertLinkedTxError("amount", &domain.TransactionUpdateRequest{
+		Amount:              &newAmount,
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+
+	accountB, err := suite.createTestAccount(ctx, userB)
+	suite.Require().NoError(err)
+	assertLinkedTxError("account_id", &domain.TransactionUpdateRequest{
+		AccountID:           &accountB.ID,
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+
+	newType := domain.TransactionTypeIncome
+	assertLinkedTxError("transaction_type", &domain.TransactionUpdateRequest{
+		TransactionType:     &newType,
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+
+	assertLinkedTxError("recurrence_settings", &domain.TransactionUpdateRequest{
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  2,
+		},
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+
+	assertLinkedTxError("split_settings", &domain.TransactionUpdateRequest{
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+
+	destAccountID := accountA.ID
+	assertLinkedTxError("destination_account_id", &domain.TransactionUpdateRequest{
+		DestinationAccountID: &destAccountID,
+		PropagationSettings:  domain.TransactionPropagationSettingsCurrent,
+	})
+}
+
+// TestLinkedTransactionValidation_AllowsPermittedFields verifies that updating allowed fields
+// (date, description, category) on a linked transaction succeeds without error.
+func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_AllowsPermittedFields() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            time.Now(),
+		Description:     "shared expense",
+		Amount:          10000,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	txA, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txA.LinkedTransactions, 1, "split transaction should have 1 linked transaction")
+
+	linkedTxID := txA.LinkedTransactions[0].ID
+
+	categoryB, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+
+	newDate := time.Now().AddDate(0, 0, 5)
+	newDesc := "updated description"
+	err = suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
+		Date:                &newDate,
+		Description:         &newDesc,
+		CategoryID:          &categoryB.ID,
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+	suite.Require().NoError(err)
+
+	updated, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{linkedTxID},
+	})
+	suite.Require().NoError(err)
+	suite.Equal(newDesc, updated.Description)
+	suite.Equal(&categoryB.ID, updated.CategoryID)
+}
+
+// TestLinkedTransactionValidation_AllowsTagsOnly verifies that updating only tags on a linked
+// transaction is permitted.
+func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_AllowsTagsOnly() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            time.Now(),
+		Description:     "shared expense",
+		Amount:          10000,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	txA, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txA.LinkedTransactions, 1, "split transaction should have 1 linked transaction")
+
+	linkedTxID := txA.LinkedTransactions[0].ID
+
+	err = suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
+		Tags:                []domain.Tag{{Name: "test-tag"}},
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	})
+	suite.Require().NoError(err)
+}
+
+// TestLinkedTransactionPropagation_DateDoesNotCrossToPartner verifies that when userB updates
+// the date on their linked (split) transaction with propagation=all, the update only affects
+// userB's installments and does NOT modify userA's transaction dates.
+func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_DateDoesNotCrossToPartner() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	originalDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            originalDate,
+		Description:     "recurring shared expense",
+		Amount:          10000,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Fetch userA's first installment (lowest ID) to get the linked transaction
+	userATransactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(userATransactions)
+	suite.Require().Len(userATransactions[0].LinkedTransactions, 1, "first installment should have linked transaction")
+
+	linkedTxID := userATransactions[0].LinkedTransactions[0].ID
+	firstInstallmentID := userATransactions[0].ID
+
+	// userB updates the date of their linked transaction with propagation=all
+	newDate := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	err = suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
+		Date:                &newDate,
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+	})
+	suite.Require().NoError(err)
+
+	// userA's transaction date should be unchanged
+	txA, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{firstInstallmentID},
+	})
+	suite.Require().NoError(err)
+	suite.Equal(originalDate.Day(), txA.Date.Day(),
+		"userA's transaction date should NOT have shifted after userB's date change")
+
+	// userB's linked transaction date should reflect the change
+	txB, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{linkedTxID},
+	})
+	suite.Require().NoError(err)
+	suite.Equal(newDate.Day(), txB.Date.Day(),
+		"userB's linked transaction date should be updated")
+}
+
+// TestLinkedTransactionPropagation_DescriptionDoesNotCrossToPartner verifies that when userB
+// updates the description on their linked (split) transaction with propagation=all, the change
+// only affects userB's installments and does NOT modify userA's transaction descriptions.
+func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_DescriptionDoesNotCrossToPartner() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Description:     "recurring shared expense",
+		Amount:          10000,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Fetch userA's first installment to get the linked transaction
+	userATransactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(userATransactions)
+	suite.Require().Len(userATransactions[0].LinkedTransactions, 1, "first installment should have linked transaction")
+
+	linkedTxID := userATransactions[0].LinkedTransactions[0].ID
+	firstInstallmentID := userATransactions[0].ID
+
+	// userB updates description with propagation=all
+	newDesc := "userB changed this"
+	err = suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
+		Description:         &newDesc,
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+	})
+	suite.Require().NoError(err)
+
+	// userA's description should remain unchanged
+	txA, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{firstInstallmentID},
+	})
+	suite.Require().NoError(err)
+	suite.Equal("recurring shared expense", txA.Description,
+		"userA's transaction description should NOT have changed")
+
+	// userB's linked transaction description should be updated
+	txB, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{linkedTxID},
+	})
+	suite.Require().NoError(err)
+	suite.Equal(newDesc, txB.Description,
+		"userB's linked transaction description should be updated")
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
