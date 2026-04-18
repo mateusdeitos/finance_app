@@ -12,6 +12,7 @@ type chargeService struct {
 	chargeRepo         repository.ChargeRepository
 	userConnectionRepo repository.UserConnectionRepository
 	transactionRepo    repository.TransactionRepository
+	accountRepo        repository.AccountRepository
 	dbTransaction      repository.DBTransaction
 	services           *Services
 }
@@ -21,9 +22,31 @@ func NewChargeService(repos *repository.Repositories, services *Services) Charge
 		chargeRepo:         repos.Charge,
 		userConnectionRepo: repos.UserConnection,
 		transactionRepo:    repos.Transaction,
+		accountRepo:        repos.Account,
 		dbTransaction:      repos.DBTransaction,
 		services:           services,
 	}
+}
+
+// validatePrivateAccount ensures the given account belongs to userID and is
+// NOT linked to a connection. Charges may only settle against private
+// (non-shared) accounts — connection accounts are the internal ledger used
+// for settlement transfers.
+func (s *chargeService) validatePrivateAccount(ctx context.Context, accountID, userID int) error {
+	accs, err := s.accountRepo.Search(ctx, domain.AccountSearchOptions{
+		IDs:     []int{accountID},
+		UserIDs: []int{userID},
+	})
+	if err != nil {
+		return pkgErrors.Internal("failed to fetch account", err)
+	}
+	if len(accs) == 0 {
+		return pkgErrors.NotFound("account")
+	}
+	if accs[0].UserConnection != nil {
+		return pkgErrors.BadRequest("account linked to a connection cannot be used for charges")
+	}
+	return nil
 }
 
 func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domain.CreateChargeRequest) (*domain.Charge, error) {
@@ -73,6 +96,10 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		otherPartyID = conn.ToUserID
 	} else {
 		otherPartyID = conn.FromUserID
+	}
+
+	if err := s.validatePrivateAccount(ctx, req.MyAccountID, callerUserID); err != nil {
+		return nil, err
 	}
 
 	callerIsCharger := *req.Role == domain.ChargeInitiatorRoleCharger

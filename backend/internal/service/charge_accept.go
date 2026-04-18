@@ -61,6 +61,10 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 		return pkgErrors.Forbidden("only the non-initiating party can accept")
 	}
 
+	if err := s.validatePrivateAccount(ctx, req.AccountID, callerUserID); err != nil {
+		return err
+	}
+
 	// ---- Status precondition ----
 	if charge.Status != domain.ChargeStatusPending {
 		return pkgErrors.AlreadyExists("charge")

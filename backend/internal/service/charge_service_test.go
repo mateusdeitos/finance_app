@@ -512,6 +512,85 @@ func (s *ChargeServiceTestSuite) TestCreate_InvalidAmount() {
 	s.Require().Error(err)
 }
 
+// TestCreate_RejectsConnectionAccount guards against using a shared connection
+// account as the initiator's account — charges must settle into private accounts.
+func (s *ChargeServiceTestSuite) TestCreate_RejectsConnectionAccount() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	// Use the charger's connection account — this is the shared ledger, not private.
+	conn.SwapIfNeeded(charger.ID)
+	chargerConnAccID := conn.FromAccountID
+
+	periodMonth, periodYear := 1, 2027
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	amount := int64(1000)
+	chargerRole := domain.ChargeInitiatorRoleCharger
+	_, err = s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  chargerConnAccID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Amount:       &amount,
+		Role:         &chargerRole,
+		Date:         chargeDate,
+	})
+	s.Require().Error(err)
+	var svcErr *pkgErrors.ServiceError
+	if assert.ErrorAs(s.T(), err, &svcErr) {
+		assert.Equal(s.T(), pkgErrors.ErrCodeBadRequest, svcErr.Code)
+		assert.Contains(s.T(), svcErr.Message, "connection")
+	}
+}
+
+// TestAccept_RejectsConnectionAccount guards the same invariant at accept time.
+func (s *ChargeServiceTestSuite) TestAccept_RejectsConnectionAccount() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	// Create a valid pending charge (charger is initiator).
+	periodMonth, periodYear := 2, 2028
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx,
+		charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID,
+		periodMonth, periodYear, chargeDate,
+	)
+
+	// Payer tries to accept with THEIR connection account — must be rejected.
+	conn.SwapIfNeeded(payer.ID)
+	payerConnAccID := conn.FromAccountID
+
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
+		AccountID: payerConnAccID,
+		Date:      acceptDate,
+	})
+	s.Require().Error(err)
+	var svcErr *pkgErrors.ServiceError
+	if assert.ErrorAs(s.T(), err, &svcErr) {
+		assert.Equal(s.T(), pkgErrors.ErrCodeBadRequest, svcErr.Code)
+		assert.Contains(s.T(), svcErr.Message, "connection")
+	}
+}
+
 // TestAccept_UsesStoredAmount verifies that a charge created with an arbitrary
 // amount settles for that stored amount when the accepter does not override it.
 func (s *ChargeServiceTestSuite) TestAccept_UsesStoredAmount() {

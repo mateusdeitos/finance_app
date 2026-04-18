@@ -71,9 +71,10 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   const connectionOptions = Array.from(connectionMap.values());
   const singleConnection = connectionOptions.length === 1 ? connectionOptions[0] : null;
 
-  // User's own active accounts
+  // User's own active private accounts only — connection (shared) accounts
+  // are the internal ledger and must not be used as the charge's destination.
   const myAccounts = accounts
-    .filter((a) => a.user_id === currentUserId && a.is_active)
+    .filter((a) => a.user_id === currentUserId && a.is_active && !a.user_connection)
     .map((a) => ({ label: a.name, value: String(a.id) }));
 
   const defaultPeriod = new Date(periodYear, periodMonth - 1, 1);
