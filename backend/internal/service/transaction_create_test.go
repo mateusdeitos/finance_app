@@ -1043,7 +1043,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	d := now()
 	period := domain.Period{Month: int(d.Month()), Year: d.Year()}
 
-	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	sourceTxID, err := suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
@@ -1084,6 +1084,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Equal(d, synthetic.Date, "date is inherited from the source transaction")
 	suite.Assert().Equal(user1.ID, synthetic.UserID)
 	suite.Assert().Empty(synthetic.SettlementsFromSource, "synthetic entry must not preload nested settlements (would double-count)")
+	suite.Require().NotNil(synthetic.SourceTransactionID, "synthetic entry must expose source_transaction_id so the frontend can open the source tx for editing")
+	suite.Assert().Equal(sourceTxID, *synthetic.SourceTransactionID, "source_transaction_id must point at the real source transaction backing the settlement")
 
 	// Case 2: user1 filters ONLY by the personal account — the real source
 	// transaction is returned, and its settlement MUST be preloaded inline

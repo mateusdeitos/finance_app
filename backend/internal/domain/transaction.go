@@ -92,10 +92,15 @@ type Transaction struct {
 	// by the listing endpoint to surface settlements whose source transaction
 	// lives on a different (non-filtered) account. The ID field of such entries
 	// is a negative sentinel; the row is read-only and should not be edited.
-	OriginSettlementID *int       `json:"origin_settlement_id,omitempty"`
-	CreatedAt          *time.Time `json:"created_at"`
-	UpdatedAt          *time.Time `json:"updated_at"`
-	DeletedAt          *time.Time `json:"deleted_at,omitempty"`
+	OriginSettlementID *int `json:"origin_settlement_id,omitempty"`
+	// SourceTransactionID is set only on synthetic Transaction entries (see
+	// OriginSettlementID). It points to the real source transaction backing
+	// the surfaced settlement so the frontend can fetch the full transaction
+	// and open it for editing when the synthetic row is clicked.
+	SourceTransactionID *int       `json:"source_transaction_id,omitempty"`
+	CreatedAt           *time.Time `json:"created_at"`
+	UpdatedAt           *time.Time `json:"updated_at"`
+	DeletedAt           *time.Time `json:"deleted_at,omitempty"`
 }
 
 func (t *Transaction) SetType(newType TransactionType) {
