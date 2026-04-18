@@ -374,11 +374,12 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 
 	}
 
-	if expectedCount > len(data.transactions) {
+	existingCount := len(data.transactions)
+	if expectedCount > existingCount {
 		base := data.previousTransaction
-		lastInstallment := minInstallment + len(data.transactions) - 1
-		for i := len(data.transactions); i < expectedCount; i++ {
-			installmentNum := lastInstallment + (i - len(data.transactions)) + 1
+		lastInstallment := minInstallment + existingCount - 1
+		for i := existingCount; i < expectedCount; i++ {
+			installmentNum := lastInstallment + (i - existingCount) + 1
 			baseDate := lo.CoalesceOrEmpty(data.req.Date, &base.Date)
 			data.transactions = append(data.transactions, &domain.Transaction{
 				ID:                      0,
@@ -858,13 +859,16 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		data.transactions[i].TransactionRecurrence = &r
 		data.transactions[i].TransactionRecurrenceID = &r.ID
 
-		if data.scenario.HadRecurrence {
+		if data.scenario.HadRecurrence && !hasPastInstallments {
 			// Preserve existing installment numbers — they already have the correct offset
 			// from creation (e.g., installments 4-12 for current_installment=4, total=12).
-		} else {
+		} else if !data.scenario.HadRecurrence {
 			// Standalone → recurrence: number from CurrentInstallment.
 			startFrom := data.req.RecurrenceSettings.CurrentInstallment
 			data.transactions[i].InstallmentNumber = lo.ToPtr(startFrom + i)
+		} else {
+			// current_and_future with past installments: new recurrence, renumber from 1.
+			data.transactions[i].InstallmentNumber = lo.ToPtr(i + 1)
 		}
 
 		for j := range data.transactions[i].LinkedTransactions {
