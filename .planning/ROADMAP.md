@@ -63,7 +63,10 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
   3. When a linked transaction's date is updated with propagation=all, all installments in the series shift by the same diff applied via existing logic
   4. When propagation=current_and_future is used, only the current and future installments shift; past installments are unaffected
   5. No new propagation logic is introduced — the existing date diff mechanism is reused for all three propagation modes
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 11-01-PLAN.md — Error constant, validation, and propagation guards
+- [ ] 11-02-PLAN.md — Integration tests for validation and propagation
 
 ### Phase 12: Frontend Edit Form
 **Goal**: Users editing a linked transaction see only the fields they can change, with non-editable fields clearly disabled and the propagation drawer available when recurrences exist
@@ -92,7 +95,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 8. Frontend | v1.1 | 3/3 | Complete | 2026-04-16 |
 | 9. Bulk Actions | v1.2 | 3/3 | Complete | 2026-04-17 |
 | 10. User Avatar System | v1.2 | 3/3 | Complete | 2026-04-17 |
-| 11. Backend Validation & Propagation | v1.3 | 0/? | Not started | - |
+| 11. Backend Validation & Propagation | v1.3 | 0/2 | Not started | - |
 | 12. Frontend Edit Form | v1.3 | 0/? | Not started | - |
 
 ---
