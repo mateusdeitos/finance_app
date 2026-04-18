@@ -1,77 +1,72 @@
-import { useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Alert, Button, Drawer, NumberInput, Select, Skeleton, Stack, Text } from '@mantine/core'
-import { DateInput } from '@mantine/dates'
-import { notifications } from '@mantine/notifications'
-import { useQuery } from '@tanstack/react-query'
-import '@mantine/dates/styles.css'
-import { useDrawerContext } from '@/utils/renderDrawer'
-import { useAcceptCharge } from '@/hooks/useAcceptCharge'
-import { useCharges } from '@/hooks/useCharges'
-import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
-import { useTransactions } from '@/hooks/useTransactions'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useMe } from '@/hooks/useMe'
-import { fetchBalance } from '@/api/transactions'
-import { parseApiError, mapTagsToFieldErrors } from '@/utils/apiErrors'
-import { QueryKeys } from '@/utils/queryKeys'
-import { formatBalance } from '@/utils/formatCents'
-import { Charges } from '@/types/charges'
+import { useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Alert, Button, Drawer, NumberInput, Select, Skeleton, Stack, Text } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
+import { notifications } from "@mantine/notifications";
+import { useQuery } from "@tanstack/react-query";
+import "@mantine/dates/styles.css";
+import { useDrawerContext } from "@/utils/renderDrawer";
+import { useAcceptCharge } from "@/hooks/useAcceptCharge";
+import { useCharges } from "@/hooks/useCharges";
+import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useMe } from "@/hooks/useMe";
+import { fetchBalance } from "@/api/transactions";
+import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
+import { QueryKeys } from "@/utils/queryKeys";
+import { formatBalance } from "@/utils/formatCents";
+import { Charges } from "@/types/charges";
 
 const acceptChargeSchema = z.object({
-  account_id: z.number('Selecione uma conta'),
-  date: z.date({ error: 'Selecione uma data' }),
+  account_id: z.number("Selecione uma conta"),
+  date: z.date({ error: "Selecione uma data" }),
   amount: z.number().positive().optional(),
-})
+});
 
-type AcceptChargeFormValues = z.infer<typeof acceptChargeSchema>
+type AcceptChargeFormValues = z.infer<typeof acceptChargeSchema>;
 
 interface AcceptChargeDrawerProps {
-  charge: Charges.Charge
-  partnerName: string
+  charge: Charges.Charge;
+  partnerName: string;
 }
 
 export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerProps) {
-  const { opened, close, reject } = useDrawerContext<void>()
-  const [submitError, setSubmitError] = useState<string | undefined>()
+  const { opened, close, reject } = useDrawerContext<void>();
+  const [submitError, setSubmitError] = useState<string | undefined>();
 
-  const { mutation } = useAcceptCharge()
+  const { mutation } = useAcceptCharge();
   const { invalidate: invalidateCharges } = useCharges({
     month: charge.period_month,
     year: charge.period_year,
-  })
-  const { invalidate: invalidatePendingCount } = useChargesPendingCount()
+  });
+  const { invalidate: invalidatePendingCount } = useChargesPendingCount();
   const { invalidate: invalidateTransactions } = useTransactions({
     month: charge.period_month,
     year: charge.period_year,
-  })
-  const { query: accountsQuery } = useAccounts()
-  const { query: meQuery } = useMe((me) => me.id)
-  const currentUserId = meQuery.data ?? 0
+  });
+  const { query: accountsQuery } = useAccounts();
+  const { query: meQuery } = useMe((me) => me.id);
+  const currentUserId = meQuery.data ?? 0;
 
-  const accounts = accountsQuery.data ?? []
+  const accounts = accountsQuery.data ?? [];
 
   // User's own active accounts
   const myAccounts = accounts
     .filter((a) => a.user_id === currentUserId && a.is_active)
-    .map((a) => ({ label: a.name, value: String(a.id) }))
+    .map((a) => ({ label: a.name, value: String(a.id) }));
 
   // Balance preview query
   const balanceQuery = useQuery({
-    queryKey: [
-      QueryKeys.Balance,
-      { month: charge.period_month, year: charge.period_year, accumulated: false },
-    ],
-    queryFn: () =>
-      fetchBalance({ month: charge.period_month, year: charge.period_year, accumulated: false }),
-  })
+    queryKey: [QueryKeys.Balance, { month: charge.period_month, year: charge.period_year, accumulated: false }],
+    queryFn: () => fetchBalance({ month: charge.period_month, year: charge.period_year, accumulated: false }),
+  });
 
-  const balanceAmount = balanceQuery.data?.balance ?? 0
+  const balanceAmount = balanceQuery.data?.balance ?? 0;
 
-  const period =
-    String(charge.period_month).padStart(2, '0') + '/' + charge.period_year
+  const period = String(charge.period_month).padStart(2, "0") + "/" + charge.period_year;
 
   const form = useForm<AcceptChargeFormValues>({
     resolver: zodResolver(acceptChargeSchema),
@@ -80,48 +75,48 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
       date: new Date(),
       amount: undefined,
     },
-  })
+  });
 
   function handleSubmit(values: AcceptChargeFormValues) {
-    setSubmitError(undefined)
+    setSubmitError(undefined);
     const payload: Charges.AcceptChargePayload = {
       account_id: values.account_id,
       date: values.date.toISOString(),
       amount: values.amount ? Math.round(values.amount * 100) : undefined,
-    }
+    };
     mutation.mutate(
       { id: charge.id, payload },
       {
         onSuccess: () => {
-          invalidateCharges()
-          invalidatePendingCount()
-          invalidateTransactions()
+          invalidateCharges();
+          invalidatePendingCount();
+          invalidateTransactions();
           notifications.show({
-            color: 'teal',
-            title: 'Cobranca aceita',
-            message: 'Cobranca aceita com sucesso',
+            color: "teal",
+            title: "Cobrança aceita",
+            message: "Cobrança aceita com sucesso",
             autoClose: 3000,
-          })
-          close()
+          });
+          close();
         },
         onError: async (err) => {
           if (err instanceof Response) {
-            const apiError = await parseApiError(err)
-            const errors = mapTagsToFieldErrors(apiError.tags, apiError.message)
+            const apiError = await parseApiError(err);
+            const errors = mapTagsToFieldErrors(apiError.tags, apiError.message);
             for (const [field, message] of Object.entries(errors)) {
-              if (field === '_general') setSubmitError(message)
-              else form.setError(field as keyof AcceptChargeFormValues, { message })
+              if (field === "_general") setSubmitError(message);
+              else form.setError(field as keyof AcceptChargeFormValues, { message });
             }
           } else {
-            setSubmitError('Erro ao aceitar cobranca')
+            setSubmitError("Erro ao aceitar cobrança");
           }
         },
       },
-    )
+    );
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Aceitar Cobranca" position="right" size="md">
+    <Drawer opened={opened} onClose={reject} title="Aceitar Cobrança" position="right" size="md">
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
           {submitError && (
@@ -193,15 +188,9 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             render={({ field, fieldState }) => (
               <NumberInput
                 label="Valor (opcional)"
-                placeholder={
-                  balanceQuery.data
-                    ? formatBalance(Math.abs(balanceAmount))
-                    : ''
-                }
-                value={field.value ?? ''}
-                onChange={(val) =>
-                  field.onChange(typeof val === 'number' ? val : undefined)
-                }
+                placeholder={balanceQuery.data ? formatBalance(Math.abs(balanceAmount)) : ""}
+                value={field.value ?? ""}
+                onChange={(val) => field.onChange(typeof val === "number" ? val : undefined)}
                 error={fieldState.error?.message}
                 decimalScale={2}
                 min={0}
@@ -209,16 +198,11 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             )}
           />
 
-          <Button
-            type="submit"
-            loading={mutation.isPending}
-            disabled={mutation.isPending}
-            fullWidth
-          >
+          <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
             Confirmar aceitacao
           </Button>
         </Stack>
       </form>
     </Drawer>
-  )
+  );
 }
