@@ -13,13 +13,18 @@ import classes from "./TransactionGroup.module.css";
 // For transfers between accounts of the same user, the debit side is the
 // origin; editing the credit side is rejected by the backend as a linked
 // transaction edit. Always route edits through the origin.
+//
+// The list endpoint only preloads linked_transactions one level deep, so the
+// debit tx reached via `credit.linked_transactions[0]` has an empty
+// linked_transactions of its own. Reattach the original credit-side tx so
+// the update drawer can still derive the destination account from it.
 function resolveTransferEditTarget(
   tx: Transactions.Transaction
 ): Transactions.Transaction {
   if (tx.type !== "transfer" || tx.operation_type !== "credit") return tx;
   const linked = tx.linked_transactions?.[0];
   if (!linked || linked.user_id !== tx.user_id) return tx;
-  return linked;
+  return { ...linked, linked_transactions: [tx] };
 }
 
 interface TransactionGroupProps {
