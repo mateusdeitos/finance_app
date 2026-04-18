@@ -41,20 +41,20 @@ None — scope is tightly defined for this milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VAL-01 | TBD | Pending |
-| VAL-02 | TBD | Pending |
-| PROP-01 | TBD | Pending |
-| FE-01 | TBD | Pending |
-| FE-02 | TBD | Pending |
-| FE-03 | TBD | Pending |
-| FE-04 | TBD | Pending |
-| FE-05 | TBD | Pending |
+| VAL-01 | Phase 11 | Pending |
+| VAL-02 | Phase 11 | Pending |
+| PROP-01 | Phase 11 | Pending |
+| FE-01 | Phase 12 | Pending |
+| FE-02 | Phase 12 | Pending |
+| FE-03 | Phase 12 | Pending |
+| FE-04 | Phase 12 | Pending |
+| FE-05 | Phase 12 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8 ⚠️
+- Mapped to phases: 8
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-18 after initial definition*
+*Last updated: 2026-04-18 after roadmap creation*

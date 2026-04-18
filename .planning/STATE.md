@@ -4,9 +4,9 @@ milestone: v1.3
 milestone_name: Editing Linked Transactions
 status: active
 last_updated: "2026-04-18T00:00:00.000Z"
-last_activity: 2026-04-18 -- Milestone v1.3 started
+last_activity: 2026-04-18 -- Roadmap created, ready to plan Phase 11
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,17 +15,21 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 11 — Backend Validation & Propagation
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-18 — Milestone v1.3 started
+Status: Not started
+Last activity: 2026-04-18 — Roadmap created for v1.3
+
+```
+[░░░░░░░░░░░░░░░░░░░░] 0% (0/2 phases)
+```
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Defining requirements for v1.3
+**Current focus:** v1.3 — Editing Linked Transactions. Backend validation (Phase 11) then frontend form adjustments (Phase 12).
 
 ## Performance Metrics
 
@@ -40,6 +44,7 @@ See: .planning/PROJECT.md (updated 2026-04-18)
 - v1.0 shipped 2026-04-10. Archived: `.planning/milestones/v1.0-ROADMAP.md`
 - v1.1 shipped 2026-04-16. Archived: `.planning/milestones/v1.1-ROADMAP.md`
 - v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
+- v1.3 roadmap: 2 phases (11–12). Backend-first, then frontend. Propagation logic reused from existing date diff mechanism — do NOT reimplement.
 
 ### Todos
 
