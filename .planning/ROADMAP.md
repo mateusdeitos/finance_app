@@ -46,7 +46,7 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 <details open>
 <summary>🔄 v1.3 Editing Linked Transactions (Phases 11–12) — ACTIVE</summary>
 
-- [ ] **Phase 11: Backend Validation & Propagation** - Backend enforces restricted field edits and propagates changes via existing logic
+- [x] Phase 11: Backend Validation & Propagation (2/2 plans) — completed 2026-04-18
 - [ ] **Phase 12: Frontend Edit Form** - Edit form disables non-editable fields, hides irrelevant sections, surfaces propagation settings
 
 </details>

@@ -41,9 +41,9 @@ None — scope is tightly defined for this milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VAL-01 | Phase 11 | Pending |
-| VAL-02 | Phase 11 | Pending |
-| PROP-01 | Phase 11 | Pending |
+| VAL-01 | Phase 11 | Done |
+| VAL-02 | Phase 11 | Done |
+| PROP-01 | Phase 11 | Done |
 | FE-01 | Phase 12 | Pending |
 | FE-02 | Phase 12 | Pending |
 | FE-03 | Phase 12 | Pending |
