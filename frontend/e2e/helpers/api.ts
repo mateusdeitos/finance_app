@@ -146,10 +146,11 @@ export interface ChargePayload {
   period_month: number
   period_year: number
   description?: string
+  amount?: number
   date: string
 }
 
-export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number }> {
+export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number; amount?: number; charger_user_id: number; payer_user_id: number }> {
   const res = await apiFetch('/api/charges', {
     method: 'POST',
     body: JSON.stringify(payload),

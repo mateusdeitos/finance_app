@@ -245,6 +245,110 @@ test.describe("Charges", () => {
     await chargesPage.expectNotification(/Cobrança cancelada/);
   });
 
+  test("create charge with arbitrary amount on zero balance", async () => {
+    // Fresh partner + connection so the shared connection account has zero balance:
+    // no seeded transactions between the two users. Before issue #74 this would fail
+    // with "cannot create charge when balance is zero"; with arbitrary amount it succeeds.
+    const freshPartnerEmail = `e2e-arbitrary-amount-${Date.now()}@financeapp.local`;
+    const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
+
+    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
+    const freshPartner = await freshPartnerMeRes.json();
+
+    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
+    await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
+      method: "PATCH",
+    });
+
+    // Primary user private account for the charger side.
+    const chargerPrivAcc = await apiCreateAccount({
+      name: `Arbitrary Amount Charger ${Date.now()}`,
+      initial_balance: 0,
+    });
+
+    const arbitraryAmount = 12345;
+    const description = `Arbitrary Amount ${Date.now()}`;
+    const charge = await apiCreateCharge({
+      connection_id: freshConn.id,
+      my_account_id: chargerPrivAcc.id,
+      period_month: PERIOD_MONTH,
+      period_year: PERIOD_YEAR,
+      description,
+      amount: arbitraryAmount,
+      date: new Date().toISOString(),
+    });
+    createdChargeIds.push(charge.id);
+
+    // Charge exists with the stored arbitrary amount and the caller is the charger
+    // (zero balance → caller defaults to charger).
+    expect(charge.amount).toBe(arbitraryAmount);
+
+    // Verify via the list endpoint too — round-trip through the DB.
+    const listRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@financeapp.local"), "/api/charges?direction=sent");
+    const listBody = await listRes.json();
+    const reloaded = (listBody.charges ?? []).find((c: { id: number }) => c.id === charge.id);
+    expect(reloaded).toBeDefined();
+    expect(reloaded.amount).toBe(arbitraryAmount);
+    expect(reloaded.status).toBe("pending");
+
+    // Partner accepts without overriding → settlement transfers must use stored amount.
+    const partnerPrivAccRes = await apiFetchAs(freshPartnerToken, "/api/accounts", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `Arbitrary Amount Payer ${Date.now()}`,
+        initial_balance: 0,
+      }),
+    });
+    const partnerPrivAcc = await partnerPrivAccRes.json();
+
+    const acceptRes = await apiFetchAs(freshPartnerToken, `/api/charges/${charge.id}/accept`, {
+      method: "POST",
+      body: JSON.stringify({
+        account_id: partnerPrivAcc.id,
+        date: new Date().toISOString(),
+      }),
+    });
+    expect(acceptRes.status).toBe(204);
+
+    // Reload the charge — it should be paid, with amount unchanged.
+    const afterAcceptRes = await apiFetchAs(freshPartnerToken, "/api/charges");
+    const afterAcceptBody = await afterAcceptRes.json();
+    const settled = (afterAcceptBody.charges ?? []).find((c: { id: number }) => c.id === charge.id);
+    expect(settled).toBeDefined();
+    expect(settled.status).toBe("paid");
+    expect(settled.amount).toBe(arbitraryAmount);
+  });
+
+  test("reject charge creation with zero balance and no amount", async () => {
+    // Regression: without an arbitrary amount, zero-balance creation must still fail.
+    const freshPartnerEmail = `e2e-zero-balance-${Date.now()}@financeapp.local`;
+    const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
+
+    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
+    const freshPartner = await freshPartnerMeRes.json();
+
+    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
+    await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
+      method: "PATCH",
+    });
+
+    const privAcc = await apiCreateAccount({
+      name: `Zero Balance Guard ${Date.now()}`,
+      initial_balance: 0,
+    });
+
+    await expect(
+      apiCreateCharge({
+        connection_id: freshConn.id,
+        my_account_id: privAcc.id,
+        period_month: PERIOD_MONTH,
+        period_year: PERIOD_YEAR,
+        description: `Zero balance ${Date.now()}`,
+        date: new Date().toISOString(),
+      }),
+    ).rejects.toThrow(/400/);
+  });
+
   test("sidebar badge shows pending count", async ({ page }) => {
     // Create a charge from partner where primary is payer
     const description = `Badge Test ${Date.now()}`;
