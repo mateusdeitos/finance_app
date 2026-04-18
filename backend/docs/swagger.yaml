@@ -60,6 +60,8 @@ definitions:
     type: object
   domain.Charge:
     properties:
+      amount:
+        type: integer
       charger_account_id:
         type: integer
       charger_user_id:
@@ -115,6 +117,8 @@ definitions:
     type: object
   domain.CreateChargeRequest:
     properties:
+      amount:
+        type: integer
       connection_id:
         type: integer
       date:

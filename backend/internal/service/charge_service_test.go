@@ -366,6 +366,157 @@ func (s *ChargeServiceTestSuite) TestAccept_RoleReinference_BalanceFlipped() {
 	assert.Equal(s.T(), charger.ID, reloaded.PayerUserID, "original charger should now be payer after balance flip")
 }
 
+// TestCreate_ArbitraryAmount_ZeroBalance verifies that a caller can create a charge
+// with an explicit amount even when their connection-account balance is zero.
+// The caller is treated as the charger (since they initiated).
+func (s *ChargeServiceTestSuite) TestCreate_ArbitraryAmount_ZeroBalance() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 9, 2026
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	amount := int64(7500)
+	created, err := s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  chargerPrivAcc.ID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Amount:       &amount,
+		Date:         chargeDate,
+	})
+	s.Require().NoError(err)
+	s.Require().NotNil(created.Amount)
+	assert.Equal(s.T(), amount, *created.Amount)
+	assert.Equal(s.T(), charger.ID, created.ChargerUserID)
+	assert.Equal(s.T(), payer.ID, created.PayerUserID)
+	s.Require().NotNil(created.ChargerAccountID)
+	assert.Equal(s.T(), chargerPrivAcc.ID, *created.ChargerAccountID)
+	assert.Nil(s.T(), created.PayerAccountID)
+}
+
+// TestCreate_ZeroBalance_NoAmount preserves the existing behavior: if the balance
+// is zero and no arbitrary amount is provided, creation fails.
+func (s *ChargeServiceTestSuite) TestCreate_ZeroBalance_NoAmount() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 10, 2026
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  chargerPrivAcc.ID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Date:         chargeDate,
+	})
+	s.Require().Error(err)
+}
+
+// TestCreate_InvalidAmount rejects non-positive arbitrary amounts.
+func (s *ChargeServiceTestSuite) TestCreate_InvalidAmount() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 11, 2026
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	badAmount := int64(0)
+	_, err = s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  chargerPrivAcc.ID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Amount:       &badAmount,
+		Date:         chargeDate,
+	})
+	s.Require().Error(err)
+}
+
+// TestAccept_UsesStoredAmount verifies that a charge created with an arbitrary
+// amount settles for that stored amount when the accepter does not override it.
+func (s *ChargeServiceTestSuite) TestAccept_UsesStoredAmount() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 12, 2026
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	// Create via service with arbitrary amount + zero balance → caller becomes charger.
+	amount := int64(4200)
+	created, err := s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  chargerPrivAcc.ID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Amount:       &amount,
+		Date:         chargeDate,
+	})
+	s.Require().NoError(err)
+
+	// Accept as payer without an amount override — stored amount should be used.
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, created.ID, &domain.AcceptChargeRequest{
+		AccountID: payerPrivAcc.ID,
+		Date:      acceptDate,
+	})
+	s.Require().NoError(err)
+
+	// 4 transaction rows were created (2 mains + 2 linked) — confirm each has amount = 4200.
+	var amounts []int64
+	err = s.DB.WithContext(ctx).
+		Raw("SELECT amount FROM transactions WHERE charge_id = ? AND deleted_at IS NULL", created.ID).
+		Scan(&amounts).Error
+	s.Require().NoError(err)
+	assert.Len(s.T(), amounts, 4)
+	for _, a := range amounts {
+		assert.Equal(s.T(), amount, a)
+	}
+}
+
 func (s *ChargeServiceTestSuite) TestAccept_NonPending() {
 	ctx := context.Background()
 

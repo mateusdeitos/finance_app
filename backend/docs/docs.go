@@ -2195,6 +2195,9 @@ const docTemplate = `{
         "domain.Charge": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "type": "integer"
+                },
                 "charger_account_id": {
                     "type": "integer"
                 },
@@ -2274,6 +2277,9 @@ const docTemplate = `{
         "domain.CreateChargeRequest": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "type": "integer"
+                },
                 "connection_id": {
                     "type": "integer"
                 },

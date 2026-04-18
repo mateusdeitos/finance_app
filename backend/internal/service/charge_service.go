@@ -40,6 +40,9 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	if req.PeriodYear <= 0 {
 		return nil, pkgErrors.BadRequest("period_year is required")
 	}
+	if req.Amount != nil && *req.Amount <= 0 {
+		return nil, pkgErrors.BadRequest("amount must be greater than zero")
+	}
 
 	// Fetch connection
 	conns, err := s.userConnectionRepo.Search(ctx, domain.UserConnectionSearchOptions{
@@ -88,6 +91,7 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		PeriodMonth:  req.PeriodMonth,
 		PeriodYear:   req.PeriodYear,
 		Description:  req.Description,
+		Amount:       req.Amount,
 		Status:       domain.ChargeStatusPending,
 		Date:         &req.Date,
 	}
@@ -105,7 +109,14 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		charge.ChargerUserID = otherPartyID
 		charge.PayerAccountID = &myAccID
 	default:
-		return nil, pkgErrors.BadRequest("cannot create charge when balance is zero")
+		// Zero balance: only allowed with an explicit arbitrary amount.
+		// Caller is treated as charger since they initiated the charge.
+		if req.Amount == nil {
+			return nil, pkgErrors.BadRequest("cannot create charge when balance is zero")
+		}
+		charge.ChargerUserID = callerUserID
+		charge.PayerUserID = otherPartyID
+		charge.ChargerAccountID = &myAccID
 	}
 
 	return s.chargeRepo.Create(ctx, charge)

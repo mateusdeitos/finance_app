@@ -31,6 +31,7 @@ type Charge struct {
 	PeriodMonth      int          `json:"period_month"`
 	PeriodYear       int          `json:"period_year"`
 	Description      *string      `json:"description"`
+	Amount           *int64       `json:"amount,omitempty"`
 	Status           ChargeStatus `json:"status"`
 	Date             *time.Time   `json:"date"`
 	CreatedAt        *time.Time   `json:"created_at"`
@@ -64,6 +65,7 @@ type CreateChargeRequest struct {
 	PeriodMonth  int       `json:"period_month"`
 	PeriodYear   int       `json:"period_year"`
 	Description  *string   `json:"description"`
+	Amount       *int64    `json:"amount,omitempty"`
 	Date         time.Time `json:"date"`
 }
 
