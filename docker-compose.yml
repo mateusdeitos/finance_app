@@ -12,6 +12,7 @@ services:
       # Persist Claude config and memory across sessions
       - ~/.claude:/home/node/.claude
       - ~/.claude.json:/home/node/.claude.json
+      - ~/.agents:/home/node/.agents:ro
       # Mount Docker socket to allow running docker/just commands inside the container
       - /var/run/docker.sock:/var/run/docker.sock
     environment:

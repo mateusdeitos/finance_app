@@ -14,6 +14,7 @@ type User struct {
 	Name       string
 	Email      string
 	Password   string
+	AvatarURL  *string
 	CreatedAt  *time.Time
 	UpdatedAt  *time.Time
 }
@@ -25,6 +26,7 @@ func (u *User) ToDomain() *domain.User {
 		Name:       u.Name,
 		Email:      u.Email,
 		Password:   u.Password,
+		AvatarURL:  u.AvatarURL,
 		CreatedAt:  *u.CreatedAt,
 		UpdatedAt:  *u.UpdatedAt,
 	}
@@ -37,6 +39,7 @@ func UserFromDomain(d *domain.User) *User {
 		Name:       d.Name,
 		Email:      d.Email,
 		Password:   d.Password,
+		AvatarURL:  d.AvatarURL,
 		CreatedAt:  &d.CreatedAt,
 		UpdatedAt:  &d.UpdatedAt,
 	}

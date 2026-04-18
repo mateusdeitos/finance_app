@@ -25,6 +25,10 @@ type UserConnection struct {
 	ConnectionStatus           UserConnectionStatusEnum `json:"connection_status"`
 	CreatedAt                  *time.Time               `json:"created_at"`
 	UpdatedAt                  *time.Time               `json:"updated_at"`
+	FromUserAvatarURL          *string                  `json:"from_user_avatar_url,omitempty"`
+	FromUserName               *string                  `json:"from_user_name,omitempty"`
+	ToUserAvatarURL            *string                  `json:"to_user_avatar_url,omitempty"`
+	ToUserName                 *string                  `json:"to_user_name,omitempty"`
 }
 
 // inverte os ids da connection para que o user atual sempre seja o from

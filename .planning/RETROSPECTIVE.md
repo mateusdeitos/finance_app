@@ -47,85 +47,81 @@
 
 ### What Was Built
 
-1. Charge domain entity with status machine (pending → paid/rejected/cancelled) and DB schema
-2. Charge CRUD API with IDOR protection and connection-scoped listing
-3. Atomic charge acceptance with race-condition guard (conditional UPDATE WHERE status='pending')
-4. Charges frontend with two-tab layout, period navigation, ChargeCards, and confirmation modals
+1. Charge entity with status machine (pending → paid/rejected/cancelled) and full DB schema
+2. Charge CRUD API with IDOR protection and pending badge count endpoint
+3. Atomic charge acceptance with dual-transfer creation and race-condition guard
+4. Complete charges frontend — listing with tabs, create/accept/reject/cancel forms, sidebar badge, E2E tests
 
 ### What Worked
 
-- Role re-inference from live balance during accept — handles balance flips between creation and acceptance
-- Direct `transactionRepo.Create` in accept flow bypasses nested DB transaction issues
-- Shared `PeriodNavigator` component reused from transactions page
-- `createAuthenticatedRoute` utility streamlined page setup
+- Domain-first approach continued from v1.0 — solid foundation before service/handler layers
+- Atomic accept flow with conditional UPDATE race guard — clean single-fence pattern
+- Non-optimistic mutation pattern for financial state — avoids UI showing incorrect balances
+- Shared PeriodNavigator with callback for reuse across transactions and charges pages
 
 ### What Was Inefficient
 
-- E2e test flakiness from shared partner accounts — required unique-per-test partners to prevent 403s
-- Mantine Drawer root detection unreliable — had to wait for inner elements instead
+- MILESTONES.md v1.1 entry shipped with empty one-liner placeholders (never filled)
+- Handler tests used mock-based approach due to lack of existing handler test patterns — works but less confidence than integration tests
 
 ### Patterns Established
 
-- Conditional UPDATE as atomic fence (no SELECT FOR UPDATE needed)
-- `payer_user_id`/`charger_user_id` explicit directional fields over connection orientation
-- Non-optimistic mutation pattern for financial state transitions
+- `transactionRepo.Create` directly (bypass service) when inside a service-level DB transaction — avoids nested transactions
+- Conditional UPDATE WHERE status='pending' as single atomic fence for race conditions
+- `createFileRoute` directly with `_authenticated` prefix instead of wrapper utility — preserves TanStack Router type inference
 
 ### Key Lessons
 
-- Playwright tests sharing partner users across test runs causes race conditions — isolate test data per run
-- Mantine Drawer mounting order means inner content loads after root — wait on inner elements
+- Financial state mutations should never use optimistic updates — stale balance display is worse than slower UI
+- Cross-query invalidation (charges → transactions + balance) needed when one mutation creates records in another domain
 
 ---
 
-## Milestone: v1.2 — Bulk Actions & Observability
+## Milestone: v1.2 — Transactions Bulk Actions
 
 **Shipped:** 2026-04-17
-**Phases:** 2 | **Plans:** 5
+**Phases:** 2 | **Plans:** 6
 
 ### What Was Built
 
-1. Generic `BulkProgressDrawer` component for per-transaction update progress
-2. `SelectCategoryDrawer` and `SelectDateDrawer` using renderDrawer promise pattern
-3. `SelectionActionBar` dropdown with bulk category/date/delete actions integrated end-to-end
-4. `pkg/applog` — context-scoped zerolog wrapper with pointer-mutation field accumulation
-5. HTTP logging middleware with X-Request-ID, dynamic log levels, and Stripe's single-log pattern
+1. Generic BulkProgressDrawer with sequential processing and stop-on-error behavior
+2. PropagationSettingsDrawer extended with update-oriented wording and blue confirm button
+3. SelectCategoryDrawer (read-only hierarchy) and SelectDateDrawer (bottom date picker) using renderDrawer promise pattern
+4. Bulk category/date change wired into SelectionActionBar with menu, SEL-02 silent skip, per-item propagation
+5. Backend avatar infrastructure — OAuth extraction, account color column, partner data via correlated subqueries
+6. UserAvatar, AccountAvatar, ColorSwatchPicker components wired across entire app
 
 ### What Worked
 
-- Reusing existing selection infrastructure (selectedIds, toggleSelection, checkboxes) — zero new selection code needed
-- renderDrawer promise pattern — clean async flow for input-gathering drawers
-- Pointer mutation on logger (`*zerolog.Logger`) — fields from any layer accumulate on same instance
-- `getEligibleIds()` silent filter — security boundary without user-facing errors
+- Reusing existing infrastructure (SelectionActionBar, BulkDeleteProgressDrawer pattern, PropagationSettingsDrawer) — Phase 9 was mostly composition not creation
+- renderDrawer promise pattern for sequential drawer chains — clean async flow without callback nesting
+- Parallel plan execution (wave-based) — backend and frontend plans ran concurrently where possible
+- Correlated subqueries for partner data avoided additional JOINs while keeping single-query performance
 
 ### What Was Inefficient
 
-- Echo v4 HTTPErrorHandler runs after middleware chain, so `c.Response().Status` reads 200 when error returned — required deriving status from `echo.HTTPError.Code` directly (caught by tests)
-- Bulk update initially sent partial payload, causing data loss on non-updated fields — required sending full transaction payload
+- Multiple fix commits for avatar system (color contrast, size, tooltip offset, referrerPolicy) — visual details hard to get right without live preview during execution
+- Phase 10 had 3 verification items marked `human_needed` — could have been caught with automated visual regression tests
+- v1.2 REQUIREMENTS.md was never created (requirements lived only in ROADMAP.md phase definitions)
 
 ### Patterns Established
 
-- `applog.FromContext()` returns nop logger when absent — safe for unit tests without logger setup
-- `severity` field name for Cloud Run (Cloud Logging parses it natively)
-- Custom middleware over hlog package — hlog designed for net/http + alice, doesn't fit Echo
+- `*string` for optional URL fields (AvatarURL) — NULL not empty string, distinguishes "no value" from "empty"
+- Inline CategoryRow component for read-only hierarchy rendering (avoids passing edit props to CategoryCard)
+- ColorSwatchPicker with preset grid + ring selection state for color choices
 
 ### Key Lessons
 
-- Echo error handlers run *after* the middleware chain completes — middleware can't rely on `c.Response().Status` for error responses
-- Bulk updates must send full entity payload, not just changed fields — partial updates cause silent data loss
-- Authorization headers must never be logged — log method, path, IP, status, latency, request_id, user_id only
-
-### Cost Observations
-
-- 2 phases, 5 plans executed in single session
-- Phase 9 (frontend) reused heavy existing infrastructure — fast execution
-- Phase 10 (backend) was greenfield but small scope — 2 plans sufficient
+- Avatar/visual components need iterative visual verification — plan for 2-3 fix rounds when no live preview available
+- Silent skip (SEL-02) is better UX than error dialogs for operations on items user can't modify
+- `gorm:"-"` tags needed for virtual fields populated by raw SQL but not stored in the table
 
 ---
 
 ## Cross-Milestone Trends
 
-| Milestone | Phases | Plans | Days | Files Changed | LOC |
-|-----------|--------|-------|------|---------------|-----|
-| v1.0 Recurrence Redesign | 4 | 8 | 1 | 27 | +3460/-489 |
-| v1.1 Charges | 4 | 9 | 6 | — | — |
-| v1.2 Bulk Actions & Observability | 2 | 5 | 1 | 75 | +7324/-394 |
+| Milestone | Phases | Plans | Days | Lint failures | Test failures |
+|-----------|--------|-------|------|---------------|---------------|
+| v1.0 Recurrence Redesign | 4 | 8 | 1 | 2 (intrange) | 10+ (missing files on local) |
+| v1.1 Charges | 4 | 9 | 6 | 0 | 0 |
+| v1.2 Bulk Actions + Avatars | 2 | 6 | 1 | 1 (tagalign) | 1 (BeforeCreate default color) |

@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 Recurrence Redesign** — Phases 1–4 (shipped 2026-04-10)
 - ✅ **v1.1 Charges** — Phases 5–8 (shipped 2026-04-16)
-- ✅ **v1.2 Bulk Actions & Observability** — Phases 9–10 (shipped 2026-04-17)
+- ✅ **v1.2 Transactions Bulk Actions** — Phases 9–10 (shipped 2026-04-17)
 
 ## Phases
 
@@ -33,10 +33,10 @@ Full details: `.planning/milestones/v1.1-ROADMAP.md`
 </details>
 
 <details>
-<summary>✅ v1.2 Bulk Actions & Observability (Phases 9–10) — SHIPPED 2026-04-17</summary>
+<summary>✅ v1.2 Transactions Bulk Actions (Phases 9–10) — SHIPPED 2026-04-17</summary>
 
 - [x] Phase 9: Bulk Actions (3/3 plans) — completed 2026-04-17
-- [x] Phase 10: Request Logging & Observability (2/2 plans) — completed 2026-04-17
+- [x] Phase 10: User Avatar System (3/3 plans) — completed 2026-04-17
 
 Full details: `.planning/milestones/v1.2-ROADMAP.md`
 
@@ -55,8 +55,8 @@ Full details: `.planning/milestones/v1.2-ROADMAP.md`
 | 7. Accept + Atomic Transfer                          | v1.1      | 2/2            | Complete    | 2026-04-16 |
 | 8. Frontend                                          | v1.1      | 3/3            | Complete    | 2026-04-16 |
 | 9. Bulk Actions                                      | v1.2      | 3/3            | Complete    | 2026-04-17 |
-| 10. Request Logging & Observability                  | v1.2      | 2/2            | Complete    | 2026-04-17 |
+| 10. User Avatar System                               | v1.2      | 3/3 | Complete   | 2026-04-17 |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 completed: 2026-04-16 · v1.2 completed: 2026-04-17_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17_

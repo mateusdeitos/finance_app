@@ -2,57 +2,45 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Transactions Bulk Actions
-status: verifying
-stopped_at: Phase 10 context gathered
-last_updated: "2026-04-17T23:31:11.285Z"
-last_activity: 2026-04-17
+status: archived
+last_updated: "2026-04-17T20:00:00.000Z"
+last_activity: 2026-04-17 -- Milestone v1.2 archived
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
 ## Current Position
 
-Phase: 10 (Request Logging & Observability) — COMPLETE
-Plan: 2 of 2
-Status: Phase 10 verified and complete
-Last activity: 2026-04-17
+Milestone v1.2 archived. Planning next milestone.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-04-17)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Phase 10 — Request Logging & Observability
+**Current focus:** Planning next milestone
 
 ## Performance Metrics
 
 - v1.0: 4 phases, 8 plans, 1 day (2026-04-09 → 2026-04-10)
 - v1.1: 4 phases, 9 plans (2026-04-10 → 2026-04-16)
-- v1.2: 1 phase (frontend-only, building on existing selection/drawer infrastructure)
+- v1.2: 2 phases, 6 plans, 1 day (2026-04-17)
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.0 Recurrence Redesign shipped 2026-04-10. 4 phases, 8 plans completed. Archived: `.planning/milestones/v1.0-ROADMAP.md`
-- v1.1 Charges milestone completed 2026-04-16. 4 phases, 9 plans completed.
-- v1.2 is frontend-only — backend already supports single-transaction update with propagation settings
-- Single phase (Phase 9) chosen because all 12 requirements form one tightly coupled user workflow; no verifiable intermediate deliverable exists
-- Existing infrastructure to reuse: selectedIds/toggleSelection state, SelectionActionBar, BulkDeleteProgressDrawer, PropagationSettingsDrawer, TransactionRow checkboxes
-- SEL-02 silent skip: exclude transactions where user ≠ original_user_id; no error shown to user
-- PROP-02: single propagation choice applies to all installment transactions in the batch (not per-transaction)
-- Charge entity uses `payer_user_id` / `charger_user_id` (explicit directional fields, not connection orientation)
-- Accept flow uses `transactionRepo.Create` directly (NOT transactionService.Create) to avoid nested DB transactions
-- Phase 8 (Frontend) uses non-optimistic mutation pattern — no optimistic updates for financial state transitions
-- Import cycle fix: moved `ImportDecimalSeparatorValue`/`ImportTypeDefinitionRule` to `domain/transaction_import.go`
+- v1.0 shipped 2026-04-10. Archived: `.planning/milestones/v1.0-ROADMAP.md`
+- v1.1 shipped 2026-04-16. Archived: `.planning/milestones/v1.1-ROADMAP.md`
+- v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
 
 ### Todos
 
-- Run integration tests with Docker when available (4 UAT items blocked)
+- Run integration tests with Docker when available
 
 ### Blockers
 
@@ -64,14 +52,8 @@ Items acknowledged and deferred at milestone close on 2026-04-17:
 
 | Category | Item | Status |
 |----------|------|--------|
-| uat | Phase 07: 07-UAT.md | partial |
-| uat | Phase 09: 09-HUMAN-UAT.md | partial (5 pending scenarios) |
-| verification | Phase 08: 08-VERIFICATION.md | human_needed |
-| verification | Phase 09: 09-VERIFICATION.md | human_needed |
-
-## Session Continuity
-
-Last session: 2026-04-17T12:00:00.000Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-request-logging-observability/10-CONTEXT.md
-Next step: `/gsd-plan-phase 10`
+| uat_gap | Phase 07: 07-UAT.md | partial |
+| uat_gap | Phase 09: 09-HUMAN-UAT.md (5 pending scenarios) | partial |
+| verification_gap | Phase 08: 08-VERIFICATION.md | human_needed |
+| verification_gap | Phase 09: 09-VERIFICATION.md | human_needed |
+| verification_gap | Phase 10: 10-VERIFICATION.md | human_needed |

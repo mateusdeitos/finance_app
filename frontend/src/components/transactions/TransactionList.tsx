@@ -3,7 +3,7 @@ import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useCategories } from "@/hooks/useCategories";
+import { useFlattenCategories } from "@/hooks/useCategories";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { useTransactions } from "@/hooks/useTransactions";
 import { Transactions } from "@/types/transactions";
@@ -59,7 +59,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
   });
 
   const { query: accountsQuery } = useAccounts();
-  const { query: categoriesQuery } = useCategories();
+  const { query: categoriesQuery } = useFlattenCategories();
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
