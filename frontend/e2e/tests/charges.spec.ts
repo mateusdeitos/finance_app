@@ -275,6 +275,7 @@ test.describe("Charges", () => {
       period_year: PERIOD_YEAR,
       description,
       amount: arbitraryAmount,
+      role: "charger",
       date: new Date().toISOString(),
     });
     createdChargeIds.push(charge.id);
@@ -319,7 +320,47 @@ test.describe("Charges", () => {
     expect(settled.amount).toBe(arbitraryAmount);
   });
 
-  test("reject charge creation with zero balance and no amount", async () => {
+  test("payer can initiate charge with arbitrary amount on zero balance", async () => {
+    // Fresh partner so the shared connection account has zero balance.
+    // Caller explicitly creates as payer ("I owe you X"), bypassing balance-sign inference.
+    const freshPartnerEmail = `e2e-payer-init-${Date.now()}@financeapp.local`;
+    const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
+
+    const freshPartnerMeRes = await apiFetchAs(freshPartnerToken, "/api/auth/me");
+    const freshPartner = await freshPartnerMeRes.json();
+
+    const freshConn = await apiCreateUserConnection(freshPartner.id, 50);
+    await apiFetchAs(freshPartnerToken, `/api/user-connections/${freshConn.id}/accepted`, {
+      method: "PATCH",
+    });
+
+    const payerPrivAcc = await apiCreateAccount({
+      name: `Payer Init ${Date.now()}`,
+      initial_balance: 0,
+    });
+
+    const arbitraryAmount = 6789;
+    const charge = await apiCreateCharge({
+      connection_id: freshConn.id,
+      my_account_id: payerPrivAcc.id,
+      period_month: PERIOD_MONTH,
+      period_year: PERIOD_YEAR,
+      description: `Payer Init ${Date.now()}`,
+      amount: arbitraryAmount,
+      role: "payer",
+      date: new Date().toISOString(),
+    });
+    createdChargeIds.push(charge.id);
+
+    // Caller was saved as the payer, not the charger.
+    const meRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@financeapp.local"), "/api/auth/me");
+    const me = await meRes.json();
+    expect(charge.payer_user_id).toBe(me.id);
+    expect(charge.charger_user_id).toBe(freshPartner.id);
+    expect(charge.amount).toBe(arbitraryAmount);
+  });
+
+  test("reject charge creation with zero balance and no role/amount", async () => {
     // Regression: without an arbitrary amount, zero-balance creation must still fail.
     const freshPartnerEmail = `e2e-zero-balance-${Date.now()}@financeapp.local`;
     const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);

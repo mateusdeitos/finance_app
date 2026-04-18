@@ -21,6 +21,17 @@ func (s ChargeStatus) IsValid() bool {
 
 var ErrInvalidStatusTransition = errors.New("invalid charge status transition")
 
+type ChargeInitiatorRole string
+
+const (
+	ChargeInitiatorRoleCharger ChargeInitiatorRole = "charger"
+	ChargeInitiatorRolePayer   ChargeInitiatorRole = "payer"
+)
+
+func (r ChargeInitiatorRole) IsValid() bool {
+	return r == ChargeInitiatorRoleCharger || r == ChargeInitiatorRolePayer
+}
+
 type Charge struct {
 	ID               int          `json:"id"`
 	ChargerUserID    int          `json:"charger_user_id"`
@@ -60,13 +71,14 @@ type ChargeSearchOptions struct {
 }
 
 type CreateChargeRequest struct {
-	ConnectionID int       `json:"connection_id"`
-	MyAccountID  int       `json:"my_account_id"`
-	PeriodMonth  int       `json:"period_month"`
-	PeriodYear   int       `json:"period_year"`
-	Description  *string   `json:"description"`
-	Amount       *int64    `json:"amount,omitempty"`
-	Date         time.Time `json:"date"`
+	ConnectionID int                  `json:"connection_id"`
+	MyAccountID  int                  `json:"my_account_id"`
+	PeriodMonth  int                  `json:"period_month"`
+	PeriodYear   int                  `json:"period_year"`
+	Description  *string              `json:"description"`
+	Amount       *int64               `json:"amount,omitempty"`
+	Role         *ChargeInitiatorRole `json:"role,omitempty"`
+	Date         time.Time            `json:"date"`
 }
 
 type AcceptChargeRequest struct {

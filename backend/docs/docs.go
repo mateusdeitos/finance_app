@@ -2274,6 +2274,17 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ChargeInitiatorRole": {
+            "type": "string",
+            "enum": [
+                "charger",
+                "payer"
+            ],
+            "x-enum-varnames": [
+                "ChargeInitiatorRoleCharger",
+                "ChargeInitiatorRolePayer"
+            ]
+        },
         "domain.CreateChargeRequest": {
             "type": "object",
             "properties": {
@@ -2297,6 +2308,9 @@ const docTemplate = `{
                 },
                 "period_year": {
                     "type": "integer"
+                },
+                "role": {
+                    "$ref": "#/definitions/domain.ChargeInitiatorRole"
                 }
             }
         },

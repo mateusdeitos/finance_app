@@ -147,6 +147,7 @@ export interface ChargePayload {
   period_year: number
   description?: string
   amount?: number
+  role?: 'charger' | 'payer'
   date: string
 }
 

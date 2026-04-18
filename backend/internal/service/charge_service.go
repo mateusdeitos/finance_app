@@ -43,6 +43,9 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	if req.Amount != nil && *req.Amount <= 0 {
 		return nil, pkgErrors.BadRequest("amount must be greater than zero")
 	}
+	if req.Role != nil && !req.Role.IsValid() {
+		return nil, pkgErrors.BadRequest("role must be 'charger' or 'payer'")
+	}
 
 	// Fetch connection
 	conns, err := s.userConnectionRepo.Search(ctx, domain.UserConnectionSearchOptions{
@@ -86,6 +89,21 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		return nil, pkgErrors.Internal("failed to compute balance", err)
 	}
 
+	// Role resolution — explicit role wins over balance inference.
+	// When unset, fall back to balance sign; zero balance requires either a
+	// role or the legacy "cannot create" error so intent stays unambiguous.
+	var callerIsCharger bool
+	switch {
+	case req.Role != nil:
+		callerIsCharger = *req.Role == domain.ChargeInitiatorRoleCharger
+	case balResult.Balance > 0:
+		callerIsCharger = true
+	case balResult.Balance < 0:
+		callerIsCharger = false
+	default:
+		return nil, pkgErrors.BadRequest("cannot infer role with zero balance; provide 'role'")
+	}
+
 	charge := &domain.Charge{
 		ConnectionID: req.ConnectionID,
 		PeriodMonth:  req.PeriodMonth,
@@ -97,26 +115,14 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	}
 
 	myAccID := req.MyAccountID
-	switch {
-	case balResult.Balance > 0:
-		// caller is owed → caller is charger
+	if callerIsCharger {
 		charge.ChargerUserID = callerUserID
 		charge.PayerUserID = otherPartyID
 		charge.ChargerAccountID = &myAccID
-	case balResult.Balance < 0:
-		// caller owes → caller is payer
+	} else {
 		charge.PayerUserID = callerUserID
 		charge.ChargerUserID = otherPartyID
 		charge.PayerAccountID = &myAccID
-	default:
-		// Zero balance: only allowed with an explicit arbitrary amount.
-		// Caller is treated as charger since they initiated the charge.
-		if req.Amount == nil {
-			return nil, pkgErrors.BadRequest("cannot create charge when balance is zero")
-		}
-		charge.ChargerUserID = callerUserID
-		charge.PayerUserID = otherPartyID
-		charge.ChargerAccountID = &myAccID
 	}
 
 	return s.chargeRepo.Create(ctx, charge)

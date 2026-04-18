@@ -115,6 +115,14 @@ definitions:
       description:
         type: string
     type: object
+  domain.ChargeInitiatorRole:
+    enum:
+      - charger
+      - payer
+    type: string
+    x-enum-varnames:
+      - ChargeInitiatorRoleCharger
+      - ChargeInitiatorRolePayer
   domain.CreateChargeRequest:
     properties:
       amount:
@@ -131,6 +139,8 @@ definitions:
         type: integer
       period_year:
         type: integer
+      role:
+        $ref: '#/definitions/domain.ChargeInitiatorRole'
     type: object
   domain.DeleteCategoryRequest:
     properties:

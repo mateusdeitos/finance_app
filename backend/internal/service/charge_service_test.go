@@ -387,12 +387,14 @@ func (s *ChargeServiceTestSuite) TestCreate_ArbitraryAmount_ZeroBalance() {
 	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
 
 	amount := int64(7500)
+	chargerRole := domain.ChargeInitiatorRoleCharger
 	created, err := s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
 		ConnectionID: conn.ID,
 		MyAccountID:  chargerPrivAcc.ID,
 		PeriodMonth:  periodMonth,
 		PeriodYear:   periodYear,
 		Amount:       &amount,
+		Role:         &chargerRole,
 		Date:         chargeDate,
 	})
 	s.Require().NoError(err)
@@ -403,6 +405,45 @@ func (s *ChargeServiceTestSuite) TestCreate_ArbitraryAmount_ZeroBalance() {
 	s.Require().NotNil(created.ChargerAccountID)
 	assert.Equal(s.T(), chargerPrivAcc.ID, *created.ChargerAccountID)
 	assert.Nil(s.T(), created.PayerAccountID)
+}
+
+// TestCreate_PayerRole_ZeroBalance verifies that the caller can create a
+// charge where they are the payer ("I owe you X"), not the charger, when
+// the shared-account balance is zero.
+func (s *ChargeServiceTestSuite) TestCreate_PayerRole_ZeroBalance() {
+	ctx := context.Background()
+
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, payer.ID, charger.ID, 50)
+	s.Require().NoError(err)
+
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 2, 2027
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+
+	amount := int64(2200)
+	payerRole := domain.ChargeInitiatorRolePayer
+	created, err := s.Services.Charge.Create(ctx, payer.ID, &domain.CreateChargeRequest{
+		ConnectionID: conn.ID,
+		MyAccountID:  payerPrivAcc.ID,
+		PeriodMonth:  periodMonth,
+		PeriodYear:   periodYear,
+		Amount:       &amount,
+		Role:         &payerRole,
+		Date:         chargeDate,
+	})
+	s.Require().NoError(err)
+	assert.Equal(s.T(), payer.ID, created.PayerUserID)
+	assert.Equal(s.T(), charger.ID, created.ChargerUserID)
+	s.Require().NotNil(created.PayerAccountID)
+	assert.Equal(s.T(), payerPrivAcc.ID, *created.PayerAccountID)
+	assert.Nil(s.T(), created.ChargerAccountID)
 }
 
 // TestCreate_ZeroBalance_NoAmount preserves the existing behavior: if the balance
@@ -485,14 +526,16 @@ func (s *ChargeServiceTestSuite) TestAccept_UsesStoredAmount() {
 	periodMonth, periodYear := 12, 2026
 	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
 
-	// Create via service with arbitrary amount + zero balance → caller becomes charger.
+	// Create via service with arbitrary amount + zero balance + explicit charger role.
 	amount := int64(4200)
+	chargerRole := domain.ChargeInitiatorRoleCharger
 	created, err := s.Services.Charge.Create(ctx, charger.ID, &domain.CreateChargeRequest{
 		ConnectionID: conn.ID,
 		MyAccountID:  chargerPrivAcc.ID,
 		PeriodMonth:  periodMonth,
 		PeriodYear:   periodYear,
 		Amount:       &amount,
+		Role:         &chargerRole,
 		Date:         chargeDate,
 	})
 	s.Require().NoError(err)
