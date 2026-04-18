@@ -418,11 +418,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 	})
 	suite.Require().NoError(err)
 
+	// personal1 filter: expense -6000 + settlement credit +3000 (source tx on personal1) = -3000
 	resultAccount1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal1.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-6000), resultAccount1.Balance)
+	suite.Assert().Equal(int64(-3000), resultAccount1.Balance)
 
 	// after update, settlement must still land on conn.FromAccountID, not on personal1
 	resultConn, err = suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
@@ -484,12 +485,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), result1.Balance)
 
-	// user2 personal account: -1000
+	// user2 personal account: expense -1000 + settlement credit +500 (source tx on personal2) = -500
 	result2Personal, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal2.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-1000), result2Personal.Balance)
+	suite.Assert().Equal(int64(-500), result2Personal.Balance)
 
 	// user2 connection account (ToAccountID): +500 (settlement credit)
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
@@ -621,12 +622,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-2000), result1.Balance)
 
-	// user2 personal: -4000
+	// user2 personal: expense -4000 + settlement credit +2000 (source tx on personal2) = -2000
 	result2Personal, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal2.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-4000), result2Personal.Balance)
+	suite.Assert().Equal(int64(-2000), result2Personal.Balance)
 
 	// user2 connection account: +2000 (settlement credit after update)
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
