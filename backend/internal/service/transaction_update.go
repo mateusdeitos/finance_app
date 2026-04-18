@@ -345,9 +345,21 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 		}
 	}
 
+	// Determine the starting installment number to compute expected transaction count.
+	// For offset installments (e.g., current_installment=4, total=12), the first
+	// transaction has InstallmentNumber=4, and we expect 9 transactions (not 12).
+	minInstallment := 1
+	if data.transactions[0].InstallmentNumber != nil && *data.transactions[0].InstallmentNumber > 0 {
+		minInstallment = *data.transactions[0].InstallmentNumber
+	}
+	expectedCount := r.Installments - minInstallment + 1
+	if expectedCount < 0 {
+		expectedCount = 0
+	}
+
 	for i := range data.transactions {
 
-		if r.Installments >= i+1 {
+		if expectedCount >= i+1 {
 			continue
 		}
 
@@ -362,13 +374,15 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 
 	}
 
-	if r.Installments > len(data.transactions) {
+	if expectedCount > len(data.transactions) {
 		base := data.previousTransaction
-		for i := len(data.transactions); i < r.Installments; i++ {
+		lastInstallment := minInstallment + len(data.transactions) - 1
+		for i := len(data.transactions); i < expectedCount; i++ {
+			installmentNum := lastInstallment + (i - len(data.transactions)) + 1
 			baseDate := lo.CoalesceOrEmpty(data.req.Date, &base.Date)
 			data.transactions = append(data.transactions, &domain.Transaction{
 				ID:                      0,
-				InstallmentNumber:       lo.ToPtr(i + 1),
+				InstallmentNumber:       lo.ToPtr(installmentNum),
 				Date:                    s.incrementInstallmentDate(*baseDate, r.Type, i),
 				UserID:                  base.UserID,
 				OriginalUserID:          base.OriginalUserID,
@@ -808,9 +822,9 @@ func (s *transactionService) handlerRecurrenceUpdate(
 			return r, nil
 		}
 
-		// CurrentInstallment is intentionally ignored on updates — it only controls
-		// which installment number to start from during creation. On updates, all
-		// existing installments are renumbered sequentially by handlerRecurrenceUpdate.
+		// CurrentInstallment is only used when converting a standalone transaction
+		// to a recurrence (sets the starting offset). When the transaction already
+		// had a recurrence, existing installment numbers are preserved.
 		recurrence := domain.RecurrenceFromSettings(*data.req.RecurrenceSettings, userID)
 		if t.TransactionRecurrenceID != nil {
 			recurrence.ID = *t.TransactionRecurrenceID
@@ -843,7 +857,15 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	for i := range data.transactions {
 		data.transactions[i].TransactionRecurrence = &r
 		data.transactions[i].TransactionRecurrenceID = &r.ID
-		data.transactions[i].InstallmentNumber = lo.ToPtr(i + 1)
+
+		if data.scenario.HadRecurrence {
+			// Preserve existing installment numbers — they already have the correct offset
+			// from creation (e.g., installments 4-12 for current_installment=4, total=12).
+		} else {
+			// Standalone → recurrence: number from CurrentInstallment.
+			startFrom := data.req.RecurrenceSettings.CurrentInstallment
+			data.transactions[i].InstallmentNumber = lo.ToPtr(startFrom + i)
+		}
 
 		for j := range data.transactions[i].LinkedTransactions {
 			rlt, err := upsertRecurrence(data.transactions[i].LinkedTransactions[j].UserID, data.transactions[i].LinkedTransactions[j])
@@ -853,7 +875,7 @@ func (s *transactionService) handlerRecurrenceUpdate(
 
 			data.transactions[i].LinkedTransactions[j].TransactionRecurrence = &rlt
 			data.transactions[i].LinkedTransactions[j].TransactionRecurrenceID = &rlt.ID
-			data.transactions[i].LinkedTransactions[j].InstallmentNumber = lo.ToPtr(i + 1)
+			data.transactions[i].LinkedTransactions[j].InstallmentNumber = data.transactions[i].InstallmentNumber
 		}
 	}
 
