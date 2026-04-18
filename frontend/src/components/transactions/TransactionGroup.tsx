@@ -10,6 +10,18 @@ import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
 import { FocusField } from "./form/TransactionForm";
 import classes from "./TransactionGroup.module.css";
 
+// For transfers between accounts of the same user, the debit side is the
+// origin; editing the credit side is rejected by the backend as a linked
+// transaction edit. Always route edits through the origin.
+function resolveTransferEditTarget(
+  tx: Transactions.Transaction
+): Transactions.Transaction {
+  if (tx.type !== "transfer" || tx.operation_type !== "credit") return tx;
+  const linked = tx.linked_transactions?.[0];
+  if (!linked || linked.user_id !== tx.user_id) return tx;
+  return linked;
+}
+
 interface TransactionGroupProps {
   group: Transactions.TransactionGroup;
   groupBy: Transactions.GroupBy;
@@ -43,8 +55,9 @@ export function TransactionGroup({
     tx: Transactions.Transaction,
     focusField?: FocusField
   ) {
+    const target = resolveTransferEditTarget(tx);
     void renderDrawer(() => (
-      <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
+      <UpdateTransactionDrawer transaction={target} focusField={focusField} />
     ));
   }
 
