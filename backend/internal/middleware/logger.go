@@ -84,17 +84,12 @@ func LoggingMiddleware(globalLogger zerolog.Logger) echo.MiddlewareFunc {
 // logAtLevel emits the final request log at the appropriate level.
 // Per D-14: 2xx->info, 4xx->warn, 5xx->error.
 func logAtLevel(l *zerolog.Logger, status int, latency time.Duration) {
-	var event *zerolog.Event
 	switch {
 	case status >= 500:
-		event = l.Error()
+		l.Error().Int("status", status).Dur("latency_ms", latency).Msg("request")
 	case status >= 400:
-		event = l.Warn()
+		l.Warn().Int("status", status).Dur("latency_ms", latency).Msg("request")
 	default:
-		event = l.Info()
+		l.Info().Int("status", status).Dur("latency_ms", latency).Msg("request")
 	}
-	event.
-		Int("status", status).
-		Dur("latency_ms", latency).
-		Msg("request")
 }
