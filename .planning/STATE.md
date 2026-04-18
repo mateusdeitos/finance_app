@@ -1,28 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Transactions Bulk Actions
-status: archived
-last_updated: "2026-04-17T20:00:00.000Z"
-last_activity: 2026-04-17 -- Milestone v1.2 archived
+milestone: v1.3
+milestone_name: Editing Linked Transactions
+status: active
+last_updated: "2026-04-18T00:00:00.000Z"
+last_activity: 2026-04-18 -- Milestone v1.3 started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
 
-Milestone v1.2 archived. Planning next milestone.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-18 — Milestone v1.3 started
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-17)
+See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.3
 
 ## Performance Metrics
 
