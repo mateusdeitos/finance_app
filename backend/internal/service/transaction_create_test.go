@@ -1108,15 +1108,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Equal(userConnection.FromAccountID, personal.SettlementsFromSource[0].AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
 
 	// Case 2b (balance consistency): GetBalance filtered by the personal
-	// account must return exactly the source transaction's contribution
-	// (-amount) — the settlement is NOT part of this leg because its
-	// account_id isn't in the filter. The frontend's group-total must match
-	// this value after excluding out-of-scope nested settlements.
+	// account returns the source transaction plus the settlement whose source
+	// tx lives on that account — this matches the frontend's group-total
+	// behavior, which includes nested settlements when the source tx is in
+	// the filter.
 	balancePersonal, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{account.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(-amount, balancePersonal.Balance, "personal-only balance must equal just the source tx amount; nested settlement stays informational")
+	suite.Assert().Equal(-amount+amount/2, balancePersonal.Balance, "personal-only balance equals source tx amount plus in-scope settlement credit")
 
 	// Case 3: user1 filters by BOTH personal AND shared accounts — the source
 	// transaction is in the filter AND the settlement's account is in the
