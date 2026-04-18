@@ -87,7 +87,10 @@ test.describe('Transfer Transactions', () => {
     // target to the debit (origin) side, so the form is populated with the
     // source account as "Conta" and destination account as "Conta de destino"
     // — not the other way around.
-    await page.locator(`[data-transaction-id="${creditSideId}"]`).click()
+    await page
+      .locator(`[data-transaction-id="${creditSideId}"]`)
+      .getByText(description)
+      .click()
     await transactionsPage.waitForUpdateDrawer()
 
     await expect(
