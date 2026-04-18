@@ -15,8 +15,8 @@ export function useCategories<T = Transactions.Category[]>(select?: (data: Trans
   return { query, invalidate };
 }
 
-export function useFlattenCategories() {
-  return useCategories((categories) => {
+export function useFlattenCategories<T = Transactions.Category[]>(select?: (data: Transactions.Category[]) => T) {
+  return useCategories<T>((categories) => {
     const flattenCategories: Transactions.Category[] = [];
 
     const getChildren = (c: Transactions.Category): Transactions.Category[] => {
@@ -32,7 +32,11 @@ export function useFlattenCategories() {
       flattenCategories.push(...getChildren(c));
     });
 
-    return flattenCategories;
+    if (select) {
+      return select(flattenCategories);
+    }
+
+    return flattenCategories as T;
   });
 }
 
