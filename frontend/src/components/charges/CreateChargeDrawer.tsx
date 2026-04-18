@@ -61,7 +61,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
     const conn = acc.user_connection!;
     if (!connectionMap.has(conn.id)) {
       connectionMap.set(conn.id, {
-        label: (conn.from_user_id === currentUserId ? conn.from_user_name : conn.to_user_name) ?? "",
+        label: (conn.from_user_id === currentUserId ? conn.to_user_name : conn.from_user_name) ?? "",
         value: String(conn.id),
       });
     }
