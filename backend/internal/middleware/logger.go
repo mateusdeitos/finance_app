@@ -55,11 +55,12 @@ func LoggingMiddleware(globalLogger zerolog.Logger) echo.MiddlewareFunc {
 				// Derive the HTTP status from the error type for accurate level selection.
 				var tagged *apperrors.TaggedHTTPError
 				var he *echo.HTTPError
-				if errors.As(err, &tagged) {
+				switch {
+				case errors.As(err, &tagged):
 					status = tagged.Code
-				} else if errors.As(err, &he) {
+				case errors.As(err, &he):
 					status = he.Code
-				} else {
+				default:
 					status = http.StatusInternalServerError
 				}
 			}

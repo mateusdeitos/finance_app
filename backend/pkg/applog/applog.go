@@ -39,13 +39,13 @@ func (lg *Logger) With(key string, value interface{}) *Logger {
 }
 
 // Debug returns a zerolog.Event at debug level carrying all accumulated fields.
-func (lg *Logger) Debug() *zerolog.Event { return lg.l.Debug() }
+func (lg *Logger) Debug() *zerolog.Event { return lg.l.Debug() } //nolint:zerologlint // wrapper — caller dispatches
 
 // Info returns a zerolog.Event at info level carrying all accumulated fields.
-func (lg *Logger) Info() *zerolog.Event { return lg.l.Info() }
+func (lg *Logger) Info() *zerolog.Event { return lg.l.Info() } //nolint:zerologlint // wrapper — caller dispatches
 
 // Warn returns a zerolog.Event at warn level carrying all accumulated fields.
-func (lg *Logger) Warn() *zerolog.Event { return lg.l.Warn() }
+func (lg *Logger) Warn() *zerolog.Event { return lg.l.Warn() } //nolint:zerologlint // wrapper — caller dispatches
 
 // Error returns a zerolog.Event at error level carrying all accumulated fields.
 func (lg *Logger) Error() *zerolog.Event { return lg.l.Error() }
