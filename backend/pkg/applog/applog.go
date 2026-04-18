@@ -48,7 +48,7 @@ func (lg *Logger) Info() *zerolog.Event { return lg.l.Info() } //nolint:zerologl
 func (lg *Logger) Warn() *zerolog.Event { return lg.l.Warn() } //nolint:zerologlint // wrapper — caller dispatches
 
 // Error returns a zerolog.Event at error level carrying all accumulated fields.
-func (lg *Logger) Error() *zerolog.Event { return lg.l.Error() }
+func (lg *Logger) Error() *zerolog.Event { return lg.l.Error() } //nolint:zerologlint // wrapper — caller dispatches
 
 // Zerolog returns the underlying *zerolog.Logger for the middleware to emit
 // the final log line with dynamic level selection.
