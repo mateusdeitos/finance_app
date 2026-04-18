@@ -57,6 +57,7 @@ const (
 	ErrorTagParentTransactionBelongsToAnotherUser               ErrorTag = "TRANSACTION.PARENT_TRANSACTION_BELONGS_TO_ANOTHER_USER"
 	ErrorTagAccountCannotBeChangedForSharedTransactions         ErrorTag = "TRANSACTION.ACCOUNT_CANNOT_BE_CHANGED_FOR_SHARED_TRANSACTIONS"
 	ErrorTagChildTransactionCannotBeUpdated                     ErrorTag = "TRANSACTION.CHILD_TRANSACTION_CANNOT_BE_UPDATED"
+	ErrorTagLinkedTransactionDisallowedFieldChanged             ErrorTag = "TRANSACTION.LINKED_TRANSACTION_DISALLOWED_FIELD_CHANGED"
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
@@ -120,8 +121,9 @@ var (
 		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagInvalidPropagationSettings)}, fmt.Sprintf("invalid propagation settings: %s", propagationSettings))
 	}
 	ErrParentTransactionBelongsToAnotherUser       = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagParentTransactionBelongsToAnotherUser)}, "parent transaction belongs to another user")
-	ErrAccountCannotBeChangedForSharedTransactions = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
-	ErrChildTransactionCannotBeUpdated             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
+	ErrAccountCannotBeChangedForSharedTransactions  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
+	ErrChildTransactionCannotBeUpdated              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
+	ErrLinkedTransactionDisallowedFieldChanged      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
 )
 
 // ServiceError represents a service-level error with a code and message

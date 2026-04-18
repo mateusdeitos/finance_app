@@ -947,12 +947,21 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	}
 
 	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, transaction.ID)
-	if len(sourceIDs) > 0 {
-		errs = append(errs, pkgErrors.ErrChildTransactionCannotBeUpdated)
+	isLinkedTransaction := len(sourceIDs) > 0
+	if isLinkedTransaction {
+		disallowedFieldSet := req.Amount != nil ||
+			lo.FromPtr(req.AccountID) > 0 ||
+			req.TransactionType != nil ||
+			req.RecurrenceSettings != nil ||
+			len(req.SplitSettings) > 0 ||
+			req.DestinationAccountID != nil
+		if disallowedFieldSet {
+			errs = append(errs, pkgErrors.ErrLinkedTransactionDisallowedFieldChanged)
+		}
 	}
 
 	if lo.FromPtr(req.AccountID) > 0 {
-		if len(sourceIDs) > 0 {
+		if isLinkedTransaction {
 			errs = append(errs, pkgErrors.ErrAccountCannotBeChangedForSharedTransactions)
 		} else {
 			_, err := s.services.Account.GetByID(ctx, userID, *req.AccountID)
