@@ -1,28 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Transactions Bulk Actions
-status: archived
-last_updated: "2026-04-17T20:00:00.000Z"
-last_activity: 2026-04-17 -- Milestone v1.2 archived
+milestone: v1.0
+milestone_name: milestone
+status: Not started
+last_updated: "2026-04-18T00:27:21.770Z"
+last_activity: 2026-04-18 — Roadmap created for v1.3
 progress:
   total_phases: 2
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 ## Current Position
 
-Milestone v1.2 archived. Planning next milestone.
+Phase: 11 — Backend Validation & Propagation
+Plan: —
+Status: Context gathered
+Last activity: 2026-04-18 — Phase 11 context gathered
+
+```
+[░░░░░░░░░░░░░░░░░░░░] 0% (0/2 phases)
+```
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-17)
+See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Planning next milestone
+**Current focus:** v1.3 — Editing Linked Transactions. Backend validation (Phase 11) then frontend form adjustments (Phase 12).
 
 ## Performance Metrics
 
@@ -37,6 +43,7 @@ See: .planning/PROJECT.md (updated 2026-04-17)
 - v1.0 shipped 2026-04-10. Archived: `.planning/milestones/v1.0-ROADMAP.md`
 - v1.1 shipped 2026-04-16. Archived: `.planning/milestones/v1.1-ROADMAP.md`
 - v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
+- v1.3 roadmap: 2 phases (11–12). Backend-first, then frontend. Propagation logic reused from existing date diff mechanism — do NOT reimplement.
 
 ### Todos
 

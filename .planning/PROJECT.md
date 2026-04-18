@@ -50,7 +50,20 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Backend validation restricts linked transaction edits to date, description, category only
+- [ ] Date propagation for linked transactions reuses existing logic (diff-based inc/dec)
+- [ ] Frontend form: editable fields enabled, non-editable fields disabled, type/recurrence/split hidden
+- [ ] Propagation settings shown when linked transaction has recurrences
+
+## Current Milestone: v1.3 Editing Linked Transactions
+
+**Goal:** Allow users to edit linked transactions with restricted fields, backend validation, and proper frontend UX.
+
+**Target features:**
+- Backend validation: only date, description, category editable on linked transactions
+- Date propagation with recurrences: reuse existing diff-based logic for all/current/current_and_future
+- Frontend form adjustments: disabled non-editable fields, hidden type/recurrence/split sections
+- Propagation settings: shown when recurrences exist
 
 ### Out of Scope
 
@@ -97,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-17 after v1.2 Transactions Bulk Actions milestone complete_
+_Last updated: 2026-04-18 after v1.3 milestone started_
