@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -52,10 +53,11 @@ func LoggingMiddleware(globalLogger zerolog.Logger) echo.MiddlewareFunc {
 			status := c.Response().Status
 			if err != nil {
 				// Derive the HTTP status from the error type for accurate level selection.
-				// Check TaggedHTTPError first — it's what application handlers return via ToHTTPError().
-				if tagged, ok := err.(*apperrors.TaggedHTTPError); ok {
+				var tagged *apperrors.TaggedHTTPError
+				var he *echo.HTTPError
+				if errors.As(err, &tagged) {
 					status = tagged.Code
-				} else if he, ok := err.(*echo.HTTPError); ok {
+				} else if errors.As(err, &he) {
 					status = he.Code
 				} else {
 					status = http.StatusInternalServerError
@@ -71,26 +73,27 @@ func LoggingMiddleware(globalLogger zerolog.Logger) echo.MiddlewareFunc {
 			finalLogger := applog.FromContext(c.Request().Context())
 
 			// Per D-14: dynamic log level selection
-			event := levelForStatus(finalLogger.Zerolog(), status)
-			event.
-				Int("status", status).
-				Dur("latency_ms", latency).
-				Msg("request")
+			logAtLevel(finalLogger.Zerolog(), status, latency)
 
 			return err
 		}
 	}
 }
 
-// levelForStatus returns a zerolog event at the appropriate level.
+// logAtLevel emits the final request log at the appropriate level.
 // Per D-14: 2xx->info, 4xx->warn, 5xx->error.
-func levelForStatus(l *zerolog.Logger, status int) *zerolog.Event {
+func logAtLevel(l *zerolog.Logger, status int, latency time.Duration) {
+	var event *zerolog.Event
 	switch {
 	case status >= 500:
-		return l.Error()
+		event = l.Error()
 	case status >= 400:
-		return l.Warn()
+		event = l.Warn()
 	default:
-		return l.Info()
+		event = l.Info()
 	}
+	event.
+		Int("status", status).
+		Dur("latency_ms", latency).
+		Msg("request")
 }

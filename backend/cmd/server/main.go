@@ -55,23 +55,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Initialize zerolog global logger (per D-15, D-16)
-	logLevel, parseErr := zerolog.ParseLevel(cfg.App.LogLevel)
-	if parseErr != nil {
-		log.Printf("WARNING: invalid LOG_LEVEL %q, defaulting to info: %v", cfg.App.LogLevel, parseErr)
-		logLevel = zerolog.InfoLevel
-	}
-	zerolog.SetGlobalLevel(logLevel)
-
-	var globalLogger zerolog.Logger
-	if cfg.App.Env == "development" {
-		globalLogger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
-			With().Timestamp().Logger()
-	} else {
-		// Cloud Run: severity field maps to Cloud Logging severity
-		zerolog.LevelFieldName = "severity"
-		globalLogger = zerolog.New(os.Stdout).With().Timestamp().Logger()
-	}
+	globalLogger := initLogger(cfg)
 
 	// Setup OAuth providers
 	oauth.SetupProviders(cfg)
@@ -233,4 +217,21 @@ func main() {
 	}
 
 	log.Println("Server exited")
+}
+
+func initLogger(cfg *config.Config) zerolog.Logger {
+	logLevel, parseErr := zerolog.ParseLevel(cfg.App.LogLevel)
+	if parseErr != nil {
+		log.Printf("WARNING: invalid LOG_LEVEL %q, defaulting to info: %v", cfg.App.LogLevel, parseErr)
+		logLevel = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(logLevel)
+
+	if cfg.App.Env == "development" {
+		return zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).
+			With().Timestamp().Logger()
+	}
+	// Cloud Run: severity field maps to Cloud Logging severity
+	zerolog.LevelFieldName = "severity"
+	return zerolog.New(os.Stdout).With().Timestamp().Logger()
 }
