@@ -50,8 +50,8 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-- [ ] Backend validation restricts linked transaction edits to date, description, category only
-- [ ] Date propagation for linked transactions reuses existing logic (diff-based inc/dec)
+- [x] Backend validation restricts linked transaction edits to date, description, category, tags only — v1.3 Phase 11
+- [x] Date/description propagation for linked transactions is user-scoped (edit my side only) — v1.3 Phase 11
 - [ ] Frontend form: editable fields enabled, non-editable fields disabled, type/recurrence/split hidden
 - [ ] Propagation settings shown when linked transaction has recurrences
 
