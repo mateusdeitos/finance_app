@@ -64,6 +64,12 @@ export async function fetchTransactions(params: Transactions.FetchParams): Promi
   return res.json();
 }
 
+export async function fetchTransaction(id: number): Promise<Transactions.Transaction> {
+  const res = await fetch(`${apiUrl}/api/transactions/${id}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch transaction");
+  return res.json();
+}
+
 export async function fetchTransactionSuggestions(
   q: string,
   limit = 10,
