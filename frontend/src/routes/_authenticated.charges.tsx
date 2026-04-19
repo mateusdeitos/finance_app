@@ -1,4 +1,4 @@
-import { Box, Button, Group, Modal, Skeleton, Stack, Tabs, Text } from "@mantine/core";
+import { ActionIcon, Box, Button, Group, Modal, Skeleton, Stack, Tabs, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
@@ -145,13 +145,14 @@ function ChargesPage() {
           paddingBottom: "var(--mantine-spacing-xs)",
         }}
       >
-        <Group justify="space-between" align="center">
+        <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
           <PeriodNavigator
             month={search.month}
             year={search.year}
             onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })}
           />
           <Button
+            visibleFrom="xs"
             leftSection={<IconPlus size={16} />}
             onClick={() =>
               void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
@@ -159,6 +160,17 @@ function ChargesPage() {
           >
             Nova Cobrança
           </Button>
+          <ActionIcon
+            hiddenFrom="xs"
+            size="lg"
+            variant="filled"
+            aria-label="Nova Cobrança"
+            onClick={() =>
+              void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
+            }
+          >
+            <IconPlus size={18} />
+          </ActionIcon>
         </Group>
       </Box>
 

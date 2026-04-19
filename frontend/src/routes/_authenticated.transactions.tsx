@@ -307,21 +307,22 @@ function TransactionsPage() {
           }}
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
-            <Group justify="space-between" align="center">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
               <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
-              <Group gap="xs">
-                <Button
-                  size="xs"
-                  leftSection={<IconPlus size={14} />}
+              <Group gap="xs" wrap="nowrap">
+                <ActionIcon
+                  size="lg"
+                  variant="filled"
                   onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
                   data-testid="btn_new_transaction"
+                  aria-label="Nova Transação"
                 >
-                  Nova Transação
-                </Button>
+                  <IconPlus size={18} />
+                </ActionIcon>
                 <Menu shadow="md" width={200}>
                   <Menu.Target>
-                    <ActionIcon size="sm" variant="default" aria-label="Mais opções">
-                      <IconDots size={14} />
+                    <ActionIcon size="lg" variant="default" aria-label="Mais opções">
+                      <IconDots size={18} />
                     </ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
@@ -357,13 +358,13 @@ function TransactionsPage() {
           <MobileBottomBar>
             <ClearFiltersButton variant="icon" />
             <ActionIcon
-              size="xl"
+              size="lg"
               radius="xl"
               variant="filled"
               onClick={openFilters}
               aria-label="Abrir filtros"
             >
-              <IconFilter size={20} />
+              <IconFilter size={18} />
             </ActionIcon>
           </MobileBottomBar>
         )}

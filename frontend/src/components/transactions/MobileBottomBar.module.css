@@ -4,8 +4,8 @@
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0.75rem 1rem;
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  padding: 0.375rem 1rem;
+  padding-bottom: calc(0.375rem + env(safe-area-inset-bottom));
   background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
 }
