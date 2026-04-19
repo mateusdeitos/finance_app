@@ -30,6 +30,9 @@ export async function fetchBalance(params: Transactions.FetchBalanceParams): Pro
   if (params.tagIds?.length) {
     params.tagIds.forEach((id) => url.searchParams.append("tag_id[]", String(id)));
   }
+  if (params.hideSettlements) {
+    url.searchParams.set("hide_settlements", "true");
+  }
 
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch balance");

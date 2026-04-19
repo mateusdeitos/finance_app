@@ -134,6 +134,7 @@ export namespace Transactions {
     accountIds?: number[];
     categoryIds?: number[];
     tagIds?: number[];
+    hideSettlements?: boolean;
   }
 
   export interface BalanceResult {

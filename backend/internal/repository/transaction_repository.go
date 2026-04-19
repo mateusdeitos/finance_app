@@ -359,41 +359,61 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 		args = append(args, filter.TagIDs)
 	}
 
-	// Settlements leg — filtered by account_id only (no category/tag columns on settlements)
-	settlementSQL := `SELECT CASE WHEN s.type = 'credit' THEN s.amount ELSE -s.amount END AS amount
-		FROM settlements s
-		JOIN transactions t ON t.id = s.source_transaction_id
-		WHERE s.user_id = ? AND t.date <= ?`
-	args = append(args, filter.UserID, endDate)
-
-	if !filter.Accumulated {
-		startDate := filter.Period.StartDate()
-		settlementSQL += " AND t.date >= ?"
-		args = append(args, startDate)
-	}
-
-	if len(filter.AccountIDs) > 0 {
-		settlementSQL += " AND s.account_id IN ?"
-		args = append(args, filter.AccountIDs)
-	}
-
 	var combined string
-	if filter.Accumulated {
-		initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
-		args = append(args, filter.UserID)
-		if len(filter.AccountIDs) > 0 {
-			initialBalanceSQL += " AND id IN ?"
-			args = append(args, filter.AccountIDs)
+	if filter.HideSettlements {
+		if filter.Accumulated {
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			args = append(args, filter.UserID)
+			if len(filter.AccountIDs) > 0 {
+				initialBalanceSQL += " AND id IN ?"
+				args = append(args, filter.AccountIDs)
+			}
+			combined = fmt.Sprintf(
+				"SELECT COALESCE(SUM(amount), 0) FROM ((%s) UNION ALL (%s)) combined",
+				txSQL, initialBalanceSQL,
+			)
+		} else {
+			combined = fmt.Sprintf(
+				"SELECT COALESCE(SUM(amount), 0) FROM (%s) combined",
+				txSQL,
+			)
 		}
-		combined = fmt.Sprintf(
-			"SELECT COALESCE(SUM(amount), 0) FROM ((%s) UNION ALL (%s) UNION ALL (%s)) combined",
-			txSQL, settlementSQL, initialBalanceSQL,
-		)
 	} else {
-		combined = fmt.Sprintf(
-			"SELECT COALESCE(SUM(amount), 0) FROM ((%s) UNION ALL (%s)) combined",
-			txSQL, settlementSQL,
-		)
+		// Settlements leg — filtered by account_id only (no category/tag columns on settlements)
+		settlementSQL := `SELECT CASE WHEN s.type = 'credit' THEN s.amount ELSE -s.amount END AS amount
+			FROM settlements s
+			JOIN transactions t ON t.id = s.source_transaction_id
+			WHERE s.user_id = ? AND t.date <= ?`
+		args = append(args, filter.UserID, endDate)
+
+		if !filter.Accumulated {
+			startDate := filter.Period.StartDate()
+			settlementSQL += " AND t.date >= ?"
+			args = append(args, startDate)
+		}
+
+		if len(filter.AccountIDs) > 0 {
+			settlementSQL += " AND (s.account_id IN ? OR t.account_id IN ?)"
+			args = append(args, filter.AccountIDs, filter.AccountIDs)
+		}
+
+		if filter.Accumulated {
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			args = append(args, filter.UserID)
+			if len(filter.AccountIDs) > 0 {
+				initialBalanceSQL += " AND id IN ?"
+				args = append(args, filter.AccountIDs)
+			}
+			combined = fmt.Sprintf(
+				"SELECT COALESCE(SUM(amount), 0) FROM ((%s) UNION ALL (%s) UNION ALL (%s)) combined",
+				txSQL, settlementSQL, initialBalanceSQL,
+			)
+		} else {
+			combined = fmt.Sprintf(
+				"SELECT COALESCE(SUM(amount), 0) FROM ((%s) UNION ALL (%s)) combined",
+				txSQL, settlementSQL,
+			)
+		}
 	}
 
 	var balance int64

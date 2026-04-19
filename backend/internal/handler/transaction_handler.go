@@ -205,7 +205,8 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 // @Param        account_id[]   query  []int  false  "Filter by account IDs"   collectionFormat(multi)
 // @Param        category_id[]  query  []int  false  "Filter by category IDs"  collectionFormat(multi)
 // @Param        tag_id[]       query  []int  false  "Filter by tag IDs"       collectionFormat(multi)
-// @Param        accumulated    query  bool   false  "Include all prior periods"
+// @Param        accumulated       query  bool   false  "Include all prior periods"
+// @Param        hide_settlements  query  bool   false  "Exclude settlements from balance"
 // @Success      200  {object}  domain.BalanceResult
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
