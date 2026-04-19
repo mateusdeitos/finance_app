@@ -427,9 +427,11 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_OwnershipValidation() 
 	suite.Assert().True(pkgErrors.IsNotFound(err), "expected not-found error, got: %v", err)
 }
 
-// TestUpdate_ChildTransactionCannotBeUpdated verifies that the linked (child)
-// transaction of a split expense cannot be directly updated by its owner.
-func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionCannotBeUpdated() {
+// TestUpdate_ChildTransactionRejectsDisallowedField verifies that updating a linked
+// (child) transaction with a disallowed field (e.g. Amount) is rejected. Allowed
+// fields (date, description, category, tags) are covered by the LinkedTransaction
+// tests below.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionRejectsDisallowedField() {
 	ctx := context.Background()
 	d := now()
 
@@ -465,17 +467,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionCannot
 	suite.Require().Len(childTxs, 1, "expected exactly one child transaction for userB")
 	childTxID := childTxs[0].ID
 
-	// userB tries to update the child transaction — should be rejected
+	// userB tries to update a disallowed field on the child transaction — should be rejected
+	newAmount := int64(200)
 	err = suite.Services.Transaction.Update(ctx, childTxID, userB.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-		Description:         lo.ToPtr("should not be updated"),
+		Amount:              &newAmount,
 	})
 	suite.Require().Error(err)
-
-	// Both ownership and child-transaction errors are expected
 	suite.Assert().True(
-		hasTag(err, pkgErrors.ErrorTagChildTransactionCannotBeUpdated) ||
-			hasTag(err, pkgErrors.ErrorTagParentTransactionBelongsToAnotherUser),
-		"expected child-transaction or ownership error, got: %v", err,
+		hasTag(err, pkgErrors.ErrorTagLinkedTransactionDisallowedFieldChanged),
+		"expected linked-transaction disallowed-field error, got: %v", err,
 	)
 }
