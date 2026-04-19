@@ -106,11 +106,17 @@ test.describe('Transfer Transactions', () => {
     await transactionsPage.clearAndFillAmount(8800) // R$ 88,00
     await transactionsPage.submitUpdate()
 
+    // Updating the amount rebuilds the credit-side linked transaction with a
+    // new id, so re-fetch the debit side to resolve the current credit id.
+    const updatedDebit = await apiGetTransaction(tx.id)
+    const newCreditSideId = updatedDebit.linked_transactions?.[0]?.id
+    expect(newCreditSideId, 'expected new credit-side linked transaction').toBeTruthy()
+
     await expect(
       page.locator(`[data-transaction-id="${tx.id}"]`).getByText(/88,00/),
     ).toBeVisible({ timeout: 8000 })
     await expect(
-      page.locator(`[data-transaction-id="${creditSideId}"]`).getByText(/88,00/),
+      page.locator(`[data-transaction-id="${newCreditSideId}"]`).getByText(/88,00/),
     ).toBeVisible({ timeout: 8000 })
   })
 
