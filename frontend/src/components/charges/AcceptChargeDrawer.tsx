@@ -53,9 +53,10 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
 
   const accounts = accountsQuery.data ?? [];
 
-  // User's own active accounts
+  // User's own active private accounts only — connection (shared) accounts
+  // are the internal ledger and must not be used to settle a charge.
   const myAccounts = accounts
-    .filter((a) => a.user_id === currentUserId && a.is_active)
+    .filter((a) => a.user_id === currentUserId && a.is_active && !a.user_connection)
     .map((a) => ({ label: a.name, value: String(a.id) }));
 
   // Balance preview query

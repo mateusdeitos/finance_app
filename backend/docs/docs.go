@@ -2195,6 +2195,9 @@ const docTemplate = `{
         "domain.Charge": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "type": "integer"
+                },
                 "charger_account_id": {
                     "type": "integer"
                 },
@@ -2271,9 +2274,23 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ChargeInitiatorRole": {
+            "type": "string",
+            "enum": [
+                "charger",
+                "payer"
+            ],
+            "x-enum-varnames": [
+                "ChargeInitiatorRoleCharger",
+                "ChargeInitiatorRolePayer"
+            ]
+        },
         "domain.CreateChargeRequest": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "type": "integer"
+                },
                 "connection_id": {
                     "type": "integer"
                 },
@@ -2291,6 +2308,9 @@ const docTemplate = `{
                 },
                 "period_year": {
                     "type": "integer"
+                },
+                "role": {
+                    "$ref": "#/definitions/domain.ChargeInitiatorRole"
                 }
             }
         },
