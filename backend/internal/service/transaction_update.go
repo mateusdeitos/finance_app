@@ -945,7 +945,7 @@ func (s *transactionService) fetchRelatedTransactions(
 func (s *transactionService) validateUpdateTransactionRequest(ctx context.Context, userID int, transaction domain.Transaction, req *domain.TransactionUpdateRequest) []*pkgErrors.ServiceError {
 	errs := []*pkgErrors.ServiceError{}
 
-	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID {
+	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID && transaction.UserID != userID {
 		errs = append(errs, pkgErrors.ErrParentTransactionBelongsToAnotherUser)
 	}
 

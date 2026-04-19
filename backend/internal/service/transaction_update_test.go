@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -3975,8 +3976,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 		suite.Run(desc, func() {
 			err := suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, updateReq)
 			suite.Require().Error(err)
-			serviceErrs, ok := err.(pkgErrors.ServiceErrors)
-			suite.Require().True(ok, "error should be ServiceErrors type")
+			var serviceErrs pkgErrors.ServiceErrors
+			suite.Require().True(errors.As(err, &serviceErrs), "error should be ServiceErrors type")
 			suite.Require().True(lo.SomeBy(serviceErrs, func(e *pkgErrors.ServiceError) bool {
 				return lo.Contains(e.Tags, string(pkgErrors.ErrorTagLinkedTransactionDisallowedFieldChanged))
 			}), "expected ErrorTagLinkedTransactionDisallowedFieldChanged in error tags")
