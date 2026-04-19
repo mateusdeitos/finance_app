@@ -27,6 +27,12 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		return pkgErrors.ServiceErrors(errs)
 	}
 
+	sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, previousTransaction.ID)
+	if err != nil {
+		return pkgErrors.Internal("failed to get source transaction IDs", err)
+	}
+	isLinkedTxEdit := len(sourceIDs) > 0
+
 	date := lo.CoalesceOrEmpty(req.Date, &previousTransaction.Date)
 	dateDiff := lo.FromPtr(date).Sub(previousTransaction.Date)
 	dateDiffDays := int(dateDiff.Hours() / 24)
@@ -37,11 +43,24 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		previousTransaction:    previousTransaction,
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
+		isLinkedTxEdit:         isLinkedTxEdit,
 	}
 
-	data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
-	if err != nil {
-		return err
+	// Linked transaction edits never change split/type/recurrence (those fields are
+	// rejected by validation). Treat them as unchanged so rebuildTransactions does
+	// not misread the absent SplitSettings as a "removed split" and delete the
+	// partner's installments.
+	if data.isLinkedTxEdit {
+		data.scenario = updateChanges{
+			Value:           NOT_CHANGED,
+			SplitHasChanged: false,
+			HadRecurrence:   previousTransaction.TransactionRecurrenceID != nil,
+		}
+	} else {
+		data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
+		if err != nil {
+			return err
+		}
 	}
 
 	errs := s.createTags(ctx, userID, req.Tags)
@@ -54,9 +73,6 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	if err != nil {
 		return err
 	}
-
-	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, data.previousTransaction.ID)
-	isLinkedTxEdit := len(sourceIDs) > 0
 
 	// atualiza/remove a recorrência de acordo com o recurrenceSettings enviado
 	err = s.handlerRecurrenceUpdate(ctx, data)
@@ -725,6 +741,12 @@ func (s *transactionService) handlerRecurrenceUpdate(
 	ctx context.Context,
 	data *transactionUpdateData,
 ) error {
+	// RecurrenceSettings is a disallowed field for linked transaction edits, so a
+	// missing value here must not be interpreted as "remove the recurrence".
+	if data.isLinkedTxEdit {
+		return nil
+	}
+
 	if data.req.RecurrenceSettings == nil && data.previousTransaction.TransactionRecurrenceID == nil {
 		return nil
 	}
