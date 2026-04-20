@@ -379,3 +379,87 @@ recurrence and/or split settings change.
 - 3 installments for userA remain, no split
 - `TransactionRecurrence.Installments` = 3
 - Total transactions in DB: 3
+
+---
+
+## Propagation `current_and_future` on installments > 1 — preserving the recurrence
+
+**Rule of thumb:** `current_and_future` on installment `n > 1` only fragments the
+recurrence when `Type` or `TotalInstallments` differ from the existing values.
+Pure attribute propagation (split/description/amount/account/category/date/tags)
+must keep `TransactionRecurrenceID` intact and preserve every
+`installment_number`. This closes [issue #83](https://github.com/mateusdeitos/finance_app/issues/83).
+
+---
+
+### InstallmentScenario9b — Remove split · propagation=current_and_future · installment > 1 · total unchanged
+
+**Pre-conditions**
+- 2 connected users, each with their own account
+- userA has 4 monthly installments with split (50/50)
+- Target: installment 3
+
+**Update request**
+```json
+{
+  "propagation_settings": "current_and_future",
+  "recurrence_settings": { "type": "monthly", "current_installment": 3, "total_installments": 4 },
+  "split_settings": []
+}
+```
+
+**Expected result**
+- All 4 userA installments remain in the **same** `TransactionRecurrence`
+- `installment_number` preserved (1, 2, 3, 4) — no renumbering
+- Installments 1 and 2 keep the split; 3 and 4 have the split removed
+- `TransactionRecurrence.Installments` stays 4
+- userB: 2 linked transactions remain (for installments 1 and 2); 2 are deleted
+- No new `TransactionRecurrence` row is created
+
+---
+
+### InstallmentScenario10b — Add split · propagation=current_and_future · installment > 1 · total unchanged
+
+**Pre-conditions**
+- 2 connected users, each with their own account
+- userA has 4 monthly installments without split
+- Target: installment 3
+
+**Update request**
+```json
+{
+  "propagation_settings": "current_and_future",
+  "recurrence_settings": { "type": "monthly", "current_installment": 3, "total_installments": 4 },
+  "split_settings": [{ "connection_id": <connectionID>, "percentage": 50 }]
+}
+```
+
+**Expected result**
+- All 4 userA installments remain in the **same** `TransactionRecurrence`
+- `installment_number` preserved (1, 2, 3, 4)
+- Installments 1 and 2 still without split; 3 and 4 gain the split
+- userB: 2 new linked transactions with `installment_number` = 3 and 4
+- `TransactionRecurrence.Installments` stays 4
+
+---
+
+### InstallmentScenario17 — Edit description only · propagation=current_and_future · installment > 1
+
+**Pre-conditions**
+- userA has 4 monthly installments, no split
+- Target: installment 3
+
+**Update request**
+```json
+{
+  "propagation_settings": "current_and_future",
+  "description": "new description",
+  "recurrence_settings": { "type": "monthly", "current_installment": 3, "total_installments": 4 }
+}
+```
+
+**Expected result**
+- `TransactionRecurrence` untouched (same ID, `Installments` = 4)
+- Every `installment_number` preserved
+- Installments 1 and 2 keep the original description
+- Installments 3 and 4 adopt the new description
