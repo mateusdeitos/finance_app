@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 <details open>
 <summary>🔄 v1.4 Bulk Update Split Settings — ACTIVE</summary>
 
-- [ ] **Phase 13: BulkDivisionDrawer Form** — Percentage-only split form with dynamic rows, sum-validates-to-100, and smart connected-account pre-selection
+- [x] Phase 13: BulkDivisionDrawer Form (1/1 plan) — completed 2026-04-20
 - [ ] **Phase 14: Bulk Action Wiring & Cent-Exact Conversion** — Menu integration, disabled state, percentage→cents conversion with last-split-absorbs-rest, and sequential progress-drawer execution with silent skip for linked txs
 - [ ] **Phase 15: E2E Coverage & Rounding Verification** — Playwright happy-path test and cent-exact verification that Σ split.amount equals tx.amount across rounding edge cases
 
@@ -143,7 +143,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 10. User Avatar System | v1.2 | 3/3 | Complete | 2026-04-17 |
 | 11. Backend Validation & Propagation | v1.3 | 2/2 | Complete   | 2026-04-18 |
 | 12. Frontend Edit Form | v1.3 | 0/? | Deferred | - |
-| 13. BulkDivisionDrawer Form | v1.4 | 0/1 | Planned | - |
+| 13. BulkDivisionDrawer Form | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 0/? | Not started | - |
 | 15. E2E Coverage & Rounding Verification | v1.4 | 0/? | Not started | - |
 
