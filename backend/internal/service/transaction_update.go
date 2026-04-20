@@ -825,11 +825,20 @@ func (s *transactionService) handlerRecurrenceUpdate(
 
 	// For propagation=current_and_future when past installments exist, the old recurrence
 	// must be shrunk to cover only the past installments, and a new recurrence must be
-	// created for the current+future batch.
+	// created for the current+future batch — but only when the recurrence itself actually
+	// changed. Edits that leave Type and TotalInstallments untouched (e.g. split-only,
+	// description-only) must keep the original recurrence and preserve installment numbers.
 	hasPastInstallments := data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
 		lo.FromPtr(data.previousTransaction.InstallmentNumber) > 1
 
-	if hasPastInstallments && data.previousTransaction.TransactionRecurrenceID != nil {
+	previousRecurrence := data.previousTransaction.TransactionRecurrence
+	recurrenceSettingsChanged := previousRecurrence == nil ||
+		data.req.RecurrenceSettings.Type != previousRecurrence.Type ||
+		data.req.RecurrenceSettings.TotalInstallments != previousRecurrence.Installments
+
+	shouldSplitRecurrence := hasPastInstallments && recurrenceSettingsChanged
+
+	if shouldSplitRecurrence && data.previousTransaction.TransactionRecurrenceID != nil {
 		oldRecurrence := data.previousTransaction.TransactionRecurrence
 		oldRecurrence.Installments = lo.FromPtr(data.previousTransaction.InstallmentNumber) - 1
 		if err := s.transactionRecurRepo.Update(ctx, oldRecurrence); err != nil {
@@ -888,15 +897,17 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		data.transactions[i].TransactionRecurrence = &r
 		data.transactions[i].TransactionRecurrenceID = &r.ID
 
-		if data.scenario.HadRecurrence && !hasPastInstallments {
-			// Preserve existing installment numbers — they already have the correct offset
-			// from creation (e.g., installments 4-12 for current_installment=4, total=12).
+		if data.scenario.HadRecurrence && !shouldSplitRecurrence {
+			// Preserve existing installment numbers — either propagation!=current_and_future
+			// (numbers already correct from creation) or current_and_future where the
+			// recurrence itself is untouched (split-only, description-only, etc.).
 		} else if !data.scenario.HadRecurrence {
 			// Standalone → recurrence: number from CurrentInstallment.
 			startFrom := data.req.RecurrenceSettings.CurrentInstallment
 			data.transactions[i].InstallmentNumber = lo.ToPtr(startFrom + i)
 		} else {
-			// current_and_future with past installments: new recurrence, renumber from 1.
+			// current_and_future with past installments AND the recurrence itself changed
+			// (new type or new total): fresh recurrence, renumber from 1.
 			data.transactions[i].InstallmentNumber = lo.ToPtr(i + 1)
 		}
 
