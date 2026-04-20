@@ -100,7 +100,8 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   3. The submit button is disabled (or submit is blocked) whenever the sum of all row percentages does not equal exactly 100
   4. When the user has exactly one connected account, the drawer opens with that account pre-selected in the first row
   5. When the user has two or more connected accounts, the drawer opens without any pre-selection and the user explicitly picks the account in the first row
-**Plans**: TBD
+**Plans:** 1 plan
+- [ ] 13-01-PLAN.md — Create BulkDivisionDrawer component (drawer shell + RHF + Zod sum=100 + smart pre-selection + Aplicar submit)
 **UI hint**: yes
 
 ### Phase 14: Bulk Action Wiring & Cent-Exact Conversion
@@ -142,7 +143,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 10. User Avatar System | v1.2 | 3/3 | Complete | 2026-04-17 |
 | 11. Backend Validation & Propagation | v1.3 | 2/2 | Complete   | 2026-04-18 |
 | 12. Frontend Edit Form | v1.3 | 0/? | Deferred | - |
-| 13. BulkDivisionDrawer Form | v1.4 | 0/? | Not started | - |
+| 13. BulkDivisionDrawer Form | v1.4 | 0/1 | Planned | - |
 | 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 0/? | Not started | - |
 | 15. E2E Coverage & Rounding Verification | v1.4 | 0/? | Not started | - |
 
