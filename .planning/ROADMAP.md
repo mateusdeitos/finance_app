@@ -116,7 +116,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   5. Each PUT request carries the full existing transaction payload (not a partial), matching the pattern from commit `19f2bbb`
   6. The existing `BulkProgressDrawer` is reused to show sequential per-transaction progress, and linked/unsplittable transactions in the selection are silently skipped (no error rows surfaced), while income transactions are processed normally
 **Plans:** 1 plan
-- [ ] 14-01-PLAN.md — Wire Divisão bulk action (splitMath helper + SelectionActionBar menu item with disabled state + handleDivisionClick route wiring with transfer skip and cent-exact conversion)
+- [x] 14-01-PLAN.md — Wire Divisão bulk action (splitMath helper + SelectionActionBar menu item with disabled state + handleDivisionClick route wiring with transfer skip and cent-exact conversion)
 **UI hint**: yes
 
 ### Phase 15: E2E Coverage & Rounding Verification
@@ -145,7 +145,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 11. Backend Validation & Propagation | v1.3 | 2/2 | Complete   | 2026-04-18 |
 | 12. Frontend Edit Form | v1.3 | 0/? | Deferred | - |
 | 13. BulkDivisionDrawer Form | v1.4 | 1/1 | Complete | 2026-04-20 |
-| 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 0/1 | Not started | - |
+| 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 1/1 | In progress | - |
 | 15. E2E Coverage & Rounding Verification | v1.4 | 0/? | Not started | - |
 
 ---
