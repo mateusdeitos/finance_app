@@ -47,23 +47,38 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ Save avatar URL from OAuth provider on login — v1.2
 - ✓ Display user avatar in header, split settings, transaction rows, account cards — v1.2
 - ✓ Customizable background color for private account avatars — v1.2
+- ✓ Backend validation restricts linked transaction edits to date, description, category, tags only — v1.3
+- ✓ Date/description propagation for linked transactions is user-scoped (edit my side only) — v1.3
 
 ### Active
 
-- [x] Backend validation restricts linked transaction edits to date, description, category, tags only — v1.3 Phase 11
-- [x] Date/description propagation for linked transactions is user-scoped (edit my side only) — v1.3 Phase 11
-- [ ] Frontend form: editable fields enabled, non-editable fields disabled, type/recurrence/split hidden
-- [ ] Propagation settings shown when linked transaction has recurrences
+- [ ] "Divisão" bulk action appears in transactions SelectionActionBar before Excluir — v1.4
+- [ ] BulkDivisionDrawer form is percentage-only (no fixed-amount mode) — v1.4
+- [ ] Single connected account auto-selected when opening drawer — v1.4
+- [ ] Form validates Σ percentage = 100% before submit — v1.4
+- [ ] Frontend converts percentage → cents per-transaction with "last split absorbs rest" — v1.4
+- [ ] Payload contains only `connection_id` + `amount` (never `percentage`) — v1.4
+- [ ] Linked/unsplittable transactions silently skipped in bulk batch — v1.4
+- [ ] BulkProgressDrawer reused for sequential per-transaction updates — v1.4
 
-## Current Milestone: v1.3 Editing Linked Transactions
+### Deferred (from v1.3)
 
-**Goal:** Allow users to edit linked transactions with restricted fields, backend validation, and proper frontend UX.
+- [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
+- [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
+
+## Current Milestone: v1.4 Bulk Update Split Settings
+
+**Goal:** Add "Divisão" to transactions bulk actions with a percentage-only drawer that converts to cents per-transaction and reuses the existing BulkProgressDrawer.
 
 **Target features:**
-- Backend validation: only date, description, category editable on linked transactions
-- Date propagation with recurrences: reuse existing diff-based logic for all/current/current_and_future
-- Frontend form adjustments: disabled non-editable fields, hidden type/recurrence/split sections
-- Propagation settings: shown when recurrences exist
+- New "Divisão" menu item in `SelectionActionBar` (before Excluir divider)
+- `BulkDivisionDrawer` component — percentage-only split form (no fixed-amount toggle)
+- Smart account pre-selection (1 connected = auto-pick; 0 = disabled)
+- Percentage → cents conversion per-transaction ("last split absorbs rest" for exact sums)
+- Linked/unsplittable transactions silently skipped (matches SEL-02 pattern from v1.2)
+- Payload contract: send only `connection_id` + `amount`; never `percentage`
+- Full transaction payload in PUT (pattern from `19f2bbb`)
+- E2E coverage for single-account pre-selection + cent-exact sums
 
 ### Out of Scope
 
@@ -97,6 +112,11 @@ Partners can accurately track shared finances, including in-progress installment
 | Correlated subqueries for partner avatar/name in account search        | Avoids additional JOINs; partner data resolved in single query                              | ✓ Good  |
 | SEL-02 silent skip for linked transactions                             | User shouldn't see errors for transactions they can't modify; cleaner UX                    | ✓ Good  |
 | Single propagation choice for entire batch                             | Per-transaction propagation would be confusing UX; one choice covers all                    | ✓ Good  |
+| Ship v1.3 with Phase 11 only; defer frontend form work                 | Bulk split (v1.4) takes priority; FE-01..FE-05 roll forward as backlog                      | Deferred |
+| Bulk split drawer is percentage-only (no fixed-amount toggle)          | Avoids ambiguity across heterogeneous transaction amounts in a selection                    | ✓ Good  |
+| Percentage → cents conversion per-transaction; last split absorbs rest | Guarantees Σ amount == tx.amount exactly; avoids 1-cent drift from rounding                 | ✓ Good  |
+| Send only `connection_id` + `amount` in bulk split payload             | Mixing `percentage` and `amount` triggers backend 400; cents-only is the wire contract      | ✓ Good  |
+| Silently skip unsplittable (linked) transactions in bulk batch         | Matches SEL-02 pattern from v1.2 — users shouldn't see errors for ops they can't perform    | ✓ Good  |
 
 ## Constraints
 
@@ -110,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-18 after Phase 11 complete_
+_Last updated: 2026-04-20 — v1.3 shipped (Phase 11 only); v1.4 started (Bulk Update Split Settings)_
