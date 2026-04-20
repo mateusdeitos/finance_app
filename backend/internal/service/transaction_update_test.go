@@ -4393,7 +4393,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 	}
 
 	// Installments 1 and 2 keep the split; 3 and 4 have the split removed.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 1,
 			"installment %d should keep split", i+1)
 	}
@@ -4498,7 +4498,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10b_AddSpl
 	}
 
 	// Installments 1 and 2 remain without split; 3 and 4 gain split.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 0,
 			"installment %d should have no split", i+1)
 	}
