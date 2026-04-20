@@ -10,8 +10,8 @@ Add "Divisão" (split settings) as a bulk action on the transactions list, letti
 
 ### UI & Menu Integration
 
-- [ ] **UI-01**: "Divisão" menu item appears in `SelectionActionBar` before the `Menu.Divider` that precedes "Excluir"
-- [ ] **UI-02**: When the user has 0 connected accounts (`user_connection.connection_status === "accepted"` count is 0), the "Divisão" menu item is disabled with a tooltip/message explaining a connected account is required
+- [x] **UI-01**: "Divisão" menu item appears in `SelectionActionBar` before the `Menu.Divider` that precedes "Excluir"
+- [x] **UI-02**: When the user has 0 connected accounts (`user_connection.connection_status === "accepted"` count is 0), the "Divisão" menu item is disabled with a tooltip/message explaining a connected account is required
 - [ ] **UI-03**: When the user has exactly 1 connected account, the drawer opens with that account pre-selected in the first split row
 - [ ] **UI-04**: When the user has 2+ connected accounts, the drawer opens empty and the user chooses
 
@@ -23,15 +23,15 @@ Add "Divisão" (split settings) as a bulk action on the transactions list, letti
 
 ### Payload & Conversion
 
-- [ ] **PAY-01**: On submit, for each selected transaction the frontend computes `amount` (cents) per split from the percentage: `round(tx.amount * percentage / 100)`, with the **last split absorbing the rounding remainder** so `Σ split.amount === tx.amount` exactly
-- [ ] **PAY-02**: Outgoing `split_settings` payload contains **only** `connection_id` and `amount` — never `percentage` (backend returns 400 when both are sent)
-- [ ] **PAY-03**: `PUT /api/transactions/{id}` carries the **full transaction payload** (not a partial), matching the pattern from commit `19f2bbb` to prevent data loss
+- [x] **PAY-01**: On submit, for each selected transaction the frontend computes `amount` (cents) per split from the percentage: `round(tx.amount * percentage / 100)`, with the **last split absorbing the rounding remainder** so `Σ split.amount === tx.amount` exactly
+- [x] **PAY-02**: Outgoing `split_settings` payload contains **only** `connection_id` and `amount` — never `percentage` (backend returns 400 when both are sent)
+- [x] **PAY-03**: `PUT /api/transactions/{id}` carries the **full transaction payload** (not a partial), matching the pattern from commit `19f2bbb` to prevent data loss
 
 ### Bulk Execution & Edge Cases
 
-- [ ] **BULK-01**: Sequential per-transaction updates are displayed via the existing `BulkProgressDrawer`
-- [ ] **BULK-02**: Linked transactions (non-null `linked_transaction_id`, or any transaction that cannot accept a split change) are **silently skipped** — no error surfaced in the progress drawer, matching the SEL-02 pattern from v1.2
-- [ ] **BULK-03**: Income transactions in the selection are handled normally by the bulk split flow (splits on income supported since PR #57)
+- [x] **BULK-01**: Sequential per-transaction updates are displayed via the existing `BulkProgressDrawer`
+- [x] **BULK-02**: Linked transactions (non-null `linked_transaction_id`, or any transaction that cannot accept a split change) are **silently skipped** — no error surfaced in the progress drawer, matching the SEL-02 pattern from v1.2
+- [x] **BULK-03**: Income transactions in the selection are handled normally by the bulk split flow (splits on income supported since PR #57)
 
 ### Testing
 
@@ -57,19 +57,19 @@ None — scope is tightly defined to issue #86.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | Phase 14 | Pending |
-| UI-02 | Phase 14 | Pending |
+| UI-01 | Phase 14 | Complete |
+| UI-02 | Phase 14 | Complete |
 | UI-03 | Phase 13 | Pending |
 | UI-04 | Phase 13 | Pending |
 | FORM-01 | Phase 13 | Pending |
 | FORM-02 | Phase 13 | Pending |
 | FORM-03 | Phase 13 | Pending |
-| PAY-01 | Phase 14 | Pending |
-| PAY-02 | Phase 14 | Pending |
-| PAY-03 | Phase 14 | Pending |
-| BULK-01 | Phase 14 | Pending |
-| BULK-02 | Phase 14 | Pending |
-| BULK-03 | Phase 14 | Pending |
+| PAY-01 | Phase 14 | Complete |
+| PAY-02 | Phase 14 | Complete |
+| PAY-03 | Phase 14 | Complete |
+| BULK-01 | Phase 14 | Complete |
+| BULK-02 | Phase 14 | Complete |
+| BULK-03 | Phase 14 | Complete |
 | TEST-01 | Phase 15 | Pending |
 | TEST-02 | Phase 15 | Pending |
 
