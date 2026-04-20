@@ -4608,6 +4608,92 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario17_EditDes
 	suite.Assert().Equal(4, recurrences[0].Installments)
 }
 
+// TestIssue83_EditDescriptionOnInstallment21Of24: regressão literal do reprodutor
+// reportado em https://github.com/mateusdeitos/finance_app/issues/83.
+// Recorrência 24x mensal com installments começando em 21 (21,22,23,24). O usuário
+// abre a parcela 21, edita APENAS a descrição, propagação "Esta e as próximas".
+// Esperado: "21 de 24" continua sendo "21 de 24", recorrência inalterada,
+// installment_numbers preservados, descrição aplicada apenas em 21..24.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue83_EditDescriptionOnInstallment21Of24() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	d := now()
+	originalDescription := "Original description"
+	newDescription := "Updated description"
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            d,
+		Description:     originalDescription,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 21,
+			TotalInstallments:  24,
+		},
+	})
+	suite.Require().NoError(err)
+
+	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installmentsBefore, 4, "should have 4 installments (21..24)")
+
+	originalRecurrenceID := lo.FromPtr(installmentsBefore[0].TransactionRecurrenceID)
+	installment21 := installmentsBefore[0]
+	suite.Require().Equal(21, lo.FromPtr(installment21.InstallmentNumber),
+		"first installment should be number 21")
+
+	err = suite.Services.Transaction.Update(ctx, installment21.ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
+		Description:         lo.ToPtr(newDescription),
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 21,
+			TotalInstallments:  24,
+		},
+	})
+	suite.Require().NoError(err)
+
+	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userA.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(installmentsAfter, 4, "still 4 installments after update")
+
+	for i, t := range installmentsAfter {
+		expectedNumber := 21 + i
+		suite.Assert().Equal(expectedNumber, lo.FromPtr(t.InstallmentNumber),
+			"installment %d must keep its original number (no renumbering from 1)", expectedNumber)
+		suite.Assert().Equal(originalRecurrenceID, lo.FromPtr(t.TransactionRecurrenceID),
+			"installment %d must remain in the original recurrence", expectedNumber)
+		suite.Assert().Equal(newDescription, t.Description,
+			"installment %d description should be updated", expectedNumber)
+	}
+
+	recurrences, err := suite.Repos.TransactionRecurrence.Search(ctx, domain.TransactionRecurrenceFilter{
+		UserID: userA.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(recurrences, 1, "no new recurrence should be created")
+	suite.Assert().Equal(originalRecurrenceID, recurrences[0].ID, "original recurrence ID preserved")
+	suite.Assert().Equal(24, recurrences[0].Installments,
+		"recurrence.Installments must remain 24 (no fragmentation)")
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
