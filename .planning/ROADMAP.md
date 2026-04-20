@@ -6,7 +6,7 @@
 - ✅ **v1.1 Charges** — Phases 5–8 (shipped 2026-04-16)
 - ✅ **v1.2 Transactions Bulk Actions** — Phases 9–10 (shipped 2026-04-17)
 - ✅ **v1.3 Editing Linked Transactions** — Phase 11 (shipped 2026-04-20, Phase 12 deferred)
-- 🔄 **v1.4 Bulk Update Split Settings** — Phase 13+ (active, roadmap pending)
+- 🔄 **v1.4 Bulk Update Split Settings** — Phases 13–15 (active)
 
 ## Phases
 
@@ -55,9 +55,11 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 </details>
 
 <details open>
-<summary>🔄 v1.4 Bulk Update Split Settings — ACTIVE (roadmap pending)</summary>
+<summary>🔄 v1.4 Bulk Update Split Settings — ACTIVE</summary>
 
-Roadmap will be created after requirements definition.
+- [ ] **Phase 13: BulkDivisionDrawer Form** — Percentage-only split form with dynamic rows, sum-validates-to-100, and smart connected-account pre-selection
+- [ ] **Phase 14: Bulk Action Wiring & Cent-Exact Conversion** — Menu integration, disabled state, percentage→cents conversion with last-split-absorbs-rest, and sequential progress-drawer execution with silent skip for linked txs
+- [ ] **Phase 15: E2E Coverage & Rounding Verification** — Playwright happy-path test and cent-exact verification that Σ split.amount equals tx.amount across rounding edge cases
 
 </details>
 
@@ -88,6 +90,42 @@ Roadmap will be created after requirements definition.
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 13: BulkDivisionDrawer Form
+**Goal**: Users can open a percentage-only split-settings drawer from the bulk transactions flow, with split rows that validate to 100% and smart pre-selection when exactly one connected account exists
+**Depends on**: Nothing (first phase of v1.4; reuses renderDrawer promise pattern from v1.2)
+**Requirements**: UI-03, UI-04, FORM-01, FORM-02, FORM-03
+**Success Criteria** (what must be TRUE):
+  1. A `BulkDivisionDrawer` component renders a React Hook Form with dynamic split rows (`useFieldArray`), each row capturing a `connection_id` and a `percentage`
+  2. The drawer shows no fixed-amount toggle — only percentage input is available on every row
+  3. The submit button is disabled (or submit is blocked) whenever the sum of all row percentages does not equal exactly 100
+  4. When the user has exactly one connected account, the drawer opens with that account pre-selected in the first row
+  5. When the user has two or more connected accounts, the drawer opens without any pre-selection and the user explicitly picks the account in the first row
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 14: Bulk Action Wiring & Cent-Exact Conversion
+**Goal**: The "Divisão" bulk action is fully wired into `SelectionActionBar` and, on submit, converts percentages into cents per-transaction (last split absorbs the rounding remainder) before sequentially applying the update to each selected transaction via the existing progress drawer
+**Depends on**: Phase 13
+**Requirements**: UI-01, UI-02, PAY-01, PAY-02, PAY-03, BULK-01, BULK-02, BULK-03
+**Success Criteria** (what must be TRUE):
+  1. A "Divisão" menu item appears in `SelectionActionBar` positioned immediately before the `Menu.Divider` that precedes "Excluir"
+  2. When the user has zero connected accounts, the "Divisão" menu item is visibly disabled and surfaces a message explaining that a connected account is required
+  3. On submit, for every selected transaction the frontend computes each split's `amount` in cents as `round(tx.amount * percentage / 100)` with the last split absorbing the rounding remainder so `Σ split.amount === tx.amount` holds exactly
+  4. The outgoing `split_settings` array on each `PUT /api/transactions/{id}` contains only `connection_id` and `amount` — no `percentage` field is sent on the wire
+  5. Each PUT request carries the full existing transaction payload (not a partial), matching the pattern from commit `19f2bbb`
+  6. The existing `BulkProgressDrawer` is reused to show sequential per-transaction progress, and linked/unsplittable transactions in the selection are silently skipped (no error rows surfaced), while income transactions are processed normally
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 15: E2E Coverage & Rounding Verification
+**Goal**: The bulk split flow has Playwright e2e coverage for the happy path and explicit verification that percentage-to-cent conversion produces exact sums with no 1-cent drift
+**Depends on**: Phase 14
+**Requirements**: TEST-01, TEST-02
+**Success Criteria** (what must be TRUE):
+  1. A Playwright e2e test drives the full happy path: single connected account auto-selected in the drawer, a multi-transaction selection is submitted, and each transaction reflects the new split settings after the run completes
+  2. A Playwright (or unit) test verifies that for a representative percentage mix on an odd-cent amount (e.g. 30/70 split on an amount that does not divide evenly by 100), `Σ split.amount === tx.amount` with the last split absorbing the rounding remainder
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -103,8 +141,11 @@ Roadmap will be created after requirements definition.
 | 9. Bulk Actions | v1.2 | 3/3 | Complete | 2026-04-17 |
 | 10. User Avatar System | v1.2 | 3/3 | Complete | 2026-04-17 |
 | 11. Backend Validation & Propagation | v1.3 | 2/2 | Complete   | 2026-04-18 |
-| 12. Frontend Edit Form | v1.3 | 0/? | Not started | - |
+| 12. Frontend Edit Form | v1.3 | 0/? | Deferred | - |
+| 13. BulkDivisionDrawer Form | v1.4 | 0/? | Not started | - |
+| 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 0/? | Not started | - |
+| 15. E2E Coverage & Rounding Verification | v1.4 | 0/? | Not started | - |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 started: 2026-04-18_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 started: 2026-04-20_

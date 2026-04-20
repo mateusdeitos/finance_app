@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Bulk Update Split Settings
-status: defining_requirements
+status: roadmap_created
 last_updated: "2026-04-20T00:00:00.000Z"
-last_activity: 2026-04-20 -- Milestone v1.4 started
+last_activity: 2026-04-20 -- v1.4 roadmap created (Phases 13–15)
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,13 +15,13 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 13 — BulkDivisionDrawer Form
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-20 — Milestone v1.4 started
+Status: Roadmap created; awaiting plan for Phase 13
+Last activity: 2026-04-20 — v1.4 roadmap created (Phases 13–15)
 
 ```
-[░░░░░░░░░░░░░░░░░░░░] 0% (roadmap pending)
+[░░░░░░░░░░░░░░░░░░░░] 0% (0/3 phases)
 ```
 
 ## Project Reference
@@ -37,6 +37,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - v1.1: 4 phases, 9 plans (2026-04-10 → 2026-04-16)
 - v1.2: 2 phases, 6 plans, 1 day (2026-04-17)
 - v1.3: 1 phase (partial), 2 plans (2026-04-18 → 2026-04-20) — Phase 12 deferred
+- v1.4: 3 phases planned (started 2026-04-20)
 
 ## Accumulated Context
 
@@ -47,6 +48,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
 - v1.3 shipped 2026-04-20 (partial — Phase 11 only). Archived: `.planning/milestones/v1.3-ROADMAP.md`. Phase 12 deferred to backlog.
 - v1.4 scope: bulk split action (issue #86). Starts at Phase 13. Backend unchanged — frontend-only work. Reuse BulkProgressDrawer + renderDrawer pattern from v1.2.
+- v1.4 phase split: P13 drawer/form, P14 wiring + cent-exact conversion + bulk execution, P15 e2e + rounding verification. Three phases keep the correctness concern (PAY-01 math) isolated in P14 alongside the wiring it guards.
 
 ### Todos
 

@@ -57,27 +57,27 @@ None — scope is tightly defined to issue #86.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | TBD | Pending |
-| UI-02 | TBD | Pending |
-| UI-03 | TBD | Pending |
-| UI-04 | TBD | Pending |
-| FORM-01 | TBD | Pending |
-| FORM-02 | TBD | Pending |
-| FORM-03 | TBD | Pending |
-| PAY-01 | TBD | Pending |
-| PAY-02 | TBD | Pending |
-| PAY-03 | TBD | Pending |
-| BULK-01 | TBD | Pending |
-| BULK-02 | TBD | Pending |
-| BULK-03 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
+| UI-01 | Phase 14 | Pending |
+| UI-02 | Phase 14 | Pending |
+| UI-03 | Phase 13 | Pending |
+| UI-04 | Phase 13 | Pending |
+| FORM-01 | Phase 13 | Pending |
+| FORM-02 | Phase 13 | Pending |
+| FORM-03 | Phase 13 | Pending |
+| PAY-01 | Phase 14 | Pending |
+| PAY-02 | Phase 14 | Pending |
+| PAY-03 | Phase 14 | Pending |
+| BULK-01 | Phase 14 | Pending |
+| BULK-02 | Phase 14 | Pending |
+| BULK-03 | Phase 14 | Pending |
+| TEST-01 | Phase 15 | Pending |
+| TEST-02 | Phase 15 | Pending |
 
 **Coverage:**
 - v1.4 requirements: 15 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 15 (pending roadmap)
+- Mapped to phases: 15 (Phase 13: 5 · Phase 14: 8 · Phase 15: 2)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 before roadmap creation*
+*Last updated: 2026-04-20 — roadmap created (Phases 13–15)*
