@@ -35,8 +35,10 @@ Add "Divisão" (split settings) as a bulk action on the transactions list, letti
 
 ### Testing
 
-- [ ] **TEST-01**: Playwright e2e — success path with 1 connected account auto-selected and bulk split applied to a multi-transaction selection
-- [ ] **TEST-02**: Playwright (or unit) verification that `Σ split.amount === tx.amount` for a representative percentage mix (e.g. 30/70 on an odd-cent amount) — no 1-cent drift
+- [x] **TEST-01
+**: Playwright e2e — success path with 1 connected account auto-selected and bulk split applied to a multi-transaction selection
+- [x] **TEST-02
+**: Playwright (or unit) verification that `Σ split.amount === tx.amount` for a representative percentage mix (e.g. 30/70 on an odd-cent amount) — no 1-cent drift
 
 ## Future Requirements
 
