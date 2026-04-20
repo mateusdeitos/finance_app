@@ -23,6 +23,10 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
 
+      - name: Run unit tests
+        working-directory: frontend
+        run: npm run test:unit
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps chromium
