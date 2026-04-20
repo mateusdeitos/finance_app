@@ -3954,7 +3954,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 		AccountID:       accountA.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		CategoryID:      categoryA.ID,
-		SplitSettings:   []domain.SplitSettings{},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
 	}
 
 	_, err = suite.Services.Transaction.Create(ctx, userA.ID, createReq)
