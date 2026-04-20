@@ -75,7 +75,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   3. When a linked transaction's date is updated with propagation=all, all installments in the series shift by the same diff applied via existing logic
   4. When propagation=current_and_future is used, only the current and future installments shift; past installments are unaffected
   5. No new propagation logic is introduced — the existing date diff mechanism is reused for all three propagation modes
-**Plans**: TBD
+**Plans:** 3 plans
+- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
+- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
+- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
 
 ### Phase 12: Frontend Edit Form
 **Goal**: Users editing a linked transaction see only the fields they can change, with non-editable fields clearly disabled and the propagation drawer available when recurrences exist
@@ -87,7 +90,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   3. The recurrence toggle and its associated inputs are not rendered when editing a linked transaction
   4. The split settings section is not rendered when editing a linked transaction
   5. When editing a linked transaction that belongs to a recurring series, the propagation settings drawer appears and the user can select all/current/current_and_future before saving
-**Plans**: TBD
+**Plans:** 3 plans
+- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
+- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
+- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
 **UI hint**: yes
 
 ### Phase 13: BulkDivisionDrawer Form
@@ -126,7 +132,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 **Success Criteria** (what must be TRUE):
   1. A Playwright e2e test drives the full happy path: single connected account auto-selected in the drawer, a multi-transaction selection is submitted, and each transaction reflects the new split settings after the run completes
   2. A Playwright (or unit) test verifies that for a representative percentage mix on an odd-cent amount (e.g. 30/70 split on an amount that does not divide evenly by 100), `Σ split.amount === tx.amount` with the last split absorbing the rounding remainder
-**Plans**: TBD
+**Plans:** 3 plans
+- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
+- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
+- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
 
 ## Progress
 
