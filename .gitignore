@@ -7,3 +7,4 @@ infra/*.tfstate
 infra/*.tfstate.backup
 infra/terraform.tfvars
 openspec
+.ai-jail
