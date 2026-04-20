@@ -146,10 +146,12 @@ export interface ChargePayload {
   period_month: number
   period_year: number
   description?: string
+  amount?: number
+  role?: 'charger' | 'payer'
   date: string
 }
 
-export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number }> {
+export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number; amount?: number; charger_user_id: number; payer_user_id: number }> {
   const res = await apiFetch('/api/charges', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -175,6 +177,30 @@ export async function getAuthTokenForUser(email: string): Promise<string> {
   const match = setCookie?.match(/auth_token=([^;]+)/)
   if (!match) throw new Error('No auth_token in response')
   return match[1]
+}
+
+/** Open a new Playwright page authenticated as the given user token. */
+export async function openAuthedPage(browser: import('@playwright/test').Browser, token: string) {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
+  const url = new URL(baseURL)
+  const context = await browser.newContext({
+    storageState: {
+      cookies: [
+        {
+          name: 'auth_token',
+          value: token,
+          domain: url.hostname,
+          path: '/',
+          expires: -1,
+          httpOnly: true,
+          secure: false,
+          sameSite: 'Lax' as const,
+        },
+      ],
+      origins: [],
+    },
+  })
+  return context.newPage()
 }
 
 /** Make an API call authenticated as a specific user */

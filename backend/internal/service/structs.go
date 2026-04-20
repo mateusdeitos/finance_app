@@ -13,6 +13,7 @@ type transactionUpdateData struct {
 	transactions           []*domain.Transaction
 	transactionIDsToRemove map[int]bool
 	scenario               updateChanges
+	isLinkedTxEdit         bool
 }
 
 type updateScenario int

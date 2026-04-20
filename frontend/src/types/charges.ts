@@ -28,12 +28,16 @@ export namespace Charges {
     charges: Charge[]
   }
 
+  export type InitiatorRole = 'charger' | 'payer'
+
   export interface CreateChargePayload {
     connection_id: number
     my_account_id: number
     period_month: number
     period_year: number
     description?: string
+    amount?: number
+    role: InitiatorRole
     date: string
   }
 

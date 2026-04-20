@@ -7,18 +7,19 @@ interface UseOpeningBalanceParams {
   month: number
   year: number
   accumulated: boolean
+  hideSettlements?: boolean
 }
 
-export function useOpeningBalance({ month, year, accumulated }: UseOpeningBalanceParams) {
+export function useOpeningBalance({ month, year, accumulated, hideSettlements }: UseOpeningBalanceParams) {
   const filters = useActiveFilters()
 
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear = month === 1 ? year - 1 : year
 
   const query = useQuery({
-    queryKey: [QueryKeys.Balance, { month: prevMonth, year: prevYear, accumulated, ...filters }],
+    queryKey: [QueryKeys.Balance, { month: prevMonth, year: prevYear, accumulated, hideSettlements, ...filters }],
     queryFn: () =>
-      fetchBalance({ month: prevMonth, year: prevYear, accumulated, ...filters }),
+      fetchBalance({ month: prevMonth, year: prevYear, accumulated, hideSettlements, ...filters }),
     enabled: accumulated,
   })
 

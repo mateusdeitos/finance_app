@@ -61,6 +61,10 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 		return pkgErrors.Forbidden("only the non-initiating party can accept")
 	}
 
+	if err := s.validatePrivateAccount(ctx, req.AccountID, callerUserID); err != nil {
+		return err
+	}
+
 	// ---- Status precondition ----
 	if charge.Status != domain.ChargeStatusPending {
 		return pkgErrors.AlreadyExists("charge")
@@ -125,11 +129,15 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 		}
 	}
 
-	// Resolve settlement amount
+	// Resolve settlement amount.
+	// Priority: accept-time override → stored arbitrary amount → live balance.
 	var amount int64
-	if req.Amount != nil {
+	switch {
+	case req.Amount != nil:
 		amount = *req.Amount
-	} else {
+	case charge.Amount != nil:
+		amount = *charge.Amount
+	default:
 		if liveBalance == 0 {
 			return pkgErrors.BadRequest("nothing to settle — balance is zero")
 		}

@@ -17,6 +17,7 @@ type Charge struct {
 	PeriodMonth      int                 `gorm:"not null"`
 	PeriodYear       int                 `gorm:"not null"`
 	Description      *string
+	Amount           *int64
 	Status           domain.ChargeStatus `gorm:"not null"`
 	Date             *time.Time
 	CreatedAt        *time.Time
@@ -46,6 +47,7 @@ func (c *Charge) ToDomain() *domain.Charge {
 		PeriodMonth:      c.PeriodMonth,
 		PeriodYear:       c.PeriodYear,
 		Description:      c.Description,
+		Amount:           c.Amount,
 		Status:           c.Status,
 		Date:             c.Date,
 		CreatedAt:        c.CreatedAt,
@@ -64,6 +66,7 @@ func ChargeFromDomain(d *domain.Charge) *Charge {
 		PeriodMonth:      d.PeriodMonth,
 		PeriodYear:       d.PeriodYear,
 		Description:      d.Description,
+		Amount:           d.Amount,
 		Status:           d.Status,
 		Date:             d.Date,
 		CreatedAt:        d.CreatedAt,

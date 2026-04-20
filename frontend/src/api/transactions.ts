@@ -30,6 +30,9 @@ export async function fetchBalance(params: Transactions.FetchBalanceParams): Pro
   if (params.tagIds?.length) {
     params.tagIds.forEach((id) => url.searchParams.append("tag_id[]", String(id)));
   }
+  if (params.hideSettlements) {
+    url.searchParams.set("hide_settlements", "true");
+  }
 
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch balance");
@@ -61,6 +64,12 @@ export async function fetchTransactions(params: Transactions.FetchParams): Promi
 
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch transactions");
+  return res.json();
+}
+
+export async function fetchTransaction(id: number): Promise<Transactions.Transaction> {
+  const res = await fetch(`${apiUrl}/api/transactions/${id}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch transaction");
   return res.json();
 }
 

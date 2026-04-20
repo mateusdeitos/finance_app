@@ -15,7 +15,16 @@
     ],
     "headers": [
       {
-        "source": "sw.js",
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/@(sw.js|registerSW.js|manifest.webmanifest)",
         "headers": [
           {
             "key": "Cache-Control",

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Button, Drawer, Select, Skeleton, Stack, Text, Textarea } from "@mantine/core";
+import { Alert, Button, Drawer, NumberInput, Radio, Select, Skeleton, Stack, Text, Textarea } from "@mantine/core";
 import { DateInput, MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,8 @@ const createChargeSchema = z.object({
   period_month: z.number().min(1).max(12),
   period_year: z.number(),
   description: z.string().optional(),
+  role: z.enum(["charger", "payer"], { error: "Selecione seu papel" }),
+  amount: z.number().positive("Informe um valor maior que zero").optional(),
   date: z.date({ error: "Selecione uma data" }),
 });
 
@@ -69,9 +71,10 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   const connectionOptions = Array.from(connectionMap.values());
   const singleConnection = connectionOptions.length === 1 ? connectionOptions[0] : null;
 
-  // User's own active accounts
+  // User's own active private accounts only — connection (shared) accounts
+  // are the internal ledger and must not be used as the charge's destination.
   const myAccounts = accounts
-    .filter((a) => a.user_id === currentUserId && a.is_active)
+    .filter((a) => a.user_id === currentUserId && a.is_active && !a.user_connection)
     .map((a) => ({ label: a.name, value: String(a.id) }));
 
   const defaultPeriod = new Date(periodYear, periodMonth - 1, 1);
@@ -84,6 +87,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_month: periodMonth,
       period_year: periodYear,
       description: "",
+      role: undefined,
+      amount: undefined,
       date: new Date(),
     },
   });
@@ -107,6 +112,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_month: values.period_month,
       period_year: values.period_year,
       description: values.description || undefined,
+      role: values.role,
+      amount: values.amount != null ? Math.round(values.amount * 100) : undefined,
       date: values.date.toISOString(),
     };
     mutation.mutate(payload, {
@@ -215,6 +222,46 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 onChange={(date) => field.onChange(date)}
                 error={fieldState.error?.message}
                 required
+              />
+            )}
+          />
+
+          <Controller
+            name="role"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Radio.Group
+                label="Sou o..."
+                value={field.value ?? null}
+                onChange={field.onChange}
+                error={fieldState.error?.message}
+                required
+              >
+                <Stack gap="xs" mt="xs">
+                  <Radio value="charger" label="Cobrador (estou cobrando)" />
+                  <Radio value="payer" label="Pagador (estou pagando)" />
+                </Stack>
+              </Radio.Group>
+            )}
+          />
+
+          <Controller
+            name="amount"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <NumberInput
+                label="Valor (opcional)"
+                description="Deixe em branco para usar o saldo atual"
+                placeholder="0,00"
+                value={field.value ?? ""}
+                onChange={(v) => field.onChange(typeof v === "number" ? v : undefined)}
+                min={0}
+                step={0.01}
+                decimalScale={2}
+                thousandSeparator="."
+                decimalSeparator=","
+                prefix="R$ "
+                error={fieldState.error?.message}
               />
             )}
           />

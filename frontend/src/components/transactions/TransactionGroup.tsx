@@ -1,5 +1,7 @@
 import { Box, Group, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { Fragment } from "react";
+import { fetchTransaction } from "@/api/transactions";
 import { Transactions } from "@/types/transactions";
 import { formatBalance, formatSignedCents } from "@/utils/formatCents";
 import { renderDrawer } from "@/utils/renderDrawer";
@@ -9,6 +11,21 @@ import { TransactionRow } from "./TransactionRow";
 import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
 import { FocusField } from "./form/TransactionForm";
 import classes from "./TransactionGroup.module.css";
+
+// For transfers between accounts of the same user, the debit side is the
+// origin; editing the credit side is rejected by the backend as a linked
+// transaction edit. Always route edits through the origin.
+//
+// The linked relationship is stored unidirectionally (debit → credit), so the
+// credit-side row carries only a shallow reference to the debit side. Fetch
+// the debit tx fresh so its own linked_transactions resolve the destination
+// account in the edit drawer.
+function needsFetchToDebitOrigin(tx: Transactions.Transaction): number | null {
+  if (tx.type !== "transfer" || tx.operation_type !== "credit") return null;
+  const linked = tx.linked_transactions?.[0];
+  if (!linked || linked.user_id !== tx.user_id) return null;
+  return linked.id;
+}
 
 interface TransactionGroupProps {
   group: Transactions.TransactionGroup;
@@ -43,9 +60,38 @@ export function TransactionGroup({
     tx: Transactions.Transaction,
     focusField?: FocusField
   ) {
-    void renderDrawer(() => (
-      <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
-    ));
+    const debitId = needsFetchToDebitOrigin(tx);
+    if (debitId == null) {
+      void renderDrawer(() => (
+        <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
+      ));
+      return;
+    }
+
+    const notifId = notifications.show({
+      loading: true,
+      title: "Carregando transação...",
+      message: "",
+      autoClose: false,
+      withCloseButton: false,
+    });
+    fetchTransaction(debitId)
+      .then((debit) => {
+        notifications.hide(notifId);
+        void renderDrawer(() => (
+          <UpdateTransactionDrawer transaction={debit} focusField={focusField} />
+        ));
+      })
+      .catch(() => {
+        notifications.update({
+          id: notifId,
+          loading: false,
+          color: "red",
+          title: "Erro",
+          message: "Não foi possível carregar a transação",
+          autoClose: 3000,
+        });
+      });
   }
 
   return (

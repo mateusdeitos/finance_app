@@ -59,7 +59,12 @@ export class ChargesPage {
     await expect(this.createDrawer).toBeVisible({ timeout: 5000 });
   }
 
-  async fillCreateForm(opts: { accountName: string; description?: string }) {
+  async fillCreateForm(opts: {
+    accountName: string;
+    role: "charger" | "payer";
+    description?: string;
+    amount?: number;
+  }) {
     // If the connection dropdown is visible (multiple connections or accounts still loading),
     // select the first available option so connection_id gets set.
     const connectionSelect = this.createDrawer.getByRole("textbox", { name: "Conexao" });
@@ -71,6 +76,15 @@ export class ChargesPage {
     const accountSelect = this.createDrawer.getByRole("textbox", { name: "Minha conta" });
     await accountSelect.click();
     await this.page.getByRole("option", { name: opts.accountName }).click();
+
+    const roleLabel =
+      opts.role === "charger" ? "Cobrador (estou cobrando)" : "Pagador (estou pagando)";
+    await this.createDrawer.getByRole("radio", { name: roleLabel }).check();
+
+    if (opts.amount != null) {
+      const amountInput = this.createDrawer.getByRole("textbox", { name: "Valor (opcional)" });
+      await amountInput.fill(opts.amount.toFixed(2).replace(".", ","));
+    }
 
     if (opts.description) {
       await this.createDrawer.getByLabel("Descricao (opcional)").fill(opts.description);

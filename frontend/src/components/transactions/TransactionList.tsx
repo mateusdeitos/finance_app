@@ -21,11 +21,6 @@ function groupNetTotal(
   hideSettlements: boolean,
   accountFilter: number[],
 ): number {
-  // When an account filter is active, only settlements bound to one of the
-  // filtered accounts contribute to the net total. Out-of-scope settlements
-  // are still rendered inline under their source transaction as context, but
-  // they do not move the balance — this keeps the listing total consistent
-  // with GetBalance, whose settlements leg is filtered by s.account_id.
   const hasAccountFilter = accountFilter.length > 0;
   const filterSet = hasAccountFilter ? new Set(accountFilter) : null;
 
@@ -34,7 +29,8 @@ function groupNetTotal(
     const settlementsAmount = hideSettlements
       ? 0
       : (tx.settlements_from_source ?? []).reduce((s, settlement) => {
-          if (filterSet && !filterSet.has(settlement.account_id)) {
+          // Include settlement if: no account filter, OR source tx account matches, OR settlement account matches
+          if (filterSet && !filterSet.has(tx.account_id) && !filterSet.has(settlement.account_id)) {
             return s;
           }
           return s + (settlement.type === "credit" ? settlement.amount : -settlement.amount);
@@ -56,6 +52,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
     month: search.month,
     year: search.year,
     accumulated: search.accumulated,
+    hideSettlements: search.hideSettlements,
   });
 
   const { query: accountsQuery } = useAccounts();

@@ -41,7 +41,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
   if (variant === 'icon') {
     return (
       <ActionIcon
-        size="xl"
+        size="lg"
         radius="xl"
         variant="filled"
         color="red"
@@ -49,7 +49,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
         aria-label="Limpar filtros"
         data-testid="btn_clear_filters"
       >
-        <IconX size={20} />
+        <IconX size={18} />
       </ActionIcon>
     )
   }
