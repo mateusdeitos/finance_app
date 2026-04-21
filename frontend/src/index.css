@@ -70,6 +70,21 @@ select {
   padding-top: env(safe-area-inset-top);
 }
 
+/* ─── Drawer/Modal root dimensions (Playwright-visibility fix) ─────────── */
+/* Mantine's Drawer/Modal root has no intrinsic size — its overlay and inner
+   wrapper use position:fixed, so they don't contribute to the root's
+   bounding box, and Playwright's toBeVisible reports the root as hidden.
+   The :has() guard only applies these dimensions while content is
+   rendered (i.e. while the drawer is open), so `not.toBeVisible` still
+   passes once the content unmounts on close. pointer-events:none keeps
+   clicks routed to the overlay/content inside. */
+.mantine-Drawer-root:has(.mantine-Drawer-content),
+.mantine-Modal-root:has(.mantine-Modal-content) {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
 /* ─── GPU-composited active states ──────────────────────────────────────── */
 button:active,
 a:active,
