@@ -95,6 +95,20 @@ Page components live in `src/pages/` as `PascalCase` functions (`AccountsPage`, 
   }
   ```
 - Query keys must come from the `QueryKeys` const in `src/utils/queryKeys.ts`. No magic strings.
+- **Derived state from queries goes through a `select` callback, not a `useMemo`/filter in the component.** Query hooks are written to accept a typed `select` and forward it to `useQuery`:
+  ```ts
+  export function useAccounts<T = Transactions.Account[]>(select?: (data: Transactions.Account[]) => T) {
+    const query = useQuery({ queryKey: [QueryKeys.Accounts], queryFn: fetchAccounts, select })
+    // ...
+  }
+  ```
+  Consumers pick exactly the slice they need:
+  ```ts
+  const { query: activeOwn }    = useAccounts((a) => a.filter((x) => x.is_active && !x.user_connection))
+  const { query: activeShared } = useAccounts((a) => a.filter((x) => x.is_active && !!x.user_connection))
+  const { query: inactive }     = useAccounts((a) => a.filter((x) => !x.is_active))
+  ```
+  Calling the same query hook multiple times is **fine and encouraged** — TanStack Query deduplicates on the `queryKey`, so there is exactly one fetch regardless of how many subscribers exist. Each `select` result is memoized per subscriber, so components only re-render when their slice actually changes. When adding a new query hook, always expose a `select?: (data) => T` generic parameter so callers can follow this pattern.
 
 ### 4. Avoid `useEffect` inside components
 
@@ -246,6 +260,7 @@ These exist in the codebase and agents should **not** copy them. When touching a
 
 - **Fat route files** — `src/routes/_authenticated.transactions.tsx` (~450 lines), `_authenticated.categories.tsx`, `_authenticated.accounts.tsx`, `login.tsx`, `auth.callback.tsx`: page logic lives inside the route file. Extract to `src/pages/<Name>Page.tsx`.
 - **`useEffect` in components** — e.g. `components/accounts/AccountForm.tsx:46`, `components/transactions/form/TransactionForm.tsx:71`, `components/transactions/form/SplitSettingsFields.tsx:73,80`, `components/transactions/form/RecurrenceFields.tsx`. Extract each to a named custom hook under `src/hooks/`.
+- **In-component query filtering** — e.g. `routes/_authenticated.accounts.tsx:59-63` filters the `useAccounts()` result four times inline. Convert each slice to its own `useAccounts(select)` call (or equivalent) so the derivation runs inside TanStack Query.
 - **Drawers not using `renderDrawer`** — `components/InviteDrawer.tsx` (prop-controlled via `useDisclosure` in `components/AppLayout.tsx`) and `components/categories/DeleteCategoryDialog.tsx` (modal with `useState`). Convert to `renderDrawer` + `useDrawerContext`.
 - **`any` escape hatches** — a handful of `as any` / `: any` casts in `SplitSettingsFields.tsx`, `RecurrenceFields.tsx`, `SplitPopover.tsx`, `ImportReviewRow.tsx` (all `eslint-disable`d). Replace with proper types; ESLint has no blanket `no-explicit-any` rule yet, but treat `any` as forbidden regardless.
 - **Fragile E2E selectors** — most `e2e/` is testid-based, but these files still reach into Mantine internals or copy and must be migrated on touch:
