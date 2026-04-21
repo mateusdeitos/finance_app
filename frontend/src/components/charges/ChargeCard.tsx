@@ -22,7 +22,13 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
     String(charge.period_month).padStart(2, '0') + '/' + charge.period_year
 
   return (
-    <Card withBorder radius="md" p="md" className={classes.card}>
+    <Card
+      withBorder
+      radius="md"
+      p="md"
+      className={classes.card}
+      data-testid={`charge_card_${charge.id}`}
+    >
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
           <Text size="md" fw={400}>
@@ -46,17 +52,17 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
         </Text>
         <Group gap="xs">
           {isReceived && isPending && onAccept && (
-            <Button size="xs" color="teal" onClick={onAccept}>
+            <Button size="xs" color="teal" onClick={onAccept} data-testid="btn_accept_charge">
               Aceitar
             </Button>
           )}
           {isReceived && isPending && onReject && (
-            <Button size="xs" color="red" variant="light" onClick={onReject}>
+            <Button size="xs" color="red" variant="light" onClick={onReject} data-testid="btn_reject_charge">
               Recusar
             </Button>
           )}
           {!isReceived && isPending && onCancel && (
-            <Button size="xs" color="red" variant="light" onClick={onCancel}>
+            <Button size="xs" color="red" variant="light" onClick={onCancel} data-testid="btn_cancel_charge">
               Cancelar
             </Button>
           )}

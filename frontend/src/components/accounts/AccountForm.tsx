@@ -92,6 +92,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
           value={initialBalance}
           onChange={(val) => setValue('initial_balance', val)}
           error={errors.initial_balance?.message}
+          data-testid="input_initial_balance"
         />
 
         <ColorSwatchPicker

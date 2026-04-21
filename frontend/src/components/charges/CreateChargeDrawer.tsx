@@ -148,7 +148,14 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Criar Cobrança" position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={reject}
+      title="Criar Cobrança"
+      position="right"
+      size="md"
+      data-testid="drawer_create_charge"
+    >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
           {submitError && (
@@ -170,6 +177,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                   onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                   error={fieldState.error?.message}
                   required
+                  data-testid="select_connection"
                 />
               )}
             />
@@ -187,6 +195,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
+                data-testid="select_my_account"
               />
             )}
           />
@@ -238,8 +247,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 required
               >
                 <Stack gap="xs" mt="xs">
-                  <Radio value="charger" label="Cobrador (estou cobrando)" />
-                  <Radio value="payer" label="Pagador (estou pagando)" />
+                  <Radio value="charger" label="Cobrador (estou cobrando)" data-testid="radio_role_charger" />
+                  <Radio value="payer" label="Pagador (estou pagando)" data-testid="radio_role_payer" />
                 </Stack>
               </Radio.Group>
             )}
@@ -262,6 +271,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 decimalSeparator=","
                 prefix="R$ "
                 error={fieldState.error?.message}
+                data-testid="input_charge_amount"
               />
             )}
           />
@@ -272,6 +282,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             minRows={2}
             {...form.register("description")}
             error={form.formState.errors.description?.message}
+            data-testid="input_charge_description"
           />
 
           {watchedConnectionId && (
@@ -288,7 +299,13 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             </div>
           )}
 
-          <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
+          <Button
+            type="submit"
+            loading={mutation.isPending}
+            disabled={mutation.isPending}
+            fullWidth
+            data-testid="btn_submit_create_charge"
+          >
             Criar Cobrança
           </Button>
         </Stack>
