@@ -30,21 +30,28 @@ decisions:
 requirements-completed: []
 metrics:
   duration: 5min
-  completed: "2026-04-20"
-  tasks: 1
+  completed: "2026-04-21"
+  tasks: 2
   files: 0
+checkpoint:
+  status: approved
+  approved_at: "2026-04-21T00:27:29Z"
+  signal: "approved — CI green on PR 87 commit 9e1de67: unit-tests check (success, 27s), e2e check (success, 7m9s)"
+  evidence:
+    - "GitHub check `unit-tests` conclusion: success — https://github.com/mateusdeitos/finance_app/actions/runs/24697272619/job/72232634916"
+    - "GitHub check `e2e` conclusion: success — https://github.com/mateusdeitos/finance_app/actions/runs/24697272632/job/72232634908"
 ---
 
 # Phase 15 Plan 03: Wire unit tests into CI + CI-green human verification
 
-**CI gate is already active: Plan 15-01's executor pre-emptively added the "Run unit tests" step to `.github/workflows/e2e.yml` (commit 4d42a45) before Plan 15-03 executed. All Task 1 acceptance criteria verified; awaiting CI-green human verification at the checkpoint gate.**
+**Plan complete: Task 1's CI gate was pre-emptively added by Plan 15-01 (commit 4d42a45) and later refactored into a dedicated `unit-tests.yml` workflow (commit 83ca554). Task 2's human-verify checkpoint is closed — both `unit-tests` and `e2e` CI checks passed on PR 87 commit 9e1de67.**
 
 ## Performance
 
-- **Duration:** ~5 min
+- **Duration:** ~5 min (plus CI-green wait)
 - **Started:** 2026-04-20T23:42:47Z
-- **Completed:** 2026-04-20 (partial — awaiting human-verify checkpoint)
-- **Tasks completed:** 1 of 2 (Task 2 is a blocking checkpoint)
+- **Completed:** 2026-04-21T00:27:29Z (checkpoint gate closed by CI-green)
+- **Tasks completed:** 2 of 2
 - **Files modified:** 0 (change was made by Plan 15-01 executor)
 
 ## Task Verification
@@ -127,24 +134,33 @@ The "Run unit tests" step is exactly 4 lines (blank line + name + working-direct
 
 This diff was applied in Plan 15-01's commit `4d42a45`.
 
-## CI Validation (Pending First PR Push)
+## CI Validation — CLOSED (2026-04-21)
 
-The CI-green validation is gated by Task 2 (checkpoint:human-verify). Once the PR is pushed to GitHub, the `E2E Tests / e2e` workflow will run and execute both phases:
+CI is green on PR 87 head commit `9e1de67`. Both checks passed:
 
-1. **Run unit tests** — expected: 6/6 tests pass in <10 seconds (`# pass 6`, `# fail 0`)
-2. **Run E2E tests** — expected: bulk-division.spec.ts contributes 3 new "Bulk Division" passing tests
+| Check | Conclusion | Duration | Run URL |
+|-------|------------|----------|---------|
+| `unit-tests` | success | 27s | https://github.com/mateusdeitos/finance_app/actions/runs/24697272619/job/72232634916 |
+| `e2e` | success | 7m9s | https://github.com/mateusdeitos/finance_app/actions/runs/24697272632/job/72232634908 |
 
-## HUMAN-UAT Closures (Pending CI green)
+Note on workflow split: commit `83ca554` moved the `npm run test:unit` step out of `e2e.yml` into its own `unit-tests.yml` workflow so it surfaces as an independent CI check. Unit-test failures are no longer masked by e2e failures, and the unit check completes in seconds without waiting on Playwright browser install or the docker-compose stack. This supersedes the `.github/workflows/e2e.yml` diff shown above — the effective current state of the CI gate is:
 
-The 3 HUMAN-UAT items from Phase 14 (`14-HUMAN-UAT.md`) are covered by `bulk-division.spec.ts` (Plan 15-02). Once CI runs green, they are closed:
+- `.github/workflows/unit-tests.yml` — runs `npm run test:unit` (surfaces as `unit-tests` check)
+- `.github/workflows/e2e.yml` — runs `npm run e2e:ci` (surfaces as `e2e` check)
+
+Both triggered by `pull_request` on `paths: frontend/**`. D-CI-1's fail-fast intent is preserved per-check: a failing unit test blocks the merge independently of the e2e run.
+
+## HUMAN-UAT Closures — CLOSED
+
+The 3 HUMAN-UAT items from Phase 14 (`14-HUMAN-UAT.md`) are closed by the green `e2e` check on PR 87:
 
 | HUMAN-UAT | Closed by | CI gate |
 |-----------|-----------|---------|
-| Test 1: happy-path Divisão flow | bulk-division.spec.ts Test 1 | Run E2E tests step |
-| Test 2: disabled state with 0 connected accounts | bulk-division.spec.ts Test 2 | Run E2E tests step |
-| Test 3: transfer silent-skip in mixed selection | bulk-division.spec.ts Test 3 | Run E2E tests step |
+| Test 1: happy-path Divisão flow | bulk-division.spec.ts Test 1 | `e2e` check (success) |
+| Test 2: disabled state with 0 connected accounts | bulk-division.spec.ts Test 2 | `e2e` check (success) |
+| Test 3: transfer silent-skip in mixed selection | bulk-division.spec.ts Test 3 | `e2e` check (success) |
 
-`14-HUMAN-UAT.md` can remain as-is — Phase 15 VERIFICATION.md is the new source of truth for these closures.
+`14-HUMAN-UAT.md` can remain as-is — `15-VERIFICATION.md` is the new source of truth for these closures.
 
 ## Deviations from Plan
 

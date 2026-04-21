@@ -12,14 +12,14 @@ Add "Divisão" (split settings) as a bulk action on the transactions list, letti
 
 - [x] **UI-01**: "Divisão" menu item appears in `SelectionActionBar` before the `Menu.Divider` that precedes "Excluir"
 - [x] **UI-02**: When the user has 0 connected accounts (`user_connection.connection_status === "accepted"` count is 0), the "Divisão" menu item is disabled with a tooltip/message explaining a connected account is required
-- [ ] **UI-03**: When the user has exactly 1 connected account, the drawer opens with that account pre-selected in the first split row
-- [ ] **UI-04**: When the user has 2+ connected accounts, the drawer opens empty and the user chooses
+- [x] **UI-03**: When the user has exactly 1 connected account, the drawer opens with that account pre-selected in the first split row
+- [x] **UI-04**: When the user has 2+ connected accounts, the drawer opens empty and the user chooses
 
 ### Drawer Form
 
-- [ ] **FORM-01**: New `BulkDivisionDrawer.tsx` component renders a React Hook Form with `useFieldArray` for N split rows, each `{ connection_id, percentage }`
-- [ ] **FORM-02**: Drawer is **percentage-only** — no toggle for fixed-amount mode
-- [ ] **FORM-03**: Form blocks submit until `Σ percentage === 100`
+- [x] **FORM-01**: New `BulkDivisionDrawer.tsx` component renders a React Hook Form with `useFieldArray` for N split rows, each `{ connection_id, percentage }`
+- [x] **FORM-02**: Drawer is **percentage-only** — no toggle for fixed-amount mode
+- [x] **FORM-03**: Form blocks submit until `Σ percentage === 100`
 
 ### Payload & Conversion
 
@@ -61,19 +61,19 @@ None — scope is tightly defined to issue #86.
 |-------------|-------|--------|
 | UI-01 | Phase 14 | Complete |
 | UI-02 | Phase 14 | Complete |
-| UI-03 | Phase 13 | Pending |
-| UI-04 | Phase 13 | Pending |
-| FORM-01 | Phase 13 | Pending |
-| FORM-02 | Phase 13 | Pending |
-| FORM-03 | Phase 13 | Pending |
+| UI-03 | Phase 13 | Complete |
+| UI-04 | Phase 13 | Complete |
+| FORM-01 | Phase 13 | Complete |
+| FORM-02 | Phase 13 | Complete |
+| FORM-03 | Phase 13 | Complete |
 | PAY-01 | Phase 14 | Complete |
 | PAY-02 | Phase 14 | Complete |
 | PAY-03 | Phase 14 | Complete |
 | BULK-01 | Phase 14 | Complete |
 | BULK-02 | Phase 14 | Complete |
 | BULK-03 | Phase 14 | Complete |
-| TEST-01 | Phase 15 | Pending |
-| TEST-02 | Phase 15 | Pending |
+| TEST-01 | Phase 15 | Complete |
+| TEST-02 | Phase 15 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 15 total
@@ -82,4 +82,4 @@ None — scope is tightly defined to issue #86.
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 — roadmap created (Phases 13–15)*
+*Last updated: 2026-04-21 — v1.4 shipped (Phases 13–15 complete, CI-green on PR 87)*

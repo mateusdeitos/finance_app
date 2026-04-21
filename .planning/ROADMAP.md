@@ -6,7 +6,7 @@
 - ✅ **v1.1 Charges** — Phases 5–8 (shipped 2026-04-16)
 - ✅ **v1.2 Transactions Bulk Actions** — Phases 9–10 (shipped 2026-04-17)
 - ✅ **v1.3 Editing Linked Transactions** — Phase 11 (shipped 2026-04-20, Phase 12 deferred)
-- 🔄 **v1.4 Bulk Update Split Settings** — Phases 13–15 (active)
+- ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-04-21)
 
 ## Phases
 
@@ -54,12 +54,12 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
-<details open>
-<summary>🔄 v1.4 Bulk Update Split Settings — ACTIVE</summary>
+<details>
+<summary>✅ v1.4 Bulk Update Split Settings (Phases 13–15) — SHIPPED 2026-04-21</summary>
 
 - [x] Phase 13: BulkDivisionDrawer Form (1/1 plan) — completed 2026-04-20
-- [ ] **Phase 14: Bulk Action Wiring & Cent-Exact Conversion** — Menu integration, disabled state, percentage→cents conversion with last-split-absorbs-rest, and sequential progress-drawer execution with silent skip for linked txs
-- [ ] **Phase 15: E2E Coverage & Rounding Verification** — Playwright happy-path test and cent-exact verification that Σ split.amount equals tx.amount across rounding edge cases
+- [x] Phase 14: Bulk Action Wiring & Cent-Exact Conversion (1/1 plan) — completed 2026-04-20
+- [x] Phase 15: E2E Coverage & Rounding Verification (3/3 plans) — completed 2026-04-21
 
 </details>
 
@@ -76,9 +76,9 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   4. When propagation=current_and_future is used, only the current and future installments shift; past installments are unaffected
   5. No new propagation logic is introduced — the existing date diff mechanism is reused for all three propagation modes
 **Plans:** 3 plans
-- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
-- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
-- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
+- [x] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
+- [x] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
+- [x] 15-03-PLAN.md — Wire npm run test:unit into CI (unit-tests.yml) + CI-green human verification
 
 ### Phase 12: Frontend Edit Form
 **Goal**: Users editing a linked transaction see only the fields they can change, with non-editable fields clearly disabled and the propagation drawer available when recurrences exist
@@ -90,10 +90,7 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   3. The recurrence toggle and its associated inputs are not rendered when editing a linked transaction
   4. The split settings section is not rendered when editing a linked transaction
   5. When editing a linked transaction that belongs to a recurring series, the propagation settings drawer appears and the user can select all/current/current_and_future before saving
-**Plans:** 3 plans
-- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
-- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
-- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
+**Plans:** deferred to backlog — no plans created
 **UI hint**: yes
 
 ### Phase 13: BulkDivisionDrawer Form
@@ -106,8 +103,8 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
   3. The submit button is disabled (or submit is blocked) whenever the sum of all row percentages does not equal exactly 100
   4. When the user has exactly one connected account, the drawer opens with that account pre-selected in the first row
   5. When the user has two or more connected accounts, the drawer opens without any pre-selection and the user explicitly picks the account in the first row
-**Plans:** 1 plan
-- [ ] 13-01-PLAN.md — Create BulkDivisionDrawer component (drawer shell + RHF + Zod sum=100 + smart pre-selection + Aplicar submit)
+**Plans:** 1/1 plans complete
+- [x] 13-01-PLAN.md — Create BulkDivisionDrawer component (drawer shell + RHF + Zod sum=100 + smart pre-selection + Aplicar submit)
 **UI hint**: yes
 
 ### Phase 14: Bulk Action Wiring & Cent-Exact Conversion
@@ -132,10 +129,10 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 **Success Criteria** (what must be TRUE):
   1. A Playwright e2e test drives the full happy path: single connected account auto-selected in the drawer, a multi-transaction selection is submitted, and each transaction reflects the new split settings after the run completes
   2. A Playwright (or unit) test verifies that for a representative percentage mix on an odd-cent amount (e.g. 30/70 split on an amount that does not divide evenly by 100), `Σ split.amount === tx.amount` with the last split absorbing the rounding remainder
-**Plans:** 3 plans
-- [ ] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
-- [ ] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
-- [ ] 15-03-PLAN.md — Wire npm run test:unit into .github/workflows/e2e.yml + CI-green human verification
+**Plans:** 3/3 plans complete
+- [x] 15-01-PLAN.md — Unit test infra (tsx devDep + test:unit script + splitMath.test.ts with 6 rounding cases)
+- [x] 15-02-PLAN.md — setupPartnerConnection helper + bulk-division.spec.ts (3 Playwright tests: happy path, disabled state, transfer silent-skip)
+- [x] 15-03-PLAN.md — Wire npm run test:unit into CI (unit-tests.yml) + CI-green human verification
 
 ## Progress
 
@@ -155,8 +152,8 @@ Full details: `.planning/milestones/v1.3-ROADMAP.md`
 | 12. Frontend Edit Form | v1.3 | 0/? | Deferred | - |
 | 13. BulkDivisionDrawer Form | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 1/1 | Complete    | 2026-04-20 |
-| 15. E2E Coverage & Rounding Verification | v1.4 | 0/? | Not started | - |
+| 15. E2E Coverage & Rounding Verification | v1.4 | 3/3 | Complete | 2026-04-21 |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 started: 2026-04-20_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-04-21_
