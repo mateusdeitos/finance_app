@@ -225,7 +225,20 @@ Mobile is the primary target.
 
 ## E2E tests (Playwright)
 
-Tests live in `frontend/e2e/`. Run with `npm run test:e2e` (see `package.json`). When adding UI affordances, add stable `data-testid` attributes (see existing `btn_new_account`, `account_form`, `section_active` conventions).
+Tests live in `frontend/e2e/` (tests in `tests/`, page objects in `pages/`, helpers in `helpers/`). Run with `npm run test:e2e`.
+
+### Selectors: `data-testid` only
+
+**E2E selectors must use `data-testid`.** This is non-negotiable: the library is an implementation detail and may change — testid-based selectors are the only ones that survive a component-library swap or a Mantine upgrade.
+
+Rules:
+- **Always**: `page.getByTestId('btn_new_account')`, `drawer.getByTestId('input_account_name')`, `row.getByTestId('checkbox_select_transaction')`.
+- **Never use UI-library-specific selectors**: no `.mantine-*`, `.ant-*`, `[class*="Group"]`, `[class*="Avatar"]`, `input[inputmode="numeric"]`, etc. These are Mantine internals and break on every upgrade.
+- **Avoid `getByRole` / `getByText` / `getByLabel`** as a primary strategy — they couple tests to copy (which changes with i18n or wording tweaks) and to ARIA details emitted by the library. Only acceptable when rendering third-party UI you cannot instrument (e.g. a browser native `confirm()`); even then, add a testid to the nearest container first.
+- Naming convention (already in use): `btn_<action>`, `input_<field>`, `drawer_<name>`, `section_<name>`, `row_<entity>`, `checkbox_<purpose>`. Stay consistent.
+- When adding a new UI element, add a stable `data-testid` in the same commit. No test may rely on class names, tag shapes, or attribute probes as a workaround.
+
+When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
 
 ## Known divergences (migrate when touching)
 
@@ -235,3 +248,10 @@ These exist in the codebase and agents should **not** copy them. When touching a
 - **`useEffect` in components** — e.g. `components/accounts/AccountForm.tsx:46`, `components/transactions/form/TransactionForm.tsx:71`, `components/transactions/form/SplitSettingsFields.tsx:73,80`, `components/transactions/form/RecurrenceFields.tsx`. Extract each to a named custom hook under `src/hooks/`.
 - **Drawers not using `renderDrawer`** — `components/InviteDrawer.tsx` (prop-controlled via `useDisclosure` in `components/AppLayout.tsx`) and `components/categories/DeleteCategoryDialog.tsx` (modal with `useState`). Convert to `renderDrawer` + `useDrawerContext`.
 - **`any` escape hatches** — a handful of `as any` / `: any` casts in `SplitSettingsFields.tsx`, `RecurrenceFields.tsx`, `SplitPopover.tsx`, `ImportReviewRow.tsx` (all `eslint-disable`d). Replace with proper types; ESLint has no blanket `no-explicit-any` rule yet, but treat `any` as forbidden regardless.
+- **Fragile E2E selectors** — most `e2e/` is testid-based, but these files still reach into Mantine internals or copy and must be migrated on touch:
+  - `e2e/tests/avatars.spec.ts` — pervasive `.mantine-Avatar-root` / `.mantine-Avatar-placeholder`.
+  - `e2e/pages/TransactionsPage.ts` — `getByRole('dialog', …)`, `locator('[class*="Group"], [class*="Stack"]')`, `locator('[class*="transaction"]')`.
+  - `e2e/pages/ImportPage.ts` — `locator('input[type="file"]')`, `locator('input[type="checkbox"]')`, and multiple `getByRole('option'/'button', { name: … })`.
+  - `e2e/pages/AccountsPage.ts` — `locator('input[inputmode="numeric"]')`.
+
+  Replacement approach: add a `data-testid` on the target element in the component, then switch the test to `getByTestId`.
