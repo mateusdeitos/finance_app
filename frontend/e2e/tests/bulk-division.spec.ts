@@ -147,10 +147,8 @@ test.describe('Bulk Division', () => {
     await page.getByRole('option').first().click()
 
     // Set row 1 percentage to 30
-    const spinbuttons = drawer.getByRole('spinbutton')
-    await spinbuttons.nth(0).click()
-    await spinbuttons.nth(0).press('Control+a')
-    await spinbuttons.nth(0).pressSequentially('30')
+    const percentInputs = drawer.getByTestId('input_split_percentage')
+    await percentInputs.nth(0).fill('30')
 
     // Add a second row
     await drawer.getByRole('button', { name: '+ Adicionar divisão' }).click()
@@ -161,9 +159,7 @@ test.describe('Bulk Division', () => {
     await page.getByRole('option').first().click()
 
     // Set row 2 percentage to 70
-    await spinbuttons.nth(1).click()
-    await spinbuttons.nth(1).press('Control+a')
-    await spinbuttons.nth(1).pressSequentially('70')
+    await percentInputs.nth(1).fill('70')
 
     // Verify the sum badge shows 100%
     await expect(drawer.getByTestId('badge_bulk_division_sum')).toHaveText(/Total: 100% \/ 100%/)
@@ -370,10 +366,8 @@ test.describe('Bulk Division', () => {
     await page.getByRole('option').first().click()
 
     // Set percentage to 100 (single-row, 100% split is valid)
-    const spinbuttons = drawer.getByRole('spinbutton')
-    await spinbuttons.nth(0).click()
-    await spinbuttons.nth(0).press('Control+a')
-    await spinbuttons.nth(0).pressSequentially('100')
+    const percentInputs = drawer.getByTestId('input_split_percentage')
+    await percentInputs.nth(0).fill('100')
 
     // Verify sum badge shows 100%
     await expect(drawer.getByTestId('badge_bulk_division_sum')).toHaveText(/Total: 100% \/ 100%/)
