@@ -148,7 +148,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}
-        data-testid={ImportTestIds.InputCsvFile}
+        fileInputProps={{ 'data-testid': ImportTestIds.InputCsvFile } as React.InputHTMLAttributes<HTMLInputElement>}
       />
 
       {errorMessage && (

@@ -36,14 +36,7 @@ export class ImportPage {
 
   /** Upload a CSV file by writing content into the hidden file input. */
   async uploadCSVContent(csvContent: string) {
-    // Mantine's FileInput wraps a real <input type="file">. The FileInput
-    // wrapper has data-testid="input_csv_file"; Playwright's setInputFiles
-    // needs the underlying input element, reached by a native-type descendant
-    // probe. This is native HTML (not Mantine internals), scoped to the
-    // testid wrapper — survives Mantine upgrades.
-    const fileInput = this.uploadStep
-      .getByTestId(ImportTestIds.InputCsvFile)
-      .locator('input[type="file"]');
+    const fileInput = this.uploadStep.getByTestId(ImportTestIds.InputCsvFile);
     await fileInput.setInputFiles({
       name: "import.csv",
       mimeType: "text/csv",
