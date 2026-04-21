@@ -107,6 +107,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
               .catch(() => {})
           }}
           aria-label="Criar conta"
+          data-testid="btn_create_account_header"
           mb={2}
         >
           <IconPlus size={16} />
@@ -146,6 +147,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}
+        data-testid="input_csv_file"
       />
 
       {errorMessage && (

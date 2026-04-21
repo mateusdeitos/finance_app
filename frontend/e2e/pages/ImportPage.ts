@@ -21,9 +21,8 @@ export class ImportPage {
   async goto() {
     await this.page.goto("/transactions");
     await this.page.waitForLoadState("networkidle");
-    // Open the overflow menu (ActionIcon with IconDots)
-    await this.page.getByRole("button", { name: "Mais opções" }).first().click();
-    await this.page.getByText("Importar transações").click();
+    await this.page.getByTestId("btn_more_options").first().click();
+    await this.page.getByTestId("menu_item_import_transactions").click();
     await expect(this.uploadStep).toBeVisible({ timeout: 8000 });
   }
 
@@ -31,12 +30,20 @@ export class ImportPage {
   async selectAccount(accountName: string) {
     const input = this.uploadStep.getByTestId("select_import_account");
     await input.click();
+    // Mantine Select options are portalled — documented escape (see Phase 7 plan).
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
   /** Upload a CSV file by writing content into the hidden file input. */
   async uploadCSVContent(csvContent: string) {
-    const fileInput = this.uploadStep.locator('input[type="file"]');
+    // Mantine's FileInput wraps a real <input type="file">. The FileInput
+    // wrapper has data-testid="input_csv_file"; Playwright's setInputFiles
+    // needs the underlying input element, reached by a native-type descendant
+    // probe. This is native HTML (not Mantine internals), scoped to the
+    // testid wrapper — survives Mantine upgrades.
+    const fileInput = this.uploadStep
+      .getByTestId("input_csv_file")
+      .locator('input[type="file"]');
     await fileInput.setInputFiles({
       name: "import.csv",
       mimeType: "text/csv",
@@ -62,22 +69,32 @@ export class ImportPage {
    *
    * Two possible completion states:
    * - allImportedSuccess: the review_step Box is REPLACED by a success screen
-   *   with "Importação concluída com sucesso!" — must search the whole page.
-   * - done with errors: the review_step Box stays and shows an Alert with
-   *   "Importação concluída com erros" inside it.
+   *   ("Importação concluída com sucesso!") — page then navigates away after 3s.
+   * - done with errors: the review_step Box stays and shows an Alert
+   *   ("Importação concluída com erros").
    *
-   * In both cases the text starts with "Importação concluída", so we wait for
-   * that substring anywhere on the page.
+   * We watch for either the finished_step testid or a fallback substring,
+   * whichever appears first.
    */
   async confirmImport() {
     await this.confirmButton.click();
-    // Wait for the import loop to finish. Two possible completion states:
-    // - allImportedSuccess: finished_import_successfully_step replaces review_step
-    //   ("Importação concluída com sucesso!") — page then navigates away after 3s.
-    // - done with errors: review_step stays and shows an Alert
-    //   ("Importação concluída com erros").
-    // Search the whole page so both cases are covered.
-    await expect(this.page.getByText("Importação concluída", { exact: false }).first()).toBeVisible({ timeout: 30000 });
+    await expect
+      .poll(
+        async () => {
+          if (await this.finishedStep.isVisible().catch(() => false)) return "success";
+          if (
+            await this.reviewStep
+              .getByText("Importação concluída com erros")
+              .isVisible()
+              .catch(() => false)
+          ) {
+            return "with_errors";
+          }
+          return null;
+        },
+        { timeout: 30000 }
+      )
+      .not.toBeNull();
     await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 
@@ -87,24 +104,16 @@ export class ImportPage {
   }
 
   /**
-   * Return the import status of a row (idle | loading | success | error | duplicate).
-   * Reads from the data-testid status cell.
+   * Return the import status of a row. Reads directly from the data-status
+   * attribute on the status cell, rather than probing for Mantine icon classes.
+   * Returns: "idle" | "loading" | "success" | "error" (plus "pending" fallback).
    */
   async getRowStatus(rowIndex: number): Promise<string> {
     const statusCell = this.reviewStep.getByTestId(`import_status_${rowIndex}`);
+    const status = await statusCell.getAttribute("data-status");
+    if (status && status !== "idle") return status;
+    // idle → fall back to the row's action (e.g. "duplicate", "skip")
     const actionSelect = this.reviewStep.getByTestId(`select_import_action_${rowIndex}`);
-    // Check visible icons
-    const hasSuccess = await statusCell
-      .locator("svg[class*='icon-check'], [data-icon='check']")
-      .isVisible()
-      .catch(() => false);
-    if (hasSuccess) return "success";
-    const hasError = await statusCell
-      .locator("svg[class*='icon-x'], [data-icon='x']")
-      .isVisible()
-      .catch(() => false);
-    if (hasError) return "error";
-    // Otherwise read from action select value
     const value = await actionSelect
       .locator("input")
       .inputValue()
@@ -122,15 +131,17 @@ export class ImportPage {
 
   /** Click the + button next to the category select to open the category creation drawer. */
   async openCreateCategoryDrawer(rowIndex: number) {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    await row.getByRole("button", { name: "Criar categoria" }).click();
-    // Wait for drawer content (root div starts hidden during Mantine transition)
-    await expect(this.page.getByTestId("drawer_create_category").getByRole("button", { name: "Nova Categoria" })).toBeVisible({ timeout: 5000 });
+    await this.reviewStep.getByTestId(`btn_create_category_row_${rowIndex}`).click();
+    await expect(
+      this.page
+        .getByTestId("drawer_create_category")
+        .getByTestId("btn_new_category_in_drawer"),
+    ).toBeVisible({ timeout: 5000 });
   }
 
   /** Click the + button next to the account select in the upload step header. */
   async openCreateAccountDrawerFromHeader() {
-    await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
+    await this.uploadStep.getByTestId("btn_create_account_header").click();
     await expect(this.page.getByTestId("account_form")).toBeVisible({ timeout: 5000 });
   }
 
@@ -138,7 +149,7 @@ export class ImportPage {
   async createCategoryInDrawer(name: string, opts?: { emoji?: string }) {
     const drawer = this.page.getByTestId("drawer_create_category");
     // Click "Nova Categoria" to show the inline input (may already be visible)
-    const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
+    const newButton = drawer.getByTestId("btn_new_category_in_drawer");
     if (await newButton.isVisible()) {
       await newButton.click();
     }
@@ -158,7 +169,6 @@ export class ImportPage {
       const emojiTestId = await emojiButton.getAttribute("data-testid");
       const categoryId = emojiTestId!.replace("btn_emoji_", "");
       await emojiButton.click();
-      // Click the emoji option — it exists in exactly one open picker
       const emojiOption = this.page.getByTestId(`emoji_${opts.emoji}`).first();
       await expect(emojiOption).toBeVisible({ timeout: 5000 });
       await emojiOption.click();
@@ -171,7 +181,7 @@ export class ImportPage {
     }
 
     // Close the drawer
-    await drawer.getByRole("button", { name: "Fechar" }).click();
+    await drawer.getByTestId("btn_close_create_category_drawer").click();
     await expect(drawer).not.toBeVisible({ timeout: 5000 });
   }
 
@@ -197,10 +207,11 @@ export class ImportPage {
 
   /** Click a row's checkbox, optionally holding Shift. */
   async toggleRowCheckbox(rowIndex: number, options?: { shiftKey?: boolean }) {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    const checkbox = row.locator('input[type="checkbox"]');
+    const checkbox = this.reviewStep
+      .getByTestId(`checkbox_import_row_${rowIndex}`)
+      .locator("input");
     if (options?.shiftKey) {
-      await checkbox.click({ modifiers: ['Shift'] });
+      await checkbox.click({ modifiers: ["Shift"] });
     } else {
       await checkbox.click();
     }
@@ -208,8 +219,10 @@ export class ImportPage {
 
   /** Return whether a row's checkbox is checked. */
   async isRowSelected(rowIndex: number): Promise<boolean> {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    return row.locator('input[type="checkbox"]').isChecked();
+    return this.reviewStep
+      .getByTestId(`checkbox_import_row_${rowIndex}`)
+      .locator("input")
+      .isChecked();
   }
 
   /** Change the action for a row via the action select. */

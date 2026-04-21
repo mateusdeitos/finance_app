@@ -50,6 +50,7 @@ export function CreateCategoryDrawer() {
           onClick={() => setPendingParentId('root')}
           size="xs"
           variant="light"
+          data-testid="btn_new_category_in_drawer"
         >
           Nova Categoria
         </Button>
@@ -82,7 +83,11 @@ export function CreateCategoryDrawer() {
           </Stack>
         )}
 
-        <Button onClick={() => close(lastCreatedRef.current ?? undefined)} mt="md">
+        <Button
+          onClick={() => close(lastCreatedRef.current ?? undefined)}
+          mt="md"
+          data-testid="btn_close_create_category_drawer"
+        >
           Fechar
         </Button>
       </Stack>
