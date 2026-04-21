@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stack, TextInput, Button, Group, Alert } from '@mantine/core'
+import { useResetFormOnChange } from '@/hooks/useResetFormOnChange'
 
 const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -29,9 +30,11 @@ export function CategoryForm({ initialValues, onSubmit, isPending, error }: Prop
     defaultValues: { name: '', emoji: '', ...initialValues },
   })
 
-  useEffect(() => {
-    if (initialValues) reset({ name: '', emoji: '', ...initialValues })
-  }, [initialValues, reset])
+  const resetValues = useMemo<CategoryFormValues | undefined>(
+    () => (initialValues ? { name: '', emoji: '', ...initialValues } : undefined),
+    [initialValues],
+  )
+  useResetFormOnChange(reset, resetValues)
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>

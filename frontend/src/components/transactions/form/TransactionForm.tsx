@@ -1,5 +1,6 @@
-import { useEffect, type FocusEvent, type ReactNode } from "react";
+import { type FocusEvent, type ReactNode } from "react";
 import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
+import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
   SegmentedControl,
@@ -68,16 +69,7 @@ export const TransactionForm = ({
     formState: { errors, isSubmitting },
   } = useFormContext<TransactionFormValues>();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (focusField) {
-        setFocus(focusField);
-      }
-    }, 0);
-
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusFieldOnMount(setFocus, focusField);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
   const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
