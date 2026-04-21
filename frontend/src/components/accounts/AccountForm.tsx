@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stack, TextInput, Textarea, Button, Group, Alert } from '@mantine/core'
 import { CurrencyInput } from '@/components/transactions/form/CurrencyInput'
 import { ColorSwatchPicker, DEFAULT_AVATAR_COLOR } from '@/components/accounts/ColorSwatchPicker'
+import { useResetFormOnChange } from '@/hooks/useResetFormOnChange'
 import { Transactions } from '@/types/transactions'
 
 const schema = z.object({
@@ -43,9 +44,20 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
     },
   })
 
-  useEffect(() => {
-    if (initialValues) reset({ name: '', description: '', initial_balance: 0, avatar_background_color: DEFAULT_AVATAR_COLOR, ...initialValues })
-  }, [initialValues, reset])
+  const resetValues = useMemo<AccountFormValues | undefined>(
+    () =>
+      initialValues
+        ? {
+            name: '',
+            description: '',
+            initial_balance: 0,
+            avatar_background_color: DEFAULT_AVATAR_COLOR,
+            ...initialValues,
+          }
+        : undefined,
+    [initialValues],
+  )
+  useResetFormOnChange(reset, resetValues)
 
   const initialBalance = useWatch({ control, name: 'initial_balance' })
   const avatarColor = useWatch({ control, name: 'avatar_background_color' })

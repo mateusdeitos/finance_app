@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ActionIcon, Box, Group, Loader, Text, TextInput } from '@mantine/core'
+import { useAutofocusRef } from '@/hooks/useAutofocusRef'
 
 interface Props {
   depth: number
@@ -11,8 +12,7 @@ export function InlineNewCategory({ depth, onSave, onCancel }: Props) {
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { inputRef.current?.focus() }, [])
+  useAutofocusRef(inputRef)
 
   async function commit() {
     const trimmed = name.trim()

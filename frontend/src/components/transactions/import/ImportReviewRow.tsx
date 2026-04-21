@@ -1,17 +1,16 @@
-import { forwardRef, memo, useEffect, useRef } from "react";
+import { forwardRef, memo } from "react";
 import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues } from "@/components/transactions/form/importFormSchema";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
-import { checkDuplicateTransaction } from "@/api/transactions";
 import classes from "./ImportReviewRow.module.css";
 import { SplitPopover } from "./SplitPopover";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
@@ -102,37 +101,14 @@ export const ImportReviewRow = memo(
 
     // ─── Duplicate re-detection ─────────────────────────────────────────────────
 
-    const [debouncedDate] = useDebouncedValue(date, 500);
-    const [debouncedDescription] = useDebouncedValue(description, 500);
-    const [debouncedAmount] = useDebouncedValue(amount, 500);
-
-    // Skip duplicate check on initial mount (backend already checked)
-    const isFirstRender = useRef(true);
-    useEffect(() => {
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-        return;
-      }
-      if (!debouncedDate || !debouncedDescription || !debouncedAmount || debouncedAmount <= 0) return;
-      void checkDuplicateTransaction({
-        date: debouncedDate as string,
-        description: debouncedDescription as string,
-        amount: debouncedAmount as number,
-        account_id: form.getValues("accountId"),
-      })
-        .then((result) => {
-          const currentAction = form.getValues(`rows.${rowIndex}.action`);
-          if (result.is_duplicate && currentAction === "import") {
-            form.setValue(`rows.${rowIndex}.action`, "duplicate");
-          } else if (!result.is_duplicate && currentAction === "duplicate") {
-            form.setValue(`rows.${rowIndex}.action`, "import");
-          }
-        })
-        .catch(() => {
-          /* ignore network errors */
-        });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedDate, debouncedDescription, debouncedAmount]);
+    useDuplicateTransactionCheck({
+      date: date as string,
+      description: description as string,
+      amount: amount as number,
+      accountId: form.getValues("accountId"),
+      getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
+      setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
+    });
 
     const rowErrors = form.formState.errors.rows?.[rowIndex];
 
