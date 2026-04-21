@@ -1,6 +1,7 @@
 import { Transactions } from "@/types/transactions";
 import { Popover, Button, Stack } from "@mantine/core";
 import { useFormContext, useForm, FormProvider } from "react-hook-form";
+import type { ImportFormValues, ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
 import { SplitSettingsFields } from "../form/SplitSettingsFields";
 
 // ─── SplitPopover ─────────────────────────────────────────────────────────────
@@ -16,8 +17,7 @@ interface SplitPopoverProps {
   rowAmount: number;
 }
 export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: SplitPopoverProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parentForm = useFormContext<any>();
+  const parentForm = useFormContext<ImportFormValues>();
 
   const localForm = useForm<SplitLocalValues>({
     defaultValues: {
@@ -27,9 +27,11 @@ export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmoun
   });
 
   function handleOpen() {
-    const rowPath = namePrefix.slice(0, -1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowValues = parentForm.getValues(rowPath) as any;
+    const rowPath = namePrefix.slice(0, -1); // "rows.0." → "rows.0"
+    // Dynamic path: RHF cannot statically prove that rowPath points to a row;
+    // the caller (ImportReviewRow) guarantees it. Cast narrows the unknown-ish
+    // getValues result to the row schema.
+    const rowValues = parentForm.getValues(rowPath as `rows.${number}`) as ImportRowFormValues;
     localForm.reset({
       amount: rowValues.amount ?? rowAmount,
       split_settings: rowValues.split_settings ?? [],
@@ -39,7 +41,7 @@ export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmoun
   function handleClose() {
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
-    parentForm.setValue(`${rowPath}.split_settings`, values.split_settings);
+    parentForm.setValue(`${rowPath}.split_settings` as `rows.${number}.split_settings`, values.split_settings);
   }
 
   return (

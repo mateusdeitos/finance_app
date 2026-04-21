@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSyncSplitAmount } from "@/hooks/useSyncSplitAmount";
+import { getFieldErrorMessage } from "@/utils/getFieldErrorMessage";
 import {
   Group,
   Avatar,
@@ -17,14 +18,11 @@ import {
 } from "@mantine/core";
 import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
-import { useWatch, useFieldArray, useFormContext } from "react-hook-form";
+import { useWatch, useFieldArray, useFormContext, type FieldValues } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 import { getInitials } from "@/utils/getInitials";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyFormValues = any;
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -52,7 +50,7 @@ function SplitRowControls({
   rowPath,
   error,
 }: SplitRowControlsProps) {
-  const { control, register, setValue } = useFormContext<AnyFormValues>();
+  const { control, register, setValue } = useFormContext<FieldValues>();
 
   const amountFieldName = `${rowPath}.amount`;
   const percentageFieldName = `${rowPath}.percentage`;
@@ -160,7 +158,7 @@ function SplitRow({
   comboboxWithinPortal = true,
   onlyPercentage = false,
 }: SplitRowProps) {
-  const { control, setValue } = useFormContext<AnyFormValues>();
+  const { control, setValue } = useFormContext<FieldValues>();
   const connectionId = useWatch({
     control,
     name: `${rowPath}.connection_id`,
@@ -283,7 +281,7 @@ export function SplitSettingsFields({
   const {
     control,
     formState: { errors },
-  } = useFormContext<AnyFormValues>();
+  } = useFormContext<FieldValues>();
   const totalAmount = (useWatch({ control, name: `${namePrefix}amount` }) as number) ?? 0;
 
   const fieldName = `${namePrefix}split_settings`;
@@ -316,17 +314,7 @@ export function SplitSettingsFields({
   const hasAvailableConnections =
     connectedAccounts.filter((a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)).length > 0;
 
-  // Resolve errors for a dot-path under namePrefix
-  function fieldError(suffix: string): string | undefined {
-    const parts = `${namePrefix}${suffix}`.split(".");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let cur: any = errors;
-    for (const p of parts) {
-      if (cur == null) return undefined;
-      cur = /^\d+$/.test(p) ? cur[Number(p)] : cur[p];
-    }
-    return cur?.message as string | undefined;
-  }
+  const fieldError = (suffix: string) => getFieldErrorMessage(errors, `${namePrefix}${suffix}`);
 
   const generalError = fieldError("split_settings");
 
