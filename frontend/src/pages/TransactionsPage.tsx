@@ -26,6 +26,7 @@ import { SelectDateDrawer } from '@/components/transactions/SelectDateDrawer'
 import { TextSearch } from '@/components/transactions/filters/TextSearch'
 import { Transactions } from '@/types/transactions'
 import { splitPercentagesToCents } from '@/utils/splitMath'
+import { TransactionsTestIds } from '@/testIds'
 
 export function TransactionsPage() {
   const search = useSearch({ from: '/_authenticated/transactions' })
@@ -165,7 +166,7 @@ export function TransactionsPage() {
           successMessage={(n) => n === 1 ? '1 transação excluída com sucesso' : `${n} transações excluídas com sucesso`}
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
-          testIdPrefix="bulk_delete"
+          testIdPrefix={TransactionsTestIds.BulkDeleteDrawer}
         />
       ))
     } catch {
@@ -211,7 +212,7 @@ export function TransactionsPage() {
           successMessage={(n) => n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`}
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
-          testIdPrefix="bulk_category"
+          testIdPrefix={TransactionsTestIds.BulkCategoryDrawer}
         />
       ))
     } catch {
@@ -262,7 +263,7 @@ export function TransactionsPage() {
           successMessage={(n) => n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`}
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
-          testIdPrefix="bulk_date"
+          testIdPrefix={TransactionsTestIds.BulkDateDrawer}
         />
       ))
     } catch {
@@ -320,7 +321,7 @@ export function TransactionsPage() {
           }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
-          testIdPrefix="bulk_division"
+          testIdPrefix={TransactionsTestIds.BulkDivisionProgressDrawer}
         />
       ))
     } catch {
@@ -352,14 +353,14 @@ export function TransactionsPage() {
                   size="lg"
                   variant="filled"
                   onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
-                  data-testid="btn_new_transaction"
+                  data-testid={TransactionsTestIds.BtnNew}
                   aria-label="Nova Transação"
                 >
                   <IconPlus size={18} />
                 </ActionIcon>
                 <Menu shadow="md" width={200}>
                   <Menu.Target>
-                    <ActionIcon size="lg" variant="default" aria-label="Mais opções" data-testid="btn_more_options">
+                    <ActionIcon size="lg" variant="default" aria-label="Mais opções" data-testid={TransactionsTestIds.BtnMoreOptions}>
                       <IconDots size={18} />
                     </ActionIcon>
                   </Menu.Target>
@@ -367,7 +368,7 @@ export function TransactionsPage() {
                     <Menu.Item
                       leftSection={<IconTableImport size={14} />}
                       onClick={() => void navigate({ to: '/transactions/import' })}
-                      data-testid="menu_item_import_transactions"
+                      data-testid={TransactionsTestIds.MenuItemImportTransactions}
                     >
                       Importar transações
                     </Menu.Item>
@@ -431,12 +432,12 @@ export function TransactionsPage() {
           <Group justify="space-between" align="center">
             <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
             <Group gap="xs">
-              <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid="btn_new_transaction">
+              <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid={TransactionsTestIds.BtnNew}>
                 Nova Transação
               </Button>
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <ActionIcon variant="default" aria-label="Mais opções" data-testid="btn_more_options">
+                  <ActionIcon variant="default" aria-label="Mais opções" data-testid={TransactionsTestIds.BtnMoreOptions}>
                     <IconDots size={16} />
                   </ActionIcon>
                 </Menu.Target>
@@ -444,7 +445,7 @@ export function TransactionsPage() {
                   <Menu.Item
                     leftSection={<IconTableImport size={14} />}
                     onClick={() => void navigate({ to: '/transactions/import' })}
-                    data-testid="menu_item_import_transactions"
+                    data-testid={TransactionsTestIds.MenuItemImportTransactions}
                   >
                     Importar transações
                   </Menu.Item>

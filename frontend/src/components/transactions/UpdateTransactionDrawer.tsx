@@ -14,6 +14,7 @@ import { updateTransactionFormSchema, UpdateTransactionFormValues, TransactionFo
 import { TransactionForm, FocusField } from "./form/TransactionForm";
 import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
 import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { TransactionsTestIds } from '@/testIds'
 
 interface Props {
   transaction: Transactions.Transaction;
@@ -107,7 +108,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       title="Editar transação"
       position="right"
       size="md"
-      data-testid="drawer_update_transaction"
+      data-testid={TransactionsTestIds.DrawerUpdate}
     >
       <FormProvider {...methods}>
         <TransactionForm

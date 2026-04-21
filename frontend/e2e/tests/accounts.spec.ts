@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { AccountsPage } from '../pages/AccountsPage'
 import { apiCreateAccount, apiDeleteAccount } from '../helpers/api'
+import { AccountsTestIds } from '@/testIds'
 
 test.describe('Accounts', () => {
   let accountsPage: AccountsPage
@@ -50,7 +51,7 @@ test.describe('Accounts', () => {
     await accountsPage.deactivateAccount(name)
     await accountsPage.page.waitForLoadState('networkidle')
 
-    await expect(accountsPage.page.getByTestId('section_inactive').getByText(name)).toBeVisible()
+    await expect(accountsPage.page.getByTestId(AccountsTestIds.SectionInactive).getByText(name)).toBeVisible()
   })
 
   test('delete (deactivate) an account and verify it moves to inactive', async () => {
@@ -62,6 +63,6 @@ test.describe('Accounts', () => {
     await accountsPage.deleteAccount(name)
     await accountsPage.page.waitForLoadState('networkidle')
 
-    await expect(accountsPage.page.getByTestId('section_active').getByText(name)).not.toBeVisible()
+    await expect(accountsPage.page.getByTestId(AccountsTestIds.SectionActive).getByText(name)).not.toBeVisible()
   })
 })

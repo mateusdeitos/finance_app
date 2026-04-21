@@ -2,6 +2,7 @@ import { Autocomplete } from "@mantine/core";
 import { useTransactionSuggestions } from "@/hooks/useTransactionSuggestions";
 import { Transactions } from "@/types/transactions";
 import { forwardRef } from "react";
+import { TransactionsTestIds } from "@/testIds";
 
 interface Props {
   value: string;
@@ -45,7 +46,7 @@ export const DescriptionAutocomplete = forwardRef<HTMLInputElement, Props>(funct
       onOptionSubmit={handleOptionSubmit}
       data={options}
       error={error}
-      data-testid="input_description"
+      data-testid={TransactionsTestIds.InputDescription}
       defaultDropdownOpened={false}
     />
   );

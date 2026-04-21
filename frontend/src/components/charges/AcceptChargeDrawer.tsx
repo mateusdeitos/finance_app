@@ -19,6 +19,7 @@ import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { QueryKeys } from "@/utils/queryKeys";
 import { formatBalance } from "@/utils/formatCents";
 import { Charges } from "@/types/charges";
+import { ChargesTestIds } from '@/testIds'
 
 const acceptChargeSchema = z.object({
   account_id: z.number("Selecione uma conta"),
@@ -123,7 +124,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
       title="Aceitar Cobrança"
       position="right"
       size="md"
-      data-testid="drawer_accept_charge"
+      data-testid={ChargesTestIds.DrawerAccept}
     >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
@@ -171,7 +172,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
-                data-testid="select_accept_account"
+                data-testid={ChargesTestIds.SelectAcceptAccount}
               />
             )}
           />
@@ -212,7 +213,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             loading={mutation.isPending}
             disabled={mutation.isPending}
             fullWidth
-            data-testid="btn_submit_accept_charge"
+            data-testid={ChargesTestIds.BtnSubmitAccept}
           >
             Confirmar aceitacao
           </Button>

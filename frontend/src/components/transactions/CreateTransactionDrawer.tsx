@@ -17,6 +17,7 @@ import { useDrawerContext } from "@/utils/renderDrawer";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
 import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { TransactionsTestIds } from '@/testIds'
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
   expense: "Nova Despesa",
@@ -116,7 +117,7 @@ export function CreateTransactionDrawer() {
       title={TYPE_LABELS[transactionType]}
       position="right"
       size="md"
-      data-testid="drawer_create_transaction"
+      data-testid={TransactionsTestIds.DrawerCreate}
     >
       <FormProvider {...methods}>
         <TransactionForm

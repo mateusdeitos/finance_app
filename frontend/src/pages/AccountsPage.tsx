@@ -7,6 +7,7 @@ import { AccountDrawer } from '@/components/accounts/AccountDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
+import { AccountsTestIds } from '@/testIds'
 
 export function AccountsPage() {
   const { query, invalidate } = useAccounts()
@@ -37,7 +38,7 @@ export function AccountsPage() {
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Contas</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid="btn_new_account">
+        <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid={AccountsTestIds.BtnNew}>
           Nova Conta
         </Button>
       </Group>
@@ -55,7 +56,7 @@ export function AccountsPage() {
             accounts={activeOwnQuery.data ?? []}
             onEdit={handleEdit}
             onAction={(a) => deactivateMutation.mutate(a.id)}
-            testId="section_active"
+            testId={AccountsTestIds.SectionActive}
           />
           <AccountSection
             label="Contas compartilhadas"
@@ -68,7 +69,7 @@ export function AccountsPage() {
             accounts={inactiveQuery.data ?? []}
             onEdit={handleEdit}
             onAction={(a) => activateMutation.mutate(a.id)}
-            testId="section_inactive"
+            testId={AccountsTestIds.SectionInactive}
           />
           {!hasAccounts && (
             <Text c="dimmed" ta="center" py="md">Nenhuma conta cadastrada</Text>

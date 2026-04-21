@@ -17,6 +17,7 @@ import { ConfirmChargeActionDrawer, type ConfirmChargeAction } from "@/component
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { CreateChargeDrawer } from "@/components/charges/CreateChargeDrawer";
 import { AcceptChargeDrawer } from "@/components/charges/AcceptChargeDrawer";
+import { ChargesTestIds } from '@/testIds'
 
 export function ChargesPage() {
   const search = useSearch({ from: "/_authenticated/charges" });
@@ -117,7 +118,7 @@ export function ChargesPage() {
             onClick={() =>
               void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
             }
-            data-testid="btn_new_charge"
+            data-testid={ChargesTestIds.BtnNew}
           >
             Nova Cobrança
           </Button>
@@ -129,7 +130,7 @@ export function ChargesPage() {
             onClick={() =>
               void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
             }
-            data-testid="btn_new_charge"
+            data-testid={ChargesTestIds.BtnNew}
           >
             <IconPlus size={18} />
           </ActionIcon>
@@ -138,8 +139,8 @@ export function ChargesPage() {
 
       <Tabs defaultValue="received">
         <Tabs.List>
-          <Tabs.Tab value="received" data-testid="tab_charges_received">Recebidas</Tabs.Tab>
-          <Tabs.Tab value="sent" data-testid="tab_charges_sent">Enviadas</Tabs.Tab>
+          <Tabs.Tab value="received" data-testid={ChargesTestIds.Tab('received')}>Recebidas</Tabs.Tab>
+          <Tabs.Tab value="sent" data-testid={ChargesTestIds.Tab('sent')}>Enviadas</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="received" pt="md">

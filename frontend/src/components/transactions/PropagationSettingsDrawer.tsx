@@ -1,6 +1,7 @@
 import { Button, Drawer, Radio, Stack, Text } from '@mantine/core'
 import { useState } from 'react'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { TransactionsTestIds } from '@/testIds'
 
 export type PropagationSetting = 'current' | 'current_and_future' | 'all'
 
@@ -56,7 +57,7 @@ export function PropagationSettingsDrawer({ actionLabel = 'excluir' }: Propagati
         body: { paddingBottom: 'var(--mantine-spacing-xl)' },
       }}
     >
-      <Stack gap="md" data-testid="propagation_drawer_body">
+      <Stack gap="md" data-testid={TransactionsTestIds.PropagationDrawerBody}>
         <Text size="sm" c="dimmed">
           {copy.body}
         </Text>
@@ -68,7 +69,7 @@ export function PropagationSettingsDrawer({ actionLabel = 'excluir' }: Propagati
                 value={opt.value}
                 label={opt.label}
                 description={opt.description}
-                data-testid={`propagation_option_${opt.value}`}
+                data-testid={TransactionsTestIds.PropagationOption(opt.value)}
               />
             ))}
           </Stack>

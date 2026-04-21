@@ -7,6 +7,7 @@ import { DeleteCategoryModal } from '@/components/categories/DeleteCategoryModal
 import { InlineNewCategory } from '@/components/categories/InlineNewCategory'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
+import { CategoriesTestIds } from '@/testIds'
 
 // pendingParentId:
 //   null        → no inline input
@@ -62,7 +63,7 @@ export function CategoriesPage() {
             leftSection={<IconPlus size={16} />}
             onClick={() => setPendingParentId('root')}
             size="sm"
-            data-testid="btn_new_category"
+            data-testid={CategoriesTestIds.BtnNew}
           >
             Nova Categoria
           </Button>
@@ -78,7 +79,7 @@ export function CategoriesPage() {
       ) : categories.length === 0 && pendingParentId === null ? (
         <Stack align="center" py="xl" gap="sm">
           <Text c="dimmed">Nenhuma categoria cadastrada</Text>
-          <Button leftSection={<IconPlus size={16} />} onClick={() => setPendingParentId('root')} data-testid="btn_create_first_category">
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setPendingParentId('root')} data-testid={CategoriesTestIds.BtnCreateFirst}>
             Criar primeira categoria
           </Button>
         </Stack>

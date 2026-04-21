@@ -8,6 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
+import { TransactionsTestIds } from '@/testIds'
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ test.describe('Recurrence', () => {
     await page.getByLabel('Total de parcelas').fill('3')
 
     // Attempt to submit
-    await page.getByTestId('btn_save_transaction').click()
+    await page.getByTestId(TransactionsTestIds.BtnSave).click()
 
     // Assert validation error is visible
     await expect(page.getByText('Parcela atual nao pode ser maior que o total')).toBeVisible()

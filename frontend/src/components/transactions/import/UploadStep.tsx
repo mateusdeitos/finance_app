@@ -23,6 +23,7 @@ import { Transactions } from '@/types/transactions'
 import { parseApiError } from '@/utils/apiErrors'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { CSV_COLUMNS } from './importPayload'
+import { ImportTestIds } from '@/testIds'
 
 type Props = {
   onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
@@ -78,7 +79,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
   }
 
   return (
-    <Stack gap="md" maw={{ lg: 1280 }} data-testid="import_upload_step">
+    <Stack gap="md" maw={{ lg: 1280 }} data-testid={ImportTestIds.UploadStep}>
       <Group gap="xs">
         <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onBack} size="sm">
           Voltar
@@ -94,7 +95,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
           data={ownAccountOptions}
           value={accountId ? String(accountId) : null}
           onChange={(val) => setAccountId(val ? Number(val) : null)}
-          data-testid="select_import_account"
+          data-testid={ImportTestIds.SelectAccount}
         />
         <ActionIcon
           variant="subtle"
@@ -107,7 +108,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
               .catch(() => {})
           }}
           aria-label="Criar conta"
-          data-testid="btn_create_account_header"
+          data-testid={ImportTestIds.BtnCreateAccountHeader}
           mb={2}
         >
           <IconPlus size={16} />
@@ -122,7 +123,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
           ]}
           value={decimalSeparator}
           onChange={(val) => setDecimalSeparator((val as Transactions.DecimalSeparatorValue | null) ?? 'comma')}
-          data-testid="select_decimal_separator"
+          data-testid={ImportTestIds.SelectDecimalSeparator}
         />
         <Select
           label="Regra de definição do tipo"
@@ -135,7 +136,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
           onChange={(val) =>
             setTypeDefinitionRule((val as Transactions.TypeDefinitionRule | null) ?? 'positive_as_income')
           }
-          data-testid="select_decimal_separator"
+          data-testid={ImportTestIds.SelectDecimalSeparator}
         />
       </Flex>
 
@@ -147,7 +148,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}
-        data-testid="input_csv_file"
+        data-testid={ImportTestIds.InputCsvFile}
       />
 
       {errorMessage && (
@@ -161,7 +162,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
         loading={mutation.isPending}
         leftSection={mutation.isPending ? <Loader size="xs" /> : undefined}
         disabled={!file || !accountId}
-        data-testid="btn_process_csv"
+        data-testid={ImportTestIds.BtnProcessCSV}
       >
         Processar arquivo
       </Button>

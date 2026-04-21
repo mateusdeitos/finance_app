@@ -9,6 +9,7 @@ import {
   apiCreateCategory,
   apiDeleteCategory,
 } from '../helpers/api'
+import { AccountsTestIds, CommonTestIds, TransactionsTestIds } from '@/testIds'
 
 test.describe('Avatar System', () => {
   const createdAccountIds: number[] = []
@@ -40,7 +41,7 @@ test.describe('Avatar System', () => {
     // (which has data-testid="avatar_user"); we drill with native descendant
     // class narrowing as a last resort since Mantine does not expose the
     // placeholder separately.
-    const headerAvatar = page.locator('header').getByTestId('avatar_user').first()
+    const headerAvatar = page.locator('header').getByTestId(CommonTestIds.AvatarUser).first()
     await expect(headerAvatar).toBeVisible()
 
     const placeholder = headerAvatar.locator('.mantine-Avatar-placeholder')
@@ -72,7 +73,7 @@ test.describe('Avatar System', () => {
     const row = page.locator(`[data-transaction-id="${tx.id}"]`)
     await expect(row).toBeVisible()
 
-    const avatar = row.getByTestId('avatar_account').first()
+    const avatar = row.getByTestId(CommonTestIds.AvatarAccount).first()
     await expect(avatar).toBeVisible()
 
     // Hover to trigger tooltip with account name
@@ -106,10 +107,10 @@ test.describe('Avatar System', () => {
     await expect(row).toBeVisible()
 
     // Transfer rows wrap both avatars in a group with its own testid.
-    const group = row.getByTestId('transfer_avatar_group')
+    const group = row.getByTestId(TransactionsTestIds.TransferAvatarGroup)
     await expect(group).toBeVisible()
-    await expect(group.getByTestId('avatar_account')).toHaveCount(2)
-    await expect(group.getByTestId('icon_transfer_arrow')).toBeVisible()
+    await expect(group.getByTestId(CommonTestIds.AvatarAccount)).toHaveCount(2)
+    await expect(group.getByTestId(TransactionsTestIds.IconTransferArrow)).toBeVisible()
   })
 
   // ── AVA-07: Account card shows avatar ────────────────────────────────────
@@ -128,7 +129,7 @@ test.describe('Avatar System', () => {
     const card = page.locator(`[data-account-name="${accountName}"]`)
     await expect(card).toBeVisible()
 
-    const avatar = card.getByTestId('avatar_account').first()
+    const avatar = card.getByTestId(CommonTestIds.AvatarAccount).first()
     await expect(avatar).toBeVisible()
 
     const placeholder = avatar.locator('.mantine-Avatar-placeholder')
@@ -144,7 +145,7 @@ test.describe('Avatar System', () => {
     await accountsPage.goto()
     await accountsPage.openCreateForm()
 
-    const picker = page.getByTestId('color_swatch_picker')
+    const picker = page.getByTestId(AccountsTestIds.ColorSwatchPicker)
     await expect(picker).toBeVisible()
 
     const swatches = picker.locator('[data-testid^="swatch_color_"]')
@@ -175,7 +176,7 @@ test.describe('Avatar System', () => {
     await expect(card).toBeVisible()
 
     // The avatar on the card should have the red background color
-    const avatar = card.getByTestId('avatar_account').first()
+    const avatar = card.getByTestId(CommonTestIds.AvatarAccount).first()
     const bgColor = await avatar
       .locator('.mantine-Avatar-placeholder')
       .evaluate((el) => getComputedStyle(el).backgroundColor)
@@ -205,7 +206,7 @@ test.describe('Avatar System', () => {
 
     const card = page.locator(`[data-account-name="${accountName}"]`)
     await expect(card).toBeVisible()
-    const avatar = card.getByTestId('avatar_account').first()
+    const avatar = card.getByTestId(CommonTestIds.AvatarAccount).first()
     const bgColor = await avatar
       .locator('.mantine-Avatar-placeholder')
       .evaluate((el) => getComputedStyle(el).backgroundColor)

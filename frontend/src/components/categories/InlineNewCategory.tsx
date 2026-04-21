@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { ActionIcon, Box, Group, Loader, Text, TextInput } from '@mantine/core'
 import { useAutofocusRef } from '@/hooks/useAutofocusRef'
+import { CategoriesTestIds } from '@/testIds'
 
 interface Props {
   depth: number
@@ -53,7 +54,7 @@ export function InlineNewCategory({ depth, onSave, onCancel }: Props) {
         size="sm"
         style={{ minWidth: 160 }}
         rightSection={saving ? <Loader size={14} /> : null}
-        data-testid="input_new_category_name"
+        data-testid={CategoriesTestIds.InputNewName}
       />
     </Group>
   )

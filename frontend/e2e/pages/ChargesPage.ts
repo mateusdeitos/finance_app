@@ -1,4 +1,5 @@
 import { type Page, type Locator, expect } from "@playwright/test";
+import { ChargesTestIds, CommonTestIds } from '@/testIds'
 
 export class ChargesPage {
   readonly page: Page;
@@ -9,10 +10,10 @@ export class ChargesPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.createDrawer = page.getByTestId("drawer_create_charge");
-    this.acceptDrawer = page.getByTestId("drawer_accept_charge");
-    this.rejectModal = page.getByTestId("modal_confirm_reject_charge");
-    this.cancelModal = page.getByTestId("modal_confirm_cancel_charge");
+    this.createDrawer = page.getByTestId(ChargesTestIds.DrawerCreate);
+    this.acceptDrawer = page.getByTestId(ChargesTestIds.DrawerAccept);
+    this.rejectModal = page.getByTestId(ChargesTestIds.ModalConfirm('reject'));
+    this.cancelModal = page.getByTestId(ChargesTestIds.ModalConfirm('cancel'));
   }
 
   async goto() {
@@ -28,12 +29,12 @@ export class ChargesPage {
   // --- Tabs ---
 
   async selectReceivedTab() {
-    await this.page.getByTestId("tab_charges_received").click();
+    await this.page.getByTestId(ChargesTestIds.Tab('received')).click();
     await this.page.waitForLoadState("networkidle");
   }
 
   async selectSentTab() {
-    await this.page.getByTestId("tab_charges_sent").click();
+    await this.page.getByTestId(ChargesTestIds.Tab('sent')).click();
     await this.page.waitForLoadState("networkidle");
   }
 
@@ -57,7 +58,7 @@ export class ChargesPage {
     // Wait for network to settle first so accounts/connections are loaded before the drawer mounts.
     // This ensures singleConnection is computed correctly in the drawer's defaultValues.
     await this.page.waitForLoadState("networkidle");
-    await this.page.getByTestId("btn_new_charge").first().click();
+    await this.page.getByTestId(ChargesTestIds.BtnNew).first().click();
     await expect(this.createDrawer).toBeVisible({ timeout: 5000 });
   }
 
@@ -69,13 +70,13 @@ export class ChargesPage {
   }) {
     // If the connection dropdown is visible (multiple connections or accounts still loading),
     // select the first available option so connection_id gets set.
-    const connectionSelect = this.createDrawer.getByTestId("select_connection");
+    const connectionSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectConnection);
     if (await connectionSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
       await connectionSelect.click();
       await this.page.getByRole("option").first().click();
     }
 
-    const accountSelect = this.createDrawer.getByTestId("select_my_account");
+    const accountSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectMyAccount);
     await accountSelect.click();
     await this.page.getByRole("option", { name: opts.accountName }).click();
 
@@ -83,64 +84,64 @@ export class ChargesPage {
     await this.createDrawer.getByTestId(radioTestId).check();
 
     if (opts.amount != null) {
-      const amountInput = this.createDrawer.getByTestId("input_charge_amount");
+      const amountInput = this.createDrawer.getByTestId(ChargesTestIds.InputAmount);
       await amountInput.fill(opts.amount.toFixed(2).replace(".", ","));
     }
 
     if (opts.description) {
-      await this.createDrawer.getByTestId("input_charge_description").fill(opts.description);
+      await this.createDrawer.getByTestId(ChargesTestIds.InputDescription).fill(opts.description);
     }
   }
 
   async submitCreate() {
-    await this.createDrawer.getByTestId("btn_submit_create_charge").click();
+    await this.createDrawer.getByTestId(ChargesTestIds.BtnSubmitCreate).click();
     await expect(this.createDrawer).not.toBeVisible({ timeout: 10000 });
   }
 
   // --- Accept ---
 
   async clickAccept() {
-    await this.page.getByTestId("btn_accept_charge").first().click();
+    await this.page.getByTestId(ChargesTestIds.BtnAccept).first().click();
     await expect(this.acceptDrawer).toBeVisible({ timeout: 5000 });
   }
 
   async fillAcceptForm(accountName: string) {
-    const accountSelect = this.acceptDrawer.getByTestId("select_accept_account");
+    const accountSelect = this.acceptDrawer.getByTestId(ChargesTestIds.SelectAcceptAccount);
     await accountSelect.click();
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
   async submitAccept() {
-    await this.acceptDrawer.getByTestId("btn_submit_accept_charge").click();
+    await this.acceptDrawer.getByTestId(ChargesTestIds.BtnSubmitAccept).click();
     await expect(this.acceptDrawer).not.toBeVisible({ timeout: 10000 });
   }
 
   // --- Reject / Cancel ---
 
   async clickReject() {
-    await this.page.getByTestId("btn_reject_charge").first().click();
+    await this.page.getByTestId(ChargesTestIds.BtnReject).first().click();
     await expect(this.rejectModal).toBeVisible({ timeout: 5000 });
   }
 
   async confirmReject() {
-    await this.rejectModal.getByTestId("btn_confirm_reject_charge").click();
+    await this.rejectModal.getByTestId(ChargesTestIds.BtnConfirm('reject')).click();
     await expect(this.rejectModal).not.toBeVisible({ timeout: 10000 });
   }
 
   async clickCancel() {
-    await this.page.getByTestId("btn_cancel_charge").first().click();
+    await this.page.getByTestId(ChargesTestIds.BtnCancel).first().click();
     await expect(this.cancelModal).toBeVisible({ timeout: 5000 });
   }
 
   async confirmCancel() {
-    await this.cancelModal.getByTestId("btn_confirm_cancel_charge").click();
+    await this.cancelModal.getByTestId(ChargesTestIds.BtnConfirm('cancel')).click();
     await expect(this.cancelModal).not.toBeVisible({ timeout: 10000 });
   }
 
   // --- Sidebar Badge ---
 
   async getSidebarBadgeCount(): Promise<number | null> {
-    const badge = this.page.getByTestId("nav_badge_charges");
+    const badge = this.page.getByTestId(CommonTestIds.NavBadge("charges"));
     if (await badge.isVisible({ timeout: 3000 }).catch(() => false)) {
       const text = await badge.textContent();
       return text ? parseInt(text) : null;

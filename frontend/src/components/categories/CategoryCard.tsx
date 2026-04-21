@@ -4,6 +4,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { InlineNewCategory } from './InlineNewCategory'
+import { CategoriesTestIds } from '@/testIds'
 
 const EMOJI_OPTIONS = [
   '🏠','🚗','🍔','🛒','💊','✈️','🎬','👕','📚','💡',
@@ -124,7 +125,7 @@ export function CategoryCard({
         )}
 
         {/* emoji button */}
-        <ActionIcon variant="subtle" color="gray" size="md" onClick={handleOpenEmoji} title="Mudar emoji" data-testid={`btn_emoji_${category.id}`}>
+        <ActionIcon variant="subtle" color="gray" size="md" onClick={handleOpenEmoji} title="Mudar emoji" data-testid={CategoriesTestIds.BtnEmoji(category.id)}>
           {category.emoji ? (
             <Text size="md" lh={1}>{category.emoji}</Text>
           ) : (
@@ -144,10 +145,10 @@ export function CategoryCard({
             error={nameError}
             style={{ minWidth: 140 }}
             rightSection={nameSaving ? <Loader size={14} /> : null}
-            data-testid="input_category_name"
+            data-testid={CategoriesTestIds.InputName}
           />
         ) : (
-          <UnstyledButton onClick={startEdit} data-testid="btn_category_name">
+          <UnstyledButton onClick={startEdit} data-testid={CategoriesTestIds.BtnName}>
             <Text fw={depth === 0 ? 600 : 400} size="md" style={{ cursor: 'text' }}>
               {category.name}
             </Text>
@@ -155,7 +156,7 @@ export function CategoryCard({
         )}
 
         {/* delete */}
-        <ActionIcon variant="subtle" color="red" size="md" onClick={() => onDelete(category)} data-testid="btn_category_delete">
+        <ActionIcon variant="subtle" color="red" size="md" onClick={() => onDelete(category)} data-testid={CategoriesTestIds.BtnDelete}>
           <IconTrash size={18} />
         </ActionIcon>
 
@@ -167,7 +168,7 @@ export function CategoryCard({
             size="md"
             onClick={handleAddChild}
             title="Adicionar subcategoria"
-            data-testid="btn_add_subcategory"
+            data-testid={CategoriesTestIds.BtnAddSubcategory}
           >
             <IconPlus size={18} />
           </ActionIcon>
@@ -204,7 +205,7 @@ export function CategoryCard({
       )}
 
       {/* emoji picker drawer */}
-      <Drawer opened={emojiOpen} onClose={handleCloseEmojiDrawer} title="Escolher emoji" position="right" size="sm" data-testid={`drawer_emoji_picker_${category.id}`}>
+      <Drawer opened={emojiOpen} onClose={handleCloseEmojiDrawer} title="Escolher emoji" position="right" size="sm" data-testid={CategoriesTestIds.DrawerEmojiPicker(category.id)}>
         <Stack gap="md">
           <ScrollArea>
             <SimpleGrid cols={7} spacing="xs">
@@ -212,7 +213,7 @@ export function CategoryCard({
                 <UnstyledButton
                   key={e}
                   onClick={() => handleEmojiSelect(e)}
-                  data-testid={`emoji_${e}`}
+                  data-testid={CategoriesTestIds.EmojiOption(e)}
                   style={{
                     fontSize: 24,
                     textAlign: 'center',

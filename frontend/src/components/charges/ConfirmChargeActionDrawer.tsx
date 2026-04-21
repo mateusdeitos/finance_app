@@ -1,5 +1,6 @@
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { ChargesTestIds } from '@/testIds'
 
 export type ConfirmChargeAction = 'reject' | 'cancel'
 
@@ -27,7 +28,7 @@ export function ConfirmChargeActionDrawer({ action }: Props) {
       onClose={reject}
       title={title}
       size="sm"
-      data-testid={`modal_confirm_${action}_charge`}
+      data-testid={ChargesTestIds.ModalConfirm(action)}
     >
       <Stack gap="md">
         <Text size="sm">{message}</Text>
@@ -38,7 +39,7 @@ export function ConfirmChargeActionDrawer({ action }: Props) {
           <Button
             color="red"
             onClick={() => close()}
-            data-testid={`btn_confirm_${action}_charge`}
+            data-testid={ChargesTestIds.BtnConfirm(action)}
           >
             {confirmLabel}
           </Button>
