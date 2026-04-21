@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useSyncSplitAmount } from "@/hooks/useSyncSplitAmount";
 import {
   Group,
   Avatar,
@@ -70,18 +71,7 @@ function SplitRowControls({
 
   const calculatedAmount = Math.round((totalAmount * percentage) / 100);
 
-  useEffect(() => {
-    if (mode === "percentage") {
-      setValue(amountFieldName, calculatedAmount);
-      setValue(percentageFieldName, percentage);
-    }
-  }, [calculatedAmount, mode, amountFieldName, setValue, percentageFieldName, percentage]);
-
-  useEffect(() => {
-    if (mode === "amount") {
-      setValue(percentageFieldName, undefined);
-    }
-  }, [mode, percentageFieldName, setValue]);
+  useSyncSplitAmount(setValue, amountFieldName, percentageFieldName, mode, calculatedAmount, percentage);
 
   function toggleMode() {
     const next = mode === "percentage" ? "amount" : "percentage";
