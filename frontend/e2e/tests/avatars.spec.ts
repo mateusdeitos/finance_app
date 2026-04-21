@@ -35,16 +35,17 @@ test.describe('Avatar System', () => {
     await page.goto('/transactions')
     await page.waitForLoadState('networkidle')
 
-    // The header should contain a Mantine Avatar (rendered as .mantine-Avatar-root)
-    // Test user has no OAuth photo, so it should show initials
-    const headerAvatar = page.locator('header .mantine-Avatar-root').first()
+    // Test user has no OAuth photo, so UserAvatar shows initials via Mantine's
+    // placeholder element. The placeholder is the child of the Avatar root
+    // (which has data-testid="avatar_user"); we drill with native descendant
+    // class narrowing as a last resort since Mantine does not expose the
+    // placeholder separately.
+    const headerAvatar = page.locator('header').getByTestId('avatar_user').first()
     await expect(headerAvatar).toBeVisible()
 
-    // Avatar should contain initials text (placeholder text inside the avatar)
     const placeholder = headerAvatar.locator('.mantine-Avatar-placeholder')
     await expect(placeholder).toBeVisible()
     const text = await placeholder.textContent()
-    // Should have at least 1 character (initials)
     expect(text?.trim().length).toBeGreaterThan(0)
   })
 
@@ -68,12 +69,10 @@ test.describe('Avatar System', () => {
     const txPage = new TransactionsPage(page)
     await txPage.goto()
 
-    // Find the transaction row
     const row = page.locator(`[data-transaction-id="${tx.id}"]`)
     await expect(row).toBeVisible()
 
-    // Row should contain an Avatar (AccountAvatar renders a Mantine Avatar)
-    const avatar = row.locator('.mantine-Avatar-root').first()
+    const avatar = row.getByTestId('avatar_account').first()
     await expect(avatar).toBeVisible()
 
     // Hover to trigger tooltip with account name
@@ -103,17 +102,14 @@ test.describe('Avatar System', () => {
     const txPage = new TransactionsPage(page)
     await txPage.goto()
 
-    // Find the debit side of the transfer (the one we created)
     const row = page.locator(`[data-transaction-id="${tx.id}"]`)
     await expect(row).toBeVisible()
 
-    // Transfer row should have 2 avatars (source + dest)
-    const avatars = row.locator('.mantine-Avatar-root')
-    await expect(avatars).toHaveCount(2)
-
-    // Should have an arrow icon between them (IconArrowRight renders as svg)
-    const arrow = row.locator('svg.tabler-icon-arrow-right')
-    await expect(arrow).toBeVisible()
+    // Transfer rows wrap both avatars in a group with its own testid.
+    const group = row.getByTestId('transfer_avatar_group')
+    await expect(group).toBeVisible()
+    await expect(group.getByTestId('avatar_account')).toHaveCount(2)
+    await expect(group.getByTestId('icon_transfer_arrow')).toBeVisible()
   })
 
   // ── AVA-07: Account card shows avatar ────────────────────────────────────
@@ -132,11 +128,9 @@ test.describe('Avatar System', () => {
     const card = page.locator(`[data-account-name="${accountName}"]`)
     await expect(card).toBeVisible()
 
-    // Card should have an Avatar
-    const avatar = card.locator('.mantine-Avatar-root').first()
+    const avatar = card.getByTestId('avatar_account').first()
     await expect(avatar).toBeVisible()
 
-    // Avatar should show initials
     const placeholder = avatar.locator('.mantine-Avatar-placeholder')
     await expect(placeholder).toBeVisible()
     const initials = await placeholder.textContent()
@@ -150,18 +144,17 @@ test.describe('Avatar System', () => {
     await accountsPage.goto()
     await accountsPage.openCreateForm()
 
-    // Color picker label
-    await expect(page.getByText('Cor do avatar')).toBeVisible()
+    const picker = page.getByTestId('color_swatch_picker')
+    await expect(picker).toBeVisible()
 
-    // 12 color swatches
-    const swatches = page.locator('[aria-label^="Selecionar cor"]')
+    const swatches = picker.locator('[data-testid^="swatch_color_"]')
     await expect(swatches).toHaveCount(12)
   })
 
   // ── AVA-06: Color picker selection persists through save ─────────────────
   test('selected avatar color persists after save and reopen', async ({ page }) => {
     const accountName = `Color Persist ${Date.now()}`
-    const targetColor = '#e63946' // red — first swatch
+    const targetSwatch = 'swatch_color_e63946' // red — first swatch
 
     const accountsPage = new AccountsPage(page)
     await accountsPage.goto()
@@ -170,61 +163,52 @@ test.describe('Avatar System', () => {
     await accountsPage.openCreateForm()
     await accountsPage.fillForm(accountName, 0)
 
-    // Click the red swatch
-    await page.locator(`[aria-label="Selecionar cor ${targetColor}"]`).click()
+    await page.getByTestId(targetSwatch).click()
 
-    // Verify the red swatch has the selection ring (box-shadow)
-    const redSwatch = page.locator(`[aria-label="Selecionar cor ${targetColor}"]`)
-    await expect(redSwatch).toHaveCSS('box-shadow', /2px/)
+    // Selection state is exposed via data-selected="true"
+    await expect(page.getByTestId(targetSwatch)).toHaveAttribute('data-selected', 'true')
 
     await accountsPage.submitForm()
     await expect(page.getByText(accountName)).toBeVisible()
 
-    // Find account ID for cleanup
     const card = page.locator(`[data-account-name="${accountName}"]`)
     await expect(card).toBeVisible()
 
     // The avatar on the card should have the red background color
-    const avatar = card.locator('.mantine-Avatar-root').first()
-    const bgColor = await avatar.locator('.mantine-Avatar-placeholder').evaluate(
-      (el) => getComputedStyle(el).backgroundColor
-    )
+    const avatar = card.getByTestId('avatar_account').first()
+    const bgColor = await avatar
+      .locator('.mantine-Avatar-placeholder')
+      .evaluate((el) => getComputedStyle(el).backgroundColor)
     // #e63946 = rgb(230, 57, 70)
     expect(bgColor).toBe('rgb(230, 57, 70)')
 
     // Edit the account and verify color is pre-selected
     await accountsPage.editAccount(accountName)
+    await expect(page.getByTestId(targetSwatch)).toHaveAttribute('data-selected', 'true')
 
-    // The red swatch should still have the selection ring
-    const editRedSwatch = page.locator(`[aria-label="Selecionar cor ${targetColor}"]`)
-    await expect(editRedSwatch).toHaveCSS('box-shadow', /2px/)
-
-    // Close the form
     await page.keyboard.press('Escape')
   })
 
   // ── AVA-06: Default color is steel blue ──────────────────────────────────
   test('new account defaults to steel blue avatar color', async ({ page }) => {
     const accountName = `Default Color ${Date.now()}`
-    const defaultColor = '#457b9d'
+    const defaultSwatch = 'swatch_color_457b9d'
 
     const accountsPage = new AccountsPage(page)
     await accountsPage.goto()
     await accountsPage.openCreateForm()
 
-    // Default swatch should be selected
-    const defaultSwatch = page.locator(`[aria-label="Selecionar cor ${defaultColor}"]`)
-    await expect(defaultSwatch).toHaveCSS('box-shadow', /2px/)
+    await expect(page.getByTestId(defaultSwatch)).toHaveAttribute('data-selected', 'true')
 
-    // Save with default
     await accountsPage.fillForm(accountName, 0)
     await accountsPage.submitForm()
 
-    // Verify avatar has default color
     const card = page.locator(`[data-account-name="${accountName}"]`)
     await expect(card).toBeVisible()
-    const avatar = card.locator('.mantine-Avatar-root .mantine-Avatar-placeholder').first()
-    const bgColor = await avatar.evaluate((el) => getComputedStyle(el).backgroundColor)
+    const avatar = card.getByTestId('avatar_account').first()
+    const bgColor = await avatar
+      .locator('.mantine-Avatar-placeholder')
+      .evaluate((el) => getComputedStyle(el).backgroundColor)
     // #457b9d = rgb(69, 123, 157)
     expect(bgColor).toBe('rgb(69, 123, 157)')
   })

@@ -49,13 +49,13 @@ function AccountCell({
 
   if (tx.type === "transfer") {
     return (
-      <Group gap={4} wrap="nowrap">
+      <Group gap={4} wrap="nowrap" data-testid="transfer_avatar_group">
         <Tooltip label={fromAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
             <AccountAvatar account={fromAccount} size={28} />
           </span>
         </Tooltip>
-        <IconArrowRight size={12} style={{ opacity: 0.5 }} />
+        <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid="icon_transfer_arrow" />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
             <AccountAvatar account={toAccount} size={28} />

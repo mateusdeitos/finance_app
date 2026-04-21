@@ -16,6 +16,7 @@ export function UserAvatar({ name, avatarUrl, size, color = "blue" }: UserAvatar
       radius="xl"
       color={avatarUrl ? undefined : color}
       imageProps={{ referrerPolicy: "no-referrer" }}
+      data-testid="avatar_user"
     >
       {getInitials(name)}
     </Avatar>
