@@ -1,5 +1,4 @@
-import { ActionIcon, Box, Button, Drawer, Group, Menu, Stack } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
+import { ActionIcon, Box, Button, Group, Menu, Stack } from '@mantine/core'
 import { IconDots, IconFilter, IconPlus, IconTableImport } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
@@ -13,6 +12,7 @@ import { deleteTransaction, updateTransaction } from '@/api/transactions'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
 import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
+import { FiltersDrawer } from '@/components/transactions/FiltersDrawer'
 import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
 import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
@@ -30,8 +30,6 @@ export function TransactionsPage() {
   const routeNavigate = useNavigate({ from: '/transactions' })
   const navigate = useNavigate()
   const isMobile = useIsMobile()
-  // TODO(migration Phase 5): convert the filters drawer to renderDrawer.
-  const [filtersOpened, { open: openFilters, close: closeFilters }] = useDisclosure(false)
 
   const { query: meQuery } = useMe((me) => me.id)
   const currentUserId = meQuery.data ?? 0
@@ -329,26 +327,13 @@ export function TransactionsPage() {
               size="lg"
               radius="xl"
               variant="filled"
-              onClick={openFilters}
+              onClick={() => void renderDrawer(() => <FiltersDrawer />).catch(() => {})}
               aria-label="Abrir filtros"
             >
               <IconFilter size={18} />
             </ActionIcon>
           </MobileBottomBar>
         )}
-
-        <Drawer
-          opened={filtersOpened}
-          onClose={closeFilters}
-          position="bottom"
-          title="Filtros"
-          size="auto"
-          styles={{
-            content: { borderRadius: 'var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0', maxHeight: '75dvh', overflowY: 'auto' },
-          }}
-        >
-          <TransactionFilters orientation="column" hideTextSearch />
-        </Drawer>
 
       </Stack>
     )

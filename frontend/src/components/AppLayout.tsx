@@ -8,6 +8,7 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { renderDrawer } from "@/utils/renderDrawer";
 
 const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> = [
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
@@ -18,7 +19,6 @@ const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> 
 
 export function AppLayout() {
   const [opened, { toggle, close }] = useDisclosure();
-  const [inviteOpened, { open: openInvite, close: closeInvite }] = useDisclosure();
   const { query: meQuery } = useMe();
   const user = meQuery.data;
   const routerState = useRouterState();
@@ -73,7 +73,10 @@ export function AppLayout() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{user.email}</Menu.Label>
-                <Menu.Item leftSection={<IconUsers size={16} />} onClick={openInvite}>
+                <Menu.Item
+                  leftSection={<IconUsers size={16} />}
+                  onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
+                >
                   Criar Conexão
                 </Menu.Item>
                 <Menu.Divider />
@@ -112,7 +115,6 @@ export function AppLayout() {
         <Outlet />
       </AppShell.Main>
 
-      <InviteDrawer opened={inviteOpened} onClose={closeInvite} />
       <PWAInstallBanner />
     </AppShell>
   );
