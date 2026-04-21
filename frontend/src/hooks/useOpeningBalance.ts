@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchBalance } from '@/api/transactions'
 import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { QueryKeys } from '@/utils/queryKeys'
+import { Transactions } from '@/types/transactions'
 
 interface UseOpeningBalanceParams {
   month: number
@@ -10,7 +11,10 @@ interface UseOpeningBalanceParams {
   hideSettlements?: boolean
 }
 
-export function useOpeningBalance({ month, year, accumulated, hideSettlements }: UseOpeningBalanceParams) {
+export function useOpeningBalance<T = Transactions.BalanceResult>(
+  { month, year, accumulated, hideSettlements }: UseOpeningBalanceParams,
+  select?: (data: Transactions.BalanceResult) => T,
+) {
   const filters = useActiveFilters()
 
   const prevMonth = month === 1 ? 12 : month - 1
@@ -21,6 +25,7 @@ export function useOpeningBalance({ month, year, accumulated, hideSettlements }:
     queryFn: () =>
       fetchBalance({ month: prevMonth, year: prevYear, accumulated, hideSettlements, ...filters }),
     enabled: accumulated,
+    select,
   })
 
   return { query }
