@@ -7,7 +7,7 @@ import { useFlattenCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
-import { type ImportFormValues } from "@/components/transactions/form/importFormSchema";
+import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
@@ -404,8 +404,7 @@ interface RecurrencePopoverProps {
 }
 
 function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: RecurrencePopoverProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parentForm = useFormContext<any>();
+  const parentForm = useFormContext<ImportFormValues>();
 
   const localForm = useForm<RecurrenceLocalValues>({
     defaultValues: {
@@ -417,8 +416,9 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
 
   function handleOpen() {
     const rowPath = namePrefix.slice(0, -1); // "rows.0." → "rows.0"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowValues = parentForm.getValues(rowPath) as any;
+    // Dynamic path: RHF cannot statically prove rowPath points to a row; the
+    // caller (the component owning namePrefix) guarantees it.
+    const rowValues = parentForm.getValues(rowPath as `rows.${number}`) as ImportRowFormValues;
     localForm.reset({
       recurrenceType: rowValues.recurrenceType ?? null,
       recurrenceCurrentInstallment: rowValues.recurrenceCurrentInstallment ?? null,
@@ -429,9 +429,18 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
   function handleClose() {
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
-    parentForm.setValue(`${rowPath}.recurrenceType`, values.recurrenceType);
-    parentForm.setValue(`${rowPath}.recurrenceCurrentInstallment`, values.recurrenceCurrentInstallment);
-    parentForm.setValue(`${rowPath}.recurrenceTotalInstallments`, values.recurrenceTotalInstallments);
+    parentForm.setValue(
+      `${rowPath}.recurrenceType` as `rows.${number}.recurrenceType`,
+      values.recurrenceType,
+    );
+    parentForm.setValue(
+      `${rowPath}.recurrenceCurrentInstallment` as `rows.${number}.recurrenceCurrentInstallment`,
+      values.recurrenceCurrentInstallment,
+    );
+    parentForm.setValue(
+      `${rowPath}.recurrenceTotalInstallments` as `rows.${number}.recurrenceTotalInstallments`,
+      values.recurrenceTotalInstallments,
+    );
   }
 
   return (

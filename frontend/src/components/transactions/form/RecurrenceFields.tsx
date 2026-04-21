@@ -1,5 +1,6 @@
 import { Select, NumberInput, Stack, Group, Text } from "@mantine/core";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, type FieldValues } from "react-hook-form";
+import { getFieldErrorMessage } from "@/utils/getFieldErrorMessage";
 
 interface RecurrenceFieldsProps {
   /**
@@ -20,26 +21,20 @@ interface RecurrenceFieldsProps {
   disableCurrentInstallment?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyFormValues = any;
-
-export function RecurrenceFields({ namePrefix = "", comboboxWithinPortal = true, disableCurrentInstallment = false }: RecurrenceFieldsProps) {
+export function RecurrenceFields({
+  namePrefix = "",
+  comboboxWithinPortal = true,
+  disableCurrentInstallment = false,
+}: RecurrenceFieldsProps) {
+  // FieldValues (RHF's base form-values type) because this component is
+  // mounted inside both the transaction form and the import form and must
+  // accept either shape through useFormContext.
   const {
     control,
     formState: { errors },
-  } = useFormContext<AnyFormValues>();
+  } = useFormContext<FieldValues>();
 
-  /** Resolve a dot-separated error path against the errors object. */
-  function fieldError(suffix: string): string | undefined {
-    const parts = `${namePrefix}${suffix}`.split(".");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let cur: any = errors;
-    for (const p of parts) {
-      if (cur == null) return undefined;
-      cur = /^\d+$/.test(p) ? cur[Number(p)] : cur[p];
-    }
-    return cur?.message as string | undefined;
-  }
+  const fieldError = (suffix: string) => getFieldErrorMessage(errors, `${namePrefix}${suffix}`);
 
   return (
     <Stack gap="sm">
