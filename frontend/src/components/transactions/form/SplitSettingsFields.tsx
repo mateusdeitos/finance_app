@@ -366,6 +366,7 @@ export function SplitSettingsFields({
             c="dimmed"
             onClick={() => append({ connection_id: 0, amount: 0 })}
             style={{ alignSelf: "flex-start" }}
+            data-testid="btn_add_split_row"
           >
             + Adicionar divisão
           </Anchor>
