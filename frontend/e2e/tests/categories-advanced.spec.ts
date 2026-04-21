@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { CategoriesPage } from '../pages/CategoriesPage'
 import { apiCreateCategory, apiDeleteCategory } from '../helpers/api'
+import { CategoriesTestIds } from '@/testIds'
 
 test.describe('Categories Advanced', () => {
   let categoriesPage: CategoriesPage
@@ -31,8 +32,8 @@ test.describe('Categories Advanced', () => {
     await expect(page.getByText(catReplacement)).toBeVisible()
 
     // Open delete dialog for catToDelete
-    await page.locator(`[data-category-name="${catToDelete}"]`).getByTestId('btn_category_delete').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).toBeVisible()
+    await page.locator(`[data-category-name="${catToDelete}"]`).getByTestId(CategoriesTestIds.BtnDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).toBeVisible()
 
     // Select replacement category via the searchable input (placeholder = "Deixar sem categoria")
     // Note: the modal is defined inline in _authenticated.categories.tsx, not in DeleteCategoryDialog.tsx
@@ -41,8 +42,8 @@ test.describe('Categories Advanced', () => {
     await page.getByRole('option', { name: catReplacement }).click()
 
     // Confirm deletion
-    await page.getByTestId('btn_confirm_delete_category').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).not.toBeVisible({ timeout: 5000 })
+    await page.getByTestId(CategoriesTestIds.BtnConfirmDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).not.toBeVisible({ timeout: 5000 })
 
     // Deleted category is gone, replacement still present
     await expect(page.getByText(catToDelete)).not.toBeVisible()
@@ -64,10 +65,10 @@ test.describe('Categories Advanced', () => {
     await expect(page.getByText(catToDelete)).toBeVisible()
 
     // Delete catToDelete without replacement
-    await page.locator(`[data-category-name="${catToDelete}"]`).getByTestId('btn_category_delete').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).toBeVisible()
-    await page.getByTestId('btn_confirm_delete_category').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).not.toBeVisible({ timeout: 5000 })
+    await page.locator(`[data-category-name="${catToDelete}"]`).getByTestId(CategoriesTestIds.BtnDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).toBeVisible()
+    await page.getByTestId(CategoriesTestIds.BtnConfirmDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).not.toBeVisible({ timeout: 5000 })
 
     // Deleted category gone, other category still present
     await expect(page.getByText(catToDelete)).not.toBeVisible()
@@ -88,10 +89,10 @@ test.describe('Categories Advanced', () => {
     await expect(page.getByText(childName)).toBeVisible()
 
     // Delete only the child
-    await page.locator(`[data-category-name="${childName}"]`).getByTestId('btn_category_delete').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).toBeVisible()
-    await page.getByTestId('btn_confirm_delete_category').click()
-    await expect(page.getByTestId('btn_confirm_delete_category')).not.toBeVisible({ timeout: 5000 })
+    await page.locator(`[data-category-name="${childName}"]`).getByTestId(CategoriesTestIds.BtnDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).toBeVisible()
+    await page.getByTestId(CategoriesTestIds.BtnConfirmDelete).click()
+    await expect(page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).not.toBeVisible({ timeout: 5000 })
 
     // Child gone, parent remains
     await expect(page.getByText(childName)).not.toBeVisible()

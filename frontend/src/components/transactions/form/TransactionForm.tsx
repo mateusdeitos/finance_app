@@ -25,6 +25,7 @@ import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { RecurrenceFields } from "./RecurrenceFields";
 import { SplitSettingsFields } from "./SplitSettingsFields";
 import { TransactionFormValues } from "./transactionFormSchema";
+import { TransactionsTestIds } from "@/testIds";
 
 export type { TransactionFormValues };
 
@@ -189,7 +190,7 @@ export const TransactionForm = ({
                 if (val === "transfer") setValue("split_settings", []);
               }}
               fullWidth
-              data-testid="segmented_transaction_type"
+              data-testid={TransactionsTestIds.SegmentedTransactionType}
             />
           )}
         />
@@ -222,7 +223,7 @@ export const TransactionForm = ({
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.amount?.message}
-                data-testid="input_amount"
+                data-testid={TransactionsTestIds.InputAmount}
               />
             )}
           />
@@ -259,7 +260,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                   error={errors.account_id?.message}
                   searchable
-                  data-testid="select_account"
+                  data-testid={TransactionsTestIds.SelectAccount}
                 />
               )}
             />
@@ -277,7 +278,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
-                  data-testid="select_destination_account"
+                  data-testid={TransactionsTestIds.SelectDestinationAccount}
                 />
               )}
             />
@@ -299,7 +300,7 @@ export const TransactionForm = ({
                     error={errors.category_id?.message}
                     searchable
                     clearable
-                    data-testid="select_category"
+                    data-testid={TransactionsTestIds.SelectCategory}
                   />
                 )}
               />
@@ -317,7 +318,7 @@ export const TransactionForm = ({
                     onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                     error={errors.account_id?.message}
                     searchable
-                    data-testid="select_account"
+                    data-testid={TransactionsTestIds.SelectAccount}
                   />
                 )}
               />
@@ -383,7 +384,7 @@ export const TransactionForm = ({
               Salvar e criar outra
             </Button>
           )}
-          <Button type="submit" loading={isSubmitting || isPending} data-testid="btn_save_transaction">
+          <Button type="submit" loading={isSubmitting || isPending} data-testid={TransactionsTestIds.BtnSave}>
             Salvar
           </Button>
         </Group>

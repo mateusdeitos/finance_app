@@ -8,6 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
+import { TransactionsTestIds } from '@/testIds'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,15 +77,15 @@ test.describe('Transaction Update', () => {
     await expect(page.getByRole('heading', { name: 'Editar transação' })).toBeVisible()
 
     // Description pre-populated
-    const descInput = transactionsPage.updateDrawer.getByTestId('input_description')
+    const descInput = transactionsPage.updateDrawer.getByTestId(TransactionsTestIds.InputDescription)
     await expect(descInput).toHaveValue(desc)
 
     // Amount pre-populated (150000 cents = R$ 1.500,00)
-    const amountInput = transactionsPage.updateDrawer.getByTestId('input_amount')
+    const amountInput = transactionsPage.updateDrawer.getByTestId(TransactionsTestIds.InputAmount)
     await expect(amountInput).toHaveValue('1.500,00')
 
     // Expense type selected (data-active is on the label element, not the inner span)
-    const segmented = transactionsPage.updateDrawer.getByTestId('segmented_transaction_type')
+    const segmented = transactionsPage.updateDrawer.getByTestId(TransactionsTestIds.SegmentedTransactionType)
     await expect(segmented.locator('[data-active]').first()).toContainText('Despesa')
   })
 
@@ -186,7 +187,7 @@ test.describe('Transaction Update', () => {
     expect(await transactionsPage.getSelectedCount()).toBe(2)
 
     // Clean up selection
-    await page.getByTestId('btn_clear_selection').click()
+    await page.getByTestId(TransactionsTestIds.BtnClearSelection).click()
   })
 
   // ── Test 5: Non-recurring hides propagation selector ──────────────────────
@@ -208,7 +209,7 @@ test.describe('Transaction Update', () => {
 
     await transactionsPage.clickTransactionRow(tx.id)
 
-    await expect(page.getByTestId('propagation_update_option_current')).not.toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.PropagationUpdateOption('current'))).not.toBeVisible()
   })
 
   // ── Test 6: Recurring shows propagation selector ───────────────────────────
@@ -231,9 +232,9 @@ test.describe('Transaction Update', () => {
 
     await transactionsPage.clickTransactionRow(tx.id)
 
-    await expect(page.getByTestId('propagation_update_option_current')).toBeVisible()
-    await expect(page.getByTestId('propagation_update_option_current_and_future')).toBeVisible()
-    await expect(page.getByTestId('propagation_update_option_all')).toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.PropagationUpdateOption('current'))).toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.PropagationUpdateOption('current_and_future'))).toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.PropagationUpdateOption('all'))).toBeVisible()
   })
 
   // ── Test 7: Propagation "current" — only changes current installment ────────

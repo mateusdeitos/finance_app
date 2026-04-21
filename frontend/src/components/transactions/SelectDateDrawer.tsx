@@ -2,6 +2,7 @@ import { Button, Drawer, Stack } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useState } from 'react'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { TransactionsTestIds } from '@/testIds'
 
 export function SelectDateDrawer() {
   const { opened, close, reject } = useDrawerContext<Date>()
@@ -13,7 +14,7 @@ export function SelectDateDrawer() {
       onClose={reject}
       position="bottom"
       title="Alterar data"
-      data-testid="drawer_select_date"
+      data-testid={TransactionsTestIds.DrawerSelectDate}
       styles={{
         content: {
           borderRadius: 'var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0',
@@ -30,13 +31,13 @@ export function SelectDateDrawer() {
           label="Nova data"
           placeholder="Selecione uma data"
           valueFormat="DD/MM/YYYY"
-          data-testid="input_bulk_date"
+          data-testid={TransactionsTestIds.InputBulkDate}
         />
         <Button
           onClick={() => date && close(date)}
           disabled={!date}
           style={{ alignSelf: 'flex-start' }}
-          data-testid="btn_apply_date"
+          data-testid={TransactionsTestIds.BtnApplyDate}
         >
           Aplicar
         </Button>

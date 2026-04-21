@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Transactions } from '@/types/transactions'
 import { useCategories } from '@/hooks/useCategories'
 import classes from './CategoryFilter.module.css'
+import { TransactionsTestIds } from '@/testIds'
 
 interface CategoryNodeProps {
   category: Transactions.Category
@@ -38,7 +39,7 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
           }
           checked={selected.includes(category.id)}
           onChange={() => onToggle(category.id)}
-          data-testid={`checkbox_filter_category_${category.id}`}
+          data-testid={TransactionsTestIds.CheckboxFilterCategory(category.id)}
           data-category-name={category.name}
         />
       </Group>
@@ -56,7 +57,7 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
                 }
                 checked={selected.includes(child.id)}
                 onChange={() => onToggle(child.id)}
-                data-testid={`checkbox_filter_category_${child.id}`}
+                data-testid={TransactionsTestIds.CheckboxFilterCategory(child.id)}
                 data-category-name={child.name}
               />
             ))}
@@ -124,13 +125,13 @@ export function CategoryFilter({ inline }: CategoryFilterProps) {
             variant="default"
             leftSection={<IconCategory size={16} />}
             onClick={() => setOpened((o) => !o)}
-            data-testid="btn_filter_categories"
+            data-testid={TransactionsTestIds.BtnFilter('categories')}
           >
             Categorias
           </Button>
         </Indicator>
       </Popover.Target>
-      <Popover.Dropdown data-testid="popover_filter_categories">
+      <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('categories')}>
         <Stack gap="xs" maw={280} className={classes.list}>
           <CategoryOptions categories={categories} selected={selected} toggle={toggle} />
         </Stack>

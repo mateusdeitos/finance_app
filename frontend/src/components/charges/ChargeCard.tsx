@@ -3,6 +3,7 @@ import { Charges } from '@/types/charges'
 import { formatBalance } from '@/utils/formatCents'
 import { ChargeStatusBadge } from './ChargeStatusBadge'
 import classes from './ChargeCard.module.css'
+import { ChargesTestIds } from '@/testIds'
 
 interface Props {
   charge: Charges.Charge
@@ -27,7 +28,7 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
       radius="md"
       p="md"
       className={classes.card}
-      data-testid={`charge_card_${charge.id}`}
+      data-testid={ChargesTestIds.Card(charge.id)}
     >
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
@@ -52,17 +53,17 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
         </Text>
         <Group gap="xs">
           {isReceived && isPending && onAccept && (
-            <Button size="xs" color="teal" onClick={onAccept} data-testid="btn_accept_charge">
+            <Button size="xs" color="teal" onClick={onAccept} data-testid={ChargesTestIds.BtnAccept}>
               Aceitar
             </Button>
           )}
           {isReceived && isPending && onReject && (
-            <Button size="xs" color="red" variant="light" onClick={onReject} data-testid="btn_reject_charge">
+            <Button size="xs" color="red" variant="light" onClick={onReject} data-testid={ChargesTestIds.BtnReject}>
               Recusar
             </Button>
           )}
           {!isReceived && isPending && onCancel && (
-            <Button size="xs" color="red" variant="light" onClick={onCancel} data-testid="btn_cancel_charge">
+            <Button size="xs" color="red" variant="light" onClick={onCancel} data-testid={ChargesTestIds.BtnCancel}>
               Cancelar
             </Button>
           )}

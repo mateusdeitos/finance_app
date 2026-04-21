@@ -9,6 +9,7 @@ import { InviteDrawer } from "@/components/InviteDrawer";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { renderDrawer } from "@/utils/renderDrawer";
+import { CommonTestIds } from '@/testIds'
 
 const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> = [
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
@@ -99,7 +100,7 @@ export function AppLayout() {
             leftSection={<Icon size={18} />}
             rightSection={
               badge ? (
-                <Badge size="xs" circle color="red" data-testid={`nav_badge_${to.slice(1)}`}>
+                <Badge size="xs" circle color="red" data-testid={CommonTestIds.NavBadge(to.slice(1))}>
                   {badge}
                 </Badge>
               ) : undefined

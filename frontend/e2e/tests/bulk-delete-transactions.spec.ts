@@ -8,6 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
+import { TransactionsTestIds } from '@/testIds'
 
 test.describe('Bulk Delete Transactions', () => {
   let transactionsPage: TransactionsPage
@@ -104,8 +105,8 @@ test.describe('Bulk Delete Transactions', () => {
 
     // Tap delete — open menu first, then propagation drawer should appear
     await transactionsPage.openBulkActionsMenu()
-    await transactionsPage.page.getByTestId('btn_bulk_delete').click()
-    await expect(transactionsPage.page.getByTestId('propagation_drawer_body')).toBeVisible()
+    await transactionsPage.page.getByTestId(TransactionsTestIds.BtnBulkDelete).click()
+    await expect(transactionsPage.page.getByTestId(TransactionsTestIds.PropagationDrawerBody)).toBeVisible()
 
     // Choose "Somente esta" and confirm
     await transactionsPage.selectPropagation('Somente esta')

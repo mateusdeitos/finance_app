@@ -1,6 +1,7 @@
 import { ActionIcon, Button } from '@mantine/core'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { IconX } from '@tabler/icons-react'
+import { TransactionsTestIds } from '@/testIds'
 
 interface ClearFiltersButtonProps {
   variant?: 'icon' | 'button'
@@ -47,7 +48,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
         color="red"
         onClick={clearFilters}
         aria-label="Limpar filtros"
-        data-testid="btn_clear_filters"
+        data-testid={TransactionsTestIds.BtnClearFilters}
       >
         <IconX size={18} />
       </ActionIcon>
@@ -61,7 +62,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
       color="red"
       leftSection={<IconX size={12} />}
       onClick={clearFilters}
-      data-testid="btn_clear_filters"
+      data-testid={TransactionsTestIds.BtnClearFilters}
     >
       Limpar filtros
     </Button>

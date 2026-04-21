@@ -8,6 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from "../helpers/api";
+import { TransactionsTestIds } from '@/testIds'
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -96,7 +97,7 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(otherDesc)).toBeVisible();
 
     // Type in search box
-    const searchInput = page.getByTestId("input_text_search");
+    const searchInput = page.getByTestId(TransactionsTestIds.InputTextSearch);
     await searchInput.fill(uniqueDesc);
     await page.waitForLoadState("networkidle");
 
@@ -132,8 +133,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descB)).toBeVisible();
 
     // Open account filter popover and select accountA
-    await page.getByTestId("btn_filter_accounts").click();
-    await page.getByTestId("popover_filter_accounts").locator(`[data-account-name="${accountAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
+    await page.getByTestId(TransactionsTestIds.PopoverFilter('accounts')).locator(`[data-account-name="${accountAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -168,8 +169,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descB)).toBeVisible();
 
     // Open category filter popover and select categoryA
-    await page.getByTestId("btn_filter_categories").click();
-    await page.getByTestId("popover_filter_categories").locator(`[data-category-name="${categoryAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.BtnFilter('categories')).click();
+    await page.getByTestId(TransactionsTestIds.PopoverFilter('categories')).locator(`[data-category-name="${categoryAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -206,9 +207,9 @@ test.describe("Transaction Filters", () => {
     // Open advanced filter and toggle "Apenas despesas"
     // getByTestId finds the Mantine Switch root <label> element, which is visible
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await page
-      .getByTestId("switch_type_expense")
+      .getByTestId(TransactionsTestIds.SwitchType('expense'))
       .locator("xpath=ancestor::label")
       .click({ timeout: 3000, force: true });
     await page.waitForLoadState("networkidle");
@@ -245,8 +246,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(incomeDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId("switch_type_income").locator("xpath=ancestor::label").click({ timeout: 3000, force: true });
+    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId(TransactionsTestIds.SwitchType('income')).locator("xpath=ancestor::label").click({ timeout: 3000, force: true });
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(incomeDesc)).toBeVisible({ timeout: 8000 });
@@ -281,9 +282,9 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(expenseDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await page
-      .getByTestId("switch_type_transfer")
+      .getByTestId(TransactionsTestIds.SwitchType('transfer'))
       .locator("xpath=ancestor::label")
       .click({ timeout: 3000, force: true });
     await page.waitForLoadState("networkidle");
@@ -321,8 +322,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(taggedDesc)).toBeVisible();
     await expect(page.getByText(untaggedDesc)).toBeVisible();
 
-    await page.getByTestId("btn_filter_tags").click();
-    await page.getByTestId("popover_filter_tags").locator(`[data-tag-name="${tagName}"]`).click();
+    await page.getByTestId(TransactionsTestIds.BtnFilter('tags')).click();
+    await page.getByTestId(TransactionsTestIds.PopoverFilter('tags')).locator(`[data-tag-name="${tagName}"]`).click();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(taggedDesc)).toBeVisible({ timeout: 8000 });
@@ -436,17 +437,17 @@ test.describe("Transaction Filters", () => {
 
     // Apply expense type filter
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId("advanced_filters_popover").waitFor({ state: "visible", timeout: 5000 });
+    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await page
-      .getByTestId("switch_type_expense")
+      .getByTestId(TransactionsTestIds.SwitchType('expense'))
       .locator("xpath=ancestor::label")
       .click({ timeout: 3000, force: true });
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
     // Apply account filter for accountA
-    await page.getByTestId("btn_filter_accounts").click();
-    await page.getByTestId("popover_filter_accounts").locator(`[data-account-name="${accountAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
+    await page.getByTestId(TransactionsTestIds.PopoverFilter('accounts')).locator(`[data-account-name="${accountAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(expenseADesc)).toBeVisible({ timeout: 8000 });
@@ -472,20 +473,20 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(targetDesc)).toBeVisible();
 
     // Apply a text search that hides the transaction
-    const searchInput = page.getByTestId("input_text_search");
+    const searchInput = page.getByTestId(TransactionsTestIds.InputTextSearch);
     await searchInput.fill("xxxxxxxxxnotfound");
     await page.waitForLoadState("networkidle");
     await expect(page.getByText(targetDesc)).not.toBeVisible({ timeout: 8000 });
 
     // The clear filters button should now be visible
-    await expect(page.getByTestId("btn_clear_filters")).toBeVisible();
+    await expect(page.getByTestId(TransactionsTestIds.BtnClearFilters)).toBeVisible();
 
     // Clear filters
-    await page.getByTestId("btn_clear_filters").click();
+    await page.getByTestId(TransactionsTestIds.BtnClearFilters).click();
     await page.waitForLoadState("networkidle");
 
     // Transaction should be visible again and clear filters button gone
     await expect(page.getByText(targetDesc)).toBeVisible({ timeout: 8000 });
-    await expect(page.getByTestId("btn_clear_filters")).not.toBeVisible();
+    await expect(page.getByTestId(TransactionsTestIds.BtnClearFilters)).not.toBeVisible();
   });
 });

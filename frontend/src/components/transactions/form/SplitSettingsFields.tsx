@@ -23,6 +23,7 @@ import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 import { getInitials } from "@/utils/getInitials";
+import { TransactionsTestIds } from "@/testIds";
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -110,7 +111,7 @@ function SplitRowControls({
             onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
             style={{ width: 90 }}
             size="sm"
-            data-testid="input_split_percentage"
+            data-testid={TransactionsTestIds.InputSplitPercentage}
           />
           {totalAmount > 0 && (
             <Text size="sm" c="dimmed">
@@ -125,7 +126,7 @@ function SplitRowControls({
             value={fieldValue}
             onChange={(v) => setValue(amountFieldName, v)}
             error={error}
-            data-testid="input_split_amount"
+            data-testid={TransactionsTestIds.InputSplitAmount}
           />
         </Box>
       )}
@@ -366,7 +367,7 @@ export function SplitSettingsFields({
             c="dimmed"
             onClick={() => append({ connection_id: 0, amount: 0 })}
             style={{ alignSelf: "flex-start" }}
-            data-testid="btn_add_split_row"
+            data-testid={TransactionsTestIds.BtnAddSplitRow}
           >
             + Adicionar divisão
           </Anchor>

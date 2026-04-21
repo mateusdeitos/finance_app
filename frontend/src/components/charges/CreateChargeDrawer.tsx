@@ -19,6 +19,7 @@ import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { QueryKeys } from "@/utils/queryKeys";
 import { formatBalance } from "@/utils/formatCents";
 import { Charges } from "@/types/charges";
+import { ChargesTestIds } from '@/testIds'
 
 const createChargeSchema = z.object({
   connection_id: z.number("Selecione uma conexao"),
@@ -154,7 +155,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       title="Criar Cobrança"
       position="right"
       size="md"
-      data-testid="drawer_create_charge"
+      data-testid={ChargesTestIds.DrawerCreate}
     >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
@@ -177,7 +178,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                   onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                   error={fieldState.error?.message}
                   required
-                  data-testid="select_connection"
+                  data-testid={ChargesTestIds.SelectConnection}
                 />
               )}
             />
@@ -195,7 +196,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
-                data-testid="select_my_account"
+                data-testid={ChargesTestIds.SelectMyAccount}
               />
             )}
           />
@@ -247,8 +248,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 required
               >
                 <Stack gap="xs" mt="xs">
-                  <Radio value="charger" label="Cobrador (estou cobrando)" data-testid="radio_role_charger" />
-                  <Radio value="payer" label="Pagador (estou pagando)" data-testid="radio_role_payer" />
+                  <Radio value="charger" label="Cobrador (estou cobrando)" data-testid={ChargesTestIds.RadioRole('charger')} />
+                  <Radio value="payer" label="Pagador (estou pagando)" data-testid={ChargesTestIds.RadioRole('payer')} />
                 </Stack>
               </Radio.Group>
             )}
@@ -271,7 +272,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 decimalSeparator=","
                 prefix="R$ "
                 error={fieldState.error?.message}
-                data-testid="input_charge_amount"
+                data-testid={ChargesTestIds.InputAmount}
               />
             )}
           />
@@ -282,7 +283,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             minRows={2}
             {...form.register("description")}
             error={form.formState.errors.description?.message}
-            data-testid="input_charge_description"
+            data-testid={ChargesTestIds.InputDescription}
           />
 
           {watchedConnectionId && (
@@ -304,7 +305,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             loading={mutation.isPending}
             disabled={mutation.isPending}
             fullWidth
-            data-testid="btn_submit_create_charge"
+            data-testid={ChargesTestIds.BtnSubmitCreate}
           >
             Criar Cobrança
           </Button>

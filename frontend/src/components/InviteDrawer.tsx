@@ -1,6 +1,7 @@
 import { Drawer, Stack, Text, TextInput, Button, CopyButton, Group } from '@mantine/core'
 import { IconCopy, IconCheck } from '@tabler/icons-react'
 import { useMe } from '@/hooks/useMe'
+import { CommonTestIds } from '@/testIds'
 import { useDrawerContext } from '@/utils/renderDrawer'
 
 export function InviteDrawer() {
@@ -19,7 +20,7 @@ export function InviteDrawer() {
       title="Criar Conexão"
       position="right"
       size="md"
-      data-testid="drawer_invite"
+      data-testid={CommonTestIds.DrawerInvite}
     >
       <Stack gap="lg">
         <Text size="sm" c="dimmed">

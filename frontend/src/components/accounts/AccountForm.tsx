@@ -7,6 +7,7 @@ import { CurrencyInput } from '@/components/transactions/form/CurrencyInput'
 import { ColorSwatchPicker, DEFAULT_AVATAR_COLOR } from '@/components/accounts/ColorSwatchPicker'
 import { useResetFormOnChange } from '@/hooks/useResetFormOnChange'
 import { Transactions } from '@/types/transactions'
+import { AccountsTestIds } from '@/testIds'
 
 const schema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -63,7 +64,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
   const avatarColor = useWatch({ control, name: 'avatar_background_color' })
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate data-testid="account_form">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate data-testid={AccountsTestIds.Form}>
       <Stack gap="md">
         {error && (
           <Alert color="red" title="Erro" variant="light">
@@ -76,7 +77,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
           required
           {...register('name')}
           error={errors.name?.message}
-          data-testid="input_account_name"
+          data-testid={AccountsTestIds.InputName}
         />
 
         <Textarea
@@ -92,7 +93,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
           value={initialBalance}
           onChange={(val) => setValue('initial_balance', val)}
           error={errors.initial_balance?.message}
-          data-testid="input_initial_balance"
+          data-testid={AccountsTestIds.InputInitialBalance}
         />
 
         <ColorSwatchPicker
@@ -102,7 +103,7 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
         />
 
         <Group justify="flex-end" mt="sm">
-          <Button type="submit" loading={isPending} data-testid="btn_account_save">
+          <Button type="submit" loading={isPending} data-testid={AccountsTestIds.BtnSave}>
             Salvar
           </Button>
         </Group>

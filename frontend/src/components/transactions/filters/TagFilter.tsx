@@ -3,6 +3,7 @@ import { IconTag } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTags } from '@/hooks/useTags'
+import { TransactionsTestIds } from '@/testIds'
 
 interface TagFilterProps {
   inline?: boolean
@@ -24,7 +25,7 @@ function TagOptions({ tags, selected, toggle }: {
           variant={selected.includes(tag.id) ? 'filled' : 'outline'}
           style={{ cursor: 'pointer' }}
           onClick={() => toggle(tag.id)}
-          data-testid={`badge_filter_tag_${tag.id}`}
+          data-testid={TransactionsTestIds.BadgeFilterTag(tag.id)}
           data-tag-name={tag.name}
         >
           {tag.name}
@@ -67,13 +68,13 @@ export function TagFilter({ inline }: TagFilterProps) {
             variant="default"
             leftSection={<IconTag size={16} />}
             onClick={() => setOpened((o) => !o)}
-            data-testid="btn_filter_tags"
+            data-testid={TransactionsTestIds.BtnFilter('tags')}
           >
             Tags
           </Button>
         </Indicator>
       </Popover.Target>
-      <Popover.Dropdown data-testid="popover_filter_tags">
+      <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('tags')}>
         <TagOptions tags={tags} selected={selected} toggle={toggle} />
       </Popover.Dropdown>
     </Popover>

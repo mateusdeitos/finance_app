@@ -4,6 +4,7 @@ import { useCategories, useDeleteCategory } from '@/hooks/useCategories'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { flattenCategories } from '@/utils/flattenCategories'
 import { Transactions } from '@/types/transactions'
+import { CategoriesTestIds } from '@/testIds'
 
 type Props = {
   category: Transactions.Category
@@ -53,7 +54,7 @@ export function DeleteCategoryModal({ category, allCategories }: Props) {
                 replaceWithId: replaceWithId ? Number(replaceWithId) : undefined,
               })
             }
-            data-testid="btn_confirm_delete_category"
+            data-testid={CategoriesTestIds.BtnConfirmDelete}
           >
             Excluir
           </Button>

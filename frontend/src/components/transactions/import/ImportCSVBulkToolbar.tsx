@@ -18,6 +18,7 @@ import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { SplitSettingsFields } from "../form/SplitSettingsFields";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useDisclosure } from "@mantine/hooks";
+import { ImportTestIds } from "@/testIds";
 
 const ACTION_OPTIONS = [
   { value: "import", label: "Importar" },
@@ -177,7 +178,7 @@ export function ImportCSVBulkToolbar({
           color="red"
           leftSection={<IconTrash size={14} />}
           onClick={onRemove}
-          data-testid="btn_bulk_remove"
+          data-testid={ImportTestIds.BtnBulkRemove}
         >
           Remover
         </Button>
@@ -221,7 +222,7 @@ export function ImportCSVBulkToolbar({
             size="xs"
             data={ACTION_OPTIONS}
             withCheckIcon={false}
-            data-testid="select_bulk_action"
+            data-testid={ImportTestIds.SelectBulkAction}
             onChange={(val) => {
               if (val) {
                 localForm.reset({ action_type: "import_action", import_action: val as Transactions.ImportRowAction });
@@ -248,7 +249,7 @@ export function ImportCSVBulkToolbar({
             size="xs"
             data={TYPE_OPTIONS}
             withCheckIcon={false}
-            data-testid="select_bulk_action"
+            data-testid={ImportTestIds.SelectBulkAction}
             onChange={(val) => {
               if (val) {
                 localForm.reset({ action_type: "type", type: val as Transactions.TransactionType });
@@ -308,7 +309,7 @@ export function ImportCSVBulkToolbar({
           leftSection={<IconHammer size={14} />}
           onClick={applySelectedAction}
           disabled={applyDisabled}
-          data-testid="btn_bulk_apply"
+          data-testid={ImportTestIds.BtnBulkApply}
         >
           Aplicar
         </Button>

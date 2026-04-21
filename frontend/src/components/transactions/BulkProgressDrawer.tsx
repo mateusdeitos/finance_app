@@ -10,6 +10,7 @@ import {
 import { IconCheck, IconX } from "@tabler/icons-react";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { useSequentialProgress } from "@/hooks/useSequentialProgress";
+import { TransactionsTestIds } from "@/testIds";
 
 export interface BulkProgressItem {
   id: number;
@@ -37,7 +38,7 @@ export function BulkProgressDrawer({
   successMessage,
   onInvalidate,
   onSuccess,
-  testIdPrefix = "bulk_progress",
+  testIdPrefix = TransactionsTestIds.BulkProgressDrawer,
 }: BulkProgressDrawerProps) {
   const { opened, close } = useDrawerContext<void>();
   const { state, progress, currentLabel, errorInfo } = useSequentialProgress({
@@ -79,18 +80,18 @@ export function BulkProgressDrawer({
             value={progress}
             animated={isProcessing}
             color={state === "error" ? "red" : "blue"}
-            data-testid="bulk_progress_bar"
+            data-testid={TransactionsTestIds.BulkProgressBar}
           />
         )}
 
         {isProcessing && (
-          <Text size="sm" c="dimmed" ta="center" data-testid="bulk_current_label">
+          <Text size="sm" c="dimmed" ta="center" data-testid={TransactionsTestIds.BulkCurrentLabel}>
             {currentLabel}
           </Text>
         )}
 
         {state === "success" && (
-          <Stack gap="sm" align="center" data-testid="bulk_success">
+          <Stack gap="sm" align="center" data-testid={TransactionsTestIds.BulkSuccess}>
             <Group justify="center" gap="xs">
               <ThemeIcon color="teal" radius="xl" size="lg">
                 <IconCheck size={18} />
@@ -99,14 +100,14 @@ export function BulkProgressDrawer({
                 {successMessage(items.length)}
               </Text>
             </Group>
-            <Button variant="default" onClick={() => close()} data-testid="btn_bulk_done">
+            <Button variant="default" onClick={() => close()} data-testid={TransactionsTestIds.BtnBulkDone}>
               Fechar
             </Button>
           </Stack>
         )}
 
         {state === "error" && errorInfo && (
-          <Stack gap="xs" data-testid="bulk_error">
+          <Stack gap="xs" data-testid={TransactionsTestIds.BulkError}>
             <Group gap="xs">
               <ThemeIcon color="red" radius="xl" size="md">
                 <IconX size={14} />
@@ -130,7 +131,7 @@ export function BulkProgressDrawer({
                 ))}
               </>
             )}
-            <Button variant="default" onClick={() => close()} mt="xs" data-testid="btn_bulk_close_error">
+            <Button variant="default" onClick={() => close()} mt="xs" data-testid={TransactionsTestIds.BtnBulkCloseError}>
               Fechar
             </Button>
           </Stack>

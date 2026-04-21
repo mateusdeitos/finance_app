@@ -1,6 +1,7 @@
 import { ActionIcon, Button, Group, Menu, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
+import { TransactionsTestIds } from '@/testIds'
 
 interface SelectionActionBarProps {
   count: number
@@ -14,20 +15,20 @@ interface SelectionActionBarProps {
 
 export function SelectionActionBar({ count, onClearSelection, onCategoryChange, onDateChange, onDivisaoChange, connectedAccountsCount, onDelete }: SelectionActionBarProps) {
   return (
-    <div className={classes.bar} data-testid="selection_action_bar">
+    <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
       <ActionIcon
         className={classes.closeButton}
         variant="default"
         radius="xl"
         size="md"
         onClick={onClearSelection}
-        data-testid="btn_clear_selection"
+        data-testid={TransactionsTestIds.BtnClearSelection}
         aria-label="Limpar seleção"
       >
         <IconX size={14} />
       </ActionIcon>
       <Group justify="space-between" align="center">
-        <Text size="sm" fw={700} data-testid="selection_count">
+        <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
           {count}
         </Text>
         <Menu shadow="md" width={200}>
@@ -36,7 +37,7 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
               size="sm"
               variant="default"
               rightSection={<IconChevronDown size={14} />}
-              data-testid="btn_bulk_actions_menu"
+              data-testid={TransactionsTestIds.BtnBulkActionsMenu}
             >
               Ações
             </Button>
@@ -45,14 +46,14 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
             <Menu.Item
               leftSection={<IconCategory size={14} />}
               onClick={onCategoryChange}
-              data-testid="btn_bulk_category"
+              data-testid={TransactionsTestIds.BtnBulkCategory}
             >
               Alterar categoria
             </Menu.Item>
             <Menu.Item
               leftSection={<IconCalendar size={14} />}
               onClick={onDateChange}
-              data-testid="btn_bulk_date"
+              data-testid={TransactionsTestIds.BtnBulkDate}
             >
               Alterar data
             </Menu.Item>
@@ -60,12 +61,12 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
               leftSection={<IconShare size={14} />}
               onClick={connectedAccountsCount === 0 ? undefined : onDivisaoChange}
               disabled={connectedAccountsCount === 0}
-              data-testid="btn_bulk_division"
+              data-testid={TransactionsTestIds.BtnBulkDivision}
             >
               Divisão
             </Menu.Item>
             {connectedAccountsCount === 0 && (
-              <Text size="xs" c="dimmed" px="sm" pb="xs" data-testid="hint_bulk_division_no_connection">
+              <Text size="xs" c="dimmed" px="sm" pb="xs" data-testid={TransactionsTestIds.HintBulkDivisionNoConnection}>
                 Conecte uma conta para usar esta ação.
               </Text>
             )}
@@ -73,7 +74,7 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
             <Menu.Item
               leftSection={<IconTrash size={14} color="var(--mantine-color-red-5)" />}
               onClick={onDelete}
-              data-testid="btn_bulk_delete"
+              data-testid={TransactionsTestIds.BtnBulkDelete}
             >
               Excluir
             </Menu.Item>

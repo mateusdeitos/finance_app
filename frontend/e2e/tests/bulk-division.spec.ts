@@ -29,6 +29,7 @@ import {
   openAuthedPage,
 } from '../helpers/api'
 import { setupPartnerConnection } from '../helpers/fixtures'
+import { TransactionsTestIds } from '@/testIds'
 
 test.describe('Bulk Division', () => {
   let transactionsPage: TransactionsPage
@@ -127,18 +128,18 @@ test.describe('Bulk Division', () => {
     await transactionsPage.selectTransaction(txA.id)
     await transactionsPage.selectTransaction(txB.id)
     await transactionsPage.selectTransaction(txC.id)
-    await expect(page.getByTestId('selection_count')).toHaveText('3')
+    await expect(page.getByTestId(TransactionsTestIds.SelectionCount)).toHaveText('3')
 
     // Open bulk menu → click Divisão
     await transactionsPage.openBulkActionsMenu()
-    await page.getByTestId('btn_bulk_division').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDivision).click()
 
     // Wait for drawer to be ready (Mantine Drawer may keep root hidden during animation)
-    await expect(page.getByTestId('btn_apply_bulk_division')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId(TransactionsTestIds.BtnApplyBulkDivision)).toBeVisible({ timeout: 8000 })
 
     // With 2 connected accounts, BulkDivisionDrawer seeds row 1 with empty {connection_id: 0}.
     // We must pick the first connection and set 30%, then add a second row for 70%.
-    const drawer = page.getByTestId('drawer_bulk_division')
+    const drawer = page.getByTestId(TransactionsTestIds.DrawerBulkDivision)
 
     // Row 1: select partner 1's connection, set to 30%
     const firstSelect = drawer.getByPlaceholder('Selecionar conta').first()
@@ -147,11 +148,11 @@ test.describe('Bulk Division', () => {
     await page.getByRole('option').first().click()
 
     // Set row 1 percentage to 30
-    const percentInputs = drawer.getByTestId('input_split_percentage')
+    const percentInputs = drawer.getByTestId(TransactionsTestIds.InputSplitPercentage)
     await percentInputs.nth(0).fill('30')
 
     // Add a second row
-    await drawer.getByTestId('btn_add_split_row').click()
+    await drawer.getByTestId(TransactionsTestIds.BtnAddSplitRow).click()
 
     // Row 2: select the remaining available connection (partner 2)
     const secondSelect = drawer.getByPlaceholder('Selecionar conta').last()
@@ -162,7 +163,7 @@ test.describe('Bulk Division', () => {
     await percentInputs.nth(1).fill('70')
 
     // Verify the sum badge shows 100%
-    await expect(drawer.getByTestId('badge_bulk_division_sum')).toHaveText(/Total: 100% \/ 100%/)
+    await expect(drawer.getByTestId(TransactionsTestIds.BadgeBulkDivisionSum)).toHaveText(/Total: 100% \/ 100%/)
 
     // --- Arm network capture BEFORE clicking submit (playwright-best-practices) ---
     const capturedPuts: Array<{
@@ -180,13 +181,13 @@ test.describe('Bulk Division', () => {
     page.on('request', onRequest)
 
     try {
-      await page.getByTestId('btn_apply_bulk_division').click()
-      await expect(page.getByTestId('bulk_success')).toBeVisible({ timeout: 15000 })
+      await page.getByTestId(TransactionsTestIds.BtnApplyBulkDivision).click()
+      await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({ timeout: 15000 })
     } finally {
       page.off('request', onRequest)
     }
 
-    await page.getByTestId('btn_bulk_done').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDone).click()
 
     // --- Wire-format assertions on each captured PUT body ---
     // PAY-02: each split_settings row must have ONLY 'amount' and 'connection_id' keys
@@ -276,13 +277,13 @@ test.describe('Bulk Division', () => {
       await soloTransactionsPage.openBulkActionsMenu()
 
       // Key assertions (HUMAN-UAT#2):
-      const divBtn = soloPage.getByTestId('btn_bulk_division')
+      const divBtn = soloPage.getByTestId(TransactionsTestIds.BtnBulkDivision)
       await expect(divBtn).toBeVisible()
       // Playwright's toBeDisabled() works for buttons AND elements with aria-disabled="true"
       await expect(divBtn).toBeDisabled()
 
       // The hint text must be visible with exact Portuguese copy
-      const hint = soloPage.getByTestId('hint_bulk_division_no_connection')
+      const hint = soloPage.getByTestId(TransactionsTestIds.HintBulkDivisionNoConnection)
       await expect(hint).toBeVisible()
       await expect(hint).toHaveText('Conecte uma conta para usar esta ação.')
 
@@ -291,7 +292,7 @@ test.describe('Bulk Division', () => {
       // Note: Mantine renders disabled Menu.Item as a button[disabled], so click() may throw
       // or be intercepted; either way the drawer should not open.
       await divBtn.click({ force: true }).catch(() => undefined)
-      await expect(soloPage.getByTestId('drawer_bulk_division')).not.toBeVisible()
+      await expect(soloPage.getByTestId(TransactionsTestIds.DrawerBulkDivision)).not.toBeVisible()
 
       // Cleanup solo user resources
       await apiFetchAs(soloToken, `/api/transactions/${soloTxId}`, { method: 'DELETE' }).catch(() => undefined)
@@ -349,27 +350,27 @@ test.describe('Bulk Division', () => {
     await transactionsPage.selectTransaction(txD.id)
     await transactionsPage.selectTransaction(txE.id)
     await transactionsPage.selectTransaction(txF.id)
-    await expect(page.getByTestId('selection_count')).toHaveText('3')
+    await expect(page.getByTestId(TransactionsTestIds.SelectionCount)).toHaveText('3')
 
     // Open bulk menu → click Divisão
     await transactionsPage.openBulkActionsMenu()
-    await page.getByTestId('btn_bulk_division').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDivision).click()
 
     // Wait for drawer to be ready
-    await expect(page.getByTestId('btn_apply_bulk_division')).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId(TransactionsTestIds.BtnApplyBulkDivision)).toBeVisible({ timeout: 8000 })
 
     // With 2+ connections, the first row starts empty; pick partner 1's connection for 100%
-    const drawer = page.getByTestId('drawer_bulk_division')
+    const drawer = page.getByTestId(TransactionsTestIds.DrawerBulkDivision)
     const firstSelect = drawer.getByPlaceholder('Selecionar conta').first()
     await firstSelect.click()
     await page.getByRole('option').first().click()
 
     // Set percentage to 100 (single-row, 100% split is valid)
-    const percentInputs = drawer.getByTestId('input_split_percentage')
+    const percentInputs = drawer.getByTestId(TransactionsTestIds.InputSplitPercentage)
     await percentInputs.nth(0).fill('100')
 
     // Verify sum badge shows 100%
-    await expect(drawer.getByTestId('badge_bulk_division_sum')).toHaveText(/Total: 100% \/ 100%/)
+    await expect(drawer.getByTestId(TransactionsTestIds.BadgeBulkDivisionSum)).toHaveText(/Total: 100% \/ 100%/)
 
     // --- Arm network capture BEFORE clicking submit ---
     const capturedPuts: Array<{ amount: number; split_settings: unknown }> = []
@@ -382,8 +383,8 @@ test.describe('Bulk Division', () => {
     page.on('request', onRequest)
 
     try {
-      await page.getByTestId('btn_apply_bulk_division').click()
-      await expect(page.getByTestId('bulk_success')).toBeVisible({ timeout: 15000 })
+      await page.getByTestId(TransactionsTestIds.BtnApplyBulkDivision).click()
+      await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({ timeout: 15000 })
     } finally {
       page.off('request', onRequest)
     }
@@ -393,9 +394,9 @@ test.describe('Bulk Division', () => {
     expect(capturedPuts.length).toBe(2)
 
     // No error row surfaced in the progress drawer
-    await expect(page.getByTestId('bulk_error')).not.toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.BulkError)).not.toBeVisible()
 
-    await page.getByTestId('btn_bulk_done').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDone).click()
 
     // --- API re-read assertions ---
     // Persisted splits surface via `linked_transactions` (the GET endpoint does not

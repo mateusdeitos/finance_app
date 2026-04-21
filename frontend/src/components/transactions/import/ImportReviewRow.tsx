@@ -17,6 +17,7 @@ import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
 import { AccountDrawer } from "@/components/accounts/AccountDrawer";
+import { ImportTestIds } from '@/testIds'
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -152,7 +153,7 @@ export const ImportReviewRow = memo(
     };
 
     return (
-      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={`import_row_${rowIndex}`}>
+      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={ImportTestIds.Row(rowIndex)}>
         {/* Checkbox */}
         <Table.Td style={{ cursor: "pointer" }}>
           <Checkbox
@@ -161,7 +162,7 @@ export const ImportReviewRow = memo(
             onClick={(e) => onToggleSelect(rowIndex, e.shiftKey)}
             disabled={disabled}
             size="xs"
-            data-testid={`checkbox_import_row_${rowIndex}`}
+            data-testid={ImportTestIds.RowCheckbox(rowIndex)}
           />
         </Table.Td>
 
@@ -169,7 +170,7 @@ export const ImportReviewRow = memo(
         <Table.Td>
           <Box
             className={classes.statusIcon}
-            data-testid={`import_status_${rowIndex}`}
+            data-testid={ImportTestIds.RowStatus(rowIndex)}
             data-status={importStatus}
           >
             {statusCell()}
@@ -269,7 +270,7 @@ export const ImportReviewRow = memo(
                     clearable
                     placeholder="Selecionar..."
                     withCheckIcon={false}
-                    data-testid={`select_category_${rowIndex}`}
+                    data-testid={ImportTestIds.RowSelectCategory(rowIndex)}
                     style={{ flex: 1 }}
                   />
                 )}
@@ -287,7 +288,7 @@ export const ImportReviewRow = memo(
                 }}
                 disabled={disabled || isSkipped}
                 aria-label="Criar categoria"
-                data-testid={`btn_create_category_row_${rowIndex}`}
+                data-testid={ImportTestIds.RowBtnCreateCategory(rowIndex)}
               >
                 <IconPlus size={14} />
               </ActionIcon>
@@ -384,7 +385,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 disabled={disabled}
                 withCheckIcon={false}
-                data-testid={`select_import_action_${rowIndex}`}
+                data-testid={ImportTestIds.RowSelectAction(rowIndex)}
               />
             )}
           />

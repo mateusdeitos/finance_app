@@ -1,6 +1,7 @@
 import { Drawer } from '@mantine/core'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { TransactionFilters } from '@/components/transactions/TransactionFilters'
+import { TransactionsTestIds } from '@/testIds'
 
 export function FiltersDrawer() {
   const { opened, reject } = useDrawerContext<void>()
@@ -12,7 +13,7 @@ export function FiltersDrawer() {
       position="bottom"
       title="Filtros"
       size="auto"
-      data-testid="drawer_transaction_filters"
+      data-testid={TransactionsTestIds.DrawerFilters}
       styles={{
         content: {
           borderRadius: 'var(--mantine-radius-lg) var(--mantine-radius-lg) 0 0',

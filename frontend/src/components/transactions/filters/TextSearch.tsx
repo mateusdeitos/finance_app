@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { IconSearch } from '@tabler/icons-react'
 import { useSearch } from '@tanstack/react-router'
 import { useSyncTransactionsSearchQuery } from '@/hooks/useSyncTransactionsSearchQuery'
+import { TransactionsTestIds } from '@/testIds'
 
 interface TextSearchProps {
   style?: React.CSSProperties
@@ -21,7 +22,7 @@ export function TextSearch({ style }: TextSearchProps) {
       value={value}
       onChange={(e) => setValue(e.currentTarget.value)}
       style={{ minWidth: 200, ...style }}
-      data-testid="input_text_search"
+      data-testid={TransactionsTestIds.InputTextSearch}
     />
   )
 }
