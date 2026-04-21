@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.3 Editing Linked Transactions (Shipped: 2026-04-20)
+
+**Phases completed:** 1 phase (Phase 11 backend only), 2 plans
+**Phases deferred:** Phase 12 (Frontend Edit Form) — FE-01..FE-05 deferred to backlog
+**Timeline:** 2026-04-18 → 2026-04-20 (partial scope shipped)
+
+**Key accomplishments:**
+
+1. Backend validation — `PUT /api/transactions/{id}` rejects edits to amount/account/type/recurrence/split on linked transactions; allows date, description, category, tags
+2. User-scoped date/description propagation for linked transactions — edits apply only to the caller's side of the transfer
+3. Existing diff-based propagation logic reused across all/current/current_and_future modes — no new propagation pathways introduced
+
+**Deferred (rolls forward as backlog):**
+
+- FE-01..FE-05 (disabled fields, hidden type/recurrence/split sections, propagation drawer on recurring linked transactions) — frontend edit form UX work
+
+---
+
 ## v1.2 Transactions Bulk Actions (Shipped: 2026-04-17)
 
 **Phases completed:** 2 phases, 6 plans

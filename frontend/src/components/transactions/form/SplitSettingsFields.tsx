@@ -110,6 +110,7 @@ function SplitRowControls({
             onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
             style={{ width: 90 }}
             size="sm"
+            data-testid="input_split_percentage"
           />
           {totalAmount > 0 && (
             <Text size="sm" c="dimmed">

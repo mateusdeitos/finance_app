@@ -20,10 +20,12 @@ import { TransactionList } from '@/components/transactions/TransactionList'
 import { SelectionActionBar } from '@/components/transactions/SelectionActionBar'
 import { PropagationSettingsDrawer, PropagationSetting } from '@/components/transactions/PropagationSettingsDrawer'
 import { BulkProgressDrawer, BulkProgressItem } from '@/components/transactions/BulkProgressDrawer'
+import { BulkDivisionDrawer } from '@/components/transactions/BulkDivisionDrawer'
 import { SelectCategoryDrawer } from '@/components/transactions/SelectCategoryDrawer'
 import { SelectDateDrawer } from '@/components/transactions/SelectDateDrawer'
 import { TextSearch } from '@/components/transactions/filters/TextSearch'
 import { Transactions } from '@/types/transactions'
+import { splitPercentagesToCents } from '@/utils/splitMath'
 
 export function TransactionsPage() {
   const search = useSearch({ from: '/_authenticated/transactions' })
@@ -48,6 +50,9 @@ export function TransactionsPage() {
 
   const { query: accountsQuery } = useAccounts()
   const accounts = accountsQuery.data ?? []
+  const connectedAccountsCount = accounts.filter(
+    (a) => a.user_connection?.connection_status === 'accepted',
+  ).length
   const { query: tagsQuery } = useTags()
   const existingTags = tagsQuery.data ?? []
 
@@ -71,6 +76,15 @@ export function TransactionsPage() {
     return [...selectedIds].filter((id) => {
       const tx = allTransactions.find((t) => t.id === id)
       return tx?.original_user_id == null || tx?.original_user_id === currentUserId
+    })
+  }
+
+  // Division-specific eligibility: also excludes transfers (D-10).
+  // Transfers cannot carry split_settings (buildFullPayload sets it to undefined for transfers).
+  function getDivisionEligibleIds(): number[] {
+    return getEligibleIds().filter((id) => {
+      const tx = allTransactions.find((t) => t.id === id)
+      return tx?.type !== 'transfer'
     })
   }
 
@@ -256,6 +270,64 @@ export function TransactionsPage() {
     }
   }
 
+  async function handleDivisionClick() {
+    try {
+      // Step 1: User picks the split configuration (percentages).
+      const rawSplits = await renderDrawer<Transactions.SplitSetting[]>(() => (
+        <BulkDivisionDrawer />
+      ))
+
+      // Step 2: If any selected tx has a recurrence, ask how to propagate.
+      let propagation: PropagationSetting | undefined
+      if (hasRecurring) {
+        propagation = await renderDrawer<PropagationSetting>(() => (
+          <PropagationSettingsDrawer actionLabel="alterar" />
+        ))
+      }
+
+      // Step 3: Build eligibility (silently skip linked non-owned + transfers).
+      const eligibleIds = getDivisionEligibleIds()
+      const items: BulkProgressItem[] = eligibleIds.map((id) => {
+        const tx = allTransactions.find((t) => t.id === id)
+        return { id, label: tx?.description ?? String(id) }
+      })
+
+      if (items.length === 0) return
+
+      // Step 4: Sequential per-tx PUT via the existing progress drawer.
+      void renderDrawer(() => (
+        <BulkProgressDrawer
+          items={items}
+          action={async (item) => {
+            const tx = allTransactions.find((t) => t.id === item.id)
+            if (!tx) return
+            // Convert percentages -> cents per-tx (PAY-01); last split absorbs remainder.
+            // splitPercentagesToCents strips `percentage` from the output (PAY-02).
+            const perTxSplits = splitPercentagesToCents(tx.amount, rawSplits)
+            const payload = buildFullPayload(tx, { split_settings: perTxSplits })
+            if (tx.transaction_recurrence_id != null && propagation) {
+              payload.propagation_settings = propagation
+            }
+            await updateTransaction(item.id, payload)
+          }}
+          titles={{
+            processing: 'Alterando divisão...',
+            success: 'Transações atualizadas',
+            error: 'Erro ao atualizar',
+          }}
+          successMessage={(n) =>
+            n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`
+          }
+          onInvalidate={invalidateTransactions}
+          onSuccess={clearSelection}
+          testIdPrefix="bulk_division"
+        />
+      ))
+    } catch {
+      // User dismissed a drawer (division selection or propagation) — silent exit.
+    }
+  }
+
   const isSelecting = selectedIds.size > 0
 
   if (isMobile) {
@@ -318,6 +390,8 @@ export function TransactionsPage() {
             onClearSelection={clearSelection}
             onCategoryChange={handleCategoryChange}
             onDateChange={handleDateChange}
+            onDivisaoChange={handleDivisionClick}
+            connectedAccountsCount={connectedAccountsCount}
             onDelete={handleDeleteClick}
           />
         ) : (
@@ -392,6 +466,8 @@ export function TransactionsPage() {
           onClearSelection={clearSelection}
           onCategoryChange={handleCategoryChange}
           onDateChange={handleDateChange}
+          onDivisaoChange={handleDivisionClick}
+          connectedAccountsCount={connectedAccountsCount}
           onDelete={handleDeleteClick}
         />
       )}
