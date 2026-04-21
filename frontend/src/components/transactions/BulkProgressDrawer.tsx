@@ -8,8 +8,8 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
 import { useDrawerContext } from "@/utils/renderDrawer";
+import { useSequentialProgress } from "@/hooks/useSequentialProgress";
 
 export interface BulkProgressItem {
   id: number;
@@ -30,14 +30,6 @@ interface BulkProgressDrawerProps {
   testIdPrefix?: string;
 }
 
-type ProcessState = "processing" | "success" | "error";
-
-interface ErrorInfo {
-  description: string;
-  reason: string;
-  remaining: string[];
-}
-
 export function BulkProgressDrawer({
   items,
   action,
@@ -48,49 +40,12 @@ export function BulkProgressDrawer({
   testIdPrefix = "bulk_progress",
 }: BulkProgressDrawerProps) {
   const { opened, close } = useDrawerContext<void>();
-  const [state, setState] = useState<ProcessState>("processing");
-  const [progress, setProgress] = useState(0);
-  const [currentLabel, setCurrentLabel] = useState("");
-  const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
-
-  useEffect(() => {
-    async function run() {
-      for (let i = 0; i < items.length; i++) {
-        setCurrentLabel(items[i].label);
-        setProgress(Math.round((i / items.length) * 100));
-
-        try {
-          await action(items[i]);
-        } catch (err) {
-          let reason = "Erro desconhecido";
-          if (err instanceof Response) {
-            try {
-              const body = await err.json();
-              reason = body.message ?? reason;
-            } catch {
-              reason = `Erro ${err.status}`;
-            }
-          }
-          setErrorInfo({
-            description: items[i].label,
-            reason,
-            remaining: items.slice(i + 1).map((t) => t.label),
-          });
-          setState("error");
-          return;
-        }
-      }
-
-      setProgress(100);
-      setCurrentLabel("");
-      setState("success");
-      onInvalidate();
-      onSuccess();
-    }
-
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { state, progress, currentLabel, errorInfo } = useSequentialProgress({
+    items,
+    action,
+    onInvalidate,
+    onSuccess,
+  });
 
   const isProcessing = state === "processing";
 
@@ -170,7 +125,7 @@ export function BulkProgressDrawer({
                 </Text>
                 {errorInfo.remaining.map((label, idx) => (
                   <Text key={`${idx}-${label}`} size="xs" c="dimmed" pl="sm">
-                    {"\u2022"} {label}
+                    {"•"} {label}
                   </Text>
                 ))}
               </>
