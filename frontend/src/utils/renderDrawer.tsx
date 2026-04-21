@@ -1,5 +1,5 @@
 import { MantineProvider } from "@mantine/core";
-import { useDisclosure, useTimeout } from "@mantine/hooks";
+import { useDisclosure } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createContext, ReactElement, useContext } from "react";
 import { createRoot } from "react-dom/client";
@@ -54,8 +54,11 @@ export function renderDrawer<T>(factory: () => ReactElement): Promise<T> {
 
   return new Promise<T>((resolve, reject) => {
     const Provider = () => {
-      const [opened, { close, open }] = useDisclosure(false);
-      useTimeout(open, 100, { autoInvoke: true });
+      // Start opened=true so Mantine's Transition renders in the "entered"
+      // state immediately — skips the entrance animation but guarantees the
+      // drawer is visible to both users and Playwright on first commit.
+      // Exit animation still plays when close()/reject() flips opened→false.
+      const [opened, { close }] = useDisclosure(true);
 
       const ctxClose = (value: T) => {
         close();
