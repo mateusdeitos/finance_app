@@ -77,12 +77,17 @@ select {
    The :has() guard only applies these dimensions while content is
    rendered (i.e. while the drawer is open), so `not.toBeVisible` still
    passes once the content unmounts on close. pointer-events:none keeps
-   clicks routed to the overlay/content inside. */
+   clicks routed to the overlay/content inside. z-index uses Mantine's
+   own --mb-z-index custom property (set on this element by ModalBase
+   via inline __vars); without it the position:fixed creates a new
+   stacking context at z-index:auto that renders BELOW the AppShell
+   navbar, which intercepts clicks on the drawer content. */
 .mantine-Drawer-root:has(.mantine-Drawer-content),
 .mantine-Modal-root:has(.mantine-Modal-content) {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: var(--mb-z-index);
 }
 
 /* ─── GPU-composited active states ──────────────────────────────────────── */
