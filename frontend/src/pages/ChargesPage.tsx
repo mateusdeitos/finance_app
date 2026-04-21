@@ -1,7 +1,6 @@
-import { ActionIcon, Box, Button, Group, Modal, Skeleton, Stack, Tabs, Text } from "@mantine/core";
+import { ActionIcon, Box, Button, Group, Skeleton, Stack, Tabs, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useTransactions } from "@/hooks/useTransactions";
@@ -14,6 +13,7 @@ import { useCancelCharge } from "@/hooks/useCancelCharge";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { Charges } from "@/types/charges";
 import { ChargeCard } from "@/components/charges/ChargeCard";
+import { ConfirmChargeActionDrawer, type ConfirmChargeAction } from "@/components/charges/ConfirmChargeActionDrawer";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { CreateChargeDrawer } from "@/components/charges/CreateChargeDrawer";
 import { AcceptChargeDrawer } from "@/components/charges/AcceptChargeDrawer";
@@ -55,11 +55,6 @@ export function ChargesPage() {
   const { mutation: rejectMutation } = useRejectCharge();
   const { mutation: cancelMutation } = useCancelCharge();
 
-  // TODO(migration Phase 5): convert to renderDrawer with discriminated result
-  const [confirmAction, setConfirmAction] = useState<
-    { type: "reject" | "cancel"; charge: Charges.Charge } | null
-  >(null);
-
   function getPartnerName(charge: Charges.Charge): string {
     return partnerNameMapQuery.data?.get(charge.connection_id) ?? "Parceiro(a)";
   }
@@ -68,30 +63,28 @@ export function ChargesPage() {
     void renderDrawer(() => <AcceptChargeDrawer charge={charge} partnerName={getPartnerName(charge)} />);
   }
 
-  function handleRejectClick(charge: Charges.Charge) {
-    setConfirmAction({ type: "reject", charge });
-  }
+  async function handleChargeAction(action: ConfirmChargeAction, charge: Charges.Charge) {
+    try {
+      await renderDrawer<void>(() => <ConfirmChargeActionDrawer action={action} />);
+    } catch {
+      return; // user dismissed the modal
+    }
 
-  function handleCancelClick(charge: Charges.Charge) {
-    setConfirmAction({ type: "cancel", charge });
-  }
-
-  function handleConfirm() {
-    if (!confirmAction) return;
-    const { type, charge } = confirmAction;
-    const mutate = type === "reject" ? rejectMutation : cancelMutation;
-    mutate.mutate(charge.id, {
+    const mutation = action === "reject" ? rejectMutation : cancelMutation;
+    mutation.mutate(charge.id, {
       onSuccess: () => {
         invalidateCharges();
         invalidatePendingCount();
         invalidateTransactions();
         notifications.show({
           color: "teal",
-          title: type === "reject" ? "Cobrança recusada" : "Cobrança cancelada",
-          message: type === "reject" ? "Cobrança recusada com sucesso." : "Cobrança cancelada com sucesso.",
+          title: action === "reject" ? "Cobrança recusada" : "Cobrança cancelada",
+          message:
+            action === "reject"
+              ? "Cobrança recusada com sucesso."
+              : "Cobrança cancelada com sucesso.",
           autoClose: 3000,
         });
-        setConfirmAction(null);
       },
     });
   }
@@ -173,7 +166,7 @@ export function ChargesPage() {
                   partnerName={getPartnerName(charge)}
                   balanceAmount={balanceAmount}
                   onAccept={() => handleAccept(charge)}
-                  onReject={() => handleRejectClick(charge)}
+                  onReject={() => void handleChargeAction("reject", charge)}
                 />
               ))}
             </Stack>
@@ -205,36 +198,13 @@ export function ChargesPage() {
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
                   balanceAmount={balanceAmount}
-                  onCancel={() => handleCancelClick(charge)}
+                  onCancel={() => void handleChargeAction("cancel", charge)}
                 />
               ))}
             </Stack>
           )}
         </Tabs.Panel>
       </Tabs>
-
-      <Modal
-        opened={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
-        title={confirmAction?.type === "reject" ? "Recusar cobrança" : "Cancelar cobrança"}
-        size="sm"
-      >
-        <Stack gap="md">
-          <Text size="sm">
-            {confirmAction?.type === "reject"
-              ? "Tem certeza que deseja recusar esta cobrança? Esta acao nao pode ser desfeita."
-              : "Tem certeza que deseja cancelar esta cobrança? Esta acao nao pode ser desfeita."}
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="default" onClick={() => setConfirmAction(null)}>
-              Voltar
-            </Button>
-            <Button color="red" loading={rejectMutation.isPending || cancelMutation.isPending} onClick={handleConfirm}>
-              {confirmAction?.type === "reject" ? "Recusar" : "Cancelar cobrança"}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
     </Stack>
   );
 }
