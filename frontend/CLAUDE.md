@@ -11,11 +11,13 @@ React/TypeScript frontend for a couples' finance management app.
 - **Bundler**: Vite
 - **Framework**: React 19
 - **Language**: TypeScript
-- **Routing**: TanStack Router
+- **Routing**: TanStack Router (file-based)
 - **Data fetching**: TanStack Query
-- **Forms**: React Hook Form
+- **Forms**: React Hook Form + `@hookform/resolvers/zod`
+- **Validation**: Zod
 - **Component library**: Mantine
 - **Styling**: CSS Modules (alongside Mantine)
+- **E2E**: Playwright
 
 ## Commands
 
@@ -23,130 +25,248 @@ React/TypeScript frontend for a couples' finance management app.
 npm run dev       # start dev server
 npm run build     # production build
 npm run preview   # preview production build
+npm run lint      # ESLint
 ```
 
 ## Project Structure
 
 ```
 src/
-  api/           # API client functions (raw fetch/axios calls, no hooks here)
-  hooks/         # Custom hooks (data fetching, mutations)
-  components/    # Shared/reusable UI components
-  pages/         # Route-level page components
-  types/         # TypeScript namespaces and types
-  utils/         # Pure utility functions
+  api/           # API client functions (raw fetch calls; no hooks, no React)
+  hooks/         # Custom hooks (queries, mutations, effects, UI)
+  components/    # Reusable UI components, organized by domain
+  pages/         # Page components (the content a route renders)
+  routes/        # TanStack Router file-based routes (thin entry points)
+  types/         # TypeScript namespaces and domain types
+  utils/         # Pure utility functions (and renderDrawer portal helper)
 ```
 
-## TypeScript Types
+## Core Conventions
 
-All domain types must be defined inside **namespaces**:
+The rules below are mandatory. Code that violates them either gets refactored in the same PR or flagged as a known migration (see "Known divergences" at the bottom).
 
-```ts
-// src/types/transactions.ts
-export namespace Transactions {
-  export type Transaction = {
-    id: number
-    amount: number
-    // ...
-  }
-}
-```
+### 1. Routes are thin entry points
 
-## Data Fetching Pattern
+A file under `src/routes/` **only** wires the route to a page component. No page JSX, no queries, no state, no handlers inside the route file.
 
-Every query must be wrapped in a custom hook that returns `{ query, invalidate }`:
+```tsx
+// src/routes/_authenticated.accounts.tsx
+import { createFileRoute } from '@tanstack/react-router'
+import { AccountsPage } from '@/pages/AccountsPage'
 
-```ts
-export function useTransactions() {
-  const queryClient = useQueryClient()
-  const query = useQuery({ queryKey: ['transactions'], queryFn: fetchTransactions })
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
-  return { query, invalidate }
-}
-```
-
-Every mutation must be wrapped in a custom hook that returns only `{ mutation }`. Invalidation is the query hook's responsibility, not the mutation's:
-
-```ts
-export function useCreateTransaction() {
-  const mutation = useMutation({ mutationFn: createTransaction })
-  return { mutation }
-}
-```
-
-## Authentication / Route Protection
-
-Protected routes use `createFileRoute` with the `/_authenticated` prefix. The parent `_authenticated.tsx` layout route handles auth via `beforeLoad` + `ensureQueryData` for the `me` query, redirecting to `/login` if unauthenticated.
-
-```ts
-export const Route = createFileRoute('/_authenticated/transactions')({
-  component: TransactionsPage,
+export const Route = createFileRoute('/_authenticated/accounts')({
+  component: AccountsPage,
 })
 ```
 
-## Query Keys
-
-All query keys must use the `QueryKeys` const object defined in `src/utils/queryKeys.ts`. Never use magic strings directly in `queryKey` arrays.
-
-```ts
-// ✅ correct
-useQuery({ queryKey: [QueryKeys.Me], queryFn: fetchMe })
-
-// ❌ wrong
-useQuery({ queryKey: ['me'], queryFn: fetchMe })
+```tsx
+// src/pages/AccountsPage.tsx
+export function AccountsPage() {
+  const { query, invalidate } = useAccounts()
+  // ...page content
+}
 ```
 
-When adding a new query, add its key to `QueryKeys` first.
+Allowed in a route file: `createFileRoute(...)`, search-param schema (e.g. Zod `validateSearch`), `beforeLoad`/`loader` that only delegates to query prefetch, and the `component:` reference. Everything else belongs in the page component.
 
-## Mobile First
+Search params schemas can be colocated in the route file **or** in `src/types/…`; whichever keeps the route file short.
 
-The app targets mobile devices as the primary experience. Always design and implement UI with mobile in mind first, then adapt for larger screens if needed.
+### 2. Pages are components, not routes
 
-- Use relative units (`rem`, `%`, `vh`/`vw`) over fixed pixel values
-- Touch targets must be large enough for easy tapping
-- Avoid hover-only interactions — all functionality must be accessible via touch
-- Test layouts at mobile viewport sizes before desktop
+Page components live in `src/pages/` as `PascalCase` functions (`AccountsPage`, `TransactionsPage`). They own the queries, mutations, handlers, and JSX. They may split into sub-components next to them or under `src/components/<domain>/` when reusable.
 
-## Component Guidelines
+### 3. Data fetching always via TanStack Query
 
-- Components must be **small and focused** — single responsibility
-- Avoid large monolithic components; split into smaller pieces
-- Use **Mantine** for all UI components
-- Apply custom styles with **CSS Modules** (`.module.css` files colocated with the component)
+- **Never** call `fetch`/`axios` inside a component, page, or effect. API calls live in `src/api/` and are consumed by hooks in `src/hooks/`.
+- Every query is a custom hook that returns `{ query, invalidate }`:
+  ```ts
+  export function useTransactions() {
+    const queryClient = useQueryClient()
+    const query = useQuery({ queryKey: [QueryKeys.Transactions], queryFn: fetchTransactions })
+    const invalidate = () => queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
+    return { query, invalidate }
+  }
+  ```
+- Every mutation is a custom hook that returns `{ mutation }` only. **Invalidation is the caller's responsibility** (usually via the `invalidate` returned by the matching query hook) — do not hard-code `onSuccess` invalidations inside the mutation hook.
+  ```ts
+  export function useCreateTransaction(options?: { onSuccess?: () => void }) {
+    const mutation = useMutation({ mutationFn: createTransaction, onSuccess: options?.onSuccess })
+    return { mutation }
+  }
+  ```
+- Query keys must come from the `QueryKeys` const in `src/utils/queryKeys.ts`. No magic strings.
+- **Derived state from queries goes through a `select` callback, not a `useMemo`/filter in the component.** Query hooks are written to accept a typed `select` and forward it to `useQuery`:
+  ```ts
+  export function useAccounts<T = Transactions.Account[]>(select?: (data: Transactions.Account[]) => T) {
+    const query = useQuery({ queryKey: [QueryKeys.Accounts], queryFn: fetchAccounts, select })
+    // ...
+  }
+  ```
+  Consumers pick exactly the slice they need:
+  ```ts
+  const { query: activeOwn }    = useAccounts((a) => a.filter((x) => x.is_active && !x.user_connection))
+  const { query: activeShared } = useAccounts((a) => a.filter((x) => x.is_active && !!x.user_connection))
+  const { query: inactive }     = useAccounts((a) => a.filter((x) => !x.is_active))
+  ```
+  Calling the same query hook multiple times is **fine and encouraged** — TanStack Query deduplicates on the `queryKey`, so there is exactly one fetch regardless of how many subscribers exist. Each `select` result is memoized per subscriber, so components only re-render when their slice actually changes. When adding a new query hook, always expose a `select?: (data) => T` generic parameter so callers can follow this pattern.
 
-## Drawers
+### 4. Avoid `useEffect` inside components
 
-All drawers must be opened using the `renderDrawer` helper from `src/utils/renderDrawer.tsx`. Do **not** manage drawer open/close state with `useState` or `useDisclosure` at the call site.
-
-`renderDrawer` renders the drawer component in an isolated React root (portal) and returns a `Promise` that resolves with the value passed to `ctx.close(value)`, or rejects when `ctx.reject(error)` is called (e.g. user dismisses).
-
-**Opening a drawer:**
+`useEffect` is a last resort. In page/component files you should see **zero** `useEffect`. When an effect is genuinely needed, encapsulate it in a custom hook under `src/hooks/` with a clear name that describes the behavior, not the implementation:
 
 ```ts
+// src/hooks/useResetFormOnChange.ts
+export function useResetFormOnChange<T>(reset: UseFormReset<T>, values: T | undefined) {
+  useEffect(() => {
+    if (values) reset(values)
+  }, [values, reset])
+}
+
+// in the component
+useResetFormOnChange(reset, initialValues)
+```
+
+Before reaching for an effect, check whether the logic fits better as:
+- Derived state during render.
+- An event handler reacting to user input.
+- A TanStack Query `select`/`onSuccess`/`enabled`.
+- An existing custom hook in `src/hooks/`.
+
+If an effect still survives the review, it lives in a hook — never inline.
+
+### 5. Forms: React Hook Form + Zod
+
+Every form follows the same pattern:
+
+```tsx
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const schema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório'),
+  initial_balance: z.number().int(),
+})
+
+type AccountFormValues = z.infer<typeof schema>
+
+export function AccountForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm<AccountFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: '', initial_balance: 0 },
+  })
+  // ...
+}
+```
+
+Rules:
+- **Schema defined with Zod**; always infer the type with `z.infer<typeof schema>` — never declare the form values type by hand.
+- **Always use `zodResolver`**; do not rely on manual validation inside handlers.
+- Use `superRefine` for cross-field validation; extract shared fields/refinements into reusable factories when multiple forms share rules (see `src/components/transactions/form/` for the pattern with `baseTransactionFields` + `applySharedRefinements`).
+- For nested forms, pass `control` via `FormProvider` / `useFormContext` rather than prop-drilling.
+- Submit button triggers `handleSubmit(onSubmit)`; validation errors are surfaced via `errors.*.message`.
+
+### 6. Components: small, focused, reusable
+
+- One responsibility per component. If a file grows past ~200 lines, split it.
+- Reusable UI → `src/components/<domain>/<Component>.tsx` (folder-by-domain: `accounts/`, `transactions/`, `charges/`, `categories/`, …). Sub-features get their own subfolder (`transactions/form/`, `transactions/filters/`, `transactions/import/`).
+- CSS Modules (`Component.module.css`) colocated with the component.
+- Prefer composition over props explosion. If a component needs 8+ props, it probably wants to be two components.
+- Never declare helper components or modals **inside** a page function body — hoist them to their own file.
+
+### 7. TypeScript: no `any`
+
+- `any` is banned. Use `unknown` + narrowing, generics, or concrete types. If a library forces an escape hatch, isolate it in a small helper with `// eslint-disable-next-line @typescript-eslint/no-explicit-any` **and a one-line comment** explaining why.
+- Domain types live inside a namespace per domain (see `src/types/transactions.ts`):
+  ```ts
+  export namespace Transactions {
+    export type Transaction = { id: number; amount: number /* cents */; /* ... */ }
+  }
+  ```
+- Amounts are **cents (int64)** end-to-end (matches backend). Format via `src/utils/formatCents.ts` only at the display layer.
+
+### 8. Drawers: `renderDrawer` + `close(value)`
+
+All drawers open through `renderDrawer` from `src/utils/renderDrawer.tsx`. **Do not** use `useDisclosure` or local `useState` at the call site. The helper renders the drawer in an isolated React root (with its own `QueryClientProvider` + `MantineProvider`) and returns a `Promise` that resolves with whatever `ctx.close(value)` passes.
+
+**Opening:**
+```tsx
 // fire-and-forget
 void renderDrawer(() => <CreateTransactionDrawer />)
 
-// await a result
-const result = await renderDrawer<MyResultType>(() => <MyDrawer />)
+// await a typed result
+const category = await renderDrawer<Transactions.Category>(() => <SelectCategoryDrawer />)
 ```
 
-**Inside the drawer component**, use `useDrawerContext` to get `opened`, `close`, and `reject`:
-
+**Inside the drawer component** — return data to the caller via `close(value)`:
 ```tsx
 import { useDrawerContext } from '@/utils/renderDrawer'
 
-export function MyDrawer() {
-  const { opened, close, reject } = useDrawerContext<MyResultType>()
-
+export function SelectCategoryDrawer() {
+  const { opened, close, reject } = useDrawerContext<Transactions.Category>()
   return (
     <Drawer opened={opened} onClose={reject} position="right" size="md">
-      {/* ... */}
-      <Button onClick={() => close(result)}>Confirm</Button>
+      {categories.map((c) => (
+        <Button key={c.id} onClick={() => close(c)}>{c.name}</Button>
+      ))}
     </Drawer>
   )
 }
 ```
 
-- Pass the expected return type as the generic to both `renderDrawer<T>` and `useDrawerContext<T>`.
-- Call `close(value)` to resolve the promise (confirmed/submitted).
-- Call `reject()` (or pass it to `onClose`) to reject the promise (dismissed/cancelled).
+Rules:
+- Pass the return type as a generic to both `renderDrawer<T>` and `useDrawerContext<T>`. Use `T = void` when the drawer just performs an action.
+- `close(value)` resolves the promise — the **only** way to return data from a drawer.
+- `reject()` rejects the promise on dismiss; wire it to Mantine's `onClose` (swipe, ESC, backdrop).
+- For confirmation drawers, return a discriminated result (`'confirmed' | 'cancelled'`) instead of a boolean when the semantics matter.
+- The caller awaits the result and acts on it in-place — no lifted state, no callbacks.
+
+## Authentication / Route Protection
+
+Protected routes live under the `/_authenticated` layout route. `_authenticated.tsx` performs auth in `beforeLoad` via `ensureQueryData` on the `me` query and redirects to `/login` if unauthenticated.
+
+## Query Keys
+
+Centralized in `src/utils/queryKeys.ts` as a `QueryKeys` const object. Add a new entry there before writing a new query hook. No string literals inside `queryKey` arrays.
+
+## Mobile First
+
+Mobile is the primary target.
+
+- Relative units (`rem`, `%`, `vh`/`vw`) over fixed pixels.
+- Touch-sized hit targets; no hover-only interactions.
+- Validate layouts at mobile viewport before desktop.
+
+## E2E tests (Playwright)
+
+Tests live in `frontend/e2e/` (tests in `tests/`, page objects in `pages/`, helpers in `helpers/`). Run with `npm run test:e2e`.
+
+### Selectors: `data-testid` only
+
+**E2E selectors must use `data-testid`.** This is non-negotiable: the library is an implementation detail and may change — testid-based selectors are the only ones that survive a component-library swap or a Mantine upgrade.
+
+Rules:
+- **Always**: `page.getByTestId('btn_new_account')`, `drawer.getByTestId('input_account_name')`, `row.getByTestId('checkbox_select_transaction')`.
+- **Never use UI-library-specific selectors**: no `.mantine-*`, `.ant-*`, `[class*="Group"]`, `[class*="Avatar"]`, `input[inputmode="numeric"]`, etc. These are Mantine internals and break on every upgrade.
+- **Avoid `getByRole` / `getByText` / `getByLabel`** as a primary strategy — they couple tests to copy (which changes with i18n or wording tweaks) and to ARIA details emitted by the library. Only acceptable when rendering third-party UI you cannot instrument (e.g. a browser native `confirm()`); even then, add a testid to the nearest container first.
+- Naming convention (already in use): `btn_<action>`, `input_<field>`, `drawer_<name>`, `section_<name>`, `row_<entity>`, `checkbox_<purpose>`. Stay consistent.
+- When adding a new UI element, add a stable `data-testid` in the same commit. No test may rely on class names, tag shapes, or attribute probes as a workaround.
+
+When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
+
+## Known divergences (migrate when touching)
+
+These exist in the codebase and agents should **not** copy them. When touching a file listed here, prefer migrating it toward the conventions above within the scope of the task.
+
+- **Fat route files** — `src/routes/_authenticated.transactions.tsx` (~450 lines), `_authenticated.categories.tsx`, `_authenticated.accounts.tsx`, `login.tsx`, `auth.callback.tsx`: page logic lives inside the route file. Extract to `src/pages/<Name>Page.tsx`.
+- **`useEffect` in components** — e.g. `components/accounts/AccountForm.tsx:46`, `components/transactions/form/TransactionForm.tsx:71`, `components/transactions/form/SplitSettingsFields.tsx:73,80`, `components/transactions/form/RecurrenceFields.tsx`. Extract each to a named custom hook under `src/hooks/`.
+- **In-component query filtering** — e.g. `routes/_authenticated.accounts.tsx:59-63` filters the `useAccounts()` result four times inline. Convert each slice to its own `useAccounts(select)` call (or equivalent) so the derivation runs inside TanStack Query.
+- **Drawers not using `renderDrawer`** — `components/InviteDrawer.tsx` (prop-controlled via `useDisclosure` in `components/AppLayout.tsx`) and `components/categories/DeleteCategoryDialog.tsx` (modal with `useState`). Convert to `renderDrawer` + `useDrawerContext`.
+- **`any` escape hatches** — a handful of `as any` / `: any` casts in `SplitSettingsFields.tsx`, `RecurrenceFields.tsx`, `SplitPopover.tsx`, `ImportReviewRow.tsx` (all `eslint-disable`d). Replace with proper types; ESLint has no blanket `no-explicit-any` rule yet, but treat `any` as forbidden regardless.
+- **Fragile E2E selectors** — most `e2e/` is testid-based, but these files still reach into Mantine internals or copy and must be migrated on touch:
+  - `e2e/tests/avatars.spec.ts` — pervasive `.mantine-Avatar-root` / `.mantine-Avatar-placeholder`.
+  - `e2e/pages/TransactionsPage.ts` — `getByRole('dialog', …)`, `locator('[class*="Group"], [class*="Stack"]')`, `locator('[class*="transaction"]')`.
+  - `e2e/pages/ImportPage.ts` — `locator('input[type="file"]')`, `locator('input[type="checkbox"]')`, and multiple `getByRole('option'/'button', { name: … })`.
+  - `e2e/pages/AccountsPage.ts` — `locator('input[inputmode="numeric"]')`.
+
+  Replacement approach: add a `data-testid` on the target element in the component, then switch the test to `getByTestId`.
