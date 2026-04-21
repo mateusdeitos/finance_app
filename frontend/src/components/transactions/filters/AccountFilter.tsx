@@ -30,6 +30,8 @@ function AccountGroup({
           label={acc.name}
           checked={selected.includes(acc.id)}
           onChange={() => toggle(acc.id)}
+          data-testid={`checkbox_filter_account_${acc.id}`}
+          data-account-name={acc.name}
         />
       ))}
     </>
@@ -99,12 +101,13 @@ export function AccountFilter({ inline }: AccountFilterProps) {
             variant="default"
             leftSection={<IconBuildingBank size={16} />}
             onClick={() => setOpened((o) => !o)}
+            data-testid="btn_filter_accounts"
           >
             Contas
           </Button>
         </Indicator>
       </Popover.Target>
-      <Popover.Dropdown>
+      <Popover.Dropdown data-testid="popover_filter_accounts">
         <Stack gap="xs" maw={280}>
           <AccountOptions accounts={accounts} selected={selected} toggle={toggle} />
         </Stack>

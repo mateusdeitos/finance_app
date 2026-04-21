@@ -117,6 +117,7 @@ export function ChargesPage() {
             onClick={() =>
               void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
             }
+            data-testid="btn_new_charge"
           >
             Nova Cobrança
           </Button>
@@ -128,6 +129,7 @@ export function ChargesPage() {
             onClick={() =>
               void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
             }
+            data-testid="btn_new_charge"
           >
             <IconPlus size={18} />
           </ActionIcon>
@@ -136,8 +138,8 @@ export function ChargesPage() {
 
       <Tabs defaultValue="received">
         <Tabs.List>
-          <Tabs.Tab value="received">Recebidas</Tabs.Tab>
-          <Tabs.Tab value="sent">Enviadas</Tabs.Tab>
+          <Tabs.Tab value="received" data-testid="tab_charges_received">Recebidas</Tabs.Tab>
+          <Tabs.Tab value="sent" data-testid="tab_charges_sent">Enviadas</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="received" pt="md">

@@ -132,8 +132,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descB)).toBeVisible();
 
     // Open account filter popover and select accountA
-    await page.getByRole("button", { name: /Contas/ }).click();
-    await page.getByLabel(accountAName).check();
+    await page.getByTestId("btn_filter_accounts").click();
+    await page.getByTestId("popover_filter_accounts").locator(`[data-account-name="${accountAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -168,8 +168,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descB)).toBeVisible();
 
     // Open category filter popover and select categoryA
-    await page.getByRole("button", { name: /Categorias/ }).click();
-    await page.getByLabel(categoryAName).check();
+    await page.getByTestId("btn_filter_categories").click();
+    await page.getByTestId("popover_filter_categories").locator(`[data-category-name="${categoryAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -321,8 +321,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(taggedDesc)).toBeVisible();
     await expect(page.getByText(untaggedDesc)).toBeVisible();
 
-    await page.getByRole("button", { name: /Tags/ }).click();
-    await page.locator(".mantine-Popover-dropdown").getByText(tagName).click();
+    await page.getByTestId("btn_filter_tags").click();
+    await page.getByTestId("popover_filter_tags").locator(`[data-tag-name="${tagName}"]`).click();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(taggedDesc)).toBeVisible({ timeout: 8000 });
@@ -445,8 +445,8 @@ test.describe("Transaction Filters", () => {
     await page.keyboard.press("Escape");
 
     // Apply account filter for accountA
-    await page.getByRole("button", { name: /Contas/ }).click();
-    await page.getByLabel(accountAName).check();
+    await page.getByTestId("btn_filter_accounts").click();
+    await page.getByTestId("popover_filter_accounts").locator(`[data-account-name="${accountAName}"] input`).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(expenseADesc)).toBeVisible({ timeout: 8000 });

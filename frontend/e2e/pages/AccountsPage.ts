@@ -23,7 +23,7 @@ export class AccountsPage {
     const form = this.page.getByTestId('account_form')
     await form.getByTestId('input_account_name').fill(name)
     if (balanceCents !== 0) {
-      const balanceInput = form.locator('input[inputmode="numeric"]')
+      const balanceInput = form.getByTestId('input_initial_balance')
       await balanceInput.click()
       for (const digit of String(balanceCents)) {
         await balanceInput.press(digit)

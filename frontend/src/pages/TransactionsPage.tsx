@@ -359,7 +359,7 @@ export function TransactionsPage() {
                 </ActionIcon>
                 <Menu shadow="md" width={200}>
                   <Menu.Target>
-                    <ActionIcon size="lg" variant="default" aria-label="Mais opções">
+                    <ActionIcon size="lg" variant="default" aria-label="Mais opções" data-testid="btn_more_options">
                       <IconDots size={18} />
                     </ActionIcon>
                   </Menu.Target>
@@ -367,6 +367,7 @@ export function TransactionsPage() {
                     <Menu.Item
                       leftSection={<IconTableImport size={14} />}
                       onClick={() => void navigate({ to: '/transactions/import' })}
+                      data-testid="menu_item_import_transactions"
                     >
                       Importar transações
                     </Menu.Item>
@@ -435,7 +436,7 @@ export function TransactionsPage() {
               </Button>
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <ActionIcon variant="default" aria-label="Mais opções">
+                  <ActionIcon variant="default" aria-label="Mais opções" data-testid="btn_more_options">
                     <IconDots size={16} />
                   </ActionIcon>
                 </Menu.Target>
@@ -443,6 +444,7 @@ export function TransactionsPage() {
                   <Menu.Item
                     leftSection={<IconTableImport size={14} />}
                     onClick={() => void navigate({ to: '/transactions/import' })}
+                    data-testid="menu_item_import_transactions"
                   >
                     Importar transações
                   </Menu.Item>

@@ -7,8 +7,8 @@ export class TransactionsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.formDrawer = page.getByRole("dialog");
-    this.updateDrawer = page.getByRole("dialog", { name: "Editar transação" });
+    this.formDrawer = page.getByTestId("drawer_create_transaction");
+    this.updateDrawer = page.getByTestId("drawer_update_transaction");
   }
 
   async goto() {
@@ -111,6 +111,9 @@ export class TransactionsPage {
     const input = this.page.getByTestId("select_account");
     await input.click();
     await input.fill(accountName);
+    // Mantine Select options are portalled and aren't instrumented with a
+    // testid; getByRole('option') is the documented fallback until we switch
+    // Select consumers to renderOption with explicit testids.
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
@@ -219,42 +222,5 @@ export class TransactionsPage {
 
   async closeBulkDeleteDrawer() {
     await this.page.getByTestId("btn_bulk_done").click();
-  }
-
-  async deleteTransaction(description: string) {
-    const transactionRow = this.page
-      .locator('[class*="Group"], [class*="Stack"]')
-      .filter({ hasText: description })
-      .first();
-    await transactionRow.click();
-    // Transaction detail/actions should appear
-    const deleteButton = this.page.getByRole("button", {
-      name: /Excluir|Deletar/,
-    });
-    await expect(deleteButton).toBeVisible();
-    await deleteButton.click();
-    // Confirm if dialog appears
-    const confirmButton = this.page
-      .getByRole("button", { name: /Confirmar|Excluir/ })
-      .last();
-    if (await confirmButton.isVisible()) {
-      await confirmButton.click();
-    }
-    await this.page.waitForLoadState("networkidle");
-  }
-
-  async getTransactionDescriptions(): Promise<string[]> {
-    await this.page.waitForLoadState("networkidle");
-    // Transaction descriptions appear as text in transaction list items
-    const items = this.page
-      .locator('[class*="transaction"], [class*="Transaction"]')
-      .locator("text=/\\w+/");
-    const count = await items.count();
-    const descriptions: string[] = [];
-    for (let i = 0; i < count; i++) {
-      const text = await items.nth(i).textContent();
-      if (text?.trim()) descriptions.push(text.trim());
-    }
-    return descriptions;
   }
 }

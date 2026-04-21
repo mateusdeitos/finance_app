@@ -161,12 +161,17 @@ export const ImportReviewRow = memo(
             onClick={(e) => onToggleSelect(rowIndex, e.shiftKey)}
             disabled={disabled}
             size="xs"
+            data-testid={`checkbox_import_row_${rowIndex}`}
           />
         </Table.Td>
 
         {/* Status */}
         <Table.Td>
-          <Box className={classes.statusIcon} data-testid={`import_status_${rowIndex}`}>
+          <Box
+            className={classes.statusIcon}
+            data-testid={`import_status_${rowIndex}`}
+            data-status={importStatus}
+          >
             {statusCell()}
           </Box>
         </Table.Td>
@@ -282,6 +287,7 @@ export const ImportReviewRow = memo(
                 }}
                 disabled={disabled || isSkipped}
                 aria-label="Criar categoria"
+                data-testid={`btn_create_category_row_${rowIndex}`}
               >
                 <IconPlus size={14} />
               </ActionIcon>

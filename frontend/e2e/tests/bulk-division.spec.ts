@@ -151,7 +151,7 @@ test.describe('Bulk Division', () => {
     await percentInputs.nth(0).fill('30')
 
     // Add a second row
-    await drawer.getByRole('button', { name: '+ Adicionar divisão' }).click()
+    await drawer.getByTestId('btn_add_split_row').click()
 
     // Row 2: select the remaining available connection (partner 2)
     const secondSelect = drawer.getByPlaceholder('Selecionar conta').last()

@@ -25,7 +25,7 @@ interface ColorSwatchPickerProps {
 
 export function ColorSwatchPicker({ value, onChange, label }: ColorSwatchPickerProps) {
   return (
-    <Stack gap="xs">
+    <Stack gap="xs" data-testid="color_swatch_picker">
       {label && <Text size="sm" fw={600}>{label}</Text>}
       <SimpleGrid cols={4} spacing={8}>
         {PRESET_COLORS.map((color) => (
@@ -36,6 +36,8 @@ export function ColorSwatchPicker({ value, onChange, label }: ColorSwatchPickerP
             radius="xl"
             onClick={() => onChange(color)}
             aria-label={`Selecionar cor ${color}`}
+            data-testid={`swatch_color_${color.replace('#', '')}`}
+            data-selected={value === color ? "true" : undefined}
             style={{
               cursor: "pointer",
               boxShadow: value === color ? "0 0 0 2px white, 0 0 0 4px var(--mantine-color-dark-4)" : "none",

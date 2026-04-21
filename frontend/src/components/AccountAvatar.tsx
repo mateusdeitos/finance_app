@@ -9,7 +9,7 @@ interface AccountAvatarProps {
 }
 
 export function AccountAvatar({ account, size }: AccountAvatarProps) {
-  if (!account) return <Avatar size={size} radius="xl" />
+  if (!account) return <Avatar size={size} radius="xl" data-testid="avatar_account_empty" />
 
   const isShared = !!account.user_connection
 
@@ -25,6 +25,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
         radius="xl"
         color={partnerAvatarUrl ? undefined : "grape"}
         imageProps={{ referrerPolicy: "no-referrer" }}
+        data-testid="avatar_account"
       >
         {getInitials(partnerName)}
       </Avatar>
@@ -37,6 +38,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
       radius="xl"
       color={undefined}
       styles={{ placeholder: { backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR, color: "white" } }}
+      data-testid="avatar_account"
     >
       {getInitials(account.name)}
     </Avatar>

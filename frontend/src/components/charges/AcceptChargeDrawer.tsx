@@ -117,7 +117,14 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Aceitar Cobrança" position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={reject}
+      title="Aceitar Cobrança"
+      position="right"
+      size="md"
+      data-testid="drawer_accept_charge"
+    >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
           {submitError && (
@@ -164,6 +171,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
+                data-testid="select_accept_account"
               />
             )}
           />
@@ -199,7 +207,13 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             )}
           />
 
-          <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
+          <Button
+            type="submit"
+            loading={mutation.isPending}
+            disabled={mutation.isPending}
+            fullWidth
+            data-testid="btn_submit_accept_charge"
+          >
             Confirmar aceitacao
           </Button>
         </Stack>

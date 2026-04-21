@@ -24,6 +24,8 @@ function TagOptions({ tags, selected, toggle }: {
           variant={selected.includes(tag.id) ? 'filled' : 'outline'}
           style={{ cursor: 'pointer' }}
           onClick={() => toggle(tag.id)}
+          data-testid={`badge_filter_tag_${tag.id}`}
+          data-tag-name={tag.name}
         >
           {tag.name}
         </Badge>
@@ -65,12 +67,13 @@ export function TagFilter({ inline }: TagFilterProps) {
             variant="default"
             leftSection={<IconTag size={16} />}
             onClick={() => setOpened((o) => !o)}
+            data-testid="btn_filter_tags"
           >
             Tags
           </Button>
         </Indicator>
       </Popover.Target>
-      <Popover.Dropdown>
+      <Popover.Dropdown data-testid="popover_filter_tags">
         <TagOptions tags={tags} selected={selected} toggle={toggle} />
       </Popover.Dropdown>
     </Popover>

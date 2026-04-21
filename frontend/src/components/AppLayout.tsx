@@ -97,7 +97,13 @@ export function AppLayout() {
             to={to}
             label={label}
             leftSection={<Icon size={18} />}
-            rightSection={badge ? <Badge size="xs" circle color="red">{badge}</Badge> : undefined}
+            rightSection={
+              badge ? (
+                <Badge size="xs" circle color="red" data-testid={`nav_badge_${to.slice(1)}`}>
+                  {badge}
+                </Badge>
+              ) : undefined
+            }
             active={currentPath === to}
             onClick={close}
           />
