@@ -1,40 +1,30 @@
 import { Alert, Button, Group, Modal, Select, Stack, Text } from '@mantine/core'
 import { useState } from 'react'
-import { useDeleteCategory } from '@/hooks/useCategories'
+import { useCategories, useDeleteCategory } from '@/hooks/useCategories'
+import { useDrawerContext } from '@/utils/renderDrawer'
 import { flattenCategories } from '@/utils/flattenCategories'
 import { Transactions } from '@/types/transactions'
 
-// TODO(migration Phase 5): convert to renderDrawer + useDrawerContext
-// with a discriminated result ({ action: 'confirmed'; replaceWithId? } | { action: 'cancelled' }).
-
 type Props = {
-  opened: boolean
-  onClose: () => void
-  category: Transactions.Category | null
+  category: Transactions.Category
   allCategories: Transactions.Category[]
-  onSuccess: () => void
 }
 
-export function DeleteCategoryModal({ opened, onClose, category, allCategories, onSuccess }: Props) {
+export function DeleteCategoryModal({ category, allCategories }: Props) {
+  const { opened, close, reject } = useDrawerContext<void>()
   const [replaceWithId, setReplaceWithId] = useState<string | null>(null)
+  const { invalidate } = useCategories()
   const { mutation } = useDeleteCategory({
     onSuccess: () => {
-      onSuccess()
-      handleClose()
+      invalidate()
+      close()
     },
   })
 
-  function handleClose() {
-    setReplaceWithId(null)
-    mutation.reset()
-    onClose()
-  }
-
-  if (!category) return null
   const label = `${category.emoji ? category.emoji + ' ' : ''}${category.name}`
 
   return (
-    <Modal opened={opened} onClose={handleClose} title="Excluir categoria" size="sm">
+    <Modal opened={opened} onClose={reject} title="Excluir categoria" size="sm">
       <Stack gap="md">
         {mutation.error && (
           <Alert color="red" title="Erro" variant="light">{mutation.error.message}</Alert>
@@ -53,11 +43,16 @@ export function DeleteCategoryModal({ opened, onClose, category, allCategories, 
           searchable
         />
         <Group justify="flex-end">
-          <Button variant="default" onClick={handleClose} disabled={mutation.isPending}>Cancelar</Button>
+          <Button variant="default" onClick={reject} disabled={mutation.isPending}>Cancelar</Button>
           <Button
             color="red"
             loading={mutation.isPending}
-            onClick={() => mutation.mutate({ id: category.id, replaceWithId: replaceWithId ? Number(replaceWithId) : undefined })}
+            onClick={() =>
+              mutation.mutate({
+                id: category.id,
+                replaceWithId: replaceWithId ? Number(replaceWithId) : undefined,
+              })
+            }
             data-testid="btn_confirm_delete_category"
           >
             Excluir

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Button, Group, Skeleton, Stack, Text } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
 import { IconPlus } from '@tabler/icons-react'
 import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/useCategories'
 import { CategoryCard } from '@/components/categories/CategoryCard'
 import { DeleteCategoryModal } from '@/components/categories/DeleteCategoryModal'
 import { InlineNewCategory } from '@/components/categories/InlineNewCategory'
+import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 
 // pendingParentId:
@@ -25,8 +25,6 @@ export function CategoriesPage() {
   })
 
   const [pendingParentId, setPendingParentId] = useState<PendingParentId>(null)
-  const [deleteOpen, { open: openDelete, close: closeDelete }] = useDisclosure(false)
-  const [deletingCategory, setDeletingCategory] = useState<Transactions.Category | null>(null)
 
   const categories = query.data ?? []
 
@@ -35,8 +33,9 @@ export function CategoriesPage() {
   }
 
   function handleDelete(category: Transactions.Category) {
-    setDeletingCategory(category)
-    openDelete()
+    void renderDrawer(() => (
+      <DeleteCategoryModal category={category} allCategories={categories} />
+    )).catch(() => {})
   }
 
   async function handleSaveName(category: Transactions.Category, name: string) {
@@ -109,14 +108,6 @@ export function CategoriesPage() {
           )}
         </Stack>
       )}
-
-      <DeleteCategoryModal
-        opened={deleteOpen}
-        onClose={closeDelete}
-        category={deletingCategory}
-        allCategories={categories}
-        onSuccess={invalidate}
-      />
     </Stack>
   )
 }
