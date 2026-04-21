@@ -110,7 +110,14 @@ export function CreateTransactionDrawer() {
   }
 
   return (
-    <Drawer opened={opened} onClose={close} title={TYPE_LABELS[transactionType]} position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={close}
+      title={TYPE_LABELS[transactionType]}
+      position="right"
+      size="md"
+      data-testid="drawer_create_transaction"
+    >
       <FormProvider {...methods}>
         <TransactionForm
           focusField="amount"

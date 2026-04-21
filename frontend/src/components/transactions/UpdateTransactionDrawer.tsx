@@ -101,7 +101,14 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   }
 
   return (
-    <Drawer opened={opened} onClose={close} title="Editar transação" position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={close}
+      title="Editar transação"
+      position="right"
+      size="md"
+      data-testid="drawer_update_transaction"
+    >
       <FormProvider {...methods}>
         <TransactionForm
           focusField={focusField}
