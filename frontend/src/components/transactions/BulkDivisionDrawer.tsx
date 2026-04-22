@@ -1,7 +1,7 @@
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Badge, Button, Drawer, Stack, Text } from "@mantine/core";
+import { Alert, Button, Drawer, Stack, Text } from "@mantine/core";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { useMe } from "@/hooks/useMe";
@@ -22,8 +22,8 @@ const bulkDivisionSchema = z.object({
     )
     .min(1, "Adicione ao menos uma divisão")
     .refine(
-      (rows) => rows.reduce((sum, r) => sum + (r.percentage ?? 0), 0) === 100,
-      { message: "A soma das porcentagens deve ser 100%" },
+      (rows) => rows.reduce((sum, r) => sum + (r.percentage ?? 0), 0) <= 100,
+      { message: "A soma das porcentagens deve ser menor ou igual a 100%" },
     ),
 });
 
@@ -129,13 +129,13 @@ function BulkDivisionDrawerForm({
     mode: "onChange",
   });
 
-  // Live sum for the badge + submit gating (D-04, FORM-03).
+  // Live sum for submit gating — valid when ≤ 100%.
   const rows = useWatch({
     control: methods.control,
     name: "split_settings",
   }) as BulkDivisionFormValues["split_settings"] | undefined;
   const sum = (rows ?? []).reduce((acc, r) => acc + (Number(r?.percentage) || 0), 0);
-  const isSumValid = sum === 100;
+  const isSumValid = sum <= 100;
 
   // Submit: return raw SplitSetting[] (D-10). Phase 14 handles cents conversion.
   const onSubmit = methods.handleSubmit((values) => {
@@ -164,14 +164,6 @@ function BulkDivisionDrawerForm({
           <form onSubmit={onSubmit}>
             <Stack gap="md">
               <SplitSettingsFields onlyPercentage={true} />
-              <Badge
-                color={isSumValid ? "green" : "red"}
-                variant="light"
-                size="lg"
-                data-testid="badge_bulk_division_sum"
-              >
-                {`Total: ${sum}% / 100%`}
-              </Badge>
               <Button
                 type="submit"
                 disabled={!isSumValid}

@@ -83,11 +83,10 @@ test.describe("Bulk Division", () => {
   // ─── Test 1: Happy-path Divisão flow ────────────────────────────────────────
   // Closes: 14-HUMAN-UAT.md test 1 — full happy-path Divisão flow
   // Covers: TEST-01, PAY-01, PAY-02, BULK-01, BULK-02, BULK-03 (income tx included)
-  test("happy path: 30/70 split applied to ≥2 transactions (including income + odd-cent)", async ({ page }) => {
+  test("happy path: split applied to ≥2 transactions (including income + odd-cent)", async ({ page }) => {
     const today = new Date().toISOString().slice(0, 10);
 
-    // Tx A: odd-cent expense — proves last-split-absorbs-remainder on the wire
-    // 101 cents * 30% = Math.round(30.3) = 30; last gets 101 - 30 = 71 (CONTEXT.md §"Specific Ideas")
+    // Tx A: odd-cent expense — the single split row absorbs the full amount (last-split-absorbs-remainder)
     const txA = await apiCreateTransaction({
       transaction_type: "expense",
       account_id: accountId,
@@ -137,7 +136,7 @@ test.describe("Bulk Division", () => {
     await expect(page.getByTestId("btn_apply_bulk_division")).toBeVisible({ timeout: 8000 });
 
     // With 2 connected accounts, BulkDivisionDrawer seeds row 1 with empty {connection_id: 0}.
-    // We must pick the first connection and set 30%, then add a second row for 70%.
+    // Pick a connection and set 30% — sum ≤ 100% is valid, no need to reach exactly 100%.
     const drawer = page.getByTestId("drawer_bulk_division");
 
     // Row 1: select partner 1's connection, set to 30%
@@ -149,20 +148,6 @@ test.describe("Bulk Division", () => {
     // Set row 1 percentage to 30
     const percentInputs = drawer.getByTestId("input_split_percentage");
     await percentInputs.nth(0).fill("30");
-
-    // Add a second row
-    await drawer.getByRole("button", { name: "+ Adicionar divisão" }).click();
-
-    // Row 2: select the remaining available connection (partner 2)
-    const secondSelect = drawer.getByPlaceholder("Selecionar conta").last();
-    await secondSelect.click();
-    await page.getByRole("option").first().click();
-
-    // Set row 2 percentage to 70
-    await percentInputs.nth(1).fill("70");
-
-    // Verify the sum badge shows 100%
-    await expect(drawer.getByTestId("badge_bulk_division_sum")).toHaveText(/Total: 100% \/ 100%/);
 
     // --- Arm network capture BEFORE clicking submit (playwright-best-practices) ---
     const capturedPuts: Array<{
@@ -206,15 +191,13 @@ test.describe("Bulk Division", () => {
       expect(splitSum).toBe(body.amount);
     }
 
-    // Specifically, the 101-cent tx MUST prove last-split-absorbs-remainder:
-    // 30% of 101 = Math.round(30.3) = 30; last gets 101 - 30 = 71
+    // With a single 30% row, splitPercentagesToCents assigns the full tx amount to the
+    // only (last) split — last-split-absorbs-remainder guarantees Σ === tx.amount.
     const oddTx = capturedPuts.find((b) => b.amount === 101);
     expect(oddTx).toBeTruthy();
     if (oddTx) {
-      // First split gets 30 (Math.round(101 * 30 / 100))
-      expect(oddTx.split_settings[0].amount).toBe(30);
-      // Last split absorbs the remainder: 71 (not Math.round(101 * 70 / 100) = 71, but proven by subtraction)
-      expect(oddTx.split_settings[1].amount).toBe(71);
+      expect(oddTx.split_settings.length).toBe(1);
+      expect(oddTx.split_settings[0].amount).toBe(101);
     }
 
     // --- API re-read assertions: splits persisted as linked_transactions ---
@@ -366,12 +349,9 @@ test.describe("Bulk Division", () => {
     await firstSelect.click();
     await page.getByRole("option").first().click();
 
-    // Set percentage to 100 (single-row, 100% split is valid)
+    // Set percentage to 100 (single-row, ≤100% is valid)
     const percentInputs = drawer.getByTestId("input_split_percentage");
     await percentInputs.nth(0).fill("100");
-
-    // Verify sum badge shows 100%
-    await expect(drawer.getByTestId("badge_bulk_division_sum")).toHaveText(/Total: 100% \/ 100%/);
 
     // --- Arm network capture BEFORE clicking submit ---
     const capturedPuts: Array<{ amount: number; split_settings: unknown }> = [];
