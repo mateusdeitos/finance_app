@@ -1,5 +1,5 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-import { AccountsTestIds, CategoriesTestIds, ImportTestIds, TransactionsTestIds } from '@/testIds'
+import { AccountsTestIds, CategoriesTestIds, ImportTestIds, RecurrenceTestIds, TransactionsTestIds } from '@/testIds'
 export class ImportPage {
   readonly page: Page;
   readonly uploadStep: Locator;
@@ -229,5 +229,45 @@ export class ImportPage {
   async getRowActionLabel(rowIndex: number): Promise<string> {
     const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     return select.locator("input").inputValue();
+  }
+
+  /**
+   * Open the recurrence popover for a row and configure installment settings.
+   * Closes the popover by clicking outside so `onClose` fires and syncs values
+   * back to the parent form (including setting `recurrenceEnabled = true`).
+   */
+  async setRowInstallments(
+    rowIndex: number,
+    opts: { type: "monthly" | "weekly" | "daily" | "yearly"; current: number; total: number },
+  ) {
+    const btn = this.reviewStep.getByTestId(ImportTestIds.RowBtnRecurrencePopover(rowIndex));
+    await btn.click();
+
+    const dropdown = this.page.getByTestId(ImportTestIds.RecurrencePopoverDropdown(rowIndex));
+    await expect(dropdown).toBeVisible({ timeout: 5000 });
+
+    // Select frequency type
+    const typeSelect = dropdown.getByTestId(RecurrenceTestIds.TypeSelect);
+    await typeSelect.click();
+    const typeLabels: Record<string, string> = {
+      monthly: "Mensal",
+      weekly: "Semanal",
+      daily: "Diário",
+      yearly: "Anual",
+    };
+    await this.page.getByRole("option", { name: typeLabels[opts.type] }).click();
+
+    // Fill current installment
+    const currentInput = dropdown.getByTestId(RecurrenceTestIds.CurrentInstallmentInput);
+    await currentInput.fill(String(opts.current));
+
+    // Fill total installments
+    const totalInput = dropdown.getByTestId(RecurrenceTestIds.TotalInstallmentsInput);
+    await totalInput.fill(String(opts.total));
+
+    // Dismiss the popover with Escape so onClose fires and syncs values to the parent form.
+    // Using keyboard is more reliable than position-based clicks inside a trapFocus popover.
+    await this.page.keyboard.press('Escape');
+    await expect(dropdown).not.toBeVisible({ timeout: 5000 });
   }
 }

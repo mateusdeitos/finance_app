@@ -1,6 +1,7 @@
 import { Select, NumberInput, Stack, Group, Text } from "@mantine/core";
 import { Controller, useFormContext, type FieldValues } from "react-hook-form";
 import { getFieldErrorMessage } from "@/utils/getFieldErrorMessage";
+import { RecurrenceTestIds } from "@/testIds";
 
 interface RecurrenceFieldsProps {
   /**
@@ -55,6 +56,7 @@ export function RecurrenceFields({
             error={fieldError("recurrenceType")}
             comboboxProps={{ withinPortal: comboboxWithinPortal }}
             clearable
+            data-testid={RecurrenceTestIds.TypeSelect}
           />
         )}
       />
@@ -69,6 +71,7 @@ export function RecurrenceFields({
             render={({ field }) => (
               <NumberInput
                 aria-label="Parcela atual"
+                data-testid={RecurrenceTestIds.CurrentInstallmentInput}
                 min={1}
                 w={64}
                 hideControls
@@ -86,6 +89,7 @@ export function RecurrenceFields({
             render={({ field }) => (
               <NumberInput
                 aria-label="Total de parcelas"
+                data-testid={RecurrenceTestIds.TotalInstallmentsInput}
                 min={1}
                 w={64}
                 hideControls

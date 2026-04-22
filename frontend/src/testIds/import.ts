@@ -30,6 +30,12 @@ export const ImportTestIds = {
   BtnBulkApply: 'btn_bulk_apply',
   SelectBulkAction: 'select_bulk_action',
 
+  // Recurrence popover (per-row)
+  RowBtnRecurrencePopover: (rowIndex: number) =>
+    `btn_recurrence_popover_${rowIndex}` as const,
+  RecurrencePopoverDropdown: (rowIndex: number) =>
+    `recurrence_popover_dropdown_${rowIndex}` as const,
+
   // Category-creation drawer (mounted from the import flow)
   DrawerCreateCategory: 'drawer_create_category',
   BtnNewCategoryInDrawer: 'btn_new_category_in_drawer',

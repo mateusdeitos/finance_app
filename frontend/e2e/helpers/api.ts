@@ -232,6 +232,14 @@ export async function apiGetTransaction(id: number): Promise<Transactions.Transa
   return transactions
 }
 
+export async function apiListTransactions(
+  month: number,
+  year: number,
+): Promise<Transactions.Transaction[]> {
+  const res = await apiFetch(`/api/transactions?month=${month}&year=${year}`)
+  return res.json()
+}
+
 export async function apiUpdateTransaction(
   id: number,
   payload: Partial<Transactions.CreateTransactionPayload>,
