@@ -6,9 +6,8 @@
  *   2. 14-HUMAN-UAT.md test 2 — disabled state with 0 connected accounts (Test 2 below)
  *   3. 14-HUMAN-UAT.md test 3 — transfer silent-skip in mixed selection (Test 3 below)
  *
- * Test 1 uses TWO accepted partner connections so a 30/70 split with an
- * odd-cent total exercises the last-split-absorbs-remainder wire format
- * end-to-end (CONTEXT.md §"Specific Ideas"). With exactly 1 connection,
+ * Test 1 uses TWO accepted partner connections so a partial (30%) split with an
+ * odd-cent total exercises exact-percentage rounding end-to-end. With exactly 1 connection,
  * BulkDivisionDrawer (lines 79-90) seeds a single row and the "+ Adicionar divisão"
  * anchor is hidden (hasAvailableConnections=false), so a 30/70 split with 2 rows
  * requires 2 connections. This is the recommended path per 15-02-PLAN.md §interfaces.
@@ -85,14 +84,18 @@ test.describe("Bulk Division", () => {
   // Closes: 14-HUMAN-UAT.md test 1 — full happy-path Divisão flow
   // Covers: TEST-01, PAY-01, PAY-02, BULK-01, BULK-02, BULK-03 (income tx included)
   test("happy path: split applied to ≥2 transactions (including income + odd-cent)", async ({ page }) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    const today = d.toISOString().slice(0, 10);
 
-    // Tx A: odd-cent expense — the single split row absorbs the full amount (last-split-absorbs-remainder)
+    const amounts = [101, 10001, 5000] as const;
+    const percentage = 30;
+
+    // Tx A: odd-cent expense — Math.round(101 * 30 / 100) = 30 (exact percentage, no remainder absorption)
     const txA = await apiCreateTransaction({
       transaction_type: "expense",
       account_id: accountId,
       category_id: categoryId,
-      amount: 101,
+      amount: amounts[0],
       date: today,
       description: `Bulk Div Odd ${Date.now()}`,
     });
@@ -103,7 +106,7 @@ test.describe("Bulk Division", () => {
       transaction_type: "income",
       account_id: accountId,
       category_id: categoryId,
-      amount: 10001,
+      amount: amounts[1],
       date: today,
       description: `Bulk Div Income ${Date.now()}`,
     });
@@ -114,7 +117,7 @@ test.describe("Bulk Division", () => {
       transaction_type: "expense",
       account_id: accountId,
       category_id: categoryId,
-      amount: 5000,
+      amount: amounts[2],
       date: today,
       description: `Bulk Div Even ${Date.now()}`,
     });
@@ -148,7 +151,7 @@ test.describe("Bulk Division", () => {
 
     // Set row 1 percentage to 30
     const percentInputs = drawer.getByTestId(TransactionsTestIds.InputSplitPercentage);
-    await percentInputs.nth(0).fill("30");
+    await percentInputs.nth(0).fill(String(percentage));
 
     // --- Arm network capture BEFORE clicking submit (playwright-best-practices) ---
     const capturedPuts: Array<{
@@ -185,20 +188,19 @@ test.describe("Bulk Division", () => {
         // PAY-02: no 'percentage' field on the wire
         expect(Object.keys(row).sort()).toEqual(["amount", "connection_id"]);
         expect(typeof row.amount).toBe("number");
+        // Each split amount is exactly Math.round(tx.amount * percentage / 100).
+        // Percentages < 100% are valid — the split sum does not need to equal the tx total.
+        expect(row.amount).toBe(Math.round((body.amount * percentage) / 100));
         expect(Number.isInteger(row.amount)).toBe(true);
       }
-      // Cent-exact sum: Σ split.amount === tx.amount (PAY-01)
-      const splitSum = body.split_settings.reduce((s, r) => s + r.amount, 0);
-      expect(splitSum).toBe(body.amount);
     }
 
-    // With a single 30% row, splitPercentagesToCents assigns the full tx amount to the
-    // only (last) split — last-split-absorbs-remainder guarantees Σ === tx.amount.
+    // With a single 30% row the split amount is Math.round(101 * 30 / 100) = 30.
     const oddTx = capturedPuts.find((b) => b.amount === 101);
     expect(oddTx).toBeTruthy();
     if (oddTx) {
       expect(oddTx.split_settings.length).toBe(1);
-      expect(oddTx.split_settings[0].amount).toBe(101);
+      expect(oddTx.split_settings[0].amount).toBe(30);
     }
 
     // --- API re-read assertions: splits persisted as linked_transactions ---

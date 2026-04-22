@@ -1,100 +1,98 @@
-import { ActionIcon, Box, Button, Group, Menu, Stack } from '@mantine/core'
-import { IconDots, IconFilter, IconPlus, IconTableImport } from '@tabler/icons-react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
-import { useMe } from '@/hooks/useMe'
-import { useIsMobile } from '@/hooks/useIsMobile'
-import { useActiveFilters } from '@/hooks/useActiveFilters'
-import { useTransactions } from '@/hooks/useTransactions'
-import { useAccounts } from '@/hooks/useAccounts'
-import { useTags } from '@/hooks/useTags'
-import { deleteTransaction, updateTransaction } from '@/api/transactions'
-import { renderDrawer } from '@/utils/renderDrawer'
-import { ClearFiltersButton } from '@/components/transactions/ClearFiltersButton'
-import { CreateTransactionDrawer } from '@/components/transactions/CreateTransactionDrawer'
-import { FiltersDrawer } from '@/components/transactions/FiltersDrawer'
-import { MobileBottomBar } from '@/components/transactions/MobileBottomBar'
-import { PeriodNavigator } from '@/components/transactions/PeriodNavigator'
-import { TransactionFilters } from '@/components/transactions/TransactionFilters'
-import { TransactionList } from '@/components/transactions/TransactionList'
-import { SelectionActionBar } from '@/components/transactions/SelectionActionBar'
-import { PropagationSettingsDrawer, PropagationSetting } from '@/components/transactions/PropagationSettingsDrawer'
-import { BulkProgressDrawer, BulkProgressItem } from '@/components/transactions/BulkProgressDrawer'
-import { BulkDivisionDrawer } from '@/components/transactions/BulkDivisionDrawer'
-import { SelectCategoryDrawer } from '@/components/transactions/SelectCategoryDrawer'
-import { SelectDateDrawer } from '@/components/transactions/SelectDateDrawer'
-import { TextSearch } from '@/components/transactions/filters/TextSearch'
-import { Transactions } from '@/types/transactions'
-import { splitPercentagesToCents } from '@/utils/splitMath'
-import { TransactionsTestIds } from '@/testIds'
+import { ActionIcon, Box, Button, Group, Menu, Stack } from "@mantine/core";
+import { IconDots, IconFilter, IconPlus, IconTableImport } from "@tabler/icons-react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
+import { useMe } from "@/hooks/useMe";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useActiveFilters } from "@/hooks/useActiveFilters";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useTags } from "@/hooks/useTags";
+import { deleteTransaction, updateTransaction } from "@/api/transactions";
+import { renderDrawer } from "@/utils/renderDrawer";
+import { ClearFiltersButton } from "@/components/transactions/ClearFiltersButton";
+import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
+import { FiltersDrawer } from "@/components/transactions/FiltersDrawer";
+import { MobileBottomBar } from "@/components/transactions/MobileBottomBar";
+import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
+import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import { TransactionList } from "@/components/transactions/TransactionList";
+import { SelectionActionBar } from "@/components/transactions/SelectionActionBar";
+import { PropagationSettingsDrawer, PropagationSetting } from "@/components/transactions/PropagationSettingsDrawer";
+import { BulkProgressDrawer, BulkProgressItem } from "@/components/transactions/BulkProgressDrawer";
+import { BulkDivisionDrawer } from "@/components/transactions/BulkDivisionDrawer";
+import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDrawer";
+import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
+import { TextSearch } from "@/components/transactions/filters/TextSearch";
+import { Transactions } from "@/types/transactions";
+import { splitPercentagesToCents } from "@/utils/splitMath";
+import { TransactionsTestIds } from "@/testIds";
 
 export function TransactionsPage() {
-  const search = useSearch({ from: '/_authenticated/transactions' })
-  const routeNavigate = useNavigate({ from: '/transactions' })
-  const navigate = useNavigate()
-  const isMobile = useIsMobile()
+  const search = useSearch({ from: "/_authenticated/transactions" });
+  const routeNavigate = useNavigate({ from: "/transactions" });
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
-  const { query: meQuery } = useMe((me) => me.id)
-  const currentUserId = meQuery.data ?? 0
+  const { query: meQuery } = useMe((me) => me.id);
+  const currentUserId = meQuery.data ?? 0;
 
   // Selection state
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const toggleSelection = useCallback((id: number) => {
     setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-  const { query: accountsQuery } = useAccounts()
-  const accounts = accountsQuery.data ?? []
-  const connectedAccountsCount = accounts.filter(
-    (a) => a.user_connection?.connection_status === 'accepted',
-  ).length
-  const { query: tagsQuery } = useTags()
-  const existingTags = tagsQuery.data ?? []
+  const { query: accountsQuery } = useAccounts();
+  const accounts = accountsQuery.data ?? [];
+  const connectedAccountsCount = accounts.filter((a) => a.user_connection?.connection_status === "accepted").length;
+  const { query: tagsQuery } = useTags();
+  const existingTags = tagsQuery.data ?? [];
 
   // Transactions data (needed to find full transaction objects for selected IDs)
   // Uses same params as TransactionList so they share the same query cache entry
-  const filters = useActiveFilters()
+  const filters = useActiveFilters();
   const { query: txQuery, invalidate: invalidateTransactions } = useTransactions({
     month: search.month,
     year: search.year,
     ...filters,
-  })
-  const allTransactions = txQuery.data ?? []
+  });
+  const allTransactions = txQuery.data ?? [];
 
   const hasRecurring = [...selectedIds].some((id) => {
-    const tx = allTransactions.find((t) => t.id === id)
-    return tx?.transaction_recurrence_id != null
-  })
+    const tx = allTransactions.find((t) => t.id === id);
+    return tx?.transaction_recurrence_id != null;
+  });
 
   // Filter out linked transactions where user is not the original creator (SEL-02 silent skip)
   function getEligibleIds(): number[] {
     return [...selectedIds].filter((id) => {
-      const tx = allTransactions.find((t) => t.id === id)
-      return tx?.original_user_id == null || tx?.original_user_id === currentUserId
-    })
+      const tx = allTransactions.find((t) => t.id === id);
+      return tx?.original_user_id == null || tx?.original_user_id === currentUserId;
+    });
   }
 
   // Division-specific eligibility: also excludes transfers (D-10).
   // Transfers cannot carry split_settings (buildFullPayload sets it to undefined for transfers).
   function getDivisionEligibleIds(): number[] {
     return getEligibleIds().filter((id) => {
-      const tx = allTransactions.find((t) => t.id === id)
-      return tx?.type !== 'transfer'
-    })
+      const tx = allTransactions.find((t) => t.id === id);
+      return tx?.type !== "transfer";
+    });
   }
 
   function buildFullPayload(
     tx: Transactions.Transaction,
     overrides: Partial<Transactions.UpdateTransactionPayload>,
   ): Transactions.UpdateTransactionPayload {
-    const isTransfer = tx.type === 'transfer'
-    const destinationAccountId = isTransfer ? tx.linked_transactions?.[0]?.account_id : undefined
+    const isTransfer = tx.type === "transfer";
+    const destinationAccountId = isTransfer ? tx.linked_transactions?.[0]?.account_id : undefined;
 
     const splitSettings = isTransfer
       ? undefined
@@ -105,15 +103,15 @@ export function TransactionsPage() {
               (a) =>
                 a.user_connection?.from_account_id === lt.account_id ||
                 a.user_connection?.to_account_id === lt.account_id,
-            )
-            if (!acc?.user_connection) return []
-            return [{ connection_id: acc.user_connection.id, amount: lt.amount }]
-          })
+            );
+            if (!acc?.user_connection) return [];
+            return [{ connection_id: acc.user_connection.id, amount: lt.amount }];
+          });
 
     const resolvedTags = (tx.tags ?? []).map((t) => {
-      const existing = existingTags.find((et) => et.name === t.name)
-      return existing ? { id: existing.id, name: t.name } : { name: t.name }
-    })
+      const existing = existingTags.find((et) => et.name === t.name);
+      return existing ? { id: existing.id, name: t.name } : { name: t.name };
+    });
 
     return {
       transaction_type: tx.type,
@@ -133,42 +131,44 @@ export function TransactionsPage() {
           }
         : undefined,
       ...overrides,
-    }
+    };
   }
 
   async function handleDeleteClick() {
     try {
-      let propagation: PropagationSetting | undefined
+      let propagation: PropagationSetting | undefined;
       if (hasRecurring) {
-        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />)
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />);
       }
 
-      const eligibleIds = getEligibleIds()
+      const eligibleIds = getEligibleIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
-        const tx = allTransactions.find((t) => t.id === id)
-        return { id, label: tx?.description ?? String(id) }
-      })
-      if (items.length === 0) return
+        const tx = allTransactions.find((t) => t.id === id);
+        return { id, label: tx?.description ?? String(id) };
+      });
+      if (items.length === 0) return;
 
       void renderDrawer(() => (
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
-            const tx = allTransactions.find((t) => t.id === item.id)
-            const prop = tx?.transaction_recurrence_id != null && propagation ? propagation : undefined
-            await deleteTransaction(item.id, prop)
+            const tx = allTransactions.find((t) => t.id === item.id);
+            const prop = tx?.transaction_recurrence_id != null && propagation ? propagation : undefined;
+            await deleteTransaction(item.id, prop);
           }}
           titles={{
-            processing: 'Excluindo transações...',
-            success: 'Transações excluídas',
-            error: 'Erro ao excluir',
+            processing: "Excluindo transações...",
+            success: "Transações excluídas",
+            error: "Erro ao excluir",
           }}
-          successMessage={(n) => n === 1 ? '1 transação excluída com sucesso' : `${n} transações excluídas com sucesso`}
+          successMessage={(n) =>
+            n === 1 ? "1 transação excluída com sucesso" : `${n} transações excluídas com sucesso`
+          }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
           testIdPrefix={TransactionsTestIds.BulkDeleteDrawer}
         />
-      ))
+      ));
     } catch {
       // User dismissed the propagation drawer without confirming
     }
@@ -176,45 +176,45 @@ export function TransactionsPage() {
 
   async function handleCategoryChange() {
     try {
-      const category = await renderDrawer<Transactions.Category>(() => <SelectCategoryDrawer />)
+      const category = await renderDrawer<Transactions.Category>(() => <SelectCategoryDrawer />);
 
-      let propagation: PropagationSetting | undefined
+      let propagation: PropagationSetting | undefined;
       if (hasRecurring) {
-        propagation = await renderDrawer<PropagationSetting>(() => (
-          <PropagationSettingsDrawer actionLabel="alterar" />
-        ))
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer actionLabel="alterar" />);
       }
 
-      const eligibleIds = getEligibleIds()
+      const eligibleIds = getEligibleIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
-        const tx = allTransactions.find((t) => t.id === id)
-        return { id, label: tx?.description ?? String(id) }
-      })
-      if (items.length === 0) return
+        const tx = allTransactions.find((t) => t.id === id);
+        return { id, label: tx?.description ?? String(id) };
+      });
+      if (items.length === 0) return;
 
       void renderDrawer(() => (
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
-            const tx = allTransactions.find((t) => t.id === item.id)
-            if (!tx) return
-            const payload = buildFullPayload(tx, { category_id: category.id })
+            const tx = allTransactions.find((t) => t.id === item.id);
+            if (!tx) return;
+            const payload = buildFullPayload(tx, { category_id: category.id });
             if (tx.transaction_recurrence_id != null && propagation) {
-              payload.propagation_settings = propagation
+              payload.propagation_settings = propagation;
             }
-            await updateTransaction(item.id, payload)
+            await updateTransaction(item.id, payload);
           }}
           titles={{
-            processing: 'Alterando categoria...',
-            success: 'Transações atualizadas',
-            error: 'Erro ao atualizar',
+            processing: "Alterando categoria...",
+            success: "Transações atualizadas",
+            error: "Erro ao atualizar",
           }}
-          successMessage={(n) => n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`}
+          successMessage={(n) =>
+            n === 1 ? "1 transação atualizada com sucesso" : `${n} transações atualizadas com sucesso`
+          }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
           testIdPrefix={TransactionsTestIds.BulkCategoryDrawer}
         />
-      ))
+      ));
     } catch {
       // User dismissed a drawer (category selection or propagation) without confirming
     }
@@ -222,50 +222,50 @@ export function TransactionsPage() {
 
   async function handleDateChange() {
     try {
-      const date = await renderDrawer<Date>(() => <SelectDateDrawer />)
+      const date = await renderDrawer<Date>(() => <SelectDateDrawer />);
 
-      let propagation: PropagationSetting | undefined
+      let propagation: PropagationSetting | undefined;
       if (hasRecurring) {
-        propagation = await renderDrawer<PropagationSetting>(() => (
-          <PropagationSettingsDrawer actionLabel="alterar" />
-        ))
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer actionLabel="alterar" />);
       }
 
-      const eligibleIds = getEligibleIds()
+      const eligibleIds = getEligibleIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
-        const tx = allTransactions.find((t) => t.id === id)
-        return { id, label: tx?.description ?? String(id) }
-      })
-      if (items.length === 0) return
+        const tx = allTransactions.find((t) => t.id === id);
+        return { id, label: tx?.description ?? String(id) };
+      });
+      if (items.length === 0) return;
 
-      const yyyy = date.getFullYear()
-      const mm = String(date.getMonth() + 1).padStart(2, '0')
-      const dd = String(date.getDate()).padStart(2, '0')
-      const dateStr = `${yyyy}-${mm}-${dd}`
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
 
       void renderDrawer(() => (
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
-            const tx = allTransactions.find((t) => t.id === item.id)
-            if (!tx) return
-            const payload = buildFullPayload(tx, { date: dateStr })
+            const tx = allTransactions.find((t) => t.id === item.id);
+            if (!tx) return;
+            const payload = buildFullPayload(tx, { date: dateStr });
             if (tx.transaction_recurrence_id != null && propagation) {
-              payload.propagation_settings = propagation
+              payload.propagation_settings = propagation;
             }
-            await updateTransaction(item.id, payload)
+            await updateTransaction(item.id, payload);
           }}
           titles={{
-            processing: 'Alterando data...',
-            success: 'Transações atualizadas',
-            error: 'Erro ao atualizar',
+            processing: "Alterando data...",
+            success: "Transações atualizadas",
+            error: "Erro ao atualizar",
           }}
-          successMessage={(n) => n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`}
+          successMessage={(n) =>
+            n === 1 ? "1 transação atualizada com sucesso" : `${n} transações atualizadas com sucesso`
+          }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
           testIdPrefix={TransactionsTestIds.BulkDateDrawer}
         />
-      ))
+      ));
     } catch {
       // User dismissed a drawer (date selection or propagation) without confirming
     }
@@ -274,80 +274,80 @@ export function TransactionsPage() {
   async function handleDivisionClick() {
     try {
       // Step 1: User picks the split configuration (percentages).
-      const rawSplits = await renderDrawer<Transactions.SplitSetting[]>(() => (
-        <BulkDivisionDrawer />
-      ))
+      const rawSplits = await renderDrawer<Transactions.SplitSetting[]>(() => <BulkDivisionDrawer />);
 
       // Step 2: If any selected tx has a recurrence, ask how to propagate.
-      let propagation: PropagationSetting | undefined
+      let propagation: PropagationSetting | undefined;
       if (hasRecurring) {
-        propagation = await renderDrawer<PropagationSetting>(() => (
-          <PropagationSettingsDrawer actionLabel="alterar" />
-        ))
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer actionLabel="alterar" />);
       }
 
       // Step 3: Build eligibility (silently skip linked non-owned + transfers).
-      const eligibleIds = getDivisionEligibleIds()
+      const eligibleIds = getDivisionEligibleIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
-        const tx = allTransactions.find((t) => t.id === id)
-        return { id, label: tx?.description ?? String(id) }
-      })
+        const tx = allTransactions.find((t) => t.id === id);
+        return { id, label: tx?.description ?? String(id) };
+      });
 
-      if (items.length === 0) return
+      if (items.length === 0) return;
 
       // Step 4: Sequential per-tx PUT via the existing progress drawer.
       void renderDrawer(() => (
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
-            const tx = allTransactions.find((t) => t.id === item.id)
-            if (!tx) return
+            const tx = allTransactions.find((t) => t.id === item.id);
+            if (!tx) return;
             // Convert percentages -> cents per-tx (PAY-01); last split absorbs remainder.
             // splitPercentagesToCents strips `percentage` from the output (PAY-02).
-            const perTxSplits = splitPercentagesToCents(tx.amount, rawSplits)
-            const payload = buildFullPayload(tx, { split_settings: perTxSplits })
+            const perTxSplits = splitPercentagesToCents(tx.amount, rawSplits);
+            const payload = buildFullPayload(tx, { split_settings: perTxSplits });
             if (tx.transaction_recurrence_id != null && propagation) {
-              payload.propagation_settings = propagation
+              payload.propagation_settings = propagation;
             }
-            await updateTransaction(item.id, payload)
+            await updateTransaction(item.id, payload);
           }}
           titles={{
-            processing: 'Alterando divisão...',
-            success: 'Transações atualizadas',
-            error: 'Erro ao atualizar',
+            processing: "Alterando divisão...",
+            success: "Transações atualizadas",
+            error: "Erro ao atualizar",
           }}
           successMessage={(n) =>
-            n === 1 ? '1 transação atualizada com sucesso' : `${n} transações atualizadas com sucesso`
+            n === 1 ? "1 transação atualizada com sucesso" : `${n} transações atualizadas com sucesso`
           }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
           testIdPrefix={TransactionsTestIds.BulkDivisionProgressDrawer}
         />
-      ))
+      ));
     } catch {
       // User dismissed a drawer (division selection or propagation) — silent exit.
     }
   }
 
-  const isSelecting = selectedIds.size > 0
+  const isSelecting = selectedIds.size > 0;
 
   if (isMobile) {
     return (
       <Stack gap="sm" pb="5rem">
         <Box
           style={{
-            position: 'sticky',
-            top: 'calc(-1 * var(--mantine-spacing-md))',
+            position: "sticky",
+            top: "calc(-1 * var(--mantine-spacing-md))",
             zIndex: 10,
-            background: 'var(--mantine-color-body)',
-            marginTop: 'calc(-1 * var(--mantine-spacing-md))',
-            paddingTop: 'var(--mantine-spacing-md)',
-            paddingBottom: 'var(--mantine-spacing-xs)',
+            background: "var(--mantine-color-body)",
+            marginTop: "calc(-1 * var(--mantine-spacing-md))",
+            paddingTop: "var(--mantine-spacing-md)",
+            paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
-          <Stack gap="xs" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
+          <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
             <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-              <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+              />
               <Group gap="xs" wrap="nowrap">
                 <ActionIcon
                   size="lg"
@@ -360,14 +360,19 @@ export function TransactionsPage() {
                 </ActionIcon>
                 <Menu shadow="md" width={200}>
                   <Menu.Target>
-                    <ActionIcon size="lg" variant="default" aria-label="Mais opções" data-testid={TransactionsTestIds.BtnMoreOptions}>
+                    <ActionIcon
+                      size="lg"
+                      variant="default"
+                      aria-label="Mais opções"
+                      data-testid={TransactionsTestIds.BtnMoreOptions}
+                    >
                       <IconDots size={18} />
                     </ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
                     <Menu.Item
                       leftSection={<IconTableImport size={14} />}
-                      onClick={() => void navigate({ to: '/transactions/import' })}
+                      onClick={() => void navigate({ to: "/transactions/import" })}
                       data-testid={TransactionsTestIds.MenuItemImportTransactions}
                     >
                       Importar transações
@@ -410,41 +415,52 @@ export function TransactionsPage() {
             </ActionIcon>
           </MobileBottomBar>
         )}
-
       </Stack>
-    )
+    );
   }
 
   return (
     <Stack gap="md">
       <Box
         style={{
-          position: 'sticky',
-          top: 'calc(-1 * var(--mantine-spacing-md))',
+          position: "sticky",
+          top: "calc(-1 * var(--mantine-spacing-md))",
           zIndex: 10,
-          background: 'var(--mantine-color-body)',
-          marginTop: 'calc(-1 * var(--mantine-spacing-md))',
-          paddingTop: 'var(--mantine-spacing-md)',
-          paddingBottom: 'var(--mantine-spacing-xs)',
+          background: "var(--mantine-color-body)",
+          marginTop: "calc(-1 * var(--mantine-spacing-md))",
+          paddingTop: "var(--mantine-spacing-md)",
+          paddingBottom: "var(--mantine-spacing-xs)",
         }}
       >
-        <Stack gap="sm" style={{ visibility: isSelecting ? 'hidden' : undefined }}>
+        <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
           <Group justify="space-between" align="center">
-            <PeriodNavigator month={search.month} year={search.year} onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })} />
+            <PeriodNavigator
+              month={search.month}
+              year={search.year}
+              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+            />
             <Group gap="xs">
-              <Button leftSection={<IconPlus size={16} />} onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)} data-testid={TransactionsTestIds.BtnNew}>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
+                data-testid={TransactionsTestIds.BtnNew}
+              >
                 Nova Transação
               </Button>
               <Menu shadow="md" width={200}>
                 <Menu.Target>
-                  <ActionIcon variant="default" aria-label="Mais opções" data-testid={TransactionsTestIds.BtnMoreOptions}>
+                  <ActionIcon
+                    variant="default"
+                    aria-label="Mais opções"
+                    data-testid={TransactionsTestIds.BtnMoreOptions}
+                  >
                     <IconDots size={16} />
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Item
                     leftSection={<IconTableImport size={14} />}
-                    onClick={() => void navigate({ to: '/transactions/import' })}
+                    onClick={() => void navigate({ to: "/transactions/import" })}
                     data-testid={TransactionsTestIds.MenuItemImportTransactions}
                   >
                     Importar transações
@@ -457,11 +473,7 @@ export function TransactionsPage() {
         </Stack>
       </Box>
 
-      <TransactionList
-        currentUserId={currentUserId}
-        selectedIds={selectedIds}
-        onSelectTransaction={toggleSelection}
-      />
+      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={toggleSelection} />
 
       {isSelecting && (
         <SelectionActionBar
@@ -474,7 +486,6 @@ export function TransactionsPage() {
           onDelete={handleDeleteClick}
         />
       )}
-
     </Stack>
-  )
+  );
 }

@@ -1,17 +1,14 @@
 import { Transactions } from "@/types/transactions";
 
 /**
- * Converts a percentage-based split configuration into cent-exact amounts
+ * Converts a percentage-based split configuration into cent amounts
  * for a single transaction total.
  *
- * Algorithm (PAY-01):
- *  - For every split at index `i < splits.length - 1`:
- *      amount = Math.round(total * percentage / 100)
- *  - The LAST split (index `splits.length - 1`) absorbs the rounding
- *    remainder: amount = total - Σ(previous amounts). This guarantees
- *    Σ amount === total exactly for any percentage mix.
- *  - "Last" is the last element in the input array's order. Deterministic;
- *    no sort step.
+ * Algorithm (PAY-02):
+ *  - Each split receives exactly Math.round(total * percentage / 100).
+ *  - Percentages do NOT need to sum to 100 — partial splits (e.g. a single
+ *    30% row) are valid and produce a split amount that is strictly the
+ *    user-specified share of the transaction.
  *
  * Output shape (PAY-02):
  *  - Each returned entry contains only { connection_id, amount }.
@@ -21,7 +18,8 @@ import { Transactions } from "@/types/transactions";
  * @param amount - total transaction amount in cents
  * @param splits - percentage-based rows from BulkDivisionDrawer; each must
  *                 have `connection_id` and `percentage` set
- * @returns new array of `{ connection_id, amount }` with Σ amount === amount
+ * @returns new array of `{ connection_id, amount }` where each amount is the
+ *          rounded percentage share of the transaction total
  */
 export function splitPercentagesToCents(
   amount: number,
@@ -29,19 +27,8 @@ export function splitPercentagesToCents(
 ): Transactions.SplitSetting[] {
   if (splits.length === 0) return [];
 
-  const result: Transactions.SplitSetting[] = [];
-  let runningSum = 0;
-
-  for (let i = 0; i < splits.length - 1; i++) {
-    const pct = splits[i].percentage ?? 0;
-    const cents = Math.round((amount * pct) / 100);
-    result.push({ connection_id: splits[i].connection_id, amount: cents });
-    runningSum += cents;
-  }
-
-  // Last split absorbs the rounding remainder.
-  const last = splits[splits.length - 1];
-  result.push({ connection_id: last.connection_id, amount: amount - runningSum });
-
-  return result;
+  return splits.map((split) => ({
+    connection_id: split.connection_id,
+    amount: Math.round((amount * (split.percentage ?? 0)) / 100),
+  }));
 }
