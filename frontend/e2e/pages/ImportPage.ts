@@ -200,9 +200,7 @@ export class ImportPage {
 
   /** Click a row's checkbox, optionally holding Shift. */
   async toggleRowCheckbox(rowIndex: number, options?: { shiftKey?: boolean }) {
-    const checkbox = this.reviewStep
-      .getByTestId(ImportTestIds.RowCheckbox(rowIndex))
-      .locator("input");
+    const checkbox = this.reviewStep.getByTestId(ImportTestIds.RowCheckbox(rowIndex));
     if (options?.shiftKey) {
       await checkbox.click({ modifiers: ["Shift"] });
     } else {
@@ -212,10 +210,7 @@ export class ImportPage {
 
   /** Return whether a row's checkbox is checked. */
   async isRowSelected(rowIndex: number): Promise<boolean> {
-    return this.reviewStep
-      .getByTestId(ImportTestIds.RowCheckbox(rowIndex))
-      .locator("input")
-      .isChecked();
+    return this.reviewStep.getByTestId(ImportTestIds.RowCheckbox(rowIndex)).isChecked();
   }
 
   /** Change the action for a row via the action select. */

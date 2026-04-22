@@ -134,7 +134,7 @@ test.describe("Transaction Filters", () => {
 
     // Open account filter popover and select accountA
     await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
-    await page.getByTestId(TransactionsTestIds.PopoverFilter('accounts')).locator(`[data-account-name="${accountAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountAId)).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -170,7 +170,7 @@ test.describe("Transaction Filters", () => {
 
     // Open category filter popover and select categoryA
     await page.getByTestId(TransactionsTestIds.BtnFilter('categories')).click();
-    await page.getByTestId(TransactionsTestIds.PopoverFilter('categories')).locator(`[data-category-name="${categoryAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.CheckboxFilterCategory(categoryAId)).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(descA)).toBeVisible({ timeout: 8000 });
@@ -447,7 +447,7 @@ test.describe("Transaction Filters", () => {
 
     // Apply account filter for accountA
     await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
-    await page.getByTestId(TransactionsTestIds.PopoverFilter('accounts')).locator(`[data-account-name="${accountAName}"] input`).check();
+    await page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountAId)).check();
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(expenseADesc)).toBeVisible({ timeout: 8000 });
