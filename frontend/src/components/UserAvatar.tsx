@@ -1,5 +1,6 @@
 import { Avatar, type MantineSize } from "@mantine/core"
 import { getInitials } from "@/utils/getInitials"
+import { CommonTestIds } from '@/testIds'
 
 interface UserAvatarProps {
   name: string
@@ -16,6 +17,7 @@ export function UserAvatar({ name, avatarUrl, size, color = "blue" }: UserAvatar
       radius="xl"
       color={avatarUrl ? undefined : color}
       imageProps={{ referrerPolicy: "no-referrer" }}
+      data-testid={CommonTestIds.AvatarUser}
     >
       {getInitials(name)}
     </Avatar>

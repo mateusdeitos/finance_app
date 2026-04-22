@@ -3,6 +3,7 @@ import { Charges } from '@/types/charges'
 import { formatBalance } from '@/utils/formatCents'
 import { ChargeStatusBadge } from './ChargeStatusBadge'
 import classes from './ChargeCard.module.css'
+import { ChargesTestIds } from '@/testIds'
 
 interface Props {
   charge: Charges.Charge
@@ -22,7 +23,13 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
     String(charge.period_month).padStart(2, '0') + '/' + charge.period_year
 
   return (
-    <Card withBorder radius="md" p="md" className={classes.card}>
+    <Card
+      withBorder
+      radius="md"
+      p="md"
+      className={classes.card}
+      data-testid={ChargesTestIds.Card(charge.id)}
+    >
       <Group justify="space-between" align="flex-start">
         <Stack gap={2}>
           <Text size="md" fw={400}>
@@ -46,17 +53,17 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
         </Text>
         <Group gap="xs">
           {isReceived && isPending && onAccept && (
-            <Button size="xs" color="teal" onClick={onAccept}>
+            <Button size="xs" color="teal" onClick={onAccept} data-testid={ChargesTestIds.BtnAccept}>
               Aceitar
             </Button>
           )}
           {isReceived && isPending && onReject && (
-            <Button size="xs" color="red" variant="light" onClick={onReject}>
+            <Button size="xs" color="red" variant="light" onClick={onReject} data-testid={ChargesTestIds.BtnReject}>
               Recusar
             </Button>
           )}
           {!isReceived && isPending && onCancel && (
-            <Button size="xs" color="red" variant="light" onClick={onCancel}>
+            <Button size="xs" color="red" variant="light" onClick={onCancel} data-testid={ChargesTestIds.BtnCancel}>
               Cancelar
             </Button>
           )}

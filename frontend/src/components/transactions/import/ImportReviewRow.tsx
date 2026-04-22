@@ -1,23 +1,23 @@
-import { forwardRef, memo, useEffect, useRef } from "react";
+import { forwardRef, memo } from "react";
 import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
-import { useDebouncedValue } from "@mantine/hooks";
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
-import { type ImportFormValues } from "@/components/transactions/form/importFormSchema";
+import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
-import { checkDuplicateTransaction } from "@/api/transactions";
 import classes from "./ImportReviewRow.module.css";
 import { SplitPopover } from "./SplitPopover";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
 import { AccountDrawer } from "@/components/accounts/AccountDrawer";
+import { ImportTestIds } from '@/testIds'
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -102,37 +102,14 @@ export const ImportReviewRow = memo(
 
     // ─── Duplicate re-detection ─────────────────────────────────────────────────
 
-    const [debouncedDate] = useDebouncedValue(date, 500);
-    const [debouncedDescription] = useDebouncedValue(description, 500);
-    const [debouncedAmount] = useDebouncedValue(amount, 500);
-
-    // Skip duplicate check on initial mount (backend already checked)
-    const isFirstRender = useRef(true);
-    useEffect(() => {
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-        return;
-      }
-      if (!debouncedDate || !debouncedDescription || !debouncedAmount || debouncedAmount <= 0) return;
-      void checkDuplicateTransaction({
-        date: debouncedDate as string,
-        description: debouncedDescription as string,
-        amount: debouncedAmount as number,
-        account_id: form.getValues("accountId"),
-      })
-        .then((result) => {
-          const currentAction = form.getValues(`rows.${rowIndex}.action`);
-          if (result.is_duplicate && currentAction === "import") {
-            form.setValue(`rows.${rowIndex}.action`, "duplicate");
-          } else if (!result.is_duplicate && currentAction === "duplicate") {
-            form.setValue(`rows.${rowIndex}.action`, "import");
-          }
-        })
-        .catch(() => {
-          /* ignore network errors */
-        });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [debouncedDate, debouncedDescription, debouncedAmount]);
+    useDuplicateTransactionCheck({
+      date: date as string,
+      description: description as string,
+      amount: amount as number,
+      accountId: form.getValues("accountId"),
+      getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
+      setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
+    });
 
     const rowErrors = form.formState.errors.rows?.[rowIndex];
 
@@ -176,7 +153,7 @@ export const ImportReviewRow = memo(
     };
 
     return (
-      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={`import_row_${rowIndex}`}>
+      <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={ImportTestIds.Row(rowIndex)}>
         {/* Checkbox */}
         <Table.Td style={{ cursor: "pointer" }}>
           <Checkbox
@@ -185,12 +162,17 @@ export const ImportReviewRow = memo(
             onClick={(e) => onToggleSelect(rowIndex, e.shiftKey)}
             disabled={disabled}
             size="xs"
+            data-testid={ImportTestIds.RowCheckbox(rowIndex)}
           />
         </Table.Td>
 
         {/* Status */}
         <Table.Td>
-          <Box className={classes.statusIcon} data-testid={`import_status_${rowIndex}`}>
+          <Box
+            className={classes.statusIcon}
+            data-testid={ImportTestIds.RowStatus(rowIndex)}
+            data-status={importStatus}
+          >
             {statusCell()}
           </Box>
         </Table.Td>
@@ -288,7 +270,7 @@ export const ImportReviewRow = memo(
                     clearable
                     placeholder="Selecionar..."
                     withCheckIcon={false}
-                    data-testid={`select_category_${rowIndex}`}
+                    data-testid={ImportTestIds.RowSelectCategory(rowIndex)}
                     style={{ flex: 1 }}
                   />
                 )}
@@ -306,6 +288,7 @@ export const ImportReviewRow = memo(
                 }}
                 disabled={disabled || isSkipped}
                 aria-label="Criar categoria"
+                data-testid={ImportTestIds.RowBtnCreateCategory(rowIndex)}
               >
                 <IconPlus size={14} />
               </ActionIcon>
@@ -402,7 +385,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 disabled={disabled}
                 withCheckIcon={false}
-                data-testid={`select_import_action_${rowIndex}`}
+                data-testid={ImportTestIds.RowSelectAction(rowIndex)}
               />
             )}
           />
@@ -428,8 +411,7 @@ interface RecurrencePopoverProps {
 }
 
 function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: RecurrencePopoverProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parentForm = useFormContext<any>();
+  const parentForm = useFormContext<ImportFormValues>();
 
   const localForm = useForm<RecurrenceLocalValues>({
     defaultValues: {
@@ -441,8 +423,9 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
 
   function handleOpen() {
     const rowPath = namePrefix.slice(0, -1); // "rows.0." → "rows.0"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rowValues = parentForm.getValues(rowPath) as any;
+    // Dynamic path: RHF cannot statically prove rowPath points to a row; the
+    // caller (the component owning namePrefix) guarantees it.
+    const rowValues = parentForm.getValues(rowPath as `rows.${number}`) as ImportRowFormValues;
     localForm.reset({
       recurrenceType: rowValues.recurrenceType ?? null,
       recurrenceCurrentInstallment: rowValues.recurrenceCurrentInstallment ?? null,
@@ -453,9 +436,18 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
   function handleClose() {
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
-    parentForm.setValue(`${rowPath}.recurrenceType`, values.recurrenceType);
-    parentForm.setValue(`${rowPath}.recurrenceCurrentInstallment`, values.recurrenceCurrentInstallment);
-    parentForm.setValue(`${rowPath}.recurrenceTotalInstallments`, values.recurrenceTotalInstallments);
+    parentForm.setValue(
+      `${rowPath}.recurrenceType` as `rows.${number}.recurrenceType`,
+      values.recurrenceType,
+    );
+    parentForm.setValue(
+      `${rowPath}.recurrenceCurrentInstallment` as `rows.${number}.recurrenceCurrentInstallment`,
+      values.recurrenceCurrentInstallment,
+    );
+    parentForm.setValue(
+      `${rowPath}.recurrenceTotalInstallments` as `rows.${number}.recurrenceTotalInstallments`,
+      values.recurrenceTotalInstallments,
+    );
   }
 
   return (

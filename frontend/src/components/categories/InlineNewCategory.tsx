@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ActionIcon, Box, Group, Loader, Text, TextInput } from '@mantine/core'
+import { useAutofocusRef } from '@/hooks/useAutofocusRef'
+import { CategoriesTestIds } from '@/testIds'
 
 interface Props {
   depth: number
@@ -11,8 +13,7 @@ export function InlineNewCategory({ depth, onSave, onCancel }: Props) {
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { inputRef.current?.focus() }, [])
+  useAutofocusRef(inputRef)
 
   async function commit() {
     const trimmed = name.trim()
@@ -53,7 +54,7 @@ export function InlineNewCategory({ depth, onSave, onCancel }: Props) {
         size="sm"
         style={{ minWidth: 160 }}
         rightSection={saving ? <Loader size={14} /> : null}
-        data-testid="input_new_category_name"
+        data-testid={CategoriesTestIds.InputNewName}
       />
     </Group>
   )

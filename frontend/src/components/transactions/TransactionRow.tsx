@@ -8,6 +8,7 @@ import { RecurrenceBadge } from "./RecurrenceBadge";
 import classes from "./TransactionRow.module.css";
 import { FocusField } from "./form/TransactionForm";
 import { MouseEventHandler } from "react";
+import { TransactionsTestIds } from "@/testIds";
 
 const MAX_TAGS = 3;
 
@@ -49,13 +50,13 @@ function AccountCell({
 
   if (tx.type === "transfer") {
     return (
-      <Group gap={4} wrap="nowrap">
+      <Group gap={4} wrap="nowrap" data-testid={TransactionsTestIds.TransferAvatarGroup}>
         <Tooltip label={fromAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
             <AccountAvatar account={fromAccount} size={28} />
           </span>
         </Tooltip>
-        <IconArrowRight size={12} style={{ opacity: 0.5 }} />
+        <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
             <AccountAvatar account={toAccount} size={28} />
@@ -175,7 +176,7 @@ export function TransactionRow({
             onChange={() => onSelect?.(tx.id)}
             onClick={(e) => e.stopPropagation()}
             size="sm"
-            data-testid={`checkbox_${tx.id}`}
+            data-testid={TransactionsTestIds.Checkbox(tx.id)}
           />
         )}
       </div>

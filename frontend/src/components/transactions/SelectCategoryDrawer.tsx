@@ -2,6 +2,7 @@ import { Drawer, Group, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useCategories } from '@/hooks/useCategories'
 import { Transactions } from '@/types/transactions'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { TransactionsTestIds } from '@/testIds'
 
 function CategoryRow({
   category,
@@ -23,7 +24,7 @@ function CategoryRow({
           borderRadius: 'var(--mantine-radius-sm)',
           width: '100%',
         }}
-        data-testid={`category_option_${category.id}`}
+        data-testid={TransactionsTestIds.CategoryOption(category.id)}
       >
         <Group gap="xs">
           {category.emoji && <Text>{category.emoji}</Text>}
@@ -49,7 +50,7 @@ export function SelectCategoryDrawer() {
       title="Selecionar categoria"
       position="right"
       size="md"
-      data-testid="drawer_select_category"
+      data-testid={TransactionsTestIds.DrawerSelectCategory}
     >
       <Stack gap={4}>
         {categories.length === 0 ? (

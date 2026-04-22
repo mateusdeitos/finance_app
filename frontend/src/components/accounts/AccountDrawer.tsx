@@ -6,6 +6,7 @@ import { useUpdateAccount } from '@/hooks/useUpdateAccount'
 import { Transactions } from '@/types/transactions'
 import { AccountForm, AccountFormValues } from './AccountForm'
 import { DEFAULT_AVATAR_COLOR } from './ColorSwatchPicker'
+import { AccountsTestIds } from '@/testIds'
 
 interface Props {
   account?: Transactions.Account
@@ -50,7 +51,7 @@ export function AccountDrawer({ account }: Props) {
       title={account ? 'Editar Conta' : 'Nova Conta'}
       position="right"
       size="md"
-      data-testid="drawer_account"
+      data-testid={AccountsTestIds.Drawer}
     >
       <AccountForm
         initialValues={initialValues}

@@ -7,6 +7,7 @@ import { Transactions } from "@/types/transactions";
 import { useMe } from "@/hooks/useMe";
 import { useAccounts } from "@/hooks/useAccounts";
 import { SplitSettingsFields } from "./form/SplitSettingsFields";
+import { TransactionsTestIds } from "@/testIds";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 // Percentage-only shape. No `amount` field in the form state, by design (D-02).
@@ -64,7 +65,7 @@ export function BulkDivisionDrawer() {
         onClose={reject}
         position="bottom"
         title="Alterar divisão"
-        data-testid="drawer_bulk_division"
+        data-testid={TransactionsTestIds.DrawerBulkDivision}
         styles={drawerStyles}
       >
         <Text c="dimmed">Carregando...</Text>
@@ -152,7 +153,7 @@ function BulkDivisionDrawerForm({
       onClose={reject}
       position="bottom"
       title="Alterar divisão"
-      data-testid="drawer_bulk_division"
+      data-testid={TransactionsTestIds.DrawerBulkDivision}
       styles={drawerStyles}
     >
       {!hasConnectedAccounts ? (
@@ -168,7 +169,7 @@ function BulkDivisionDrawerForm({
                 type="submit"
                 disabled={!isSumValid}
                 style={{ alignSelf: "flex-start" }}
-                data-testid="btn_apply_bulk_division"
+                data-testid={TransactionsTestIds.BtnApplyBulkDivision}
               >
                 Aplicar
               </Button>

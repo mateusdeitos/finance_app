@@ -1,4 +1,5 @@
 import { Radio, Stack, Text } from '@mantine/core'
+import { TransactionsTestIds } from '@/testIds'
 
 export type PropagationValue = 'current' | 'current_and_future' | 'all'
 
@@ -25,7 +26,7 @@ export function UpdatePropagationSelector({ value, onChange }: Props) {
               value={opt.value}
               label={opt.label}
               description={opt.description}
-              data-testid={`propagation_update_option_${opt.value}`}
+              data-testid={TransactionsTestIds.PropagationUpdateOption(opt.value)}
             />
           ))}
         </Stack>

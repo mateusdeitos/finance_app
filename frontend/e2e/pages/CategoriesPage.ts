@@ -1,4 +1,5 @@
 import { type Page, type Locator, expect } from '@playwright/test'
+import { CategoriesTestIds } from '@/testIds'
 
 export class CategoriesPage {
   readonly page: Page
@@ -13,8 +14,8 @@ export class CategoriesPage {
   }
 
   async createRootCategory(name: string) {
-    const firstCatButton = this.page.getByTestId('btn_create_first_category')
-    const newCatButton = this.page.getByTestId('btn_new_category')
+    const firstCatButton = this.page.getByTestId(CategoriesTestIds.BtnCreateFirst)
+    const newCatButton = this.page.getByTestId(CategoriesTestIds.BtnNew)
 
     if (await firstCatButton.isVisible()) {
       await firstCatButton.click()
@@ -22,7 +23,7 @@ export class CategoriesPage {
       await newCatButton.click()
     }
 
-    const input = this.page.getByTestId('input_new_category_name')
+    const input = this.page.getByTestId(CategoriesTestIds.InputNewName)
     await expect(input).toBeVisible()
     await input.fill(name)
     await input.press('Enter')
@@ -30,9 +31,9 @@ export class CategoriesPage {
   }
 
   async createSubcategory(parentName: string, childName: string) {
-    await this.getCategoryRow(parentName).getByTestId('btn_add_subcategory').click()
+    await this.getCategoryRow(parentName).getByTestId(CategoriesTestIds.BtnAddSubcategory).click()
 
-    const input = this.page.getByTestId('input_new_category_name')
+    const input = this.page.getByTestId(CategoriesTestIds.InputNewName)
     await expect(input).toBeVisible()
     await input.fill(childName)
     await input.press('Enter')
@@ -40,9 +41,9 @@ export class CategoriesPage {
   }
 
   async editCategoryName(oldName: string, newName: string) {
-    await this.getCategoryRow(oldName).getByTestId('btn_category_name').click()
+    await this.getCategoryRow(oldName).getByTestId(CategoriesTestIds.BtnName).click()
 
-    const input = this.page.getByTestId('input_category_name')
+    const input = this.page.getByTestId(CategoriesTestIds.InputName)
     await expect(input).toBeVisible()
     await input.fill(newName)
     await input.press('Enter')
@@ -50,9 +51,9 @@ export class CategoriesPage {
   }
 
   async deleteCategory(name: string) {
-    await this.getCategoryRow(name).getByTestId('btn_category_delete').click()
-    await this.page.getByTestId('btn_confirm_delete_category').click()
-    await expect(this.page.getByTestId('btn_confirm_delete_category')).not.toBeVisible({ timeout: 5000 })
+    await this.getCategoryRow(name).getByTestId(CategoriesTestIds.BtnDelete).click()
+    await this.page.getByTestId(CategoriesTestIds.BtnConfirmDelete).click()
+    await expect(this.page.getByTestId(CategoriesTestIds.BtnConfirmDelete)).not.toBeVisible({ timeout: 5000 })
   }
 
   private getCategoryRow(name: string): Locator {

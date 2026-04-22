@@ -14,6 +14,7 @@ import {
   getAuthTokenForUser,
   apiFetchAs,
 } from '../helpers/api'
+import { TransactionsTestIds } from '@/testIds'
 
 /**
  * Bulk Update — regression tests for data loss prevention
@@ -123,34 +124,34 @@ test.describe('Bulk Update — data preservation', () => {
   async function bulkChangeCategory(page: TransactionsPage['page'], txId: number, targetCategoryId: number) {
     await transactionsPage.selectTransaction(txId)
     await transactionsPage.openBulkActionsMenu()
-    await page.getByTestId('btn_bulk_category').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkCategory).click()
 
     // Wait for a category option to appear (Mantine Drawer root stays hidden during animation)
-    const categoryOption = page.getByTestId(`category_option_${targetCategoryId}`)
+    const categoryOption = page.getByTestId(TransactionsTestIds.CategoryOption(targetCategoryId))
     await expect(categoryOption).toBeVisible({ timeout: 8000 })
     await categoryOption.click()
 
-    await expect(page.getByTestId('bulk_success').or(page.getByTestId('bulk_error'))).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('bulk_error')).not.toBeVisible()
-    await expect(page.getByTestId('bulk_success')).toBeVisible()
-    await page.getByTestId('btn_bulk_done').click()
+    await expect(page.getByTestId(TransactionsTestIds.BulkSuccess).or(page.getByTestId(TransactionsTestIds.BulkError))).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId(TransactionsTestIds.BulkError)).not.toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDone).click()
   }
 
   // ── Helper: select transaction and do bulk date change via UI ──
   async function bulkChangeDate(page: TransactionsPage['page'], txId: number) {
     await transactionsPage.selectTransaction(txId)
     await transactionsPage.openBulkActionsMenu()
-    await page.getByTestId('btn_bulk_date').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDate).click()
 
     // Wait for the apply button inside the date drawer (Mantine Drawer root stays hidden during animation)
-    const applyBtn = page.getByTestId('btn_apply_date')
+    const applyBtn = page.getByTestId(TransactionsTestIds.BtnApplyDate)
     await expect(applyBtn).toBeVisible({ timeout: 8000 })
     await applyBtn.click()
 
-    await expect(page.getByTestId('bulk_success').or(page.getByTestId('bulk_error'))).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('bulk_error')).not.toBeVisible()
-    await expect(page.getByTestId('bulk_success')).toBeVisible()
-    await page.getByTestId('btn_bulk_done').click()
+    await expect(page.getByTestId(TransactionsTestIds.BulkSuccess).or(page.getByTestId(TransactionsTestIds.BulkError))).toBeVisible({ timeout: 15000 })
+    await expect(page.getByTestId(TransactionsTestIds.BulkError)).not.toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible()
+    await page.getByTestId(TransactionsTestIds.BtnBulkDone).click()
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -269,16 +270,16 @@ test.describe('Bulk Update — data preservation', () => {
     // Select, open bulk menu, change category — propagation drawer will appear
     await transactionsPage.selectTransaction(tx.id)
     await transactionsPage.openBulkActionsMenu()
-    await page.getByTestId('btn_bulk_category').click()
+    await page.getByTestId(TransactionsTestIds.BtnBulkCategory).click()
 
     // Wait for category option inside drawer
-    const catOption = page.getByTestId(`category_option_${newCategoryId}`)
+    const catOption = page.getByTestId(TransactionsTestIds.CategoryOption(newCategoryId))
     await expect(catOption).toBeVisible({ timeout: 8000 })
     await catOption.click()
 
     // Propagation drawer should appear for recurring tx — wait for option inside it
-    const propagationOption = page.getByTestId('propagation_option_current')
-    await expect(propagationOption.or(page.getByTestId('bulk_success'))).toBeVisible({ timeout: 8000 })
+    const propagationOption = page.getByTestId(TransactionsTestIds.PropagationOption('current'))
+    await expect(propagationOption.or(page.getByTestId(TransactionsTestIds.BulkSuccess))).toBeVisible({ timeout: 8000 })
 
     // If propagation appears, select "Somente esta"
     const propagationVisible = await propagationOption.isVisible().catch(() => false)
@@ -286,8 +287,8 @@ test.describe('Bulk Update — data preservation', () => {
       await transactionsPage.selectPropagation('Somente esta', 'update')
     }
 
-    await expect(page.getByTestId('bulk_success')).toBeVisible({ timeout: 15000 })
-    await page.getByTestId('btn_bulk_done').click()
+    await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({ timeout: 15000 })
+    await page.getByTestId(TransactionsTestIds.BtnBulkDone).click()
 
     const updated = await apiGetTransaction(tx.id)
     expect(updated.description).toBe(desc)

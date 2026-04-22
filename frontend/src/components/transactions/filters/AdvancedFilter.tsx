@@ -3,6 +3,7 @@ import { IconAdjustments } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { Transactions } from "@/types/transactions";
+import { TransactionsTestIds } from "@/testIds";
 
 const TYPE_OPTIONS: { value: Transactions.TransactionType; label: string }[] = [
   { value: "expense", label: "Apenas despesas" },
@@ -29,7 +30,7 @@ function TypeOptions({
           label={opt.label}
           checked={selected.includes(opt.value)}
           onChange={() => toggle(opt.value)}
-          data-testid={`switch_type_${opt.value}`}
+          data-testid={TransactionsTestIds.SwitchType(opt.value)}
         />
       ))}
     </>
@@ -83,7 +84,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
       onChange={setOpened}
       position="bottom-start"
       shadow="md"
-      data-testid="advanced_filters_popover"
+      data-testid={TransactionsTestIds.AdvancedFiltersPopover}
     >
       <Popover.Target>
         <Indicator label={advancedCount} size={16} disabled={!advancedCount}>
@@ -91,7 +92,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             variant="default"
             leftSection={<IconAdjustments size={16} />}
             onClick={() => setOpened((o) => !o)}
-            data-testid="open_advanced_filters"
+            data-testid={TransactionsTestIds.BtnOpenAdvancedFilters}
           >
             Filtros avançados
           </Button>
@@ -104,7 +105,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             label="Ocultar acertos"
             checked={hideSettlements}
             onChange={toggleHideSettlements}
-            data-testid="switch_hide_settlements"
+            data-testid={TransactionsTestIds.SwitchHideSettlements}
           />
         </Stack>
       </Popover.Dropdown>

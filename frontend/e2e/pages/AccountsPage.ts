@@ -1,4 +1,5 @@
 import { type Page, type Locator, expect } from '@playwright/test'
+import { AccountsTestIds } from '@/testIds'
 
 export class AccountsPage {
   readonly page: Page
@@ -6,7 +7,7 @@ export class AccountsPage {
 
   constructor(page: Page) {
     this.page = page
-    this.newAccountButton = page.getByTestId('btn_new_account')
+    this.newAccountButton = page.getByTestId(AccountsTestIds.BtnNew)
   }
 
   async goto() {
@@ -16,14 +17,14 @@ export class AccountsPage {
 
   async openCreateForm() {
     await this.newAccountButton.click()
-    await expect(this.page.getByTestId('account_form')).toBeVisible()
+    await expect(this.page.getByTestId(AccountsTestIds.Form)).toBeVisible()
   }
 
   async fillForm(name: string, balanceCents = 0) {
-    const form = this.page.getByTestId('account_form')
-    await form.getByTestId('input_account_name').fill(name)
+    const form = this.page.getByTestId(AccountsTestIds.Form)
+    await form.getByTestId(AccountsTestIds.InputName).fill(name)
     if (balanceCents !== 0) {
-      const balanceInput = form.locator('input[inputmode="numeric"]')
+      const balanceInput = form.getByTestId(AccountsTestIds.InputInitialBalance)
       await balanceInput.click()
       for (const digit of String(balanceCents)) {
         await balanceInput.press(digit)
@@ -32,8 +33,8 @@ export class AccountsPage {
   }
 
   async submitForm() {
-    await this.page.getByTestId('btn_account_save').click()
-    await expect(this.page.getByTestId('account_form')).not.toBeVisible({ timeout: 5000 })
+    await this.page.getByTestId(AccountsTestIds.BtnSave).click()
+    await expect(this.page.getByTestId(AccountsTestIds.Form)).not.toBeVisible({ timeout: 5000 })
   }
 
   private getCardByName(name: string): Locator {
@@ -41,12 +42,12 @@ export class AccountsPage {
   }
 
   async editAccount(accountName: string) {
-    await this.getCardByName(accountName).getByTestId('btn_account_edit').click()
-    await expect(this.page.getByTestId('account_form')).toBeVisible()
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnEdit).click()
+    await expect(this.page.getByTestId(AccountsTestIds.Form)).toBeVisible()
   }
 
   async clickAccountAction(accountName: string) {
-    await this.getCardByName(accountName).getByTestId('btn_account_action').click()
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnAction).click()
   }
 
   async deactivateAccount(accountName: string) {

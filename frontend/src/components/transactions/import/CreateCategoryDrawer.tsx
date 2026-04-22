@@ -6,6 +6,7 @@ import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/use
 import { CategoryCard } from '@/components/categories/CategoryCard'
 import { InlineNewCategory } from '@/components/categories/InlineNewCategory'
 import { Transactions } from '@/types/transactions'
+import { ImportTestIds } from '@/testIds'
 
 type PendingParentId = number | 'root' | null
 
@@ -43,13 +44,14 @@ export function CreateCategoryDrawer() {
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Categorias" position="right" size="md" data-testid="drawer_create_category">
+    <Drawer opened={opened} onClose={reject} title="Categorias" position="right" size="md" data-testid={ImportTestIds.DrawerCreateCategory}>
       <Stack gap="sm">
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => setPendingParentId('root')}
           size="xs"
           variant="light"
+          data-testid={ImportTestIds.BtnNewCategoryInDrawer}
         >
           Nova Categoria
         </Button>
@@ -82,7 +84,11 @@ export function CreateCategoryDrawer() {
           </Stack>
         )}
 
-        <Button onClick={() => close(lastCreatedRef.current ?? undefined)} mt="md">
+        <Button
+          onClick={() => close(lastCreatedRef.current ?? undefined)}
+          mt="md"
+          data-testid={ImportTestIds.BtnCloseCreateCategoryDrawer}
+        >
           Fechar
         </Button>
       </Stack>

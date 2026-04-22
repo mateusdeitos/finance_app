@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Drawer } from "@mantine/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "@/hooks/useCategories";
 import { useMe } from "@/hooks/useMe";
 import { useTransactionPrefill } from "@/hooks/useTransactionPrefill";
@@ -11,10 +12,12 @@ import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
 import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
+import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
 import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { TransactionsTestIds } from '@/testIds'
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
   expense: "Nova Despesa",
@@ -65,7 +68,13 @@ export function CreateTransactionDrawer() {
   const { query: tagsQuery } = useTags();
   const existingTags = tagsQuery.data ?? [];
 
-  const { mutation } = useCreateTransaction();
+  const queryClient = useQueryClient();
+  const { mutation } = useCreateTransaction({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] });
+      queryClient.invalidateQueries({ queryKey: [QueryKeys.Tags] });
+    },
+  });
 
   function submitTransaction(values: TransactionFormValues, onSuccess: () => void) {
     setSubmitError(undefined);
@@ -102,7 +111,14 @@ export function CreateTransactionDrawer() {
   }
 
   return (
-    <Drawer opened={opened} onClose={close} title={TYPE_LABELS[transactionType]} position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={close}
+      title={TYPE_LABELS[transactionType]}
+      position="right"
+      size="md"
+      data-testid={TransactionsTestIds.DrawerCreate}
+    >
       <FormProvider {...methods}>
         <TransactionForm
           focusField="amount"

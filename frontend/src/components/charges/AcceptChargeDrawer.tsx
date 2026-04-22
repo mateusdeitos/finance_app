@@ -16,6 +16,7 @@ import { useMe } from "@/hooks/useMe";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { formatBalance } from "@/utils/formatCents";
 import { Charges } from "@/types/charges";
+import { ChargesTestIds } from '@/testIds'
 
 const acceptChargeSchema = z.object({
   account_id: z.number("Selecione uma conta"),
@@ -110,7 +111,14 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Aceitar Cobrança" position="right" size="md">
+    <Drawer
+      opened={opened}
+      onClose={reject}
+      title="Aceitar Cobrança"
+      position="right"
+      size="md"
+      data-testid={ChargesTestIds.DrawerAccept}
+    >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
           {submitError && (
@@ -157,6 +165,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
+                data-testid={ChargesTestIds.SelectAcceptAccount}
               />
             )}
           />
@@ -177,7 +186,13 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             )}
           />
 
-          <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
+          <Button
+            type="submit"
+            loading={mutation.isPending}
+            disabled={mutation.isPending}
+            fullWidth
+            data-testid={ChargesTestIds.BtnSubmitAccept}
+          >
             {roleMsg("Confirmar e receber cobrança", "Confirmar e pagar cobrança")}
           </Button>
         </Stack>

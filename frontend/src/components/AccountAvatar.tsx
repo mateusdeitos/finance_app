@@ -2,6 +2,7 @@ import { Avatar, type MantineSize } from "@mantine/core"
 import { getInitials } from "@/utils/getInitials"
 import { DEFAULT_AVATAR_COLOR } from "@/components/accounts/ColorSwatchPicker"
 import { Transactions } from "@/types/transactions"
+import { CommonTestIds } from '@/testIds'
 
 interface AccountAvatarProps {
   account: Transactions.Account | null | undefined
@@ -9,7 +10,7 @@ interface AccountAvatarProps {
 }
 
 export function AccountAvatar({ account, size }: AccountAvatarProps) {
-  if (!account) return <Avatar size={size} radius="xl" />
+  if (!account) return <Avatar size={size} radius="xl" data-testid={CommonTestIds.AvatarAccountEmpty} />
 
   const isShared = !!account.user_connection
 
@@ -25,6 +26,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
         radius="xl"
         color={partnerAvatarUrl ? undefined : "grape"}
         imageProps={{ referrerPolicy: "no-referrer" }}
+        data-testid={CommonTestIds.AvatarAccount}
       >
         {getInitials(partnerName)}
       </Avatar>
@@ -37,6 +39,7 @@ export function AccountAvatar({ account, size }: AccountAvatarProps) {
       radius="xl"
       color={undefined}
       styles={{ placeholder: { backgroundColor: account.avatar_background_color ?? DEFAULT_AVATAR_COLOR, color: "white" } }}
+      data-testid={CommonTestIds.AvatarAccount}
     >
       {getInitials(account.name)}
     </Avatar>

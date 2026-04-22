@@ -7,6 +7,7 @@ import {
   apiDeleteTransaction,
   apiGetTransaction,
 } from '../helpers/api'
+import { TransactionsTestIds } from '@/testIds'
 
 test.describe('Transfer Transactions', () => {
   let transactionsPage: TransactionsPage
@@ -54,10 +55,10 @@ test.describe('Transfer Transactions', () => {
     await transactionsPage.openCreateForm()
     await transactionsPage.selectType('transfer')
 
-    await expect(page.getByTestId('select_account')).toBeVisible()
-    await expect(page.getByTestId('select_destination_account')).toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.SelectAccount)).toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.SelectDestinationAccount)).toBeVisible()
     // Category selector must NOT appear for transfers
-    await expect(page.getByTestId('select_category')).not.toBeVisible()
+    await expect(page.getByTestId(TransactionsTestIds.SelectCategory)).not.toBeVisible()
   })
 
   test('editing the credit side of a same-user transfer opens the debit (origin) side', async ({ page }) => {
@@ -94,10 +95,10 @@ test.describe('Transfer Transactions', () => {
     await transactionsPage.waitForUpdateDrawer()
 
     await expect(
-      transactionsPage.updateDrawer.getByTestId('select_account'),
+      transactionsPage.updateDrawer.getByTestId(TransactionsTestIds.SelectAccount),
     ).toHaveValue(sourceAccountName)
     await expect(
-      transactionsPage.updateDrawer.getByTestId('select_destination_account'),
+      transactionsPage.updateDrawer.getByTestId(TransactionsTestIds.SelectDestinationAccount),
     ).toHaveValue(destAccountName)
 
     // Change a restricted-on-linked-tx field (amount). Without the fix, the

@@ -8,6 +8,7 @@ import {
   apiCreateCategory,
   apiDeleteCategory,
 } from "../helpers/api";
+import { ImportTestIds } from '@/testIds'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ test.describe("Import transactions", () => {
     await importPage.uploadCSV(csv, testAccountName);
 
     // Row 0 should have action "duplicate" (detected server-side)
-    const actionSelect = importPage.reviewStep.getByTestId("select_import_action_0");
+    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
     await expect(actionSelect).toHaveValue("Duplicado", {
       timeout: 5000,
     });
@@ -182,7 +183,7 @@ test.describe("Import transactions", () => {
 
     // Category should be auto-selected in row 0 after drawer close
     // Wait for Mantine Select to reflect the new value after form.setValue + re-render
-    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+    await expect(importPage.reviewStep.getByTestId(ImportTestIds.RowSelectCategory(0)))
       .toHaveValue(newCategoryName, { timeout: 5000 });
 
     // Confirm import succeeds with the auto-selected category
@@ -215,7 +216,7 @@ test.describe("Import transactions", () => {
     await importPage.createCategoryInDrawer(newCategoryName, { emoji });
 
     // Category should be auto-selected with emoji prefix in the select
-    await expect(importPage.reviewStep.getByTestId(`select_category_0`))
+    await expect(importPage.reviewStep.getByTestId(ImportTestIds.RowSelectCategory(0)))
       .toHaveValue(`${emoji} ${newCategoryName}`, { timeout: 5000 });
   });
 

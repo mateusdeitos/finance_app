@@ -3,6 +3,7 @@ import { IconPencil, IconTrash, IconRefresh } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatBalance } from '@/utils/formatCents'
 import { AccountAvatar } from '@/components/AccountAvatar'
+import { AccountsTestIds } from '@/testIds'
 
 interface Props {
   account: Transactions.Account
@@ -14,7 +15,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
   const isShared = !!account.user_connection
 
   return (
-    <Card withBorder radius="md" p="md" data-account-name={account.name} data-testid="account_card">
+    <Card withBorder radius="md" p="md" data-account-name={account.name} data-testid={AccountsTestIds.Card}>
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={4}>
           <Group gap="sm">
@@ -35,7 +36,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
         {!isShared && (
           <Group gap="xs" wrap="nowrap">
             {account.is_active && (
-              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid="btn_account_edit">
+              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid={AccountsTestIds.BtnEdit}>
                 <IconPencil size={16} />
               </ActionIcon>
             )}
@@ -43,7 +44,7 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
               variant="subtle"
               color={account.is_active ? 'red' : 'teal'}
               onClick={() => onDelete(account)}
-              data-testid="btn_account_action"
+              data-testid={AccountsTestIds.BtnAction}
             >
               {account.is_active ? <IconTrash size={16} /> : <IconRefresh size={16} />}
             </ActionIcon>

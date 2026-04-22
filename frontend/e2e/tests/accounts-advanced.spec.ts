@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { AccountsPage } from '../pages/AccountsPage'
 import { apiCreateAccount, apiDeleteAccount } from '../helpers/api'
+import { AccountsTestIds } from '@/testIds'
 
 test.describe('Accounts Advanced', () => {
   let accountsPage: AccountsPage
@@ -29,15 +30,15 @@ test.describe('Accounts Advanced', () => {
     await page.waitForLoadState('networkidle')
 
     // Confirm account is in inactive section
-    await expect(page.getByTestId('section_inactive').getByText(name)).toBeVisible()
+    await expect(page.getByTestId(AccountsTestIds.SectionInactive).getByText(name)).toBeVisible()
 
     // Reactivate
     await accountsPage.reactivateAccount(name)
     await page.waitForLoadState('networkidle')
 
     // Account should now be in active section
-    await expect(page.getByTestId('section_active').getByText(name)).toBeVisible({ timeout: 8000 })
-    await expect(page.getByTestId('section_inactive').getByText(name)).not.toBeVisible()
+    await expect(page.getByTestId(AccountsTestIds.SectionActive).getByText(name)).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId(AccountsTestIds.SectionInactive).getByText(name)).not.toBeVisible()
   })
 
   // ── Create with initial balance ───────────────────────────────────────────
@@ -94,13 +95,13 @@ test.describe('Accounts Advanced', () => {
     // Deactivate A
     await accountsPage.deactivateAccount(nameA)
     await page.waitForLoadState('networkidle')
-    await expect(page.getByTestId('section_inactive').getByText(nameA)).toBeVisible()
+    await expect(page.getByTestId(AccountsTestIds.SectionInactive).getByText(nameA)).toBeVisible()
     // B still active
-    await expect(page.getByTestId('section_active').getByText(nameB)).toBeVisible()
+    await expect(page.getByTestId(AccountsTestIds.SectionActive).getByText(nameB)).toBeVisible()
 
     // Deactivate B
     await accountsPage.deactivateAccount(nameB)
     await page.waitForLoadState('networkidle')
-    await expect(page.getByTestId('section_inactive').getByText(nameB)).toBeVisible({ timeout: 8000 })
+    await expect(page.getByTestId(AccountsTestIds.SectionInactive).getByText(nameB)).toBeVisible({ timeout: 8000 })
   })
 })

@@ -1,6 +1,7 @@
 import { SegmentedControl, Stack, Text } from '@mantine/core'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Transactions } from '@/types/transactions'
+import { TransactionsTestIds } from '@/testIds'
 
 const OPTIONS = [
   { value: 'date', label: 'Data' },
@@ -22,7 +23,7 @@ export function GroupBySelector() {
   return (
     <Stack gap={4}>
       <Text size="sm" c="dimmed">Agrupar por</Text>
-      <SegmentedControl value={groupBy} onChange={onChange} data={OPTIONS} size="sm" data-testid="segmented_group_by" />
+      <SegmentedControl value={groupBy} onChange={onChange} data={OPTIONS} size="sm" data-testid={TransactionsTestIds.SegmentedGroupBy} />
     </Stack>
   )
 }

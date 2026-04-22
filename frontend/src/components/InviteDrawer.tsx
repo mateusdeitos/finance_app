@@ -1,13 +1,11 @@
 import { Drawer, Stack, Text, TextInput, Button, CopyButton, Group } from '@mantine/core'
 import { IconCopy, IconCheck } from '@tabler/icons-react'
 import { useMe } from '@/hooks/useMe'
+import { CommonTestIds } from '@/testIds'
+import { useDrawerContext } from '@/utils/renderDrawer'
 
-type Props = {
-  opened: boolean
-  onClose: () => void
-}
-
-export function InviteDrawer({ opened, onClose }: Props) {
+export function InviteDrawer() {
+  const { opened, reject } = useDrawerContext<void>()
   const { query: meQuery } = useMe()
   const user = meQuery.data
 
@@ -18,10 +16,11 @@ export function InviteDrawer({ opened, onClose }: Props) {
   return (
     <Drawer
       opened={opened}
-      onClose={onClose}
+      onClose={reject}
       title="Criar Conexão"
       position="right"
       size="md"
+      data-testid={CommonTestIds.DrawerInvite}
     >
       <Stack gap="lg">
         <Text size="sm" c="dimmed">

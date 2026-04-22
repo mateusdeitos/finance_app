@@ -8,8 +8,9 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { IconCheck, IconX } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
 import { useDrawerContext } from "@/utils/renderDrawer";
+import { useSequentialProgress } from "@/hooks/useSequentialProgress";
+import { TransactionsTestIds } from "@/testIds";
 
 export interface BulkProgressItem {
   id: number;
@@ -30,14 +31,6 @@ interface BulkProgressDrawerProps {
   testIdPrefix?: string;
 }
 
-type ProcessState = "processing" | "success" | "error";
-
-interface ErrorInfo {
-  description: string;
-  reason: string;
-  remaining: string[];
-}
-
 export function BulkProgressDrawer({
   items,
   action,
@@ -45,52 +38,15 @@ export function BulkProgressDrawer({
   successMessage,
   onInvalidate,
   onSuccess,
-  testIdPrefix = "bulk_progress",
+  testIdPrefix = TransactionsTestIds.BulkProgressDrawer,
 }: BulkProgressDrawerProps) {
   const { opened, close } = useDrawerContext<void>();
-  const [state, setState] = useState<ProcessState>("processing");
-  const [progress, setProgress] = useState(0);
-  const [currentLabel, setCurrentLabel] = useState("");
-  const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
-
-  useEffect(() => {
-    async function run() {
-      for (let i = 0; i < items.length; i++) {
-        setCurrentLabel(items[i].label);
-        setProgress(Math.round((i / items.length) * 100));
-
-        try {
-          await action(items[i]);
-        } catch (err) {
-          let reason = "Erro desconhecido";
-          if (err instanceof Response) {
-            try {
-              const body = await err.json();
-              reason = body.message ?? reason;
-            } catch {
-              reason = `Erro ${err.status}`;
-            }
-          }
-          setErrorInfo({
-            description: items[i].label,
-            reason,
-            remaining: items.slice(i + 1).map((t) => t.label),
-          });
-          setState("error");
-          return;
-        }
-      }
-
-      setProgress(100);
-      setCurrentLabel("");
-      setState("success");
-      onInvalidate();
-      onSuccess();
-    }
-
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { state, progress, currentLabel, errorInfo } = useSequentialProgress({
+    items,
+    action,
+    onInvalidate,
+    onSuccess,
+  });
 
   const isProcessing = state === "processing";
 
@@ -124,18 +80,18 @@ export function BulkProgressDrawer({
             value={progress}
             animated={isProcessing}
             color={state === "error" ? "red" : "blue"}
-            data-testid="bulk_progress_bar"
+            data-testid={TransactionsTestIds.BulkProgressBar}
           />
         )}
 
         {isProcessing && (
-          <Text size="sm" c="dimmed" ta="center" data-testid="bulk_current_label">
+          <Text size="sm" c="dimmed" ta="center" data-testid={TransactionsTestIds.BulkCurrentLabel}>
             {currentLabel}
           </Text>
         )}
 
         {state === "success" && (
-          <Stack gap="sm" align="center" data-testid="bulk_success">
+          <Stack gap="sm" align="center" data-testid={TransactionsTestIds.BulkSuccess}>
             <Group justify="center" gap="xs">
               <ThemeIcon color="teal" radius="xl" size="lg">
                 <IconCheck size={18} />
@@ -144,14 +100,14 @@ export function BulkProgressDrawer({
                 {successMessage(items.length)}
               </Text>
             </Group>
-            <Button variant="default" onClick={() => close()} data-testid="btn_bulk_done">
+            <Button variant="default" onClick={() => close()} data-testid={TransactionsTestIds.BtnBulkDone}>
               Fechar
             </Button>
           </Stack>
         )}
 
         {state === "error" && errorInfo && (
-          <Stack gap="xs" data-testid="bulk_error">
+          <Stack gap="xs" data-testid={TransactionsTestIds.BulkError}>
             <Group gap="xs">
               <ThemeIcon color="red" radius="xl" size="md">
                 <IconX size={14} />
@@ -170,12 +126,12 @@ export function BulkProgressDrawer({
                 </Text>
                 {errorInfo.remaining.map((label, idx) => (
                   <Text key={`${idx}-${label}`} size="xs" c="dimmed" pl="sm">
-                    {"\u2022"} {label}
+                    {"•"} {label}
                   </Text>
                 ))}
               </>
             )}
-            <Button variant="default" onClick={() => close()} mt="xs" data-testid="btn_bulk_close_error">
+            <Button variant="default" onClick={() => close()} mt="xs" data-testid={TransactionsTestIds.BtnBulkCloseError}>
               Fechar
             </Button>
           </Stack>

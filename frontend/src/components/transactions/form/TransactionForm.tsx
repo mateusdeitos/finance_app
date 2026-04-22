@@ -1,5 +1,6 @@
-import { useEffect, type FocusEvent, type ReactNode } from "react";
+import { type FocusEvent, type ReactNode } from "react";
 import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
+import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
   SegmentedControl,
@@ -24,6 +25,7 @@ import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { RecurrenceFields } from "./RecurrenceFields";
 import { SplitSettingsFields } from "./SplitSettingsFields";
 import { TransactionFormValues } from "./transactionFormSchema";
+import { TransactionsTestIds } from "@/testIds";
 
 export type { TransactionFormValues };
 
@@ -68,16 +70,7 @@ export const TransactionForm = ({
     formState: { errors, isSubmitting },
   } = useFormContext<TransactionFormValues>();
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (focusField) {
-        setFocus(focusField);
-      }
-    }, 0);
-
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusFieldOnMount(setFocus, focusField);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
   const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
@@ -197,7 +190,7 @@ export const TransactionForm = ({
                 if (val === "transfer") setValue("split_settings", []);
               }}
               fullWidth
-              data-testid="segmented_transaction_type"
+              data-testid={TransactionsTestIds.SegmentedTransactionType}
             />
           )}
         />
@@ -230,7 +223,7 @@ export const TransactionForm = ({
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.amount?.message}
-                data-testid="input_amount"
+                data-testid={TransactionsTestIds.InputAmount}
               />
             )}
           />
@@ -267,7 +260,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                   error={errors.account_id?.message}
                   searchable
-                  data-testid="select_account"
+                  data-testid={TransactionsTestIds.SelectAccount}
                 />
               )}
             />
@@ -285,7 +278,7 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
-                  data-testid="select_destination_account"
+                  data-testid={TransactionsTestIds.SelectDestinationAccount}
                 />
               )}
             />
@@ -307,7 +300,7 @@ export const TransactionForm = ({
                     error={errors.category_id?.message}
                     searchable
                     clearable
-                    data-testid="select_category"
+                    data-testid={TransactionsTestIds.SelectCategory}
                   />
                 )}
               />
@@ -325,7 +318,7 @@ export const TransactionForm = ({
                     onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                     error={errors.account_id?.message}
                     searchable
-                    data-testid="select_account"
+                    data-testid={TransactionsTestIds.SelectAccount}
                   />
                 )}
               />
@@ -391,7 +384,7 @@ export const TransactionForm = ({
               Salvar e criar outra
             </Button>
           )}
-          <Button type="submit" loading={isSubmitting || isPending} data-testid="btn_save_transaction">
+          <Button type="submit" loading={isSubmitting || isPending} data-testid={TransactionsTestIds.BtnSave}>
             Salvar
           </Button>
         </Group>

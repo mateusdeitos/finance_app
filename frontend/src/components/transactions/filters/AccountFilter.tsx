@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { Transactions } from '@/types/transactions'
+import { TransactionsTestIds } from '@/testIds'
 
 interface AccountFilterProps {
   inline?: boolean
@@ -30,6 +31,8 @@ function AccountGroup({
           label={acc.name}
           checked={selected.includes(acc.id)}
           onChange={() => toggle(acc.id)}
+          data-testid={TransactionsTestIds.CheckboxFilterAccount(acc.id)}
+          data-account-name={acc.name}
         />
       ))}
     </>
@@ -99,12 +102,13 @@ export function AccountFilter({ inline }: AccountFilterProps) {
             variant="default"
             leftSection={<IconBuildingBank size={16} />}
             onClick={() => setOpened((o) => !o)}
+            data-testid={TransactionsTestIds.BtnFilter('accounts')}
           >
             Contas
           </Button>
         </Indicator>
       </Popover.Target>
-      <Popover.Dropdown>
+      <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('accounts')}>
         <Stack gap="xs" maw={280}>
           <AccountOptions accounts={accounts} selected={selected} toggle={toggle} />
         </Stack>

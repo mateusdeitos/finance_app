@@ -1,5 +1,5 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-
+import { AccountsTestIds, CategoriesTestIds, ImportTestIds, TransactionsTestIds } from '@/testIds'
 export class ImportPage {
   readonly page: Page;
   readonly uploadStep: Locator;
@@ -10,33 +10,33 @@ export class ImportPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.uploadStep = page.getByTestId("import_upload_step");
-    this.reviewStep = page.getByTestId("import_review_step");
-    this.finishedStep = page.getByTestId("finished_import_successfully_step");
-    this.processButton = page.getByTestId("btn_process_csv");
-    this.confirmButton = page.getByTestId("btn_confirm_import");
+    this.uploadStep = page.getByTestId(ImportTestIds.UploadStep);
+    this.reviewStep = page.getByTestId(ImportTestIds.ReviewStep);
+    this.finishedStep = page.getByTestId(ImportTestIds.FinishedStep);
+    this.processButton = page.getByTestId(ImportTestIds.BtnProcessCSV);
+    this.confirmButton = page.getByTestId(ImportTestIds.BtnConfirm);
   }
 
   /** Navigate to /transactions and click "Importar transações" in the overflow menu. */
   async goto() {
     await this.page.goto("/transactions");
     await this.page.waitForLoadState("networkidle");
-    // Open the overflow menu (ActionIcon with IconDots)
-    await this.page.getByRole("button", { name: "Mais opções" }).first().click();
-    await this.page.getByText("Importar transações").click();
+    await this.page.getByTestId(TransactionsTestIds.BtnMoreOptions).first().click();
+    await this.page.getByTestId(TransactionsTestIds.MenuItemImportTransactions).click();
     await expect(this.uploadStep).toBeVisible({ timeout: 8000 });
   }
 
   /** Select the account in the upload step (Mantine Select is readonly, use click+option). */
   async selectAccount(accountName: string) {
-    const input = this.uploadStep.getByTestId("select_import_account");
+    const input = this.uploadStep.getByTestId(ImportTestIds.SelectAccount);
     await input.click();
+    // Mantine Select options are portalled — documented escape (see Phase 7 plan).
     await this.page.getByRole("option", { name: accountName }).click();
   }
 
   /** Upload a CSV file by writing content into the hidden file input. */
   async uploadCSVContent(csvContent: string) {
-    const fileInput = this.uploadStep.locator('input[type="file"]');
+    const fileInput = this.uploadStep.getByTestId(ImportTestIds.InputCsvFile);
     await fileInput.setInputFiles({
       name: "import.csv",
       mimeType: "text/csv",
@@ -62,22 +62,32 @@ export class ImportPage {
    *
    * Two possible completion states:
    * - allImportedSuccess: the review_step Box is REPLACED by a success screen
-   *   with "Importação concluída com sucesso!" — must search the whole page.
-   * - done with errors: the review_step Box stays and shows an Alert with
-   *   "Importação concluída com erros" inside it.
+   *   ("Importação concluída com sucesso!") — page then navigates away after 3s.
+   * - done with errors: the review_step Box stays and shows an Alert
+   *   ("Importação concluída com erros").
    *
-   * In both cases the text starts with "Importação concluída", so we wait for
-   * that substring anywhere on the page.
+   * We watch for either the finished_step testid or a fallback substring,
+   * whichever appears first.
    */
   async confirmImport() {
     await this.confirmButton.click();
-    // Wait for the import loop to finish. Two possible completion states:
-    // - allImportedSuccess: finished_import_successfully_step replaces review_step
-    //   ("Importação concluída com sucesso!") — page then navigates away after 3s.
-    // - done with errors: review_step stays and shows an Alert
-    //   ("Importação concluída com erros").
-    // Search the whole page so both cases are covered.
-    await expect(this.page.getByText("Importação concluída", { exact: false }).first()).toBeVisible({ timeout: 30000 });
+    await expect
+      .poll(
+        async () => {
+          if (await this.finishedStep.isVisible().catch(() => false)) return "success";
+          if (
+            await this.reviewStep
+              .getByText("Importação concluída com erros")
+              .isVisible()
+              .catch(() => false)
+          ) {
+            return "with_errors";
+          }
+          return null;
+        },
+        { timeout: 30000 }
+      )
+      .not.toBeNull();
     await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 
@@ -87,24 +97,16 @@ export class ImportPage {
   }
 
   /**
-   * Return the import status of a row (idle | loading | success | error | duplicate).
-   * Reads from the data-testid status cell.
+   * Return the import status of a row. Reads directly from the data-status
+   * attribute on the status cell, rather than probing for Mantine icon classes.
+   * Returns: "idle" | "loading" | "success" | "error" (plus "pending" fallback).
    */
   async getRowStatus(rowIndex: number): Promise<string> {
-    const statusCell = this.reviewStep.getByTestId(`import_status_${rowIndex}`);
-    const actionSelect = this.reviewStep.getByTestId(`select_import_action_${rowIndex}`);
-    // Check visible icons
-    const hasSuccess = await statusCell
-      .locator("svg[class*='icon-check'], [data-icon='check']")
-      .isVisible()
-      .catch(() => false);
-    if (hasSuccess) return "success";
-    const hasError = await statusCell
-      .locator("svg[class*='icon-x'], [data-icon='x']")
-      .isVisible()
-      .catch(() => false);
-    if (hasError) return "error";
-    // Otherwise read from action select value
+    const statusCell = this.reviewStep.getByTestId(ImportTestIds.RowStatus(rowIndex));
+    const status = await statusCell.getAttribute("data-status");
+    if (status && status !== "idle") return status;
+    // idle → fall back to the row's action (e.g. "duplicate", "skip")
+    const actionSelect = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     const value = await actionSelect
       .locator("input")
       .inputValue()
@@ -114,7 +116,7 @@ export class ImportPage {
 
   /** Set the category for a row via the searchable category select. */
   async setRowCategory(rowIndex: number, categoryName: string) {
-    const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
+    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectCategory(rowIndex));
     await select.click();
     await select.fill(categoryName);
     await this.page.getByRole("option", { name: categoryName }).click();
@@ -122,28 +124,30 @@ export class ImportPage {
 
   /** Click the + button next to the category select to open the category creation drawer. */
   async openCreateCategoryDrawer(rowIndex: number) {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    await row.getByRole("button", { name: "Criar categoria" }).click();
-    // Wait for drawer content (root div starts hidden during Mantine transition)
-    await expect(this.page.getByTestId("drawer_create_category").getByRole("button", { name: "Nova Categoria" })).toBeVisible({ timeout: 5000 });
+    await this.reviewStep.getByTestId(ImportTestIds.RowBtnCreateCategory(rowIndex)).click();
+    await expect(
+      this.page
+        .getByTestId(ImportTestIds.DrawerCreateCategory)
+        .getByTestId(ImportTestIds.BtnNewCategoryInDrawer),
+    ).toBeVisible({ timeout: 5000 });
   }
 
   /** Click the + button next to the account select in the upload step header. */
   async openCreateAccountDrawerFromHeader() {
-    await this.uploadStep.getByRole("button", { name: "Criar conta" }).click();
-    await expect(this.page.getByTestId("account_form")).toBeVisible({ timeout: 5000 });
+    await this.uploadStep.getByTestId(ImportTestIds.BtnCreateAccountHeader).click();
+    await expect(this.page.getByTestId(AccountsTestIds.Form)).toBeVisible({ timeout: 5000 });
   }
 
   /** Create a new category inside the category drawer and close it. */
   async createCategoryInDrawer(name: string, opts?: { emoji?: string }) {
-    const drawer = this.page.getByTestId("drawer_create_category");
+    const drawer = this.page.getByTestId(ImportTestIds.DrawerCreateCategory);
     // Click "Nova Categoria" to show the inline input (may already be visible)
-    const newButton = drawer.getByRole("button", { name: "Nova Categoria" });
+    const newButton = drawer.getByTestId(ImportTestIds.BtnNewCategoryInDrawer);
     if (await newButton.isVisible()) {
       await newButton.click();
     }
     // Wait for and fill the inline input
-    const input = drawer.getByTestId("input_new_category_name");
+    const input = drawer.getByTestId(CategoriesTestIds.InputNewName);
     await expect(input).toBeVisible({ timeout: 5000 });
     await input.fill(name);
     await input.press("Enter");
@@ -158,12 +162,11 @@ export class ImportPage {
       const emojiTestId = await emojiButton.getAttribute("data-testid");
       const categoryId = emojiTestId!.replace("btn_emoji_", "");
       await emojiButton.click();
-      // Click the emoji option — it exists in exactly one open picker
-      const emojiOption = this.page.getByTestId(`emoji_${opts.emoji}`).first();
+      const emojiOption = this.page.getByTestId(CategoriesTestIds.EmojiOption(opts.emoji)).first();
       await expect(emojiOption).toBeVisible({ timeout: 5000 });
       await emojiOption.click();
       // Close the emoji picker drawer (saves on close)
-      const emojiDrawer = this.page.getByTestId(`drawer_emoji_picker_${categoryId}`);
+      const emojiDrawer = this.page.getByTestId(CategoriesTestIds.DrawerEmojiPicker(categoryId));
       await emojiDrawer.getByRole("button", { name: "Fechar" }).click();
       await expect(emojiDrawer).not.toBeVisible({ timeout: 5000 });
       // Wait for save to complete
@@ -171,36 +174,35 @@ export class ImportPage {
     }
 
     // Close the drawer
-    await drawer.getByRole("button", { name: "Fechar" }).click();
+    await drawer.getByTestId(ImportTestIds.BtnCloseCreateCategoryDrawer).click();
     await expect(drawer).not.toBeVisible({ timeout: 5000 });
   }
 
   /** Create a new account inside the account drawer. */
   async createAccountInDrawer(name: string) {
-    const form = this.page.getByTestId("account_form");
-    await form.getByTestId("input_account_name").fill(name);
-    await form.getByTestId("btn_account_save").click();
+    const form = this.page.getByTestId(AccountsTestIds.Form);
+    await form.getByTestId(AccountsTestIds.InputName).fill(name);
+    await form.getByTestId(AccountsTestIds.BtnSave).click();
     await expect(form).not.toBeVisible({ timeout: 10000 });
   }
 
   /** Get the current value of the category select for a row. */
   async getRowCategoryValue(rowIndex: number): Promise<string> {
-    const select = this.reviewStep.getByTestId(`select_category_${rowIndex}`);
+    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectCategory(rowIndex));
     return select.inputValue();
   }
 
   /** Get the current value of the main account select in the upload step. */
   async getHeaderAccountValue(): Promise<string> {
-    const select = this.uploadStep.getByTestId("select_import_account");
+    const select = this.uploadStep.getByTestId(ImportTestIds.SelectAccount);
     return select.inputValue();
   }
 
   /** Click a row's checkbox, optionally holding Shift. */
   async toggleRowCheckbox(rowIndex: number, options?: { shiftKey?: boolean }) {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    const checkbox = row.locator('input[type="checkbox"]');
+    const checkbox = this.reviewStep.getByTestId(ImportTestIds.RowCheckbox(rowIndex));
     if (options?.shiftKey) {
-      await checkbox.click({ modifiers: ['Shift'] });
+      await checkbox.click({ modifiers: ["Shift"] });
     } else {
       await checkbox.click();
     }
@@ -208,8 +210,7 @@ export class ImportPage {
 
   /** Return whether a row's checkbox is checked. */
   async isRowSelected(rowIndex: number): Promise<boolean> {
-    const row = this.reviewStep.getByTestId(`import_row_${rowIndex}`);
-    return row.locator('input[type="checkbox"]').isChecked();
+    return this.reviewStep.getByTestId(ImportTestIds.RowCheckbox(rowIndex)).isChecked();
   }
 
   /** Change the action for a row via the action select. */
@@ -219,14 +220,14 @@ export class ImportPage {
       skip: "Não importar",
       duplicate: "Duplicado",
     };
-    const select = this.reviewStep.getByTestId(`select_import_action_${rowIndex}`);
+    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     await select.click();
     await this.page.getByRole("option", { name: labels[action] }).click();
   }
 
   /** Check whether a row's action select shows a particular value (by visible label). */
   async getRowActionLabel(rowIndex: number): Promise<string> {
-    const select = this.reviewStep.getByTestId(`select_import_action_${rowIndex}`);
+    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     return select.locator("input").inputValue();
   }
 }
