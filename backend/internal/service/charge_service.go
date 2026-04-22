@@ -104,12 +104,38 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 
 	callerIsCharger := *req.Role == domain.ChargeInitiatorRoleCharger
 
+	// Auto-fill amount from caller's current period balance when none is provided.
+	// SwapIfNeeded orients conn so FromAccountID is always the caller's connection
+	// account — the same account the frontend queries for the balance preview.
+	// conn is a local copy so mutating it here is safe.
+	amount := req.Amount
+	if amount == nil {
+		conn.SwapIfNeeded(callerUserID)
+		callerConnAccountID := conn.FromAccountID
+
+		period := domain.Period{Month: req.PeriodMonth, Year: req.PeriodYear}
+		balResult, err := s.services.Transaction.GetBalance(ctx, callerUserID, period, domain.BalanceFilter{
+			AccountIDs: []int{callerConnAccountID},
+		})
+		if err != nil {
+			return nil, pkgErrors.Internal("failed to compute balance", err)
+		}
+
+		if balResult.Balance != 0 {
+			abs := balResult.Balance
+			if abs < 0 {
+				abs = -abs
+			}
+			amount = &abs
+		}
+	}
+
 	charge := &domain.Charge{
 		ConnectionID: req.ConnectionID,
 		PeriodMonth:  req.PeriodMonth,
 		PeriodYear:   req.PeriodYear,
 		Description:  req.Description,
-		Amount:       req.Amount,
+		Amount:       amount,
 		Status:       domain.ChargeStatusPending,
 		Date:         &req.Date,
 	}

@@ -78,7 +78,6 @@ export const TransactionsTestIds = {
 
   // Bulk division drawer
   DrawerBulkDivision: 'drawer_bulk_division',
-  BadgeBulkDivisionSum: 'badge_bulk_division_sum',
   BtnApplyBulkDivision: 'btn_apply_bulk_division',
 
   // Select category / date drawers

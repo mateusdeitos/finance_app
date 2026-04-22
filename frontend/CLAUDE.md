@@ -165,6 +165,19 @@ Rules:
 - Use `superRefine` for cross-field validation; extract shared fields/refinements into reusable factories when multiple forms share rules (see `src/components/transactions/form/` for the pattern with `baseTransactionFields` + `applySharedRefinements`).
 - For nested forms, pass `control` via `FormProvider` / `useFormContext` rather than prop-drilling.
 - Submit button triggers `handleSubmit(onSubmit)`; validation errors are surfaced via `errors.*.message`.
+- **Use `useWatch` instead of `form.watch` to subscribe to field values.** `form.watch` re-renders the entire form component on every keystroke; `useWatch` creates a granular subscription so only the consuming component re-renders.
+  ```tsx
+  import { useWatch } from 'react-hook-form'
+
+  // watching a single field
+  const amount = useWatch({ control: form.control, name: 'amount' })
+
+  // watching multiple fields at once
+  const [month, year, connectionId] = useWatch({
+    control: form.control,
+    name: ['period_month', 'period_year', 'connection_id'],
+  })
+  ```
 
 ### 6. Components: small, focused, reusable
 

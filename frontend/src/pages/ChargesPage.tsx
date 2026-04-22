@@ -5,7 +5,6 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useBalance } from "@/hooks/useBalance";
 import { useCharges } from "@/hooks/useCharges";
 import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useRejectCharge } from "@/hooks/useRejectCharge";
@@ -46,12 +45,6 @@ export function ChargesPage() {
     }
     return map;
   });
-
-  const { query: balanceQuery } = useBalance(
-    { month: search.month, year: search.year, accumulated: false },
-    (data) => data.balance,
-  );
-  const balanceAmount = balanceQuery.data ?? undefined;
 
   const { mutation: rejectMutation } = useRejectCharge();
   const { mutation: cancelMutation } = useCancelCharge();
@@ -167,7 +160,7 @@ export function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onAccept={() => handleAccept(charge)}
                   onReject={() => void handleChargeAction("reject", charge)}
                 />
@@ -200,7 +193,7 @@ export function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onCancel={() => void handleChargeAction("cancel", charge)}
                 />
               ))}
