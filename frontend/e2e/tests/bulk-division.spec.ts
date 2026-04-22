@@ -150,6 +150,20 @@ test.describe("Bulk Division", () => {
     const percentInputs = drawer.getByTestId("input_split_percentage");
     await percentInputs.nth(0).fill("30");
 
+    // Add a second row
+    await drawer.getByRole("button", { name: "+ Adicionar divisão" }).click();
+
+    // Row 2: select the remaining available connection (partner 2)
+    const secondSelect = drawer.getByPlaceholder("Selecionar conta").last();
+    await secondSelect.click();
+    await page.getByRole("option").first().click();
+
+    // Set row 2 percentage to 70
+    await percentInputs.nth(1).fill("70");
+
+    // Verify the sum badge shows 100%
+    await expect(drawer.getByTestId("badge_bulk_division_sum")).toHaveText(/Total: 100% \/ 100%/);
+
     // --- Arm network capture BEFORE clicking submit (playwright-best-practices) ---
     const capturedPuts: Array<{
       amount: number;
