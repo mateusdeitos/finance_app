@@ -436,6 +436,11 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
   function handleClose() {
     const values = localForm.getValues();
     const rowPath = namePrefix.slice(0, -1);
+    // Sync recurrenceEnabled so buildPayload includes the settings in the import payload.
+    parentForm.setValue(
+      `${rowPath}.recurrenceEnabled` as `rows.${number}.recurrenceEnabled`,
+      values.recurrenceType != null,
+    );
     parentForm.setValue(
       `${rowPath}.recurrenceType` as `rows.${number}.recurrenceType`,
       values.recurrenceType,
@@ -450,15 +455,23 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
     );
   }
 
+  const rowIdx = namePrefix.match(/rows\.(\d+)\./)?.[1] ?? '0';
+
   return (
     <FormProvider {...localForm}>
       <Popover trapFocus withinPortal onOpen={handleOpen} onClose={handleClose}>
         <Popover.Target>
-          <Button size="xs" variant={hasRecurrence ? "light" : "default"} disabled={disabled} fullWidth>
+          <Button
+            size="xs"
+            variant={hasRecurrence ? "light" : "default"}
+            disabled={disabled}
+            fullWidth
+            data-testid={ImportTestIds.RowBtnRecurrencePopover(Number(rowIdx))}
+          >
             {summary}
           </Button>
         </Popover.Target>
-        <Popover.Dropdown>
+        <Popover.Dropdown data-testid={ImportTestIds.RecurrencePopoverDropdown(Number(rowIdx))}>
           <Stack gap="xs" w={300}>
             <RecurrenceFields namePrefix="" comboboxWithinPortal={false} />
           </Stack>

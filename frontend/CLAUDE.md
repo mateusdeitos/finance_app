@@ -265,6 +265,25 @@ Rules:
 - Naming convention (already in use): `btn_<action>`, `input_<field>`, `drawer_<name>`, `section_<name>`, `row_<entity>`, `checkbox_<purpose>`. Stay consistent.
 - When adding a new UI element, add a stable `data-testid` in the same commit. No test may rely on class names, tag shapes, or attribute probes as a workaround.
 
+### Declaring testid constants (`src/testIds/`)
+
+All `data-testid` values are centralised in `src/testIds/` and re-exported from `src/testIds/index.ts`. Never use magic strings — always reference the constant.
+
+All ids — static or parametric — are declared as `as const` objects:
+  ```ts
+  // src/testIds/recurrence.ts
+  export const RecurrenceTestIds = {
+    // static id
+    TypeSelect: 'select_recurrence_type',
+    CurrentInstallmentInput: 'input_recurrence_current_installment',
+    // parametric id (factory function)
+    RowBtnRecurrencePopover: (rowIndex: number) => `btn_recurrence_popover_${rowIndex}` as const,
+  } as const
+  ```
+- Group ids by domain, one file per domain (e.g. `recurrence.ts`, `import.ts`).
+- Static ids: plain string value. Parametric ids: arrow function returning `'...' as const` so the return type is a string literal, not `string`.
+- Add the export to `index.ts` before referencing the id anywhere.
+
 When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
 
 ## Known divergences (migrate when touching)
