@@ -1,26 +1,23 @@
+import { AcceptChargeDrawer } from "@/components/charges/AcceptChargeDrawer";
+import { ChargeCard } from "@/components/charges/ChargeCard";
+import { CreateChargeDrawer } from "@/components/charges/CreateChargeDrawer";
+import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useCancelCharge } from "@/hooks/useCancelCharge";
+import { useCharges } from "@/hooks/useCharges";
+import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
+import { useMe } from "@/hooks/useMe";
+import { useRejectCharge } from "@/hooks/useRejectCharge";
+import { useTransactions } from "@/hooks/useTransactions";
+import { Charges } from "@/types/charges";
+import { renderDrawer } from "@/utils/renderDrawer";
 import { ActionIcon, Box, Button, Group, Modal, Skeleton, Stack, Tabs, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { useMemo, useState } from "react";
 import { z } from "zod";
-import { createFileRoute } from "@tanstack/react-router";
-import { useMe } from "@/hooks/useMe";
-import { useTransactions } from "@/hooks/useTransactions";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useCharges } from "@/hooks/useCharges";
-import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
-import { useRejectCharge } from "@/hooks/useRejectCharge";
-import { useCancelCharge } from "@/hooks/useCancelCharge";
-import { fetchBalance } from "@/api/transactions";
-import { QueryKeys } from "@/utils/queryKeys";
-import { renderDrawer } from "@/utils/renderDrawer";
-import { Charges } from "@/types/charges";
-import { ChargeCard } from "@/components/charges/ChargeCard";
-import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
-import { CreateChargeDrawer } from "@/components/charges/CreateChargeDrawer";
-import { AcceptChargeDrawer } from "@/components/charges/AcceptChargeDrawer";
 
 const now = new Date();
 
@@ -53,15 +50,6 @@ function ChargesPage() {
   const { query: accountsQuery } = useAccounts();
   const { mutation: rejectMutation } = useRejectCharge();
   const { mutation: cancelMutation } = useCancelCharge();
-
-  // Fetch balance for the current period to pass to ChargeCards
-  const balanceQuery = useQuery({
-    queryKey: [QueryKeys.Balance, { month: search.month, year: search.year, accumulated: false }],
-    queryFn: () => fetchBalance({ month: search.month, year: search.year, accumulated: false }),
-  });
-
-  // Extract balance amount in cents from the query result
-  const balanceAmount = balanceQuery.data?.balance ?? undefined;
 
   // Confirmation modal state
   const [confirmAction, setConfirmAction] = useState<{ type: "reject" | "cancel"; charge: Charges.Charge } | null>(
@@ -205,7 +193,7 @@ function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onAccept={() => handleAccept(charge)}
                   onReject={() => handleRejectClick(charge)}
                 />
@@ -238,7 +226,7 @@ function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onCancel={() => handleCancelClick(charge)}
                 />
               ))}

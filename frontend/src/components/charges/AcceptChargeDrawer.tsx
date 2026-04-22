@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Button, Drawer, NumberInput, Select, Skeleton, Stack, Text } from "@mantine/core";
+import { Alert, Button, Drawer, Select, Stack, Text } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
-import { useQuery } from "@tanstack/react-query";
 import "@mantine/dates/styles.css";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { useAcceptCharge } from "@/hooks/useAcceptCharge";
@@ -14,9 +13,7 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
-import { fetchBalance } from "@/api/transactions";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
-import { QueryKeys } from "@/utils/queryKeys";
 import { formatBalance } from "@/utils/formatCents";
 import { Charges } from "@/types/charges";
 
@@ -59,24 +56,20 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
     .filter((a) => a.user_id === currentUserId && a.is_active && !a.user_connection)
     .map((a) => ({ label: a.name, value: String(a.id) }));
 
-  // Balance preview query
-  const balanceQuery = useQuery({
-    queryKey: [QueryKeys.Balance, { month: charge.period_month, year: charge.period_year, accumulated: false }],
-    queryFn: () => fetchBalance({ month: charge.period_month, year: charge.period_year, accumulated: false }),
-  });
-
-  const balanceAmount = balanceQuery.data?.balance ?? 0;
-
   const period = String(charge.period_month).padStart(2, "0") + "/" + charge.period_year;
 
   const form = useForm<AcceptChargeFormValues>({
     resolver: zodResolver(acceptChargeSchema),
     defaultValues: {
-      account_id: undefined,
+      account_id: accountsQuery?.data?.[0].id ?? 0,
       date: new Date(),
-      amount: undefined,
+      amount: charge.amount / 100,
     },
   });
+
+  const role: Charges.InitiatorRole = charge.charger_user_id === currentUserId ? "charger" : "payer";
+
+  const roleMsg = (whenCharger: string, whenPayer: string) => (role === "charger" ? whenCharger : whenPayer);
 
   function handleSubmit(values: AcceptChargeFormValues) {
     setSubmitError(undefined);
@@ -141,16 +134,12 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             )}
           </Stack>
 
-          {/* Balance preview */}
-          {balanceQuery.isLoading ? (
-            <Skeleton height={40} />
-          ) : balanceQuery.data ? (
-            <Text size="sm" c="dimmed">
-              {balanceAmount < 0
-                ? `Voce deve ${formatBalance(Math.abs(balanceAmount))}`
-                : `Devem a voce ${formatBalance(balanceAmount)}`}
-            </Text>
-          ) : null}
+          <Text size="sm" c="dimmed">
+            {roleMsg(
+              `Devem a você ${formatBalance(charge.amount)}`,
+              `Você deve ${formatBalance(Math.abs(charge.amount))}`,
+            )}
+          </Text>
 
           <Controller
             name="account_id"
@@ -158,6 +147,10 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             render={({ field, fieldState }) => (
               <Select
                 label="Conta"
+                description={roleMsg(
+                  "Uma conta sua que será utilizada para creditar o valor da cobrança",
+                  "Uma conta sua que será utilizada para debitar o valor da cobrança",
+                )}
                 placeholder="Selecione uma conta"
                 data={myAccounts}
                 value={field.value != null ? String(field.value) : null}
@@ -173,7 +166,8 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             control={form.control}
             render={({ field, fieldState }) => (
               <DateInput
-                label="Data da transferencia"
+                label="Data da transferência"
+                description="Data utilizada na transferência entre contas para quitação da cobrança"
                 placeholder="Selecione uma data"
                 value={field.value}
                 onChange={(date) => field.onChange(date)}
@@ -183,24 +177,8 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             )}
           />
 
-          <Controller
-            name="amount"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <NumberInput
-                label="Valor (opcional)"
-                placeholder={balanceQuery.data ? formatBalance(Math.abs(balanceAmount)) : ""}
-                value={field.value ?? ""}
-                onChange={(val) => field.onChange(typeof val === "number" ? val : undefined)}
-                error={fieldState.error?.message}
-                decimalScale={2}
-                min={0}
-              />
-            )}
-          />
-
           <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
-            Confirmar aceitacao
+            {roleMsg("Confirmar e receber cobrança", "Confirmar e pagar cobrança")}
           </Button>
         </Stack>
       </form>

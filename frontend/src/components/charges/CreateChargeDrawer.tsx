@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Button, Drawer, NumberInput, Radio, Select, Skeleton, Stack, Text, Textarea } from "@mantine/core";
+import {
+  Alert,
+  Avatar,
+  Button,
+  Drawer,
+  Group,
+  NumberInput,
+  Radio,
+  Select,
+  Skeleton,
+  Stack,
+  Text,
+  Textarea,
+} from "@mantine/core";
 import { DateInput, MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
-import { useQuery } from "@tanstack/react-query";
 import "@mantine/dates/styles.css";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { useCreateCharge } from "@/hooks/useCreateCharge";
@@ -14,9 +26,8 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
-import { fetchBalance } from "@/api/transactions";
+import { useBalanceForConnection } from "@/hooks/useBalanceForConnection";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
-import { QueryKeys } from "@/utils/queryKeys";
 import { formatBalance } from "@/utils/formatCents";
 import { Charges } from "@/types/charges";
 
@@ -58,13 +69,15 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   );
 
   // Deduplicate connections
-  const connectionMap = new Map<number, { label: string; value: string }>();
+  const connectionMap = new Map<number, { label: string; value: string; avatarUrl?: string }>();
   for (const acc of acceptedAccounts) {
     const conn = acc.user_connection!;
     if (!connectionMap.has(conn.id)) {
+      const isFrom = conn.from_user_id === currentUserId;
       connectionMap.set(conn.id, {
-        label: (conn.from_user_id === currentUserId ? conn.to_user_name : conn.from_user_name) ?? "",
+        label: (isFrom ? conn.to_user_name : conn.from_user_name) ?? "",
         value: String(conn.id),
+        avatarUrl: isFrom ? conn.to_user_avatar_url : conn.from_user_avatar_url,
       });
     }
   }
@@ -93,16 +106,25 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
     },
   });
 
-  const watchedMonth = form.watch("period_month");
-  const watchedYear = form.watch("period_year");
-  const watchedConnectionId = form.watch("connection_id");
-
-  // Balance preview query
-  const balanceQuery = useQuery({
-    queryKey: [QueryKeys.Balance, { month: watchedMonth, year: watchedYear, accumulated: false }],
-    queryFn: () => fetchBalance({ month: watchedMonth, year: watchedYear, accumulated: false }),
-    enabled: !!watchedConnectionId && !!watchedMonth && !!watchedYear,
+  const [watchedMonth, watchedYear, watchedConnectionId] = useWatch({
+    control: form.control,
+    name: ["period_month", "period_year", "connection_id"],
   });
+
+  const { query: balanceQuery } = useBalanceForConnection({
+    month: watchedMonth,
+    year: watchedYear,
+    connectionId: watchedConnectionId,
+    currentUserId,
+  });
+
+  const balanceDescription = balanceQuery.isLoading ? (
+    <Skeleton height={16} mt={4} width={160} />
+  ) : balanceQuery.data ? (
+    balanceQuery.data.balance < 0
+      ? `Voce deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
+      : `Devem a voce ${formatBalance(balanceQuery.data.balance)}`
+  ) : undefined;
 
   function handleSubmit(values: CreateChargeFormValues) {
     setSubmitError(undefined);
@@ -157,7 +179,14 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             </Alert>
           )}
 
-          {!singleConnection && (
+          {singleConnection ? (
+            <Group gap="sm">
+              <Avatar src={singleConnection.avatarUrl ?? null} radius="xl" size="md" />
+              <Text size="sm" fw={500}>
+                {singleConnection.label}
+              </Text>
+            </Group>
+          ) : (
             <Controller
               name="connection_id"
               control={form.control}
@@ -232,6 +261,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             render={({ field, fieldState }) => (
               <Radio.Group
                 label="Sou o..."
+                description={balanceDescription}
                 value={field.value ?? null}
                 onChange={field.onChange}
                 error={fieldState.error?.message}
@@ -273,20 +303,6 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             {...form.register("description")}
             error={form.formState.errors.description?.message}
           />
-
-          {watchedConnectionId && (
-            <div>
-              {balanceQuery.isLoading ? (
-                <Skeleton height={40} />
-              ) : balanceQuery.data ? (
-                <Text size="sm" c="dimmed">
-                  {balanceQuery.data.balance < 0
-                    ? `Voce deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
-                    : `Devem a voce ${formatBalance(balanceQuery.data.balance)}`}
-                </Text>
-              ) : null}
-            </div>
-          )}
 
           <Button type="submit" loading={mutation.isPending} disabled={mutation.isPending} fullWidth>
             Criar Cobrança

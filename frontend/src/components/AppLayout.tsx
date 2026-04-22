@@ -13,7 +13,7 @@ const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> 
   { label: "Transações", icon: IconReceipt2, to: "/transactions" },
   { label: "Contas", icon: IconWallet, to: "/accounts" },
   { label: "Categorias", icon: IconTree, to: "/categories" },
-  { label: "Cobrancas", icon: IconCreditCard, to: "/charges" },
+  { label: "Cobranças", icon: IconCreditCard, to: "/charges" },
 ];
 
 export function AppLayout() {
@@ -29,9 +29,7 @@ export function AppLayout() {
   const pendingCount = pendingCountQuery.data?.count ?? 0;
 
   const chargeNavLinks = navLinks.map((link) =>
-    link.to === "/charges" && pendingCount > 0
-      ? { ...link, badge: pendingCount }
-      : { ...link, badge: undefined },
+    link.to === "/charges" && pendingCount > 0 ? { ...link, badge: pendingCount } : { ...link, badge: undefined },
   );
 
   return (
@@ -94,7 +92,13 @@ export function AppLayout() {
             to={to}
             label={label}
             leftSection={<Icon size={18} />}
-            rightSection={badge ? <Badge size="xs" circle color="red">{badge}</Badge> : undefined}
+            rightSection={
+              badge ? (
+                <Badge size="xs" circle color="red">
+                  {badge}
+                </Badge>
+              ) : undefined
+            }
             active={currentPath === to}
             onClick={close}
           />
