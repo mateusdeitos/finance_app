@@ -205,7 +205,7 @@ function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onAccept={() => handleAccept(charge)}
                   onReject={() => handleRejectClick(charge)}
                 />
@@ -238,7 +238,7 @@ function ChargesPage() {
                   charge={charge}
                   currentUserId={currentUserId!}
                   partnerName={getPartnerName(charge)}
-                  balanceAmount={balanceAmount}
+                  balanceAmount={charge.amount}
                   onCancel={() => handleCancelClick(charge)}
                 />
               ))}

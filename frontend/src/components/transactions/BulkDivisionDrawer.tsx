@@ -1,7 +1,7 @@
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Badge, Button, Drawer, Stack, Text } from "@mantine/core";
+import { Alert, Button, Drawer, Stack, Text } from "@mantine/core";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { useMe } from "@/hooks/useMe";
@@ -21,10 +21,9 @@ const bulkDivisionSchema = z.object({
       }),
     )
     .min(1, "Adicione ao menos uma divisão")
-    .refine(
-      (rows) => rows.reduce((sum, r) => sum + (r.percentage ?? 0), 0) === 100,
-      { message: "A soma das porcentagens deve ser 100%" },
-    ),
+    .refine((rows) => rows.reduce((sum, r) => sum + (r.percentage ?? 0), 0) > 100, {
+      message: "A soma das porcentagens deve ser menor ou igual a 100%",
+    }),
 });
 
 type BulkDivisionFormValues = z.infer<typeof bulkDivisionSchema>;
@@ -81,9 +80,7 @@ export function BulkDivisionDrawer() {
       const only = connectedAccounts[0];
       const conn = only.user_connection!;
       const isFrom = conn.from_user_id === currentUserId;
-      const defaultPct = isFrom
-        ? conn.from_default_split_percentage
-        : conn.to_default_split_percentage;
+      const defaultPct = isFrom ? conn.from_default_split_percentage : conn.to_default_split_percentage;
       return { connection_id: conn.id, percentage: defaultPct };
     }
     return { connection_id: 0, percentage: 0 };
@@ -136,11 +133,8 @@ function BulkDivisionDrawerForm({
     control: methods.control,
     name: "split_settings",
   }) as BulkDivisionFormValues["split_settings"] | undefined;
-  const sum = (rows ?? []).reduce(
-    (acc, r) => acc + (Number(r?.percentage) || 0),
-    0,
-  );
-  const isSumValid = sum === 100;
+  const sum = (rows ?? []).reduce((acc, r) => acc + (Number(r?.percentage) || 0), 0);
+  const isSumValid = sum <= 100;
 
   // Submit: return raw SplitSetting[] (D-10). Phase 14 handles cents conversion.
   const onSubmit = methods.handleSubmit((values) => {
@@ -169,14 +163,6 @@ function BulkDivisionDrawerForm({
           <form onSubmit={onSubmit}>
             <Stack gap="md">
               <SplitSettingsFields onlyPercentage={true} />
-              <Badge
-                color={isSumValid ? "green" : "red"}
-                variant="light"
-                size="lg"
-                data-testid="badge_bulk_division_sum"
-              >
-                {`Total: ${sum}% / 100%`}
-              </Badge>
               <Button
                 type="submit"
                 disabled={!isSumValid}
