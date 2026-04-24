@@ -99,8 +99,8 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 
 	result, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	// expense: -1000, settlement credit: +500 → net = -500
-	suite.Assert().Equal(int64(-500), result.Balance)
+	// expense: -1000, fromTx: -500, settlement credit: +500 → net = -1000
+	suite.Assert().Equal(int64(-1000), result.Balance)
 }
 
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter() {
@@ -332,29 +332,29 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitBothDirectio
 	})
 	suite.Require().NoError(err)
 
-	// user1 balance: -1000 (own expense) + 500 (settlement credit) - 400 (linked from user2) = -900
+	// user1 balance: -1000 (own expense) - 500 (fromTx on conn, user1's split) + 500 (settlement credit) - 400 (toTx from user2's split) = -1400
 	result1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-900), result1.Balance)
+	suite.Assert().Equal(int64(-1400), result1.Balance)
 
-	// user2 balance: -800 (own expense) + 400 (settlement credit) - 500 (linked from user1) = -900
+	// user2 balance: -500 (toTx from user1's split) - 800 (own expense) - 400 (fromTx on conn, user2's split) + 400 (settlement credit) = -1300
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-900), result2.Balance)
+	suite.Assert().Equal(int64(-1300), result2.Balance)
 
-	// user1 balance in connection account: +500 (settlement credit) - 400 (linked from user2) = +100
+	// user1 balance in connection account: -500 (fromTx, user1's split) + 500 (settlement credit) - 400 (toTx from user2's split) = -400
 	resultUser1BalanceConnectionAccount, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(+100), resultUser1BalanceConnectionAccount.Balance)
+	suite.Assert().Equal(int64(-400), resultUser1BalanceConnectionAccount.Balance)
 
-	// user2 balance in connection account: +400 (settlement credit) - 500 (linked from user1) = -100
+	// user2 balance in connection account: -500 (toTx from user1's split) - 400 (fromTx, user2's split) + 400 (settlement credit) = -500
 	resultUser2BalanceConnectionAccount, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-100), resultUser2BalanceConnectionAccount.Balance)
+	suite.Assert().Equal(int64(-500), resultUser2BalanceConnectionAccount.Balance)
 }
 
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpense() {
@@ -389,12 +389,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 	})
 	suite.Require().NoError(err)
 
-	// initial connection account balance: settlement +500 (no expense on conn account)
+	// initial connection account balance: -500 (fromTx) + 500 (settlement credit) = 0
 	resultConn, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(500), resultConn.Balance)
+	suite.Assert().Equal(int64(0), resultConn.Balance)
 
 	resultConn2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
@@ -402,8 +402,8 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), resultConn2.Balance)
 
-	// find transaction ID
-	txs, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{UserID: &user1.ID})
+	// find transaction ID — filter by personal account to get the main tx only
+	txs, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{UserID: &user1.ID, AccountIDs: []int{personal1.ID}})
 	suite.Require().NoError(err)
 	suite.Require().Len(txs, 1)
 	txID := txs[0].ID
@@ -425,12 +425,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-3000), resultAccount1.Balance)
 
-	// after update, settlement must still land on conn.FromAccountID, not on personal1
+	// after update, conn account: -500 (fromTx, amount unchanged by update) + 3000 (settlement credit) = 2500
 	resultConn, err = suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(3000), resultConn.Balance)
+	suite.Assert().Equal(int64(2500), resultConn.Balance)
 
 	resultConn2, err = suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
@@ -475,12 +475,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	// user2 total: -1000 + 500 = -500
+	// user2 total: -1000 (expense) - 500 (fromTx) + 500 (settlement credit) = -1000
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-500), result2.Balance)
+	suite.Assert().Equal(int64(-1000), result2.Balance)
 
-	// user1 total: -500 (linked expense)
+	// user1 total: -500 (toTx from user2's split)
 	result1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), result1.Balance)
@@ -492,14 +492,14 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), result2Personal.Balance)
 
-	// user2 connection account (ToAccountID): +500 (settlement credit)
+	// user2 connection account (ToAccountID): -500 (fromTx) + 500 (settlement credit) = 0
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(500), result2Conn.Balance)
+	suite.Assert().Equal(int64(0), result2Conn.Balance)
 
-	// user1 connection account (FromAccountID): -500 (linked expense)
+	// user1 connection account (FromAccountID): -500 (toTx from user2's split)
 	result1Conn, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})
@@ -536,7 +536,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID})
+	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID, AccountIDs: []int{personal2.ID}})
 	suite.Require().NoError(err)
 	suite.Require().Len(txs, 1)
 
@@ -546,7 +546,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	// user2 total: -1000 (full expense, settlement gone)
+	// user2 total: -1000 (full expense, settlement and fromTx gone)
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-1000), result2.Balance)
@@ -600,7 +600,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID})
+	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID, AccountIDs: []int{personal2.ID}})
 	suite.Require().NoError(err)
 	suite.Require().Len(txs, 1)
 
@@ -612,12 +612,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	// user2 total: -4000 + 2000 = -2000
+	// user2 total: -4000 (expense) - 500 (fromTx, amount unchanged by update) + 2000 (settlement) = -2500
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-2000), result2.Balance)
+	suite.Assert().Equal(int64(-2500), result2.Balance)
 
-	// user1 total: -2000 (linked expense)
+	// user1 total: -2000 (toTx from user2's split)
 	result1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-2000), result1.Balance)
@@ -629,14 +629,14 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-2000), result2Personal.Balance)
 
-	// user2 connection account: +2000 (settlement credit after update)
+	// user2 connection account: -500 (fromTx, amount unchanged by update) + 2000 (settlement credit) = 1500
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(2000), result2Conn.Balance)
+	suite.Assert().Equal(int64(1500), result2Conn.Balance)
 
-	// user1 connection account: -2000 (linked expense after update)
+	// user1 connection account: -2000 (toTx from user2's split)
 	result1Conn, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})
@@ -674,7 +674,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID})
+	txs, err := suite.Services.Transaction.Search(ctx, user2.ID, period, domain.TransactionFilter{UserID: &user2.ID, AccountIDs: []int{personal2.ID}})
 	suite.Require().NoError(err)
 	suite.Require().Len(txs, 1)
 
@@ -686,24 +686,24 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	})
 	suite.Require().NoError(err)
 
-	// user2 total: -4000 + 3000 = -1000
+	// user2 total: -4000 + 3000 (settlement) = -1000 (fromTx deleted by SplitHasChanged)
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-1000), result2.Balance)
 
-	// user1 total: -3000 (linked expense, 75% of 4000)
+	// user1 total: -3000 (toTx, 75% of 4000)
 	result1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-3000), result1.Balance)
 
-	// user2 connection account (ToAccountID): +3000 (settlement credit)
+	// user2 connection account (ToAccountID): +3000 (settlement credit, fromTx deleted)
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(3000), result2Conn.Balance)
 
-	// user1 connection account (FromAccountID): -3000 (linked expense)
+	// user1 connection account (FromAccountID): -3000 (toTx)
 	result1Conn, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.FromAccountID},
 	})

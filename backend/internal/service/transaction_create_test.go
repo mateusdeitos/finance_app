@@ -847,6 +847,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {
@@ -867,16 +868,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, transactionsUser1[0].UserID)
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 1)
+	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 2)
 
-	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
-	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[0].CategoryID)
-	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[0].Amount))
-	suite.Assert().Equal(d, transactionsUser1[0].LinkedTransactions[0].Date)
-	suite.Assert().Equal("Test transaction", transactionsUser1[0].LinkedTransactions[0].Description)
-	suite.Assert().Equal(domain.TransactionTypeExpense, transactionsUser1[0].LinkedTransactions[0].Type)
-	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[0].UserID)
-	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[0].OriginalUserID))
+	// LinkedTransactions[0] is the fromTransaction (user1, conn.FromAccountID)
+	suite.Assert().Equal(userConnection.FromAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
+	suite.Assert().Equal(user1.ID, transactionsUser1[0].LinkedTransactions[0].UserID)
+	// LinkedTransactions[1] is the toTransaction (user2, conn.ToAccountID)
+	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[1].AccountID)
+	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[1].CategoryID)
+	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[1].Amount))
+	suite.Assert().Equal(d, transactionsUser1[0].LinkedTransactions[1].Date)
+	suite.Assert().Equal("Test transaction", transactionsUser1[0].LinkedTransactions[1].Description)
+	suite.Assert().Equal(domain.TransactionTypeExpense, transactionsUser1[0].LinkedTransactions[1].Type)
+	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[1].UserID)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
 	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
 	settlement := transactionsUser1[0].SettlementsFromSource[0]
@@ -885,7 +890,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
+	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[1].ID, settlement.ParentTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -963,6 +968,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {
@@ -981,16 +987,18 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 	suite.Assert().Equal(user1.ID, transactionsUser1[0].UserID)
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 1)
+	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 2)
 
-	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
-	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[0].CategoryID)
-	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[0].Amount))
-	suite.Assert().Equal(d, transactionsUser1[0].LinkedTransactions[0].Date)
-	suite.Assert().Equal("Shared income", transactionsUser1[0].LinkedTransactions[0].Description)
-	suite.Assert().Equal(domain.TransactionTypeIncome, transactionsUser1[0].LinkedTransactions[0].Type)
-	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[0].UserID)
-	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[0].OriginalUserID))
+	// LinkedTransactions[0] is the fromTransaction (user1, conn.FromAccountID)
+	// LinkedTransactions[1] is the toTransaction (user2, conn.ToAccountID)
+	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[1].AccountID)
+	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[1].CategoryID)
+	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[1].Amount))
+	suite.Assert().Equal(d, transactionsUser1[0].LinkedTransactions[1].Date)
+	suite.Assert().Equal("Shared income", transactionsUser1[0].LinkedTransactions[1].Description)
+	suite.Assert().Equal(domain.TransactionTypeIncome, transactionsUser1[0].LinkedTransactions[1].Type)
+	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[1].UserID)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
 	// Settlement should be debit for income (author owes partner)
 	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
@@ -1000,7 +1008,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
+	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[1].ID, settlement.ParentTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -1072,9 +1080,17 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	})
 	suite.Require().NoError(err)
 
-	suite.Require().Len(sharedOnly, 1, "shared-account view should surface the settlement as a synthetic entry")
-	synthetic := sharedOnly[0]
-	suite.Require().NotNil(synthetic.OriginSettlementID, "synthetic entry must carry origin_settlement_id")
+	suite.Require().Len(sharedOnly, 2, "shared-account view should surface the fromTransaction and the settlement as a synthetic entry")
+	// One entry is the fromTransaction (real linked tx on conn.FromAccountID), the other is the synthetic settlement.
+	// Find the synthetic entry (has OriginSettlementID set).
+	var synthetic *domain.Transaction
+	for _, tx := range sharedOnly {
+		if tx.OriginSettlementID != nil {
+			synthetic = tx
+			break
+		}
+	}
+	suite.Require().NotNil(synthetic, "should find synthetic settlement entry")
 	suite.Assert().Less(synthetic.ID, 0, "synthetic entry must have a negative sentinel id")
 	suite.Assert().Equal(userConnection.FromAccountID, synthetic.AccountID, "synthetic entry lives on the shared account")
 	suite.Assert().Equal(int64(amount/2), synthetic.Amount, "synthetic entry amount equals the settlement amount")
@@ -1131,10 +1147,18 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(both, 1, "combined filter must not duplicate the source transaction")
-	suite.Assert().Equal(account.ID, both[0].AccountID)
-	suite.Require().Len(both[0].SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
-	suite.Assert().Equal(userConnection.FromAccountID, both[0].SettlementsFromSource[0].AccountID)
+	suite.Require().Len(both, 2, "combined filter returns the source transaction and the fromTransaction on the shared account")
+	// Find the source transaction (on the personal account)
+	var sourceTx *domain.Transaction
+	for _, tx := range both {
+		if tx.AccountID == account.ID {
+			sourceTx = tx
+			break
+		}
+	}
+	suite.Require().NotNil(sourceTx)
+	suite.Require().Len(sourceTx.SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
+	suite.Assert().Equal(userConnection.FromAccountID, sourceTx.SettlementsFromSource[0].AccountID)
 
 	// Case 4: user2 filters by user1's FromAccountID — must return nothing,
 	// because the settlement's user_id scopes the query to user1.
@@ -1217,9 +1241,10 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user1.ID, transactionsUser1[0].UserID)
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[0].OriginalUserID))
 
-	// User2 (criador) não tem transação na própria conta
+	// User2 (criador) has the main expense on personal account + fromTransaction on conn.ToAccountID
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user2.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {

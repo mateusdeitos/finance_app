@@ -60,9 +60,10 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 	})
 	suite.Require().NoError(err)
 
-	// userA should have 1 transaction with 3 linked transactions
+	// userA should have 1 main transaction on personal account (plus 3 fromTransactions on connection accounts)
 	userATxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(userATxs, 1)
@@ -70,18 +71,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 	ownerTx := userATxs[0]
 	suite.Assert().Equal(amount, ownerTx.Amount)
 	suite.Assert().Equal(domain.TransactionTypeExpense, ownerTx.Type)
-	suite.Assert().Len(ownerTx.LinkedTransactions, 3, "should have 1 linked tx per connection")
+	suite.Assert().Len(ownerTx.LinkedTransactions, 6, "should have 2 linked txs per connection (from + to)")
 
 	expectedLinkedAmount := int64(float64(amount) * float64(splitPct) / 100)
 
-	for i, lt := range ownerTx.LinkedTransactions {
-		conn := connections[i]
-		suite.Assert().Equalf(expectedLinkedAmount, lt.Amount, "linked[%d].Amount", i)
-		suite.Assert().Equalf(domain.TransactionTypeExpense, lt.Type, "linked[%d].Type", i)
-		suite.Assert().Equalf(domain.OperationTypeDebit, lt.OperationType, "linked[%d].OperationType", i)
-		suite.Assert().Equalf(conn.ToAccountID, lt.AccountID, "linked[%d].AccountID", i)
-		suite.Assert().Equalf(conn.ToUserID, lt.UserID, "linked[%d].UserID", i)
-		suite.Assert().Equalf(userA.ID, lo.FromPtr(lt.OriginalUserID), "linked[%d].OriginalUserID", i)
+	// Each connection produces a fromTransaction (userA, FromAccountID) and toTransaction (partner, ToAccountID)
+	// They are appended in order: [from0, to0, from1, to1, from2, to2]
+	for i, conn := range connections {
+		toTx := ownerTx.LinkedTransactions[i*2+1] // toTransaction is at odd indices
+		suite.Assert().Equalf(expectedLinkedAmount, toTx.Amount, "linked[%d].Amount", i)
+		suite.Assert().Equalf(domain.TransactionTypeExpense, toTx.Type, "linked[%d].Type", i)
+		suite.Assert().Equalf(domain.OperationTypeDebit, toTx.OperationType, "linked[%d].OperationType", i)
+		suite.Assert().Equalf(conn.ToAccountID, toTx.AccountID, "linked[%d].AccountID", i)
+		suite.Assert().Equalf(conn.ToUserID, toTx.UserID, "linked[%d].UserID", i)
+		suite.Assert().Equalf(userA.ID, lo.FromPtr(toTx.OriginalUserID), "linked[%d].OriginalUserID", i)
 	}
 
 	// Each partner should also have 1 transaction in their own view

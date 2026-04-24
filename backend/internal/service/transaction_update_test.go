@@ -2401,8 +2401,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 3)
@@ -2763,8 +2764,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 3)
@@ -2799,7 +2801,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 	suite.Assert().Nil(updatedT1.TransactionRecurrenceID)
 	suite.Assert().Len(updatedT1.LinkedTransactions, 0)
 
-	// total: 1 transaction only
+	// total: 1 transaction only (fromTxs also deleted with split removal)
 	allUserA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
 	suite.Assert().Len(allUserA, 1)
@@ -2850,8 +2852,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 3)
@@ -2880,8 +2883,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 	suite.Assert().Equal(installment3.ID, remaining[1].ID)
 
 	for i, t := range remaining {
-		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should still have its linked transaction", i+1)
-		suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
+		suite.Assert().Len(t.LinkedTransactions, 2, "installment %d should still have its linked transactions (from + to)", i+1)
 	}
 
 	// installment 2 must be standalone without split
@@ -2892,10 +2894,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 	suite.Assert().Nil(updatedT2.TransactionRecurrenceID)
 	suite.Assert().Len(updatedT2.LinkedTransactions, 0)
 
-	// total: 5 transactions (2 userA in recurrence + 2 userB linked + 1 userA standalone)
+	// total: userA has 3 main txs + 2 fromTxs (installments 1,3 still have split) = 5
 	allUserA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
-	suite.Assert().Len(allUserA, 3)
+	suite.Assert().Len(allUserA, 5)
 
 	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
 	suite.Require().NoError(err)
@@ -2942,8 +2944,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 3)
@@ -2966,15 +2969,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 
 	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:        &userA.ID,
+		AccountIDs:    []int{accountA.ID},
 		RecurrenceIDs: []int{recurrenceID},
 		SortBy:        &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Len(installmentsAfter, 5, "userA should have 5 installments")
 
+	// Installments 1-3 (original) have from+to linked txs from Create; 4-5 (new) have only toTx
 	for i, t := range installmentsAfter {
-		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction", i+1)
-		suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
+		if i < 3 {
+			suite.Assert().Len(t.LinkedTransactions, 2, "installment %d should have 2 linked transactions (from + to)", i+1)
+		} else {
+			suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction (to only)", i+1)
+			suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
+		}
 	}
 
 	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
@@ -3022,8 +3031,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 5)
@@ -3897,8 +3907,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 	suite.Require().NoError(err)
 
 	beforeA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(beforeA, 9, "userA should have 9 installments")
@@ -3919,16 +3930,16 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 	suite.Require().NoError(err)
 
 	afterA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Len(afterA, 9, "userA should still have 9 installments")
 
 	for i, t := range afterA {
 		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "userA installment[%d]", i)
-		suite.Assert().Len(t.LinkedTransactions, 1, "userA installment[%d] should have 1 linked tx", i)
-		suite.Assert().Equal(4+i, lo.FromPtr(t.LinkedTransactions[0].InstallmentNumber), "userB linked installment[%d]", i)
+		suite.Assert().Len(t.LinkedTransactions, 2, "userA installment[%d] should have 2 linked txs (from + to)", i)
 	}
 }
 
@@ -3969,12 +3980,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 
 	// Fetch the created transaction to get the linked transaction ID
 	parentTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 1, "parent transaction should have one linked transaction")
+	suite.Require().Len(parentTx.LinkedTransactions, 2, "parent transaction should have two linked transactions (from + to)")
 
-	linkedTxID := parentTx.LinkedTransactions[0].ID
+	// Find the toTransaction (userB's linked tx)
+	var linkedTxID int
+	for _, lt := range parentTx.LinkedTransactions {
+		if lt.UserID == userB.ID {
+			linkedTxID = lt.ID
+			break
+		}
+	}
+	suite.Require().NotZero(linkedTxID, "should find userB's linked tx")
 
 	assertDisallowedFieldError := func(desc string, updateReq *domain.TransactionUpdateRequest) {
 		suite.Run(desc, func() {
@@ -4063,12 +4083,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	parentTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 1)
+	suite.Require().Len(parentTx.LinkedTransactions, 2)
 
-	linkedTxID := parentTx.LinkedTransactions[0].ID
+	// Find the toTransaction (userB's linked tx)
+	var linkedTxID int
+	for _, lt := range parentTx.LinkedTransactions {
+		if lt.UserID == userB.ID {
+			linkedTxID = lt.ID
+			break
+		}
+	}
+	suite.Require().NotZero(linkedTxID, "should find userB's linked tx")
 
 	categoryB, err := suite.createTestCategory(ctx, userB)
 	suite.Require().NoError(err)
@@ -4130,12 +4159,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	parentTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 1)
+	suite.Require().Len(parentTx.LinkedTransactions, 2)
 
-	linkedTxID := parentTx.LinkedTransactions[0].ID
+	// Find the toTransaction (userB's linked tx)
+	var linkedTxID int
+	for _, lt := range parentTx.LinkedTransactions {
+		if lt.UserID == userB.ID {
+			linkedTxID = lt.ID
+			break
+		}
+	}
+	suite.Require().NotZero(linkedTxID, "should find userB's linked tx")
 
 	updateReq := &domain.TransactionUpdateRequest{
 		Tags:                []domain.Tag{{Name: "linked-test-tag"}},
@@ -4191,16 +4229,25 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 
 	// Get userA's first installment (which has the linked transaction for userB)
 	userATransactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(userATransactions, 3, "userA should have 3 installments")
 
 	firstInstallment := userATransactions[0]
-	suite.Require().Len(firstInstallment.LinkedTransactions, 1, "first installment should have linked tx")
+	suite.Require().Len(firstInstallment.LinkedTransactions, 2, "first installment should have 2 linked txs (from + to)")
 
-	linkedTxID := firstInstallment.LinkedTransactions[0].ID
+	// Find the toTransaction (userB's linked tx)
+	var linkedTxID int
+	for _, lt := range firstInstallment.LinkedTransactions {
+		if lt.UserID == userB.ID {
+			linkedTxID = lt.ID
+			break
+		}
+	}
+	suite.Require().NotZero(linkedTxID, "should find userB's linked tx")
 	originalUserADate := firstInstallment.Date
 
 	// userB shifts the linked transaction's date forward by 5 days, propagation=all
@@ -4215,8 +4262,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 
 	// Verify userA's installments are UNCHANGED
 	userAAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(userAAfter, 3, "userA should still have 3 installments")
@@ -4275,16 +4323,25 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 
 	// Get userA's first installment to find the linked transaction
 	userATransactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(userATransactions, 3, "userA should have 3 installments")
 
 	firstInstallment := userATransactions[0]
-	suite.Require().Len(firstInstallment.LinkedTransactions, 1)
+	suite.Require().Len(firstInstallment.LinkedTransactions, 2)
 
-	linkedTxID := firstInstallment.LinkedTransactions[0].ID
+	// Find the toTransaction (userB's linked tx)
+	var linkedTxID int
+	for _, lt := range firstInstallment.LinkedTransactions {
+		if lt.UserID == userB.ID {
+			linkedTxID = lt.ID
+			break
+		}
+	}
+	suite.Require().NotZero(linkedTxID, "should find userB's linked tx")
 
 	// userB changes the description with propagation=all
 	newDesc := "userB changed this description"
@@ -4298,8 +4355,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 
 	// Verify userA's transactions retain the original description
 	userAAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(userAAfter, 3, "userA should still have 3 installments")
@@ -4364,8 +4422,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 	suite.Require().NoError(err)
 
 	installmentsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsBefore, 4)
@@ -4387,8 +4446,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 
 	// All 4 userA installments must remain in the SAME recurrence with ORIGINAL numbers.
 	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Len(installmentsAfter, 4, "userA should still have 4 installments")
@@ -4401,8 +4461,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 
 	// Installments 1 and 2 keep the split; 3 and 4 have the split removed.
 	for i := range 2 {
-		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 1,
-			"installment %d should keep split", i+1)
+		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 2,
+			"installment %d should keep split (from + to)", i+1)
 	}
 	for i := 2; i < 4; i++ {
 		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 0,
