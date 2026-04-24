@@ -485,12 +485,12 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), result1.Balance)
 
-	// user2 personal account: expense -1000 (no settlement on personal account, settlement is on conn account)
+	// user2 personal account: expense -1000 + settlement credit +500 (source tx on personal2 is included in balance) = -500
 	result2Personal, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal2.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-1000), result2Personal.Balance)
+	suite.Assert().Equal(int64(-500), result2Personal.Balance)
 
 	// user2 connection account (ToAccountID): -500 (fromTx) + 500 (settlement toTx only) = 0
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
