@@ -31,7 +31,7 @@ export class ImportPage {
     const input = this.uploadStep.getByTestId(ImportTestIds.SelectAccount);
     await input.click();
     // Mantine Select options are portalled — documented escape (see Phase 7 plan).
-    await this.page.getByRole("option", { name: accountName }).click();
+    await this.page.getByRole("option", { name: accountName }).first().click();
   }
 
   /** Upload a CSV file by writing content into the hidden file input. */

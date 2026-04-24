@@ -9,8 +9,19 @@ import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { SettlementRow } from "./SettlementRow";
 import { TransactionRow } from "./TransactionRow";
 import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
+import { UpdateLinkedSplitDrawer } from "./UpdateLinkedSplitDrawer";
+import { UpdateLinkedTransferDrawer } from "./UpdateLinkedTransferDrawer";
 import { FocusField } from "./form/TransactionForm";
 import classes from "./TransactionGroup.module.css";
+
+function getLinkedMode(
+  tx: Transactions.Transaction,
+  currentUserId: number,
+): "transfer" | "split" | null {
+  if (tx.original_user_id == null || tx.original_user_id === currentUserId)
+    return null;
+  return tx.type === "transfer" ? "transfer" : "split";
+}
 
 // For transfers between accounts of the same user, the debit side is the
 // origin; editing the credit side is rejected by the backend as a linked
@@ -56,10 +67,25 @@ export function TransactionGroup({
 }: TransactionGroupProps) {
   const isSelectionActive = (selectedIds?.size ?? 0) > 0;
 
+  function renderLinkedDrawer(tx: Transactions.Transaction) {
+    const mode = getLinkedMode(tx, currentUserId);
+    if (mode === "transfer") {
+      void renderDrawer(() => <UpdateLinkedTransferDrawer transaction={tx} />);
+      return true;
+    }
+    if (mode === "split") {
+      void renderDrawer(() => <UpdateLinkedSplitDrawer transaction={tx} />);
+      return true;
+    }
+    return false;
+  }
+
   function openEditDrawer(
     tx: Transactions.Transaction,
     focusField?: FocusField
   ) {
+    if (renderLinkedDrawer(tx)) return;
+
     const debitId = needsFetchToDebitOrigin(tx);
     if (debitId == null) {
       void renderDrawer(() => (

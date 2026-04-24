@@ -10,9 +10,14 @@ export const TransactionsTestIds = {
   MenuItemImportTransactions: 'menu_item_import_transactions',
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,
 
-  // Drawers (create / update)
+  // Drawers (create / update / linked)
   DrawerCreate: 'drawer_create_transaction',
   DrawerUpdate: 'drawer_update_transaction',
+  DrawerUpdateLinkedSplit: 'drawer_update_linked_split',
+  DrawerUpdateLinkedTransfer: 'drawer_update_linked_transfer',
+
+  // Form errors
+  AlertFormError: 'alert_form_error',
 
   // Form fields
   InputAmount: 'input_amount',

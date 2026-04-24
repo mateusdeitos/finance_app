@@ -10,11 +10,15 @@ import { Transactions } from "@/types/transactions";
 import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { buildTransactionPayload } from "@/utils/buildTransactionPayload";
-import { updateTransactionFormSchema, UpdateTransactionFormValues, TransactionFormValues } from "./form/transactionFormSchema";
+import {
+  updateTransactionFormSchema,
+  UpdateTransactionFormValues,
+  TransactionFormValues,
+} from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
 import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
 import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
-import { TransactionsTestIds } from '@/testIds'
+import { TransactionsTestIds } from "@/testIds";
 
 interface Props {
   transaction: Transactions.Transaction;
@@ -42,8 +46,19 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       return [{ connection_id: acc.user_connection.id, amount: lt.amount }];
     });
 
-  const destinationAccountId =
-    transaction.type != "transfer" ? null : transaction?.linked_transactions?.[0]?.account_id;
+  const {
+    query: { data: destinationAccount },
+  } = useAccounts((accounts) => {
+    if (transaction.type !== "transfer") return null;
+    return accounts.find((a) => {
+      const ids = [a.id];
+      if (a.user_connection) {
+        ids.push(a.user_connection?.from_account_id, a.user_connection?.to_account_id);
+      }
+
+      return ids.includes(transaction.linked_transactions![0].account_id);
+    });
+  });
 
   const isRecurring = transaction.transaction_recurrence_id != null;
 
@@ -56,7 +71,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       amount: transaction.amount,
       account_id: transaction.account_id,
       category_id: transaction.category_id ?? null,
-      destination_account_id: destinationAccountId,
+      destination_account_id: destinationAccount?.id ?? null,
       tags: (transaction.tags ?? []).map((t) => t.name),
       split_settings: initialSplitSettings,
       recurrenceEnabled: !!transaction.transaction_recurrence?.id,
@@ -73,6 +88,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   function submitTransaction(values: UpdateTransactionFormValues, onSuccess: () => void) {
     setSubmitError(undefined);
     const payload = buildTransactionPayload(values, existingTags);
+
     mutation.mutate(
       {
         id: transaction.id,
@@ -125,9 +141,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
                 <Controller
                   control={methods.control}
                   name="propagation_settings"
-                  render={({ field }) => (
-                    <UpdatePropagationSelector value={field.value} onChange={field.onChange} />
-                  )}
+                  render={({ field }) => <UpdatePropagationSelector value={field.value} onChange={field.onChange} />}
                 />
               </Stack>
             ) : undefined

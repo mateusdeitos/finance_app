@@ -4,11 +4,15 @@ export class TransactionsPage {
   readonly page: Page;
   readonly formDrawer: Locator;
   readonly updateDrawer: Locator;
+  readonly linkedSplitDrawer: Locator;
+  readonly linkedTransferDrawer: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.formDrawer = page.getByTestId(TransactionsTestIds.DrawerCreate);
     this.updateDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdate);
+    this.linkedSplitDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedSplit);
+    this.linkedTransferDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedTransfer);
   }
 
   async goto() {
@@ -41,26 +45,47 @@ export class TransactionsPage {
     await expect(this.updateDrawer).toBeVisible({ timeout: 8000 });
   }
 
+  async waitForLinkedSplitDrawer() {
+    await expect(this.linkedSplitDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  async waitForLinkedTransferDrawer() {
+    await expect(this.linkedTransferDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Assert no form error alert is visible. Call after submit to catch validation/API errors early. */
+  async assertNoFormErrors() {
+    await expect(this.page.getByTestId(TransactionsTestIds.AlertFormError)).not.toBeVisible();
+  }
+
   /** Clear the description input and type a new value. */
   async clearAndFillDescription(description: string) {
     const input = this.updateDrawer.getByTestId(TransactionsTestIds.InputDescription);
     await input.fill(description);
   }
 
-  /** Replace amount in the update form by selecting all and pressing digits. */
-  async clearAndFillAmount(amountCents: number) {
-    const input = this.updateDrawer.getByTestId(TransactionsTestIds.InputAmount);
+  /** Replace amount in the update form by clearing with backspace then typing digits. */
+  async clearAndFillAmount(amountCents: number, drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    const input = container.getByTestId(TransactionsTestIds.InputAmount);
     await input.click();
-    await input.press("Control+a");
+    // Move to end and backspace to clear — Control+a doesn't work in this input
+    await input.press("End");
+    const currentValue = await input.inputValue();
+    for (let i = 0; i < currentValue.length; i++) {
+      await input.press("Backspace");
+    }
     for (const digit of String(amountCents)) {
       await input.press(digit);
     }
   }
 
   /** Click save in the update drawer and wait for it to close. */
-  async submitUpdate() {
-    await this.updateDrawer.getByTestId(TransactionsTestIds.BtnSave).click();
-    await expect(this.updateDrawer).not.toBeVisible({ timeout: 10000 });
+  async submitUpdate(drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    await container.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.assertNoFormErrors();
+    await expect(container).not.toBeVisible({ timeout: 10000 });
   }
 
   /** Select a propagation option in the update drawer. */
@@ -114,15 +139,17 @@ export class TransactionsPage {
     // Mantine Select options are portalled and aren't instrumented with a
     // testid; getByRole('option') is the documented fallback until we switch
     // Select consumers to renderOption with explicit testids.
-    await this.page.getByRole("option", { name: accountName }).click();
+    await this.page.getByRole("option", { name: accountName }).first().click();
   }
 
-  async selectCategory(categoryName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectCategory);
+  async selectCategory(categoryName: string, drawer?: Locator) {
+    const container = drawer ?? this.page;
+    const input = container.getByTestId(TransactionsTestIds.SelectCategory);
     await input.click();
     await input.fill(categoryName);
     await this.page
       .getByRole("option", { name: new RegExp(categoryName) })
+      .first()
       .click();
   }
 
@@ -161,7 +188,7 @@ export class TransactionsPage {
     const input = this.page.getByTestId(TransactionsTestIds.SelectDestinationAccount);
     await input.click();
     await input.fill(accountName);
-    await this.page.getByRole("option", { name: accountName }).click();
+    await this.page.getByRole("option", { name: accountName }).first().click();
   }
 
   async fillTransfer(
