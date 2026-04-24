@@ -1,14 +1,11 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { ImportPage } from "../pages/ImportPage";
 import {
-  apiCreateAccount,
-  apiDeleteAccount,
-  apiCreateCategory,
-  apiDeleteCategory,
-  apiCreateUserConnection,
   getAuthTokenForUser,
   apiFetchAs,
+  openAuthedPage,
 } from "../helpers/api";
+import { ImportTestIds, TransactionsTestIds } from "@/testIds";
 
 /**
  * Import Split Settings E2E Tests
@@ -17,6 +14,9 @@ import {
  * configured row does not send both percentage AND amount to the API.
  *
  * Requires multi-user setup (user connection needed for splits).
+ *
+ * Uses a fresh unique primary user per test run so the user has exactly one
+ * connection — guaranteeing the auto-select in the split popover triggers.
  */
 
 const CSV_HEADER = "Data;Descrição;Valor";
@@ -25,67 +25,85 @@ function buildCsvContent(rows: string[][]): string {
   return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
 }
 
-const PARTNER_EMAIL = `e2e-split-import-${Date.now()}@financeapp.local`;
-
 test.describe("Import with split settings", () => {
   let importPage: ImportPage;
+  let primaryToken: string;
   let testAccountId: number;
   let testAccountName: string;
   let testCategoryId: number;
   let testCategoryName: string;
+  let customPage: Page;
 
   test.beforeAll(async () => {
-    // 1. Create test account
-    testAccountName = `Conta Split Import ${Date.now()}`;
-    const account = await apiCreateAccount({
-      name: testAccountName,
-      initial_balance: 0,
+    // Use unique emails per run so each test run starts with a clean user
+    // that has exactly one connection — required for the auto-select to trigger.
+    const ts = Date.now();
+    const PRIMARY_EMAIL = `e2e-split-primary-${ts}@financeapp.local`;
+    const PARTNER_EMAIL = `e2e-split-partner-${ts}@financeapp.local`;
+
+    // 1. Create fresh primary user and get their token
+    primaryToken = await getAuthTokenForUser(PRIMARY_EMAIL);
+
+    // 2. Create test account for the primary user
+    testAccountName = `Conta Split Import ${ts}`;
+    const accountRes = await apiFetchAs(primaryToken, "/api/accounts", {
+      method: "POST",
+      body: JSON.stringify({ name: testAccountName, initial_balance: 0 }),
     });
+    const account = await accountRes.json();
     testAccountId = account.id;
 
-    // 2. Create test category
-    testCategoryName = `Cat Split Import ${Date.now()}`;
-    const category = await apiCreateCategory({ name: testCategoryName });
+    // 3. Create test category for the primary user
+    testCategoryName = `Cat Split Import ${ts}`;
+    const categoryRes = await apiFetchAs(primaryToken, "/api/categories", {
+      method: "POST",
+      body: JSON.stringify({ name: testCategoryName }),
+    });
+    const category = await categoryRes.json();
     testCategoryId = category.id;
 
-    // 3. Auth as partner, create their account
+    // 4. Create partner user and their account
     const partnerToken = await getAuthTokenForUser(PARTNER_EMAIL);
     await apiFetchAs(partnerToken, "/api/accounts", {
       method: "POST",
-      body: JSON.stringify({
-        name: `Partner Split ${Date.now()}`,
-        initial_balance: 0,
-      }),
+      body: JSON.stringify({ name: `Partner Split ${ts}`, initial_balance: 0 }),
     });
 
-    // 4. Get partner user ID
+    // 5. Get partner user ID
     const meRes = await apiFetchAs(partnerToken, "/api/auth/me");
-    const partnerUser = await meRes.json();
+    const partnerUser = (await meRes.json()) as { id: number };
 
-    // 5. Primary user creates connection to partner
-    const conn = await apiCreateUserConnection(partnerUser.id, 50);
+    // 6. Primary user creates connection to partner
+    const connRes = await apiFetchAs(primaryToken, "/api/user-connections", {
+      method: "POST",
+      body: JSON.stringify({ to_user_id: partnerUser.id, from_default_split_percentage: 50 }),
+    });
+    const conn = (await connRes.json()) as { id: number };
 
-    // 6. Partner accepts the connection
-    await apiFetchAs(
-      partnerToken,
-      `/api/user-connections/${conn.id}/accepted`,
-      { method: "PATCH" },
-    );
+    // 7. Partner accepts the connection
+    await apiFetchAs(partnerToken, `/api/user-connections/${conn.id}/accepted`, { method: "PATCH" });
   });
 
   test.afterAll(async () => {
-    await apiDeleteCategory(testCategoryId).catch(() => undefined);
-    await apiDeleteAccount(testAccountId).catch(() => undefined);
+    // Clean up primary user's resources using their token
+    await apiFetchAs(primaryToken, `/api/categories/${testCategoryId}`, { method: "DELETE" }).catch(() => undefined);
+    await apiFetchAs(primaryToken, `/api/accounts/${testAccountId}`, { method: "DELETE" }).catch(() => undefined);
   });
 
-  test.beforeEach(async ({ page }) => {
-    importPage = new ImportPage(page);
+  test.beforeEach(async ({ browser }) => {
+    // Open a page authenticated as the fresh primary user (not the shared e2e user)
+    customPage = await openAuthedPage(browser, primaryToken);
+    importPage = new ImportPage(customPage);
     await importPage.goto();
   });
 
-  test("reopening split popover does not cause percentage+amount conflict on import", async ({
-    page,
-  }) => {
+  test.afterEach(async () => {
+    // Close the custom browser context to avoid resource leaks
+    await customPage?.context().close().catch(() => undefined);
+  });
+
+  test("reopening split popover does not cause percentage+amount conflict on import", async () => {
+    const page = customPage;
     const description = `Split Reopen ${Date.now()}`;
     const csv = buildCsvContent([["15/01/2026", description, "-100,00"]]);
 
@@ -101,26 +119,22 @@ test.describe("Import with split settings", () => {
     await expect(splitButton).toBeVisible({ timeout: 5000 });
     await splitButton.click();
 
-    // The split popover renders as role="dialog" (unlike Mantine Select dropdowns)
-    const popover = page.locator('.mantine-Popover-dropdown[role="dialog"]');
+    // The split popover dropdown
+    const popover = page.getByTestId(ImportTestIds.SplitPopoverDropdown(0));
     await expect(popover).toBeVisible({ timeout: 5000 });
 
-    // Add a split entry
-    await popover.getByText("+ Adicionar divisão").click();
+    // Add a split entry — only one connection exists so it is auto-selected
+    await popover.getByTestId(TransactionsTestIds.BtnAddSplitRow).click();
 
-    // Select the connection account from the dropdown inside the popover
-    await popover.getByPlaceholder("Selecionar conta").click();
-    await page.getByRole("option").first().click();
-
-    // Wait for the split to be configured (percentage input appears)
-    await expect(popover.locator('input[type="text"]').first()).toBeVisible();
+    // Wait for the split to be configured (percentage input appears after auto-select)
+    await expect(popover.getByTestId(TransactionsTestIds.InputSplitPercentage)).toBeVisible();
 
     // Close the popover — click the page title area which is always visible
     await page.getByText("Revisão da importação").click({ force: true });
     await expect(popover).not.toBeVisible({ timeout: 5000 });
 
-    // After configuring, the button text changes from "Sem divisão" to a summary
-    // Re-locate the split button in the same cell
+    // After configuring, the button text changes from "Sem divisão" to a summary.
+    // Re-locate the split button in the same cell.
     const splitButtonAfter = importPage.reviewStep
       .locator('[data-row-index="0"]')
       .locator("td")
@@ -140,8 +154,6 @@ test.describe("Import with split settings", () => {
     await importPage.confirmImport();
 
     // Verify success (no error about percentage and amount together)
-    await expect(
-      page.getByText("Importação concluída com sucesso"),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Importação concluída com sucesso")).toBeVisible({ timeout: 15000 });
   });
 });

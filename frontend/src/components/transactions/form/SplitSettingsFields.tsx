@@ -365,7 +365,13 @@ export function SplitSettingsFields({
             type="button"
             size="sm"
             c="dimmed"
-            onClick={() => append({ connection_id: 0, amount: 0 })}
+            onClick={() => {
+              const available = connectedAccounts.filter(
+                (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id),
+              );
+              const connectionId = available.length === 1 ? available[0].user_connection!.id : 0;
+              append({ connection_id: connectionId, amount: 0 });
+            }}
             style={{ alignSelf: "flex-start" }}
             data-testid={TransactionsTestIds.BtnAddSplitRow}
           >

@@ -365,6 +365,7 @@ export const ImportReviewRow = memo(
               hasSplit={!!splitSettings?.length}
               disabled={disabled || isSkipped}
               rowAmount={amount as number}
+              rowIndex={rowIndex}
             />
           ) : (
             <Text fz="xs" c="dimmed">

@@ -179,6 +179,27 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 	}
 
+	// When a linked transaction's amount is edited, propagate the new amount to its
+	// source transactions (the original author's entry) and all of their linked
+	// transactions so every side of the transfer/split stays in sync.
+	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
+		for _, sourceID := range sourceIDs {
+			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
+				IDs: []int{sourceID},
+			})
+			if err != nil {
+				return pkgErrors.Internal("failed to fetch source transaction for amount propagation", err)
+			}
+			sourceTx.Amount = *req.Amount
+			for j := range sourceTx.LinkedTransactions {
+				sourceTx.LinkedTransactions[j].Amount = *req.Amount
+			}
+			if err := s.transactionRepo.Update(ctx, sourceTx); err != nil {
+				return err
+			}
+		}
+	}
+
 	return s.dbTransaction.Commit(ctx)
 }
 
@@ -587,10 +608,33 @@ func (s *transactionService) rebuildTransactions(
 				}
 			}
 
-			userID := data.transactions[i].UserID
+			data.transactions[i].Type = domain.TransactionTypeTransfer
+			data.transactions[i].OperationType = domain.OperationTypeDebit
+			data.transactions[i].CategoryID = nil
+			data.transactions[i].AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &data.transactions[i].AccountID))
+			data.transactions[i].Amount = baseAmount
+
 			accountID := *data.req.DestinationAccountID
 
-			if !data.scenario.IsTransferToSameUser() {
+			if data.scenario.IsTransferToSameUser() {
+				data.transactions[i].LinkedTransactions = []domain.Transaction{
+					{
+						ID:             0,
+						Date:           data.transactions[i].Date,
+						Description:    data.transactions[i].Description,
+						UserID:         data.transactions[i].UserID,
+						OriginalUserID: data.transactions[i].OriginalUserID,
+						Type:           domain.TransactionTypeTransfer,
+						OperationType:  domain.OperationTypeCredit,
+						AccountID:      accountID,
+						CategoryID:     nil,
+						Amount:         baseAmount,
+						Tags:           data.transactions[i].Tags,
+						CreatedAt:      nil,
+						UpdatedAt:      nil,
+					},
+				}
+			} else {
 				c, err := s.getConnectionFromDestinationAccountID(ctx, data.userID, accountID)
 				if err != nil {
 					return err
@@ -598,32 +642,25 @@ func (s *transactionService) rebuildTransactions(
 
 				c.SwapIfNeeded(data.userID)
 
-				userID = c.ToUserID
-				accountID = c.ToAccountID
-			}
-
-			data.transactions[i].Type = domain.TransactionTypeTransfer
-			data.transactions[i].OperationType = domain.OperationTypeDebit
-			data.transactions[i].CategoryID = nil
-			data.transactions[i].AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &data.transactions[i].AccountID))
-			data.transactions[i].Amount = baseAmount
-
-			data.transactions[i].LinkedTransactions = []domain.Transaction{
-				{
-					ID:             0,
-					Date:           data.transactions[i].Date,
-					Description:    data.transactions[i].Description,
-					UserID:         userID,
-					OriginalUserID: data.transactions[i].OriginalUserID,
-					Type:           domain.TransactionTypeTransfer,
-					OperationType:  domain.OperationTypeCredit,
-					AccountID:      accountID,
-					CategoryID:     nil,
-					Amount:         baseAmount,
-					Tags:           lo.Ternary(data.scenario.IsTransferToSameUser(), data.transactions[i].Tags, []domain.Tag{}),
-					CreatedAt:      nil,
-					UpdatedAt:      nil,
-				},
+				// Cross-user transfer: only the receiver's credit side is a linked transaction.
+				// The sender's debit is already the main transaction — no extra linked tx needed.
+				data.transactions[i].LinkedTransactions = []domain.Transaction{
+					{
+						ID:             0,
+						Date:           data.transactions[i].Date,
+						Description:    data.transactions[i].Description,
+						UserID:         c.ToUserID,
+						OriginalUserID: data.transactions[i].OriginalUserID,
+						Type:           domain.TransactionTypeTransfer,
+						OperationType:  domain.OperationTypeCredit,
+						AccountID:      c.ToAccountID,
+						CategoryID:     nil,
+						Amount:         baseAmount,
+						Tags:           []domain.Tag{},
+						CreatedAt:      nil,
+						UpdatedAt:      nil,
+					},
+				}
 			}
 		} else if data.scenario.TypeChanged() {
 			data.transactions[i].SetType(*data.req.TransactionType)
@@ -989,8 +1026,8 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, transaction.ID)
 	isLinkedTransaction := len(sourceIDs) > 0
 	if isLinkedTransaction {
-		disallowedFieldSet := req.Amount != nil ||
-			lo.FromPtr(req.AccountID) > 0 ||
+		// amount, date, description, tags and category_id are allowed for linked tx edits.
+		disallowedFieldSet := lo.FromPtr(req.AccountID) > 0 ||
 			req.TransactionType != nil ||
 			req.RecurrenceSettings != nil ||
 			len(req.SplitSettings) > 0 ||

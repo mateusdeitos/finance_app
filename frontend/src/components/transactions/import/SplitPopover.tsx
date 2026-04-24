@@ -3,6 +3,7 @@ import { Popover, Button, Stack } from "@mantine/core";
 import { useFormContext, useForm, FormProvider } from "react-hook-form";
 import type { ImportFormValues, ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
 import { SplitSettingsFields } from "../form/SplitSettingsFields";
+import { ImportTestIds } from "@/testIds";
 
 // ─── SplitPopover ─────────────────────────────────────────────────────────────
 interface SplitLocalValues {
@@ -15,8 +16,9 @@ interface SplitPopoverProps {
   hasSplit: boolean;
   disabled: boolean;
   rowAmount: number;
+  rowIndex: number;
 }
-export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount }: SplitPopoverProps) {
+export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount, rowIndex }: SplitPopoverProps) {
   const parentForm = useFormContext<ImportFormValues>();
 
   const localForm = useForm<SplitLocalValues>({
@@ -48,11 +50,11 @@ export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmoun
     <FormProvider {...localForm}>
       <Popover trapFocus closeOnClickOutside withinPortal closeOnEscape onClose={handleClose} onOpen={handleOpen}>
         <Popover.Target>
-          <Button size="xs" variant={hasSplit ? "light" : "default"} disabled={disabled} fullWidth>
+          <Button size="xs" variant={hasSplit ? "light" : "default"} disabled={disabled} fullWidth data-testid={ImportTestIds.RowBtnSplitPopover(rowIndex)}>
             {summary}
           </Button>
         </Popover.Target>
-        <Popover.Dropdown>
+        <Popover.Dropdown data-testid={ImportTestIds.SplitPopoverDropdown(rowIndex)}>
           <Stack gap="xs" w={320}>
             <SplitSettingsFields namePrefix="" comboboxWithinPortal={false} />
           </Stack>

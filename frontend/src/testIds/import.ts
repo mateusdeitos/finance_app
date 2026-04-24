@@ -36,6 +36,12 @@ export const ImportTestIds = {
   RecurrencePopoverDropdown: (rowIndex: number) =>
     `recurrence_popover_dropdown_${rowIndex}` as const,
 
+  // Split popover (per-row)
+  RowBtnSplitPopover: (rowIndex: number) =>
+    `btn_split_popover_${rowIndex}` as const,
+  SplitPopoverDropdown: (rowIndex: number) =>
+    `split_popover_dropdown_${rowIndex}` as const,
+
   // Category-creation drawer (mounted from the import flow)
   DrawerCreateCategory: 'drawer_create_category',
   BtnNewCategoryInDrawer: 'btn_new_category_in_drawer',
