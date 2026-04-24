@@ -982,7 +982,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
-	// Build expected linked transactions: for each connection, fromTx (user, FromAccountID) + toTx (partner, ToAccountID)
+	// Build expected linked transactions: all fromTx first (same user), then all toTx (partner users)
 	expectedLinkedTxsOwn := make([]domain.Transaction, 0, 2*len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
@@ -1000,6 +1000,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 			InstallmentNumber:       nil,
 			LinkedTransactions:      []domain.Transaction{},
 		})
+	}
+	for _, connection := range connections {
 		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
 			Type:                    domain.TransactionTypeExpense,
@@ -1172,7 +1174,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
-	// Build expected linked transactions: fromTx + toTx per connection
+	// Build expected linked transactions: all fromTx first (same user), then all toTx (partner users)
 	expectedLinkedTxsDiff := make([]domain.Transaction, 0, 2*len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
@@ -1190,6 +1192,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 			InstallmentNumber:       nil,
 			LinkedTransactions:      []domain.Transaction{},
 		})
+	}
+	for _, connection := range connections {
 		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
 			Type:                    domain.TransactionTypeExpense,
@@ -3514,7 +3518,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		SplitSettings:       []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))
 
-	// installment 1: unchanged → 2 credit settlements (from CREATE)
+	// installment 1: unchanged → 1 credit settlement (from CREATE, toTx only)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
 	suite.Require().Len(s1, 1)
 	for _, s := range s1 {
@@ -3526,9 +3530,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 	suite.Require().Len(s2, 1)
 	suite.Assert().Equal(domain.SettlementTypeDebit, s2[0].Type)
 
-	// installment 3: unchanged → 2 credit settlements (from CREATE)
+	// installment 3: unchanged → 1 credit settlement (from CREATE, toTx only)
 	s3 := suite.settlementsForSource(ctx, installments[2].ID)
-	suite.Require().Len(s3, 2, "installment 3 unchanged, keeps 2 settlements from CREATE")
+	suite.Require().Len(s3, 1, "installment 3 unchanged, keeps 1 settlement from CREATE (toTx only)")
 	for _, s := range s3 {
 		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
 	}
@@ -3586,7 +3590,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))
 
-	// installment 1 (past): unchanged → 2 credit settlements (from CREATE)
+	// installment 1 (past): unchanged → 1 credit settlement (from CREATE, toTx only)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
 	suite.Require().Len(s1, 1)
 	for _, s := range s1 {
@@ -3654,10 +3658,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	suite.Require().NoError(err)
 	suite.Require().Len(installments, 3)
 
-	// All 3 should start as credit (CREATE creates 2 settlements per installment)
+	// All 3 should start as credit (CREATE creates 1 settlement per installment, toTx only)
 	for _, t := range installments {
 		s := suite.settlementsForSource(ctx, t.ID)
-		suite.Require().Len(s, 2, "CREATE creates 2 settlements per installment (fromTx + toTx)")
+		suite.Require().Len(s, 1, "CREATE creates 1 settlement per installment (toTx only)")
 		for _, settlement := range s {
 			suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
 		}
