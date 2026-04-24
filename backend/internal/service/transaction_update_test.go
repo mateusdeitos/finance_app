@@ -3164,7 +3164,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange()
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 	suite.Assert().Empty(suite.settlementsForSource(ctx, t.ID))
 
@@ -3207,7 +3207,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 
 	// verify initial credit settlement
@@ -3252,7 +3252,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToEx
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 
 	// Update: expense→income → debit settlement
@@ -3300,7 +3300,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AddSplit() {
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 	suite.Assert().Empty(suite.settlementsForSource(ctx, t.ID))
 
@@ -3340,7 +3340,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 1)
 
@@ -3379,7 +3379,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 	})
 	suite.Require().NoError(err)
 
-	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID})
+	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 
 	before := suite.settlementsForSource(ctx, t.ID)
@@ -3430,8 +3430,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installments, 3)
@@ -3492,8 +3493,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installments, 3)
@@ -3517,8 +3519,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 
 	// installments 2 and 3 (current+future): flipped → debit
 	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	updatedInstallments := make([]*domain.Transaction, 0)
@@ -3568,8 +3571,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	suite.Require().NoError(err)
 
 	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installments, 3)
@@ -3594,8 +3598,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	}))
 
 	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &userA.ID,
-		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(installmentsAfter, 3)

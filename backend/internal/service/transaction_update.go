@@ -599,68 +599,8 @@ func (s *transactionService) rebuildTransactions(
 		}
 
 		if data.scenario.TypeChangedToTransfer() || data.scenario.RemainedTransfer() {
-			// Remove all existing linked transactions. For TypeChangedToTransfer these are
-			// split-linked txs; for RemainedTransfer these are the old credit/debit txs that
-			// must be replaced by the new ones built below.
-			for j := range data.transactions[i].LinkedTransactions {
-				if data.transactions[i].LinkedTransactions[j].ID > 0 {
-					data.transactionIDsToRemove[data.transactions[i].LinkedTransactions[j].ID] = true
-				}
-			}
-
-			data.transactions[i].Type = domain.TransactionTypeTransfer
-			data.transactions[i].OperationType = domain.OperationTypeDebit
-			data.transactions[i].CategoryID = nil
-			data.transactions[i].AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &data.transactions[i].AccountID))
-			data.transactions[i].Amount = baseAmount
-
-			accountID := *data.req.DestinationAccountID
-
-			if data.scenario.IsTransferToSameUser() {
-				data.transactions[i].LinkedTransactions = []domain.Transaction{
-					{
-						ID:             0,
-						Date:           data.transactions[i].Date,
-						Description:    data.transactions[i].Description,
-						UserID:         data.transactions[i].UserID,
-						OriginalUserID: data.transactions[i].OriginalUserID,
-						Type:           domain.TransactionTypeTransfer,
-						OperationType:  domain.OperationTypeCredit,
-						AccountID:      accountID,
-						CategoryID:     nil,
-						Amount:         baseAmount,
-						Tags:           data.transactions[i].Tags,
-						CreatedAt:      nil,
-						UpdatedAt:      nil,
-					},
-				}
-			} else {
-				c, err := s.getConnectionFromDestinationAccountID(ctx, data.userID, accountID)
-				if err != nil {
-					return err
-				}
-
-				c.SwapIfNeeded(data.userID)
-
-				// Cross-user transfer: only the receiver's credit side is a linked transaction.
-				// The sender's debit is already the main transaction — no extra linked tx needed.
-				data.transactions[i].LinkedTransactions = []domain.Transaction{
-					{
-						ID:             0,
-						Date:           data.transactions[i].Date,
-						Description:    data.transactions[i].Description,
-						UserID:         c.ToUserID,
-						OriginalUserID: data.transactions[i].OriginalUserID,
-						Type:           domain.TransactionTypeTransfer,
-						OperationType:  domain.OperationTypeCredit,
-						AccountID:      c.ToAccountID,
-						CategoryID:     nil,
-						Amount:         baseAmount,
-						Tags:           []domain.Tag{},
-						CreatedAt:      nil,
-						UpdatedAt:      nil,
-					},
-				}
+			if err := s.rebuildTransferLinkedTransactions(ctx, data.transactions[i], data, baseAmount); err != nil {
+				return err
 			}
 		} else if data.scenario.TypeChanged() {
 			data.transactions[i].SetType(*data.req.TransactionType)
@@ -671,6 +611,79 @@ func (s *transactionService) rebuildTransactions(
 		}
 	}
 
+	return nil
+}
+
+func (s *transactionService) rebuildTransferLinkedTransactions(
+	ctx context.Context,
+	tx *domain.Transaction,
+	data *transactionUpdateData,
+	baseAmount int64,
+) error {
+	// Remove all existing linked transactions. For TypeChangedToTransfer these are
+	// split-linked txs; for RemainedTransfer these are the old credit/debit txs that
+	// must be replaced by the new ones built below.
+	for j := range tx.LinkedTransactions {
+		if tx.LinkedTransactions[j].ID > 0 {
+			data.transactionIDsToRemove[tx.LinkedTransactions[j].ID] = true
+		}
+	}
+
+	tx.Type = domain.TransactionTypeTransfer
+	tx.OperationType = domain.OperationTypeDebit
+	tx.CategoryID = nil
+	tx.AccountID = lo.FromPtr(lo.CoalesceOrEmpty(data.req.AccountID, &tx.AccountID))
+	tx.Amount = baseAmount
+
+	accountID := *data.req.DestinationAccountID
+
+	if data.scenario.IsTransferToSameUser() {
+		tx.LinkedTransactions = []domain.Transaction{
+			{
+				ID:             0,
+				Date:           tx.Date,
+				Description:    tx.Description,
+				UserID:         tx.UserID,
+				OriginalUserID: tx.OriginalUserID,
+				Type:           domain.TransactionTypeTransfer,
+				OperationType:  domain.OperationTypeCredit,
+				AccountID:      accountID,
+				CategoryID:     nil,
+				Amount:         baseAmount,
+				Tags:           tx.Tags,
+				CreatedAt:      nil,
+				UpdatedAt:      nil,
+			},
+		}
+		return nil
+	}
+
+	c, err := s.getConnectionFromDestinationAccountID(ctx, data.userID, accountID)
+	if err != nil {
+		return err
+	}
+
+	c.SwapIfNeeded(data.userID)
+
+	// Cross-user transfer: only the receiver's credit side is a linked transaction.
+	// The sender's debit is already the main transaction — no extra linked tx needed.
+	tx.LinkedTransactions = []domain.Transaction{
+		{
+			ID:             0,
+			Date:           tx.Date,
+			Description:    tx.Description,
+			UserID:         c.ToUserID,
+			OriginalUserID: tx.OriginalUserID,
+			Type:           domain.TransactionTypeTransfer,
+			OperationType:  domain.OperationTypeCredit,
+			AccountID:      c.ToAccountID,
+			CategoryID:     nil,
+			Amount:         baseAmount,
+			Tags:           []domain.Tag{},
+			CreatedAt:      nil,
+			UpdatedAt:      nil,
+		},
+	}
 	return nil
 }
 
@@ -717,11 +730,14 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 
 	// Map counterpart's connection account ID → author's connection account ID.
 	// lt.AccountID is set to connection.ToAccountID in injectLinkedTransactions/rebuildTransactions.
+	// Only consider linked transactions belonging to other users (skip same-user from-side).
 	connAccountByToAccount := make(map[int]int, len(own.LinkedTransactions))
 	if len(own.LinkedTransactions) > 0 {
-		toAccountIDs := make([]int, len(own.LinkedTransactions))
-		for i, lt := range own.LinkedTransactions {
-			toAccountIDs[i] = lt.AccountID
+		var toAccountIDs []int
+		for _, lt := range own.LinkedTransactions {
+			if lt.UserID != userID {
+				toAccountIDs = append(toAccountIDs, lt.AccountID)
+			}
 		}
 		conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
 			AccountIDs: toAccountIDs,
@@ -736,6 +752,13 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 	}
 
 	for _, lt := range own.LinkedTransactions {
+		// Skip linked transactions belonging to the same user (e.g. the from-side
+		// of a split on the author's connection account). Settlements only track
+		// debts between different users.
+		if lt.UserID == userID {
+			continue
+		}
+
 		accountID := own.AccountID
 		if connAccount, ok := connAccountByToAccount[lt.AccountID]; ok {
 			accountID = connAccount

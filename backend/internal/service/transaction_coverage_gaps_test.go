@@ -436,7 +436,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 		IDs: []int{txID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(own.LinkedTransactions, 1)
+	suite.Require().Len(own.LinkedTransactions, 2)
 
 	// Delete the settlements that were automatically created during Create.
 	existingSettlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
@@ -455,7 +455,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 	// account.  The lookup connAccountByToAccount[conn.FromAccountID] then misses
 	// (since we only store ToAccountID → FromAccountID), triggering the fallback.
 	ownCopy := *own
-	linkedCopy := own.LinkedTransactions[0]
+	// Use the toTransaction (index 1, belongs to userB) — the fromTransaction
+	// (index 0, belongs to userA) is skipped by syncSettlementsForTransaction.
+	linkedCopy := own.LinkedTransactions[1]
 	linkedCopy.AccountID = conn.FromAccountID // use FROM account to force a miss
 	ownCopy.LinkedTransactions = []domain.Transaction{linkedCopy}
 
