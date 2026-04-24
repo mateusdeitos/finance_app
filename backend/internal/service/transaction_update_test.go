@@ -482,8 +482,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 	}
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -507,6 +508,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		UserID:         user.ID,
 		OriginalUserID: lo.ToPtr(user.ID),
 		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  50,
+				Type:                    domain.TransactionTypeExpense,
+				OperationType:           domain.OperationTypeDebit,
+				AccountID:               userConnection.FromAccountID,
+				CategoryID:              nil,
+				Date:                    d,
+				Description:             "Test transaction",
+				Tags:                    []domain.Tag{{Name: "Test tag"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
 			{
 				Amount:                  50,
 				Type:                    domain.TransactionTypeExpense,
@@ -629,8 +645,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 	}
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -654,6 +671,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		UserID:         user.ID,
 		OriginalUserID: lo.ToPtr(user.ID),
 		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  50,
+				Type:                    domain.TransactionTypeExpense,
+				OperationType:           domain.OperationTypeDebit,
+				AccountID:               userConnection.FromAccountID,
+				CategoryID:              nil,
+				Date:                    d,
+				Description:             "Test transaction",
+				Tags:                    []domain.Tag{{Name: "Test tag"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
 			{
 				Amount:                  50,
 				Type:                    domain.TransactionTypeExpense,
@@ -952,7 +984,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 	}
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -964,34 +997,53 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
+	// Build expected linked transactions: for each connection, fromTx (user, FromAccountID) + toTx (partner, ToAccountID)
+	var expectedLinkedTxsOwn []domain.Transaction
+	for _, connection := range connections {
+		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
+			Amount:                  int64(float64(amount) * float64(percentage) / 100),
+			Type:                    domain.TransactionTypeExpense,
+			OperationType:           domain.OperationTypeDebit,
+			AccountID:               connection.FromAccountID,
+			CategoryID:              nil,
+			Date:                    d,
+			Description:             "Test transaction",
+			Tags:                    []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+			UserID:                  user.ID,
+			OriginalUserID:          lo.ToPtr(user.ID),
+			TransactionRecurrenceID: nil,
+			InstallmentNumber:       nil,
+			LinkedTransactions:      []domain.Transaction{},
+		})
+		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
+			Amount:                  int64(float64(amount) * float64(percentage) / 100),
+			Type:                    domain.TransactionTypeExpense,
+			OperationType:           domain.OperationTypeDebit,
+			AccountID:               connection.ToAccountID,
+			CategoryID:              nil,
+			Date:                    d,
+			Description:             "Test transaction",
+			Tags:                    []domain.Tag{},
+			UserID:                  connection.ToUserID,
+			OriginalUserID:          lo.ToPtr(user.ID),
+			TransactionRecurrenceID: nil,
+			InstallmentNumber:       nil,
+			LinkedTransactions:      []domain.Transaction{},
+		})
+	}
+
 	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
-		Amount:         amount,
-		Type:           domain.TransactionTypeExpense,
-		OperationType:  domain.OperationTypeDebit,
-		AccountID:      account.ID,
-		CategoryID:     lo.ToPtr(category.ID),
-		Date:           d,
-		Description:    "Test transaction",
-		Tags:           []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
-		UserID:         user.ID,
-		OriginalUserID: lo.ToPtr(user.ID),
-		LinkedTransactions: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.Transaction {
-			return domain.Transaction{
-				Amount:                  int64(float64(amount) * float64(percentage) / 100),
-				Type:                    domain.TransactionTypeExpense,
-				OperationType:           domain.OperationTypeDebit,
-				AccountID:               connection.ToAccountID,
-				CategoryID:              nil,
-				Date:                    d,
-				Description:             "Test transaction",
-				Tags:                    []domain.Tag{},
-				UserID:                  connection.ToUserID,
-				OriginalUserID:          lo.ToPtr(user.ID),
-				TransactionRecurrenceID: nil,
-				InstallmentNumber:       nil,
-				LinkedTransactions:      []domain.Transaction{},
-			}
-		}),
+		Amount:             amount,
+		Type:               domain.TransactionTypeExpense,
+		OperationType:      domain.OperationTypeDebit,
+		AccountID:          account.ID,
+		CategoryID:         lo.ToPtr(category.ID),
+		Date:               d,
+		Description:        "Test transaction",
+		Tags:               []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+		UserID:             user.ID,
+		OriginalUserID:     lo.ToPtr(user.ID),
+		LinkedTransactions: expectedLinkedTxsOwn,
 	})
 
 	ltIDs := lo.Map(t.LinkedTransactions, func(lt domain.Transaction, _ int) int {
@@ -1122,7 +1174,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 	}
 
 	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to get transaction: %v", err)
@@ -1134,34 +1187,53 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
+	// Build expected linked transactions: fromTx + toTx per connection
+	var expectedLinkedTxsDiff []domain.Transaction
+	for _, connection := range connections {
+		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
+			Amount:                  int64(float64(amount) * float64(percentage) / 100),
+			Type:                    domain.TransactionTypeExpense,
+			OperationType:           domain.OperationTypeDebit,
+			AccountID:               connection.FromAccountID,
+			CategoryID:              nil,
+			Date:                    d,
+			Description:             "Test transaction",
+			Tags:                    []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+			UserID:                  user.ID,
+			OriginalUserID:          lo.ToPtr(user.ID),
+			TransactionRecurrenceID: nil,
+			InstallmentNumber:       nil,
+			LinkedTransactions:      []domain.Transaction{},
+		})
+		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
+			Amount:                  int64(float64(amount) * float64(percentage) / 100),
+			Type:                    domain.TransactionTypeExpense,
+			OperationType:           domain.OperationTypeDebit,
+			AccountID:               connection.ToAccountID,
+			CategoryID:              nil,
+			Date:                    d,
+			Description:             "Test transaction",
+			Tags:                    []domain.Tag{},
+			UserID:                  connection.ToUserID,
+			OriginalUserID:          lo.ToPtr(user.ID),
+			TransactionRecurrenceID: nil,
+			InstallmentNumber:       nil,
+			LinkedTransactions:      []domain.Transaction{},
+		})
+	}
+
 	assertTransaction(&suite.ServiceTestWithDBSuite, t, &domain.Transaction{
-		Amount:         amount,
-		Type:           domain.TransactionTypeExpense,
-		OperationType:  domain.OperationTypeDebit,
-		AccountID:      account.ID,
-		CategoryID:     lo.ToPtr(category.ID),
-		Date:           d,
-		Description:    "Test transaction",
-		Tags:           []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
-		UserID:         user.ID,
-		OriginalUserID: lo.ToPtr(user.ID),
-		LinkedTransactions: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.Transaction {
-			return domain.Transaction{
-				Amount:                  int64(float64(amount) * float64(percentage) / 100),
-				Type:                    domain.TransactionTypeExpense,
-				OperationType:           domain.OperationTypeDebit,
-				AccountID:               connection.ToAccountID,
-				CategoryID:              nil,
-				Date:                    d,
-				Description:             "Test transaction",
-				Tags:                    []domain.Tag{},
-				UserID:                  connection.ToUserID,
-				OriginalUserID:          lo.ToPtr(user.ID),
-				TransactionRecurrenceID: nil,
-				InstallmentNumber:       nil,
-				LinkedTransactions:      []domain.Transaction{},
-			}
-		}),
+		Amount:             amount,
+		Type:               domain.TransactionTypeExpense,
+		OperationType:      domain.OperationTypeDebit,
+		AccountID:          account.ID,
+		CategoryID:         lo.ToPtr(category.ID),
+		Date:               d,
+		Description:        "Test transaction",
+		Tags:               []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+		UserID:             user.ID,
+		OriginalUserID:     lo.ToPtr(user.ID),
+		LinkedTransactions: expectedLinkedTxsDiff,
 	})
 
 	ltIDs := lo.Map(t.LinkedTransactions, func(lt domain.Transaction, _ int) int {
@@ -2976,14 +3048,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 	suite.Require().NoError(err)
 	suite.Assert().Len(installmentsAfter, 5, "userA should have 5 installments")
 
-	// Installments 1-3 (original) have from+to linked txs from Create; 4-5 (new) have only toTx
+	// After update, all installments have only toTx (update removes fromTx due to splitHasChanged)
 	for i, t := range installmentsAfter {
-		if i < 3 {
-			suite.Assert().Len(t.LinkedTransactions, 2, "installment %d should have 2 linked transactions (from + to)", i+1)
-		} else {
-			suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction (to only)", i+1)
-			suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
-		}
+		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction (to only, fromTx removed by update)", i+1)
+		suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
 	}
 
 	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
@@ -3220,10 +3288,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 
-	// verify initial credit settlement
+	// verify initial credit settlements (CREATE creates 2: one for fromTx, one for toTx)
 	before := suite.settlementsForSource(ctx, t.ID)
-	suite.Require().Len(before, 1)
-	suite.Assert().Equal(domain.SettlementTypeCredit, before[0].Type)
+	suite.Require().Len(before, 2)
+	for _, s := range before {
+		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
+	}
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
@@ -3352,7 +3422,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
-	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 1)
+	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 2, "CREATE creates 2 settlements (fromTx + toTx)")
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		// no SplitSettings → removes split
@@ -3393,8 +3463,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 	suite.Require().NoError(err)
 
 	before := suite.settlementsForSource(ctx, t.ID)
-	suite.Require().Len(before, 1)
-	suite.Assert().Equal(conn.FromAccountID, before[0].AccountID)
+	suite.Require().Len(before, 2, "CREATE creates 2 settlements (fromTx + toTx)")
+	// Find the settlement for the toTx (accountID = conn.FromAccountID)
+	var beforeToSettlement *domain.Settlement
+	for _, s := range before {
+		if s.AccountID == conn.FromAccountID {
+			beforeToSettlement = s
+		}
+	}
+	suite.Require().NotNil(beforeToSettlement)
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		AccountID:     lo.ToPtr(accountA2.ID),
@@ -3402,7 +3479,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 	}))
 
 	after := suite.settlementsForSource(ctx, t.ID)
-	suite.Require().Len(after, 1)
+	suite.Require().Len(after, 1, "UPDATE creates only 1 settlement (toTx, skips same-user fromTx)")
 	// settlement account is always conn.FromAccountID regardless of the author's personal account
 	suite.Assert().Equal(conn.FromAccountID, after[0].AccountID)
 }
@@ -3454,20 +3531,24 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		SplitSettings:       []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))
 
-	// installment 1: unchanged → credit
+	// installment 1: unchanged → 2 credit settlements (from CREATE)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
-	suite.Require().Len(s1, 1)
-	suite.Assert().Equal(domain.SettlementTypeCredit, s1[0].Type)
+	suite.Require().Len(s1, 2, "installment 1 unchanged, keeps 2 settlements from CREATE")
+	for _, s := range s1 {
+		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
+	}
 
-	// installment 2: flipped → debit
+	// installment 2: flipped → 1 debit settlement (UPDATE creates only toTx settlement)
 	s2 := suite.settlementsForSource(ctx, installments[1].ID)
 	suite.Require().Len(s2, 1)
 	suite.Assert().Equal(domain.SettlementTypeDebit, s2[0].Type)
 
-	// installment 3: unchanged → credit
+	// installment 3: unchanged → 2 credit settlements (from CREATE)
 	s3 := suite.settlementsForSource(ctx, installments[2].ID)
-	suite.Require().Len(s3, 1)
-	suite.Assert().Equal(domain.SettlementTypeCredit, s3[0].Type)
+	suite.Require().Len(s3, 2, "installment 3 unchanged, keeps 2 settlements from CREATE")
+	for _, s := range s3 {
+		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
+	}
 }
 
 // 2.8 Propagation=current_and_future updates current+future installments' settlements
@@ -3522,10 +3603,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	}))
 
-	// installment 1 (past): unchanged → credit
+	// installment 1 (past): unchanged → 2 credit settlements (from CREATE)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
-	suite.Require().Len(s1, 1)
-	suite.Assert().Equal(domain.SettlementTypeCredit, s1[0].Type)
+	suite.Require().Len(s1, 2, "installment 1 unchanged, keeps 2 settlements from CREATE")
+	for _, s := range s1 {
+		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
+	}
 
 	// installments 2 and 3 (current+future): flipped → debit
 	installmentsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
@@ -3588,11 +3671,13 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	suite.Require().NoError(err)
 	suite.Require().Len(installments, 3)
 
-	// All 3 should start as credit
+	// All 3 should start as credit (CREATE creates 2 settlements per installment)
 	for _, t := range installments {
 		s := suite.settlementsForSource(ctx, t.ID)
-		suite.Require().Len(s, 1)
-		suite.Assert().Equal(domain.SettlementTypeCredit, s[0].Type)
+		suite.Require().Len(s, 2, "CREATE creates 2 settlements per installment (fromTx + toTx)")
+		for _, settlement := range s {
+			suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
+		}
 	}
 
 	// Change type to income for all installments (propagation=all)
@@ -3939,7 +4024,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 
 	for i, t := range afterA {
 		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "userA installment[%d]", i)
-		suite.Assert().Len(t.LinkedTransactions, 2, "userA installment[%d] should have 2 linked txs (from + to)", i)
+		suite.Assert().Len(t.LinkedTransactions, 1, "userA installment[%d] should have 1 linked tx (to only, fromTx removed by update)", i)
 	}
 }
 
@@ -4008,10 +4093,14 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 		})
 	}
 
+	// Amount is now ALLOWED for linked transaction edits (validation was changed to permit it)
 	newAmount := int64(20000)
-	assertDisallowedFieldError("amount", &domain.TransactionUpdateRequest{
-		Amount:              &newAmount,
-		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+	suite.Run("amount", func() {
+		err := suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
+			Amount:              &newAmount,
+			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		})
+		suite.Assert().NoError(err, "amount should be allowed for linked transaction edits")
 	})
 
 	assertDisallowedFieldError("account_id", &domain.TransactionUpdateRequest{

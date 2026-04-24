@@ -76,14 +76,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 	expectedLinkedAmount := int64(float64(amount) * float64(splitPct) / 100)
 
 	// Each connection produces a fromTransaction (userA, FromAccountID) and toTransaction (partner, ToAccountID)
-	// They are appended in order: [from0, to0, from1, to1, from2, to2]
+	// Find each toTransaction by matching UserID to conn.ToUserID
 	for i, conn := range connections {
-		toTx := ownerTx.LinkedTransactions[i*2+1] // toTransaction is at odd indices
+		var toTx *domain.Transaction
+		for j := range ownerTx.LinkedTransactions {
+			lt := &ownerTx.LinkedTransactions[j]
+			if lt.UserID == conn.ToUserID && lt.AccountID == conn.ToAccountID {
+				toTx = lt
+				break
+			}
+		}
+		suite.Require().NotNilf(toTx, "should find toTransaction for connection[%d]", i)
 		suite.Assert().Equalf(expectedLinkedAmount, toTx.Amount, "linked[%d].Amount", i)
 		suite.Assert().Equalf(domain.TransactionTypeExpense, toTx.Type, "linked[%d].Type", i)
 		suite.Assert().Equalf(domain.OperationTypeDebit, toTx.OperationType, "linked[%d].OperationType", i)
-		suite.Assert().Equalf(conn.ToAccountID, toTx.AccountID, "linked[%d].AccountID", i)
-		suite.Assert().Equalf(conn.ToUserID, toTx.UserID, "linked[%d].UserID", i)
 		suite.Assert().Equalf(userA.ID, lo.FromPtr(toTx.OriginalUserID), "linked[%d].OriginalUserID", i)
 	}
 

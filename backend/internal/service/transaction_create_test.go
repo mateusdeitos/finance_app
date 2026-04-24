@@ -883,14 +883,21 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[1].UserID)
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
-	settlement := transactionsUser1[0].SettlementsFromSource[0]
-	suite.Assert().Equal(user1.ID, settlement.UserID)
-	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
-	suite.Assert().Equal(int64(amount/2), settlement.Amount)
-	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
-	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[1].ID, settlement.ParentTransactionID)
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	// Find the settlement for the toTransaction (ParentTransactionID = toTx.ID)
+	var settlementForTo *domain.Settlement
+	for i := range transactionsUser1[0].SettlementsFromSource {
+		s := &transactionsUser1[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].LinkedTransactions[1].ID {
+			settlementForTo = s
+		}
+	}
+	suite.Require().NotNil(settlementForTo, "should find settlement for toTransaction")
+	suite.Assert().Equal(user1.ID, settlementForTo.UserID)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlementForTo.Type)
+	suite.Assert().Equal(int64(amount/2), settlementForTo.Amount)
+	suite.Assert().Equal(userConnection.FromAccountID, settlementForTo.AccountID)
+	suite.Assert().Equal(transactionsUser1[0].ID, settlementForTo.SourceTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -1001,14 +1008,21 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
 	// Settlement should be debit for income (author owes partner)
-	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
-	settlement := transactionsUser1[0].SettlementsFromSource[0]
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	// Find the settlement for the toTransaction
+	var settlement *domain.Settlement
+	for i := range transactionsUser1[0].SettlementsFromSource {
+		s := &transactionsUser1[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].LinkedTransactions[1].ID {
+			settlement = s
+		}
+	}
+	suite.Require().NotNil(settlement, "should find settlement for toTransaction")
 	suite.Assert().Equal(user1.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeDebit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[1].ID, settlement.ParentTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -1122,8 +1136,16 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Nil(personal.OriginSettlementID, "real source transaction must not be tagged as a synthetic entry")
 	suite.Assert().Equal(account.ID, personal.AccountID)
 	suite.Assert().Equal(amount, personal.Amount)
-	suite.Require().Len(personal.SettlementsFromSource, 1, "settlement must be preloaded inline for display context under the source transaction")
-	suite.Assert().Equal(userConnection.FromAccountID, personal.SettlementsFromSource[0].AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
+	suite.Require().Len(personal.SettlementsFromSource, 2, "settlement must be preloaded inline for display context under the source transaction (fromTx + toTx)")
+	// Find the settlement for the toTransaction (accountID = conn.FromAccountID)
+	var toSettlement *domain.Settlement
+	for i := range personal.SettlementsFromSource {
+		if personal.SettlementsFromSource[i].AccountID == userConnection.FromAccountID {
+			toSettlement = &personal.SettlementsFromSource[i]
+		}
+	}
+	suite.Require().NotNil(toSettlement, "should find settlement for toTransaction")
+	suite.Assert().Equal(userConnection.FromAccountID, toSettlement.AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
 
 	// Case 2b (balance consistency): GetBalance filtered by the personal
 	// account returns the source transaction plus the settlement whose source
@@ -1263,14 +1285,21 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user2.ID, transactionsUser2[0].UserID)
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 1)
-	settlement := transactionsUser2[0].SettlementsFromSource[0]
+	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	// Find the settlement for the toTransaction (whose ParentTransactionID = transactionsUser1[0].ID)
+	var settlement *domain.Settlement
+	for i := range transactionsUser2[0].SettlementsFromSource {
+		s := &transactionsUser2[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].ID {
+			settlement = s
+		}
+	}
+	suite.Require().NotNil(settlement, "should find settlement for toTransaction")
 	suite.Assert().Equal(user2.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.ToAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser2[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].ID, settlement.ParentTransactionID)
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of5() {
