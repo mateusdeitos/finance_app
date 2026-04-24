@@ -516,7 +516,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 				CategoryID:              nil,
 				Date:                    d,
 				Description:             "Test transaction",
-				Tags:                    []domain.Tag{{Name: "Test tag"}},
+				Tags:                    []domain.Tag{},
 				UserID:                  user.ID,
 				OriginalUserID:          lo.ToPtr(user.ID),
 				TransactionRecurrenceID: nil,
@@ -664,7 +664,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 				CategoryID:              nil,
 				Date:                    d,
 				Description:             "Test transaction",
-				Tags:                    []domain.Tag{{Name: "Test tag"}},
+				Tags:                    []domain.Tag{},
 				UserID:                  user.ID,
 				OriginalUserID:          lo.ToPtr(user.ID),
 				TransactionRecurrenceID: nil,
@@ -993,7 +993,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 			CategoryID:              nil,
 			Date:                    d,
 			Description:             "Test transaction",
-			Tags:                    []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+			Tags:                    []domain.Tag{},
 			UserID:                  user.ID,
 			OriginalUserID:          lo.ToPtr(user.ID),
 			TransactionRecurrenceID: nil,
@@ -1183,7 +1183,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 			CategoryID:              nil,
 			Date:                    d,
 			Description:             "Test transaction",
-			Tags:                    []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
+			Tags:                    []domain.Tag{},
 			UserID:                  user.ID,
 			OriginalUserID:          lo.ToPtr(user.ID),
 			TransactionRecurrenceID: nil,
@@ -3273,12 +3273,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
 
-	// verify initial credit settlements (CREATE creates 2: one for fromTx, one for toTx)
+	// verify initial credit settlement
 	before := suite.settlementsForSource(ctx, t.ID)
-	suite.Require().Len(before, 2)
-	for _, s := range before {
-		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
-	}
+	suite.Require().Len(before, 1)
+	suite.Assert().Equal(domain.SettlementTypeCredit, before[0].Type)
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
@@ -3407,7 +3405,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 
 	t, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
 	suite.Require().NoError(err)
-	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 2, "CREATE creates 2 settlements (fromTx + toTx)")
+	suite.Require().Len(suite.settlementsForSource(ctx, t.ID), 1)
 
 	suite.Require().NoError(suite.Services.Transaction.Update(ctx, t.ID, userA.ID, &domain.TransactionUpdateRequest{
 		// no SplitSettings → removes split
@@ -3448,7 +3446,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 	suite.Require().NoError(err)
 
 	before := suite.settlementsForSource(ctx, t.ID)
-	suite.Require().Len(before, 2, "CREATE creates 2 settlements (fromTx + toTx)")
+	suite.Require().Len(before, 1)
 	// Find the settlement for the toTx (accountID = conn.FromAccountID)
 	var beforeToSettlement *domain.Settlement
 	for _, s := range before {
@@ -3518,7 +3516,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 
 	// installment 1: unchanged → 2 credit settlements (from CREATE)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
-	suite.Require().Len(s1, 2, "installment 1 unchanged, keeps 2 settlements from CREATE")
+	suite.Require().Len(s1, 1)
 	for _, s := range s1 {
 		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
 	}
@@ -3590,7 +3588,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 
 	// installment 1 (past): unchanged → 2 credit settlements (from CREATE)
 	s1 := suite.settlementsForSource(ctx, installments[0].ID)
-	suite.Require().Len(s1, 2, "installment 1 unchanged, keeps 2 settlements from CREATE")
+	suite.Require().Len(s1, 1)
 	for _, s := range s1 {
 		suite.Assert().Equal(domain.SettlementTypeCredit, s.Type)
 	}

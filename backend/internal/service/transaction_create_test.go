@@ -883,7 +883,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user2.ID, transactionsUser1[0].LinkedTransactions[1].UserID)
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
 	// Find the settlement for the toTransaction (ParentTransactionID = toTx.ID)
 	var settlementForTo *domain.Settlement
 	for i := range transactionsUser1[0].SettlementsFromSource {
@@ -1008,7 +1008,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[1].OriginalUserID))
 
 	// Settlement should be debit for income (author owes partner)
-	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
 	// Find the settlement for the toTransaction
 	var settlement *domain.Settlement
 	for i := range transactionsUser1[0].SettlementsFromSource {
@@ -1136,7 +1136,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Nil(personal.OriginSettlementID, "real source transaction must not be tagged as a synthetic entry")
 	suite.Assert().Equal(account.ID, personal.AccountID)
 	suite.Assert().Equal(amount, personal.Amount)
-	suite.Require().Len(personal.SettlementsFromSource, 2, "settlement must be preloaded inline for display context under the source transaction (fromTx + toTx)")
+	suite.Require().Len(personal.SettlementsFromSource, 1, "settlement must be preloaded inline for display context under the source transaction")
 	// Find the settlement for the toTransaction (accountID = conn.FromAccountID)
 	var toSettlement *domain.Settlement
 	for i := range personal.SettlementsFromSource {
@@ -1285,7 +1285,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user2.ID, transactionsUser2[0].UserID)
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 
-	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 2, "CREATE creates settlements for both fromTx and toTx")
+	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 1)
 	// Find the settlement for the toTransaction (whose ParentTransactionID = transactionsUser1[0].ID)
 	var settlement *domain.Settlement
 	for i := range transactionsUser2[0].SettlementsFromSource {

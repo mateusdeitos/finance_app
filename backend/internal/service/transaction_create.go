@@ -263,6 +263,13 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 	}
 
 	for _, lt := range authorTransaction.LinkedTransactions {
+		// Skip linked transactions belonging to the same user (e.g. the from-side
+		// of a split on the author's connection account). Settlements only track
+		// debts between different users.
+		if lt.UserID == userID {
+			continue
+		}
+
 		accountID := authorTransaction.AccountID
 		if connAccount, ok := connAccountByToAccount[lt.AccountID]; ok {
 			accountID = connAccount
