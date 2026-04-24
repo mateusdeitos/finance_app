@@ -597,30 +597,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinkedTransactionsToOwnIncomeWithSplit() {
 	ctx := context.Background()
 	user, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user: %v", err)
-	}
-
+	suite.Require().NoError(err)
 	account, err := suite.createTestAccount(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test account: %v", err)
-	}
-
+	suite.Require().NoError(err)
 	category, err := suite.createTestCategory(ctx, user)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test category: %v", err)
-	}
-
+	suite.Require().NoError(err)
 	user2, err := suite.createTestUser(ctx)
-	if err != nil {
-		suite.T().Fatalf("Failed to create test user: %v", err)
-	}
-
+	suite.Require().NoError(err)
 	userConnection, err := suite.createAcceptedTestUserConnection(ctx, user.ID, user2.ID, 50)
-	if err != nil {
-		suite.T().Fatalf("Failed to create accepted test user connection: %v", err)
-	}
-
+	suite.Require().NoError(err)
 	d := now()
 
 	transaction := domain.TransactionCreateRequest{
@@ -998,7 +983,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 	t := transactions[0]
 
 	// Build expected linked transactions: for each connection, fromTx (user, FromAccountID) + toTx (partner, ToAccountID)
-	var expectedLinkedTxsOwn []domain.Transaction
+	expectedLinkedTxsOwn := make([]domain.Transaction, 0, 2*len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
@@ -1188,7 +1173,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 	t := transactions[0]
 
 	// Build expected linked transactions: fromTx + toTx per connection
-	var expectedLinkedTxsDiff []domain.Transaction
+	expectedLinkedTxsDiff := make([]domain.Transaction, 0, 2*len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
