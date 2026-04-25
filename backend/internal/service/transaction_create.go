@@ -418,21 +418,22 @@ func (s *transactionService) injectLinkedTransactions(
 		// do NOT get a fromTransaction — a settlement handles the author's shared account.
 		if req.TransactionType == domain.TransactionTypeTransfer {
 			fromTransaction := domain.Transaction{
-				ID:                0,
-				InstallmentNumber: transaction.InstallmentNumber,
-				Date:              transaction.Date,
-				Description:       transaction.Description,
-				UserID:            connection.FromUserID,
-				OriginalUserID:    &userID,
-				Type:              transaction.Type,
-				OperationType:     transaction.OperationType.Invert(),
-				AccountID:         connection.FromAccountID,
-				CategoryID:        nil,
-				Amount:            amount,
-				Tags:              nil,
-				CreatedAt:         nil,
-				UpdatedAt:         nil,
-				ChargeID:          transaction.ChargeID,
+				ID:                      0,
+				InstallmentNumber:       transaction.InstallmentNumber,
+				Date:                    transaction.Date,
+				Description:             transaction.Description,
+				UserID:                  connection.FromUserID,
+				OriginalUserID:          &userID,
+				Type:                    transaction.Type,
+				OperationType:           transaction.OperationType.Invert(),
+				AccountID:              connection.FromAccountID,
+				CategoryID:              nil,
+				Amount:                  amount,
+				Tags:                    nil,
+				CreatedAt:               nil,
+				UpdatedAt:               nil,
+				ChargeID:                transaction.ChargeID,
+				TransactionRecurrenceID: transaction.TransactionRecurrenceID,
 			}
 			transaction.LinkedTransactions = append(transaction.LinkedTransactions, fromTransaction)
 		}

@@ -1186,23 +1186,17 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	// transaction is in the filter AND the settlement's account is in the
 	// filter. The source tx is returned with its settlement preloaded (scoped
 	// preload admits it), and NO synthetic entry is appended (would be a
-	// duplicate of the attached settlement).
+	// duplicate of the attached settlement). No fromTx exists for shared expenses.
 	both, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
 		UserID:          &user1.ID,
 		AccountIDs:      []int{account.ID, userConnection.FromAccountID},
 		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(both, 2, "combined filter returns the source transaction and the synthetic settlement on the shared account")
-	// Find the source transaction (on the personal account)
-	var sourceTx *domain.Transaction
-	for _, tx := range both {
-		if tx.AccountID == account.ID && tx.OriginSettlementID == nil {
-			sourceTx = tx
-			break
-		}
-	}
-	suite.Require().NotNil(sourceTx)
+	suite.Require().Len(both, 1, "combined filter returns only the source transaction (no fromTx, no synthetic duplicate)")
+	sourceTx := both[0]
+	suite.Assert().Equal(account.ID, sourceTx.AccountID)
+	suite.Assert().Nil(sourceTx.OriginSettlementID)
 	suite.Require().Len(sourceTx.SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
 	suite.Assert().Equal(userConnection.FromAccountID, sourceTx.SettlementsFromSource[0].AccountID)
 
