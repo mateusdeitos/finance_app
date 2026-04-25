@@ -51,7 +51,7 @@ function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCe
         <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
-            <AccountAvatar account={toAccount} size={28} />
+            <AccountAvatar account={toAccount} direction="to" size={28} />
           </span>
         </Tooltip>
       </Group>
@@ -114,18 +114,46 @@ export function TransactionRow({
   const linkedTxFromOtherUser =
     tx.type === "transfer"
       ? (tx.linked_transactions ?? []).find(
-          (lt) => lt.original_user_id != null && lt.original_user_id !== currentUserId
+          (lt) => lt.original_user_id != null && lt.original_user_id !== currentUserId,
         )
       : undefined;
-  const fromConnectionAccount =
-    linkedTxFromOtherUser?.original_user_id != null
-      ? (accounts.find(
-          (a) =>
-            a.user_connection &&
-            (a.user_connection.from_user_id === linkedTxFromOtherUser.original_user_id ||
-              a.user_connection.to_user_id === linkedTxFromOtherUser.original_user_id)
-        ) ?? null)
-      : null;
+  const fromConnectionAccount: Transactions.Account | null = (() => {
+    if (linkedTxFromOtherUser?.original_user_id == null) {
+      return null;
+    }
+
+    const account = accounts.find(
+      (a) =>
+        a.user_connection &&
+        (a.user_connection.from_user_id === linkedTxFromOtherUser.original_user_id ||
+          a.user_connection.to_user_id === linkedTxFromOtherUser.original_user_id),
+    );
+
+    if (!account) {
+      return null;
+    }
+
+    const acc: Transactions.Account = {
+      ...account,
+      name: (() => {
+        let name = account.name;
+        if (!account.user_connection) return name;
+
+        if (
+          account.user_connection?.from_user_id === linkedTxFromOtherUser.original_user_id &&
+          !!account.user_connection.from_user_name
+        ) {
+          name = account!.user_connection!.from_user_name!;
+        } else if (account?.user_connection?.to_user_name) {
+          name = account.user_connection.to_user_name;
+        }
+
+        return name;
+      })(),
+    };
+
+    return acc;
+  })();
 
   const fromAccount = tx.operation_type === "debit" ? account : (fromConnectionAccount ?? linkedAccount);
   const toAccount = tx.operation_type === "debit" ? linkedAccount : account;
