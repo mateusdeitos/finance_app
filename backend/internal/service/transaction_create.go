@@ -23,9 +23,20 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
-	_, err = s.services.Account.GetByID(ctx, userID, transaction.AccountID)
+	account, err := s.services.Account.GetByID(ctx, userID, transaction.AccountID)
 	if err != nil {
 		return 0, err
+	}
+
+	if account.UserConnection != nil {
+		if transaction.TransactionType == domain.TransactionTypeTransfer {
+			return 0, pkgErrors.ErrTransferNotAllowedOnSharedAccount
+		}
+		if len(transaction.SplitSettings) > 0 {
+			return 0, pkgErrors.ErrSplitSettingsNotAllowedOnSharedAccount
+		}
+		account.UserConnection.SwapIfNeeded(userID)
+		transaction.SharedAccountConnection = account.UserConnection
 	}
 
 	if transaction.CategoryID > 0 {
@@ -236,7 +247,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 			firstID = t.ID
 		}
 
-		if req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
+		if req.SharedAccountConnection == nil && req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
 			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType, req.SplitSettings); err != nil {
 				return 0, err
 			}
@@ -333,6 +344,36 @@ func (s *transactionService) injectLinkedTransactions(
 	recurrenceSettings *domain.RecurrenceSettings) error {
 
 	hasRecurrence := recurrenceSettings != nil
+
+	// Shared account: create a single inverted linked tx on the partner's account
+	if req.SharedAccountConnection != nil {
+		conn := req.SharedAccountConnection
+		linkedTx := domain.Transaction{
+			ID:                      0,
+			InstallmentNumber:       transaction.InstallmentNumber,
+			Date:                    transaction.Date,
+			Description:             transaction.Description,
+			UserID:                  conn.ToUserID,
+			OriginalUserID:          &userID,
+			Type:                    lo.Ternary(transaction.Type == domain.TransactionTypeExpense, domain.TransactionTypeIncome, domain.TransactionTypeExpense),
+			OperationType:           transaction.OperationType.Invert(),
+			AccountID:               conn.ToAccountID,
+			CategoryID:              nil,
+			Amount:                  transaction.Amount,
+			Tags:                    nil,
+			ChargeID:                transaction.ChargeID,
+			TransactionRecurrenceID: transaction.TransactionRecurrenceID,
+		}
+		if hasRecurrence {
+			r, err := s.createRecurrence(ctx, conn.ToUserID, *recurrenceSettings)
+			if err != nil {
+				return err
+			}
+			linkedTx.TransactionRecurrenceID = &r.ID
+		}
+		transaction.LinkedTransactions = append(transaction.LinkedTransactions, linkedTx)
+		return nil
+	}
 
 	var connectionIDs []int
 

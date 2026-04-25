@@ -18,6 +18,7 @@ import {
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
@@ -75,7 +76,10 @@ export const TransactionForm = ({
 
   const transactionType = useWatch({ control, name: "transaction_type" });
   const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
+  const accountId = useWatch({ control, name: "account_id" });
   const isTransfer = transactionType === "transfer";
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+  const isSharedAccount = !!selectedAccount?.user_connection;
 
   const generalError = submitError ?? (errors as Record<string, { message?: string }>)["_general"]?.message;
 
@@ -97,44 +101,13 @@ export const TransactionForm = ({
     setValue("split_settings", []);
   }
 
-  const accountOptions = accounts
+  // Transfer source: personal accounts only (flat list)
+  const personalAccountOptions = accounts
     .filter((a) => !a.user_connection)
     .map((a) => ({ value: String(a.id), label: a.name }));
 
-  const destinationAccountOptions: ComboboxItemGroup<ComboboxItem>[] = accounts.reduce<
-    ComboboxItemGroup<ComboboxItem>[]
-  >(
-    (acc, a) => {
-      const item = { label: a.name, value: String(a.id) };
-      if (a.user_connection) {
-        return [
-          acc[0],
-          {
-            ...acc[1],
-            items: [...acc[1].items, item],
-          },
-        ];
-      }
-
-      return [
-        {
-          ...acc[0],
-          items: [...acc[0].items, item],
-        },
-        acc[1],
-      ];
-    },
-    [
-      {
-        group: "Minhas contas",
-        items: [],
-      },
-      {
-        group: "Contas Compartilhadas",
-        items: [],
-      },
-    ],
-  );
+  // Expense/income + transfer destination: grouped personal + shared
+  const groupedAccountOptions = useGroupedAccountOptions(accounts);
 
   const categoryOptions = categories.map((c) => ({
     value: String(c.id),
@@ -255,10 +228,10 @@ export const TransactionForm = ({
                   ref={field.ref}
                   label="Conta"
                   required
-                  data={accountOptions}
+                  data={personalAccountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
+                  onBlur={makeSelectBlurHandler(personalAccountOptions, (val) => field.onChange(val))}
                   error={errors.account_id?.message}
                   searchable
                   data-testid={TransactionsTestIds.SelectAccount}
@@ -273,10 +246,10 @@ export const TransactionForm = ({
                   ref={field.ref}
                   label="Conta de destino"
                   required
-                  data={destinationAccountOptions}
+                  data={groupedAccountOptions}
                   value={field.value ? String(field.value) : null}
                   onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
+                  onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
                   data-testid={TransactionsTestIds.SelectDestinationAccount}
@@ -313,10 +286,17 @@ export const TransactionForm = ({
                     ref={field.ref}
                     label="Conta"
                     required
-                    data={accountOptions}
+                    data={groupedAccountOptions}
                     value={field.value ? String(field.value) : null}
-                    onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
+                    onChange={(val) => {
+                      field.onChange(val ? Number(val) : null);
+                      // Clear split settings when selecting a shared account
+                      const acct = accounts.find((a) => a.id === Number(val));
+                      if (acct?.user_connection) {
+                        setValue("split_settings", []);
+                      }
+                    }}
+                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
                     error={errors.account_id?.message}
                     searchable
                     data-testid={TransactionsTestIds.SelectAccount}
@@ -325,7 +305,7 @@ export const TransactionForm = ({
               />
             </SimpleGrid>
 
-            <SplitSettingsFields />
+            {!isSharedAccount && <SplitSettingsFields />}
           </>
         )}
 
