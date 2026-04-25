@@ -512,21 +512,6 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 				Amount:                  50,
 				Type:                    domain.TransactionTypeExpense,
 				OperationType:           domain.OperationTypeDebit,
-				AccountID:               userConnection.FromAccountID,
-				CategoryID:              nil,
-				Date:                    d,
-				Description:             "Test transaction",
-				Tags:                    []domain.Tag{},
-				UserID:                  user.ID,
-				OriginalUserID:          lo.ToPtr(user.ID),
-				TransactionRecurrenceID: nil,
-				InstallmentNumber:       nil,
-				LinkedTransactions:      []domain.Transaction{},
-			},
-			{
-				Amount:                  50,
-				Type:                    domain.TransactionTypeExpense,
-				OperationType:           domain.OperationTypeDebit,
 				AccountID:               userConnection.ToAccountID,
 				CategoryID:              nil,
 				Date:                    d,
@@ -656,21 +641,6 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		UserID:         user.ID,
 		OriginalUserID: lo.ToPtr(user.ID),
 		LinkedTransactions: []domain.Transaction{
-			{
-				Amount:                  50,
-				Type:                    domain.TransactionTypeExpense,
-				OperationType:           domain.OperationTypeDebit,
-				AccountID:               userConnection.FromAccountID,
-				CategoryID:              nil,
-				Date:                    d,
-				Description:             "Test transaction",
-				Tags:                    []domain.Tag{},
-				UserID:                  user.ID,
-				OriginalUserID:          lo.ToPtr(user.ID),
-				TransactionRecurrenceID: nil,
-				InstallmentNumber:       nil,
-				LinkedTransactions:      []domain.Transaction{},
-			},
 			{
 				Amount:                  50,
 				Type:                    domain.TransactionTypeExpense,
@@ -982,25 +952,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
-	// Build expected linked transactions: all fromTx first (same user), then all toTx (partner users)
-	expectedLinkedTxsOwn := make([]domain.Transaction, 0, 2*len(connections))
-	for _, connection := range connections {
-		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
-			Amount:                  int64(float64(amount) * float64(percentage) / 100),
-			Type:                    domain.TransactionTypeExpense,
-			OperationType:           domain.OperationTypeDebit,
-			AccountID:               connection.FromAccountID,
-			CategoryID:              nil,
-			Date:                    d,
-			Description:             "Test transaction",
-			Tags:                    []domain.Tag{},
-			UserID:                  user.ID,
-			OriginalUserID:          lo.ToPtr(user.ID),
-			TransactionRecurrenceID: nil,
-			InstallmentNumber:       nil,
-			LinkedTransactions:      []domain.Transaction{},
-		})
-	}
+	// Build expected linked transactions: only toTx (partner users) for shared expenses
+	expectedLinkedTxsOwn := make([]domain.Transaction, 0, len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsOwn = append(expectedLinkedTxsOwn, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
@@ -1174,25 +1127,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 
 	t := transactions[0]
 
-	// Build expected linked transactions: all fromTx first (same user), then all toTx (partner users)
-	expectedLinkedTxsDiff := make([]domain.Transaction, 0, 2*len(connections))
-	for _, connection := range connections {
-		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
-			Amount:                  int64(float64(amount) * float64(percentage) / 100),
-			Type:                    domain.TransactionTypeExpense,
-			OperationType:           domain.OperationTypeDebit,
-			AccountID:               connection.FromAccountID,
-			CategoryID:              nil,
-			Date:                    d,
-			Description:             "Test transaction",
-			Tags:                    []domain.Tag{},
-			UserID:                  user.ID,
-			OriginalUserID:          lo.ToPtr(user.ID),
-			TransactionRecurrenceID: nil,
-			InstallmentNumber:       nil,
-			LinkedTransactions:      []domain.Transaction{},
-		})
-	}
+	// Build expected linked transactions: only toTx (partner users) for shared expenses
+	expectedLinkedTxsDiff := make([]domain.Transaction, 0, len(connections))
 	for _, connection := range connections {
 		expectedLinkedTxsDiff = append(expectedLinkedTxsDiff, domain.Transaction{
 			Amount:                  int64(float64(amount) * float64(percentage) / 100),
@@ -2944,7 +2880,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 	suite.Assert().Equal(installment3.ID, remaining[1].ID)
 
 	for i, t := range remaining {
-		suite.Assert().Len(t.LinkedTransactions, 2, "installment %d should still have its linked transactions (from + to)", i+1)
+		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should still have its linked transaction (to)", i+1)
 	}
 
 	// installment 2 must be standalone without split
@@ -2955,10 +2891,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 	suite.Assert().Nil(updatedT2.TransactionRecurrenceID)
 	suite.Assert().Len(updatedT2.LinkedTransactions, 0)
 
-	// total: userA has 3 main txs + 2 fromTxs (installments 1,3 still have split) = 5
+	// total: userA has 3 main txs (installments 1,2,3 — no fromTxs for shared expenses)
 	allUserA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userA.ID})
 	suite.Require().NoError(err)
-	suite.Assert().Len(allUserA, 5)
+	suite.Assert().Len(allUserA, 3)
 
 	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
 	suite.Require().NoError(err)
@@ -3039,7 +2975,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 
 	// After update, all installments have only toTx (update removes fromTx due to splitHasChanged)
 	for i, t := range installmentsAfter {
-		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction (to only, fromTx removed by update)", i+1)
+		suite.Assert().Len(t.LinkedTransactions, 1, "installment %d should have 1 linked transaction (to only)", i+1)
 		suite.Assert().Equal(userB.ID, t.LinkedTransactions[0].UserID)
 	}
 
@@ -4011,7 +3947,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 
 	for i, t := range afterA {
 		suite.Assert().Equal(4+i, lo.FromPtr(t.InstallmentNumber), "userA installment[%d]", i)
-		suite.Assert().Len(t.LinkedTransactions, 1, "userA installment[%d] should have 1 linked tx (to only, fromTx removed by update)", i)
+		suite.Assert().Len(t.LinkedTransactions, 1, "userA installment[%d] should have 1 linked tx (to only)", i)
 	}
 }
 
@@ -4056,7 +3992,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 2, "parent transaction should have two linked transactions (from + to)")
+	suite.Require().Len(parentTx.LinkedTransactions, 1, "parent transaction should have one linked transaction (to)")
 
 	// Find the toTransaction (userB's linked tx)
 	var linkedTxID int
@@ -4163,7 +4099,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 2)
+	suite.Require().Len(parentTx.LinkedTransactions, 1)
 
 	// Find the toTransaction (userB's linked tx)
 	var linkedTxID int
@@ -4239,7 +4175,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 		AccountIDs: []int{accountA.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(parentTx.LinkedTransactions, 2)
+	suite.Require().Len(parentTx.LinkedTransactions, 1)
 
 	// Find the toTransaction (userB's linked tx)
 	var linkedTxID int
@@ -4313,7 +4249,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	suite.Require().Len(userATransactions, 3, "userA should have 3 installments")
 
 	firstInstallment := userATransactions[0]
-	suite.Require().Len(firstInstallment.LinkedTransactions, 2, "first installment should have 2 linked txs (from + to)")
+	suite.Require().Len(firstInstallment.LinkedTransactions, 1, "first installment should have 1 linked tx (to)")
 
 	// Find the toTransaction (userB's linked tx)
 	var linkedTxID int
@@ -4407,7 +4343,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	suite.Require().Len(userATransactions, 3, "userA should have 3 installments")
 
 	firstInstallment := userATransactions[0]
-	suite.Require().Len(firstInstallment.LinkedTransactions, 2)
+	suite.Require().Len(firstInstallment.LinkedTransactions, 1)
 
 	// Find the toTransaction (userB's linked tx)
 	var linkedTxID int
@@ -4537,8 +4473,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 
 	// Installments 1 and 2 keep the split; 3 and 4 have the split removed.
 	for i := range 2 {
-		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 2,
-			"installment %d should keep split (from + to)", i+1)
+		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 1,
+			"installment %d should keep split (to)", i+1)
 	}
 	for i := 2; i < 4; i++ {
 		suite.Assert().Len(installmentsAfter[i].LinkedTransactions, 0,

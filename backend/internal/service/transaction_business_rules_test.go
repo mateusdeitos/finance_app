@@ -60,7 +60,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 	})
 	suite.Require().NoError(err)
 
-	// userA should have 1 main transaction on personal account (plus 3 fromTransactions on connection accounts)
+	// userA should have 1 main transaction on personal account
 	userATxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:     &userA.ID,
 		AccountIDs: []int{accountA.ID},
@@ -71,11 +71,11 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 	ownerTx := userATxs[0]
 	suite.Assert().Equal(amount, ownerTx.Amount)
 	suite.Assert().Equal(domain.TransactionTypeExpense, ownerTx.Type)
-	suite.Assert().Len(ownerTx.LinkedTransactions, 6, "should have 2 linked txs per connection (from + to)")
+	suite.Assert().Len(ownerTx.LinkedTransactions, 3, "should have 1 linked tx per connection (to only, no fromTx for shared expenses)")
 
 	expectedLinkedAmount := int64(float64(amount) * float64(splitPct) / 100)
 
-	// Each connection produces a fromTransaction (userA, FromAccountID) and toTransaction (partner, ToAccountID)
+	// Each connection produces only a toTransaction (partner, ToAccountID) for shared expenses
 	// Find each toTransaction by matching UserID to conn.ToUserID
 	for i, conn := range connections {
 		var toTx *domain.Transaction
@@ -272,7 +272,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_DifferentUser
 		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(userATxs, 1, "cross-user transfer: 1 tx for userA")
+	suite.Require().Len(userATxs, 2, "cross-user transfer: 2 txs for userA (main debit + fromTx credit)")
 	debitTx := userATxs[0]
 
 	// Update: cross-user transfer → same-user transfer
@@ -344,7 +344,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_DifferentUser
 		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(userATxs, 1)
+	suite.Require().Len(userATxs, 2, "cross-user transfer: 2 txs for userA (main debit + fromTx credit)")
 	debitTx := userATxs[0]
 
 	// Update: cross-user transfer to userB → cross-user transfer to userC

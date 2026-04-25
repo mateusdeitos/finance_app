@@ -323,7 +323,7 @@ When users create a transfer to another user through a connection account, 3 tra
 
 - 1 transfer operation type = 'debit' with the account being the author private account
 - 1 transfer operation type = 'credit' with the account being the author side's account of the user_connection
-- 1 transfer operation type = 'debit' with the account being the other user side's account of the user_connection
+- 1 transfer operation type = 'credit' with the account being the other user side's account of the user_connection
 
 ### Balance
 

@@ -413,22 +413,28 @@ func (s *transactionService) injectLinkedTransactions(
 
 		amount := s.calculateAmount(transaction.Amount, splitSetting)
 
-		fromTransaction := domain.Transaction{
-			ID:                0,
-			InstallmentNumber: transaction.InstallmentNumber,
-			Date:              transaction.Date,
-			Description:       transaction.Description,
-			UserID:            connection.FromUserID,
-			OriginalUserID:    &userID,
-			Type:              transaction.Type,
-			OperationType:     lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, transaction.OperationType.Invert(), transaction.OperationType),
-			AccountID:         connection.FromAccountID,
-			CategoryID:        nil,
-			Amount:            amount,
-			Tags:              nil,
-			CreatedAt:         nil,
-			UpdatedAt:         nil,
-			ChargeID:          transaction.ChargeID,
+		// Cross-user transfers create a fromTransaction on the author's shared account
+		// (credit mirror of the debit on the private account). Shared expenses/income
+		// do NOT get a fromTransaction — a settlement handles the author's shared account.
+		if req.TransactionType == domain.TransactionTypeTransfer {
+			fromTransaction := domain.Transaction{
+				ID:                0,
+				InstallmentNumber: transaction.InstallmentNumber,
+				Date:              transaction.Date,
+				Description:       transaction.Description,
+				UserID:            connection.FromUserID,
+				OriginalUserID:    &userID,
+				Type:              transaction.Type,
+				OperationType:     transaction.OperationType.Invert(),
+				AccountID:         connection.FromAccountID,
+				CategoryID:        nil,
+				Amount:            amount,
+				Tags:              nil,
+				CreatedAt:         nil,
+				UpdatedAt:         nil,
+				ChargeID:          transaction.ChargeID,
+			}
+			transaction.LinkedTransactions = append(transaction.LinkedTransactions, fromTransaction)
 		}
 
 		toTransaction := domain.Transaction{
@@ -457,12 +463,6 @@ func (s *transactionService) injectLinkedTransactions(
 			toTransaction.TransactionRecurrenceID = &r.ID
 		}
 
-		// For split expenses both sides need tracking via the shared connection accounts.
-		// For cross-user transfers the debit side is already the main transaction; only
-		// the receiver's credit side is created as a linked transaction.
-		if req.TransactionType != domain.TransactionTypeTransfer {
-			transaction.LinkedTransactions = append(transaction.LinkedTransactions, fromTransaction)
-		}
 		transaction.LinkedTransactions = append(transaction.LinkedTransactions, toTransaction)
 	}
 
