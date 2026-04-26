@@ -8,7 +8,8 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
-import { TransactionsTestIds } from '@/testIds'
+import { fillNumber } from '../helpers/formFields'
+import { RecurrenceTestIds, TransactionsTestIds } from '@/testIds'
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
@@ -106,14 +107,14 @@ test.describe('Recurrence', () => {
     await transactionsPage.openCreateForm()
 
     // Fill the main expense fields first
-    await transactionsPage.fillExpense(1000, `Parcela invalida - e2e ${Date.now()}`, testAccountName, testCategoryName)
+    await transactionsPage.fillExpense(1000, `Parcela invalida - e2e ${Date.now()}`, testAccountId, testCategoryId)
 
     // Enable recurrence toggle — click the visible <label> element, not the hidden input
     await page.locator('label', { hasText: 'Recorrência' }).click()
 
     // Fill invalid values: current (5) > total (3)
-    await page.getByLabel('Parcela atual').fill('5')
-    await page.getByLabel('Total de parcelas').fill('3')
+    await fillNumber(transactionsPage.formDrawer, RecurrenceTestIds.CurrentInstallmentInput, 5)
+    await fillNumber(transactionsPage.formDrawer, RecurrenceTestIds.TotalInstallmentsInput, 3)
 
     // Attempt to submit
     await page.getByTestId(TransactionsTestIds.BtnSave).click()

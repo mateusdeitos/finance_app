@@ -21,4 +21,11 @@ export const ChargesTestIds = {
   BtnSubmitCreate: 'btn_submit_create_charge',
   SelectAcceptAccount: 'select_accept_account',
   BtnSubmitAccept: 'btn_submit_accept_charge',
+
+  // Select options (renderOption testids — pass the entity id)
+  OptionConnection: (connectionId: number | string) =>
+    `option_connection_${connectionId}` as const,
+  OptionMyAccount: (accountId: number | string) => `option_my_account_${accountId}` as const,
+  OptionAcceptAccount: (accountId: number | string) =>
+    `option_accept_account_${accountId}` as const,
 } as const

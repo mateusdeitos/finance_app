@@ -89,10 +89,10 @@ test.describe("Import with split settings", () => {
     const description = `Split Reopen ${Date.now()}`;
     const csv = buildCsvContent([["15/01/2026", description, "-100,00"]]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Set category (required for expense)
-    await importPage.setRowCategory(0, testCategoryName);
+    await importPage.setRowCategory(0, testCategoryId);
 
     // The split popover button starts with text "Sem divisão"
     const splitButton = importPage.reviewStep

@@ -1,5 +1,6 @@
 import { type Page, type Locator, expect } from '@playwright/test'
 import { AccountsTestIds } from '@/testIds'
+import { fillCurrencyCents, fillText } from '../helpers/formFields'
 
 export class AccountsPage {
   readonly page: Page
@@ -22,13 +23,9 @@ export class AccountsPage {
 
   async fillForm(name: string, balanceCents = 0) {
     const form = this.page.getByTestId(AccountsTestIds.Form)
-    await form.getByTestId(AccountsTestIds.InputName).fill(name)
+    await fillText(form, AccountsTestIds.InputName, name)
     if (balanceCents !== 0) {
-      const balanceInput = form.getByTestId(AccountsTestIds.InputInitialBalance)
-      await balanceInput.click()
-      for (const digit of String(balanceCents)) {
-        await balanceInput.press(digit)
-      }
+      await fillCurrencyCents(form, AccountsTestIds.InputInitialBalance, balanceCents)
     }
   }
 

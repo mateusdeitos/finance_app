@@ -1,5 +1,13 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-import { TransactionsTestIds, type PropagationOption } from '@/testIds'
+import { TransactionsTestIds, type PropagationOption, type TransactionType } from '@/testIds'
+import {
+  clearAndFillCurrencyCents,
+  fillCurrencyCents,
+  fillText,
+  pickSegmented,
+  selectOption,
+} from '../helpers/formFields'
+
 export class TransactionsPage {
   readonly page: Page;
   readonly formDrawer: Locator;
@@ -26,9 +34,12 @@ export class TransactionsPage {
   }
 
   async selectGroupBy(option: 'date' | 'category' | 'account') {
-    const labelMap: Record<string, string> = { date: 'Data', category: 'Categoria', account: 'Conta' }
-    await this.page.getByTestId(TransactionsTestIds.SegmentedGroupBy).getByText(labelMap[option]).click()
-    await this.page.waitForLoadState('networkidle')
+    await pickSegmented(
+      this.page,
+      TransactionsTestIds.SegmentedGroupBy,
+      TransactionsTestIds.SegmentGroupBy(option),
+    );
+    await this.page.waitForLoadState('networkidle');
   }
 
   /** Click the transaction row for the given transaction ID to open the update drawer. */
@@ -43,18 +54,16 @@ export class TransactionsPage {
 
   /** Clear the description input and type a new value. */
   async clearAndFillDescription(description: string) {
-    const input = this.updateDrawer.getByTestId(TransactionsTestIds.InputDescription);
-    await input.fill(description);
+    await fillText(this.updateDrawer, TransactionsTestIds.InputDescription, description);
   }
 
   /** Replace amount in the update form by selecting all and pressing digits. */
   async clearAndFillAmount(amountCents: number) {
-    const input = this.updateDrawer.getByTestId(TransactionsTestIds.InputAmount);
-    await input.click();
-    await input.press("Control+a");
-    for (const digit of String(amountCents)) {
-      await input.press(digit);
-    }
+    await clearAndFillCurrencyCents(
+      this.updateDrawer,
+      TransactionsTestIds.InputAmount,
+      amountCents,
+    );
   }
 
   /** Click save in the update drawer and wait for it to close. */
@@ -83,47 +92,36 @@ export class TransactionsPage {
     await expect(this.formDrawer).toBeVisible();
   }
 
-  async selectType(type: "expense" | "income" | "transfer") {
-    if (type === "expense") return;
-    const labels: Record<string, string> = {
-      income: "Receita",
-      transfer: "Transferência",
-    };
-    await this.page
-      .getByTestId(TransactionsTestIds.SegmentedTransactionType)
-      .getByText(labels[type])
-      .click();
+  async selectType(type: TransactionType) {
+    await pickSegmented(
+      this.formDrawer,
+      TransactionsTestIds.SegmentedTransactionType,
+      TransactionsTestIds.SegmentTransactionType(type),
+    );
   }
 
   async fillAmount(amountCents: number) {
-    const amountInput = this.page.getByTestId(TransactionsTestIds.InputAmount);
-    await amountInput.click();
-    for (const digit of String(amountCents)) {
-      await amountInput.press(digit);
-    }
+    await fillCurrencyCents(this.formDrawer, TransactionsTestIds.InputAmount, amountCents);
   }
 
   async fillDescription(description: string) {
-    await this.page.getByTestId(TransactionsTestIds.InputDescription).fill(description);
+    await fillText(this.formDrawer, TransactionsTestIds.InputDescription, description);
   }
 
-  async selectAccount(accountName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectAccount);
-    await input.click();
-    await input.fill(accountName);
-    // Mantine Select options are portalled and aren't instrumented with a
-    // testid; getByRole('option') is the documented fallback until we switch
-    // Select consumers to renderOption with explicit testids.
-    await this.page.getByRole("option", { name: accountName }).click();
+  async selectAccount(accountId: number) {
+    await selectOption(
+      this.formDrawer,
+      TransactionsTestIds.SelectAccount,
+      TransactionsTestIds.OptionAccount(accountId),
+    );
   }
 
-  async selectCategory(categoryName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectCategory);
-    await input.click();
-    await input.fill(categoryName);
-    await this.page
-      .getByRole("option", { name: new RegExp(categoryName) })
-      .click();
+  async selectCategory(categoryId: number) {
+    await selectOption(
+      this.formDrawer,
+      TransactionsTestIds.SelectCategory,
+      TransactionsTestIds.OptionCategory(categoryId),
+    );
   }
 
   async submitForm() {
@@ -134,47 +132,48 @@ export class TransactionsPage {
   async fillExpense(
     amountCents: number,
     description: string,
-    accountName: string,
-    categoryName: string
+    accountId: number,
+    categoryId: number,
   ) {
     await this.selectType("expense");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(accountName);
-    await this.selectCategory(categoryName);
+    await this.selectAccount(accountId);
+    await this.selectCategory(categoryId);
   }
 
   async fillIncome(
     amountCents: number,
     description: string,
-    accountName: string,
-    categoryName: string
+    accountId: number,
+    categoryId: number,
   ) {
     await this.selectType("income");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(accountName);
-    await this.selectCategory(categoryName);
+    await this.selectAccount(accountId);
+    await this.selectCategory(categoryId);
   }
 
-  async selectDestinationAccount(accountName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectDestinationAccount);
-    await input.click();
-    await input.fill(accountName);
-    await this.page.getByRole("option", { name: accountName }).click();
+  async selectDestinationAccount(accountId: number) {
+    await selectOption(
+      this.formDrawer,
+      TransactionsTestIds.SelectDestinationAccount,
+      TransactionsTestIds.OptionDestinationAccount(accountId),
+    );
   }
 
   async fillTransfer(
     amountCents: number,
     description: string,
-    sourceAccountName: string,
-    destAccountName: string
+    sourceAccountId: number,
+    destAccountId: number,
   ) {
     await this.selectType("transfer");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(sourceAccountName);
-    await this.selectDestinationAccount(destAccountName);
+    await this.selectAccount(sourceAccountId);
+    await this.selectDestinationAccount(destAccountId);
   }
 
   async selectTransaction(transactionId: number) {
@@ -201,16 +200,11 @@ export class TransactionsPage {
   }
 
   async selectPropagation(
-    option: "Somente esta" | "Esta e as próximas" | "Todas",
+    option: "current" | "current_and_future" | "all",
     action: "delete" | "update" = "delete"
   ) {
-    const valueMap: Record<string, PropagationOption> = {
-      "Somente esta": "current",
-      "Esta e as próximas": "current_and_future",
-      Todas: "all",
-    };
     await this.page
-      .getByTestId(TransactionsTestIds.PropagationOption(valueMap[option]))
+      .getByTestId(TransactionsTestIds.PropagationOption(option))
       .click();
     const confirmTestId = action === "delete" ? "btn_propagation_confirm" : "btn_propagation_confirm_update";
     await this.page.getByTestId(confirmTestId).click();

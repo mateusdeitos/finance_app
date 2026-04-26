@@ -1,5 +1,6 @@
 import { type Page, type Locator, expect } from '@playwright/test'
 import { CategoriesTestIds } from '@/testIds'
+import { fillText } from '../helpers/formFields'
 
 export class CategoriesPage {
   readonly page: Page
@@ -25,7 +26,7 @@ export class CategoriesPage {
 
     const input = this.page.getByTestId(CategoriesTestIds.InputNewName)
     await expect(input).toBeVisible()
-    await input.fill(name)
+    await fillText(this.page, CategoriesTestIds.InputNewName, name)
     await input.press('Enter')
     await expect(this.page.getByText(name)).toBeVisible()
   }
@@ -35,7 +36,7 @@ export class CategoriesPage {
 
     const input = this.page.getByTestId(CategoriesTestIds.InputNewName)
     await expect(input).toBeVisible()
-    await input.fill(childName)
+    await fillText(this.page, CategoriesTestIds.InputNewName, childName)
     await input.press('Enter')
     await expect(this.page.getByText(childName)).toBeVisible()
   }
@@ -45,7 +46,7 @@ export class CategoriesPage {
 
     const input = this.page.getByTestId(CategoriesTestIds.InputName)
     await expect(input).toBeVisible()
-    await input.fill(newName)
+    await fillText(this.page, CategoriesTestIds.InputName, newName)
     await input.press('Enter')
     await expect(this.page.getByText(newName)).toBeVisible()
   }
