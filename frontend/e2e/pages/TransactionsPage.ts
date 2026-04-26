@@ -1,11 +1,10 @@
 import { type Page, type Locator, expect } from "@playwright/test";
 import { TransactionsTestIds, type PropagationOption, type TransactionType } from '@/testIds'
 import {
-  clearAndFillCurrencyCents,
-  fillCurrencyCents,
-  fillText,
-  pickSegmented,
-  selectOption,
+  CurrencyField,
+  SegmentedField,
+  SelectField,
+  TextField,
 } from '../helpers/formFields'
 
 export class TransactionsPage {
@@ -34,9 +33,7 @@ export class TransactionsPage {
   }
 
   async selectGroupBy(option: 'date' | 'category' | 'account') {
-    await pickSegmented(
-      this.page,
-      TransactionsTestIds.SegmentedGroupBy,
+    await new SegmentedField(this.page, TransactionsTestIds.SegmentedGroupBy).pick(
       TransactionsTestIds.SegmentGroupBy(option),
     );
     await this.page.waitForLoadState('networkidle');
@@ -54,14 +51,12 @@ export class TransactionsPage {
 
   /** Clear the description input and type a new value. */
   async clearAndFillDescription(description: string) {
-    await fillText(this.updateDrawer, TransactionsTestIds.InputDescription, description);
+    await new TextField(this.updateDrawer, TransactionsTestIds.InputDescription).fill(description);
   }
 
   /** Replace amount in the update form by selecting all and pressing digits. */
   async clearAndFillAmount(amountCents: number) {
-    await clearAndFillCurrencyCents(
-      this.updateDrawer,
-      TransactionsTestIds.InputAmount,
+    await new CurrencyField(this.updateDrawer, TransactionsTestIds.InputAmount).clearAndFillCents(
       amountCents,
     );
   }
@@ -93,33 +88,29 @@ export class TransactionsPage {
   }
 
   async selectType(type: TransactionType) {
-    await pickSegmented(
-      this.formDrawer,
-      TransactionsTestIds.SegmentedTransactionType,
+    await new SegmentedField(this.formDrawer, TransactionsTestIds.SegmentedTransactionType).pick(
       TransactionsTestIds.SegmentTransactionType(type),
     );
   }
 
   async fillAmount(amountCents: number) {
-    await fillCurrencyCents(this.formDrawer, TransactionsTestIds.InputAmount, amountCents);
+    await new CurrencyField(this.formDrawer, TransactionsTestIds.InputAmount).fillCents(
+      amountCents,
+    );
   }
 
   async fillDescription(description: string) {
-    await fillText(this.formDrawer, TransactionsTestIds.InputDescription, description);
+    await new TextField(this.formDrawer, TransactionsTestIds.InputDescription).fill(description);
   }
 
   async selectAccount(accountId: number) {
-    await selectOption(
-      this.formDrawer,
-      TransactionsTestIds.SelectAccount,
+    await new SelectField(this.formDrawer, TransactionsTestIds.SelectAccount).pick(
       TransactionsTestIds.OptionAccount(accountId),
     );
   }
 
   async selectCategory(categoryId: number) {
-    await selectOption(
-      this.formDrawer,
-      TransactionsTestIds.SelectCategory,
+    await new SelectField(this.formDrawer, TransactionsTestIds.SelectCategory).pick(
       TransactionsTestIds.OptionCategory(categoryId),
     );
   }
@@ -156,9 +147,7 @@ export class TransactionsPage {
   }
 
   async selectDestinationAccount(accountId: number) {
-    await selectOption(
-      this.formDrawer,
-      TransactionsTestIds.SelectDestinationAccount,
+    await new SelectField(this.formDrawer, TransactionsTestIds.SelectDestinationAccount).pick(
       TransactionsTestIds.OptionDestinationAccount(accountId),
     );
   }
@@ -200,7 +189,7 @@ export class TransactionsPage {
   }
 
   async selectPropagation(
-    option: "current" | "current_and_future" | "all",
+    option: PropagationOption,
     action: "delete" | "update" = "delete"
   ) {
     await this.page

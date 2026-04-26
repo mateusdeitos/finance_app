@@ -14,7 +14,7 @@ import {
   openAuthedPage,
 } from "../helpers/api";
 import { ChargesTestIds } from "@/testIds";
-import { selectOption } from "../helpers/formFields";
+import { SelectField } from "../helpers/formFields";
 
 /**
  * Charges E2E Tests
@@ -369,9 +369,7 @@ test.describe("Charges", () => {
     // The radio is required in the schema, so submit without picking charger/payer stays on-form.
     await chargesPage.openCreateDrawer();
     // Fill everything except role — submit must stay on the form.
-    await selectOption(
-      chargesPage.createDrawer,
-      ChargesTestIds.SelectMyAccount,
+    await new SelectField(chargesPage.createDrawer, ChargesTestIds.SelectMyAccount).pick(
       ChargesTestIds.OptionMyAccount(primaryAccountId),
     );
     await chargesPage.createDrawer.getByTestId(ChargesTestIds.BtnSubmitCreate).click();

@@ -8,7 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
-import { fillNumber } from '../helpers/formFields'
+import { NumberField } from '../helpers/formFields'
 import { RecurrenceTestIds, TransactionsTestIds } from '@/testIds'
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
@@ -113,8 +113,8 @@ test.describe('Recurrence', () => {
     await page.locator('label', { hasText: 'Recorrência' }).click()
 
     // Fill invalid values: current (5) > total (3)
-    await fillNumber(transactionsPage.formDrawer, RecurrenceTestIds.CurrentInstallmentInput, 5)
-    await fillNumber(transactionsPage.formDrawer, RecurrenceTestIds.TotalInstallmentsInput, 3)
+    await new NumberField(transactionsPage.formDrawer, RecurrenceTestIds.CurrentInstallmentInput).fill(5)
+    await new NumberField(transactionsPage.formDrawer, RecurrenceTestIds.TotalInstallmentsInput).fill(3)
 
     // Attempt to submit
     await page.getByTestId(TransactionsTestIds.BtnSave).click()

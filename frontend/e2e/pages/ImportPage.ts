@@ -8,12 +8,7 @@ import {
   type ImportRowAction,
   type RecurrenceType,
 } from '@/testIds'
-import {
-  fillNumber,
-  selectOption,
-  setFileInput,
-  fillText,
-} from '../helpers/formFields'
+import { FileField, NumberField, SelectField, TextField } from '../helpers/formFields'
 
 export class ImportPage {
   readonly page: Page;
@@ -43,16 +38,14 @@ export class ImportPage {
 
   /** Select the account in the upload step. */
   async selectAccount(accountId: number) {
-    await selectOption(
-      this.uploadStep,
-      ImportTestIds.SelectAccount,
+    await new SelectField(this.uploadStep, ImportTestIds.SelectAccount).pick(
       ImportTestIds.OptionAccount(accountId),
     );
   }
 
   /** Upload a CSV file by writing content into the hidden file input. */
   async uploadCSVContent(csvContent: string) {
-    await setFileInput(this.uploadStep, ImportTestIds.InputCsvFile, {
+    await new FileField(this.uploadStep, ImportTestIds.InputCsvFile).set({
       name: "import.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csvContent, "utf-8"),
@@ -131,9 +124,7 @@ export class ImportPage {
 
   /** Set the category for a row via the searchable category select. */
   async setRowCategory(rowIndex: number, categoryId: number) {
-    await selectOption(
-      this.reviewStep,
-      ImportTestIds.RowSelectCategory(rowIndex),
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectCategory(rowIndex)).pick(
       ImportTestIds.RowOptionCategory(rowIndex, categoryId),
     );
   }
@@ -197,7 +188,7 @@ export class ImportPage {
   /** Create a new account inside the account drawer. */
   async createAccountInDrawer(name: string) {
     const form = this.page.getByTestId(AccountsTestIds.Form);
-    await fillText(form, AccountsTestIds.InputName, name);
+    await new TextField(form, AccountsTestIds.InputName).fill(name);
     await form.getByTestId(AccountsTestIds.BtnSave).click();
     await expect(form).not.toBeVisible({ timeout: 10000 });
   }
@@ -231,9 +222,7 @@ export class ImportPage {
 
   /** Change the action for a row via the action select. */
   async setRowAction(rowIndex: number, action: ImportRowAction) {
-    await selectOption(
-      this.reviewStep,
-      ImportTestIds.RowSelectAction(rowIndex),
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectAction(rowIndex)).pick(
       ImportTestIds.RowOptionAction(rowIndex, action),
     );
   }
@@ -259,13 +248,11 @@ export class ImportPage {
     const dropdown = this.page.getByTestId(ImportTestIds.RecurrencePopoverDropdown(rowIndex));
     await expect(dropdown).toBeVisible({ timeout: 5000 });
 
-    await selectOption(
-      dropdown,
-      RecurrenceTestIds.TypeSelect,
+    await new SelectField(dropdown, RecurrenceTestIds.TypeSelect).pick(
       RecurrenceTestIds.OptionType(opts.type),
     );
-    await fillNumber(dropdown, RecurrenceTestIds.CurrentInstallmentInput, opts.current);
-    await fillNumber(dropdown, RecurrenceTestIds.TotalInstallmentsInput, opts.total);
+    await new NumberField(dropdown, RecurrenceTestIds.CurrentInstallmentInput).fill(opts.current);
+    await new NumberField(dropdown, RecurrenceTestIds.TotalInstallmentsInput).fill(opts.total);
 
     // Dismiss the popover with Escape so onClose fires and syncs values to the parent form.
     // Using keyboard is more reliable than position-based clicks inside a trapFocus popover.

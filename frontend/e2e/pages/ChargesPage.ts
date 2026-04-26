@@ -1,10 +1,10 @@
 import { type Page, type Locator, expect } from "@playwright/test";
 import { ChargesTestIds, CommonTestIds, type ChargeRole } from '@/testIds'
 import {
-  fillNumber,
-  fillTextarea,
-  pickRadio,
-  selectOption,
+  NumberField,
+  RadioField,
+  SelectField,
+  TextareaField,
 } from '../helpers/formFields'
 
 export class ChargesPage {
@@ -83,32 +83,28 @@ export class ChargesPage {
     // the requested connection's option only if the Select actually rendered.
     const connectionSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectConnection);
     if (await connectionSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await selectOption(
-        this.createDrawer,
-        ChargesTestIds.SelectConnection,
+      await new SelectField(this.createDrawer, ChargesTestIds.SelectConnection).pick(
         ChargesTestIds.OptionConnection(opts.connectionId),
       );
     }
 
-    await selectOption(
-      this.createDrawer,
-      ChargesTestIds.SelectMyAccount,
+    await new SelectField(this.createDrawer, ChargesTestIds.SelectMyAccount).pick(
       ChargesTestIds.OptionMyAccount(opts.accountId),
     );
 
-    await pickRadio(this.createDrawer, ChargesTestIds.RadioRole(opts.role));
+    await new RadioField(this.createDrawer, ChargesTestIds.RadioRole(opts.role)).pick();
 
     if (opts.amount != null) {
       // Mantine NumberInput uses comma as the decimal separator (locale pt-BR).
-      await fillNumber(
-        this.createDrawer,
-        ChargesTestIds.InputAmount,
+      await new NumberField(this.createDrawer, ChargesTestIds.InputAmount).fill(
         opts.amount.toFixed(2).replace('.', ','),
       );
     }
 
     if (opts.description) {
-      await fillTextarea(this.createDrawer, ChargesTestIds.InputDescription, opts.description);
+      await new TextareaField(this.createDrawer, ChargesTestIds.InputDescription).fill(
+        opts.description,
+      );
     }
   }
 
@@ -125,9 +121,7 @@ export class ChargesPage {
   }
 
   async fillAcceptForm(accountId: number) {
-    await selectOption(
-      this.acceptDrawer,
-      ChargesTestIds.SelectAcceptAccount,
+    await new SelectField(this.acceptDrawer, ChargesTestIds.SelectAcceptAccount).pick(
       ChargesTestIds.OptionAcceptAccount(accountId),
     );
   }

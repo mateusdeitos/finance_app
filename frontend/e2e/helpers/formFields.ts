@@ -1,97 +1,106 @@
 /**
- * Form-field interaction helpers for Playwright e2e tests.
+ * Form-field interaction helpers for Playwright e2e tests — one class per
+ * field kind. Each class wraps a `(root, testid)` pair and exposes only the
+ * methods that make sense for that kind, so the type system stops you from
+ * calling `.pickCents()` on a text input or `.pick()` on a checkbox.
  *
- * Encapsulate the Mantine-specific quirks (CurrencyInput keydown loop,
- * combobox option portals, SegmentedControl item targeting) so Page Objects
- * stay short and tests don't drift back to fragile `getByRole('option')` /
- * `getByText(label)` patterns.
+ * Classes encapsulate the Mantine-specific quirks (CurrencyInput keydown
+ * digit-loop, combobox option portals, SegmentedControl item targeting) so
+ * Page Objects stay short and tests don't drift back to fragile
+ * `getByRole('option')` / `getByText(label)` patterns.
  *
  * Conventions:
- * - All helpers take `root: Page | Locator` first to scope inside drawers/forms.
- * - Helpers that resolve portalled content (Select dropdown options) extract
- *   the `Page` from `root` internally.
- * - Selects and Segmented controls take an option `testid` — never a label —
- *   per `frontend/CLAUDE.md` selectors policy.
+ * - Constructor: `(root: Page | Locator, testid: string)`. Always scope `root`
+ *   to a drawer/form locator when the field lives inside one — defaulting to
+ *   `page` lets stale duplicates match silently.
+ * - Selects and SegmentedControls require an option testid (no label
+ *   fallback), per the testid-only selector policy in `frontend/CLAUDE.md`.
+ * - Classes that resolve portalled content (Select dropdowns) extract `Page`
+ *   from `root` internally.
  */
 
 import { type Page, type Locator } from '@playwright/test'
 
 export type FieldRoot = Page | Locator
 
-function resolvePage(root: FieldRoot): Page {
-  return 'page' in root ? root.page() : root
+abstract class FieldBase {
+  constructor(
+    protected readonly root: FieldRoot,
+    protected readonly testid: string,
+  ) {}
+
+  protected locator(): Locator {
+    return this.root.getByTestId(this.testid)
+  }
+
+  protected page(): Page {
+    return 'page' in this.root ? this.root.page() : this.root
+  }
 }
 
 // ─── Plain text / textarea / number ───────────────────────────────────────────
 
-export async function fillText(root: FieldRoot, testid: string, value: string): Promise<void> {
-  await root.getByTestId(testid).fill(value)
+export class TextField extends FieldBase {
+  async fill(value: string): Promise<void> {
+    await this.locator().fill(value)
+  }
+
+  async clear(): Promise<void> {
+    await this.locator().fill('')
+  }
 }
 
-export async function clearText(root: FieldRoot, testid: string): Promise<void> {
-  await root.getByTestId(testid).fill('')
+export class TextareaField extends FieldBase {
+  async fill(value: string): Promise<void> {
+    await this.locator().fill(value)
+  }
 }
 
-export async function fillTextarea(root: FieldRoot, testid: string, value: string): Promise<void> {
-  await root.getByTestId(testid).fill(value)
-}
-
-export async function fillNumber(
-  root: FieldRoot,
-  testid: string,
-  value: number | string,
-): Promise<void> {
-  await root.getByTestId(testid).fill(String(value))
+export class NumberField extends FieldBase {
+  async fill(value: number | string): Promise<void> {
+    await this.locator().fill(String(value))
+  }
 }
 
 // ─── CurrencyInput (custom keydown handler — only per-key presses work) ──────
 
-export async function fillCurrencyCents(
-  root: FieldRoot,
-  testid: string,
-  cents: number,
-): Promise<void> {
-  const input = root.getByTestId(testid)
-  await input.click()
-  for (const digit of String(cents)) {
-    await input.press(digit)
+export class CurrencyField extends FieldBase {
+  async fillCents(cents: number): Promise<void> {
+    const input = this.locator()
+    await input.click()
+    for (const digit of String(cents)) {
+      await input.press(digit)
+    }
   }
-}
 
-export async function clearAndFillCurrencyCents(
-  root: FieldRoot,
-  testid: string,
-  cents: number,
-): Promise<void> {
-  const input = root.getByTestId(testid)
-  await input.click()
-  await input.press('Control+a')
-  for (const digit of String(cents)) {
-    await input.press(digit)
+  async clearAndFillCents(cents: number): Promise<void> {
+    const input = this.locator()
+    await input.click()
+    await input.press('Control+a')
+    for (const digit of String(cents)) {
+      await input.press(digit)
+    }
   }
 }
 
 // ─── Date / Month picker ──────────────────────────────────────────────────────
 
 /**
- * Type a date directly into a Mantine `DateInput`.
- * Pass it in the format the input expects (component default is DD/MM/YYYY).
- * Tabs out to commit the value and close the popover.
+ * Wraps a Mantine `DateInput`. Pass the date in the format the input expects
+ * (component default is DD/MM/YYYY). Tabs out to commit and close the popover.
  */
-export async function fillDateInput(
-  root: FieldRoot,
-  testid: string,
-  formattedDate: string,
-): Promise<void> {
-  const input = root.getByTestId(testid)
-  await input.click()
-  await input.fill(formattedDate)
-  await input.press('Tab')
+export class DateField extends FieldBase {
+  async fill(formattedDate: string): Promise<void> {
+    const input = this.locator()
+    await input.click()
+    await input.fill(formattedDate)
+    await input.press('Tab')
+  }
 }
 
 // ─── Select (Mantine combobox) ────────────────────────────────────────────────
 
-interface SelectOptionParams {
+interface SelectPickOptions {
   /**
    * Optional text to type into the search-enabled combobox before clicking
    * the option. Use when the option list is virtualised or long; otherwise
@@ -101,80 +110,74 @@ interface SelectOptionParams {
 }
 
 /**
- * Pick an option from a Mantine `Select` by clicking its `optionTestId`.
- *
- * The component must instrument its option via `renderOption` with the
- * matching `data-testid`. Helpers do not fall back to `getByRole('option', { name })`
- * — that path is forbidden by the testid-only selector policy.
+ * Wraps a Mantine `Select`. The component must instrument its option via
+ * `renderOption` with the matching `data-testid` — this class does not fall
+ * back to `getByRole('option', { name })` (forbidden by the testid-only
+ * selector policy).
  */
-export async function selectOption(
-  root: FieldRoot,
-  triggerTestId: string,
-  optionTestId: string,
-  params: SelectOptionParams = {},
-): Promise<void> {
-  const trigger = root.getByTestId(triggerTestId)
-  await trigger.click()
-  if (params.search) {
-    await trigger.fill(params.search)
+export class SelectField extends FieldBase {
+  /** Click the trigger, then click the option whose testid matches. */
+  async pick(optionTestId: string, opts: SelectPickOptions = {}): Promise<void> {
+    const trigger = this.locator()
+    await trigger.click()
+    if (opts.search) {
+      await trigger.fill(opts.search)
+    }
+    // Mantine renders Select options in a portal attached to <body>, so resolve
+    // the option locator from the Page rather than from `root`.
+    await this.page().getByTestId(optionTestId).click()
   }
-  // Mantine renders Select options in a portal attached to <body>, so resolve
-  // the option locator from the Page rather than from `root`.
-  await resolvePage(root).getByTestId(optionTestId).click()
 }
 
 // ─── TagsInput (multi) ────────────────────────────────────────────────────────
 
 /**
- * Add multiple tags to a Mantine `TagsInput`. Presses `Enter` after each tag,
- * which both creates new tags and confirms suggestions.
+ * Wraps a Mantine `TagsInput`. Presses `Enter` after each tag, which both
+ * creates new tags and confirms suggestions.
  */
-export async function fillTagsInput(
-  root: FieldRoot,
-  testid: string,
-  values: string[],
-): Promise<void> {
-  const input = root.getByTestId(testid)
-  await input.click()
-  for (const tag of values) {
-    await input.fill(tag)
-    await input.press('Enter')
+export class TagsField extends FieldBase {
+  async add(values: string[]): Promise<void> {
+    const input = this.locator()
+    await input.click()
+    for (const tag of values) {
+      await input.fill(tag)
+      await input.press('Enter')
+    }
   }
 }
 
 // ─── Radio / Checkbox / Switch ────────────────────────────────────────────────
 
-export async function pickRadio(root: FieldRoot, testid: string): Promise<void> {
-  await root.getByTestId(testid).check()
+/** A single Mantine `Radio` already scoped to its own testid. */
+export class RadioField extends FieldBase {
+  async pick(): Promise<void> {
+    await this.locator().check()
+  }
 }
 
-export async function setCheckbox(
-  root: FieldRoot,
-  testid: string,
-  checked: boolean,
-): Promise<void> {
-  await root.getByTestId(testid).setChecked(checked)
+export class CheckboxField extends FieldBase {
+  async set(checked: boolean): Promise<void> {
+    await this.locator().setChecked(checked)
+  }
 }
 
-export async function setSwitch(root: FieldRoot, testid: string, on: boolean): Promise<void> {
-  await root.getByTestId(testid).setChecked(on)
+export class SwitchField extends FieldBase {
+  async set(on: boolean): Promise<void> {
+    await this.locator().setChecked(on)
+  }
 }
 
 // ─── SegmentedControl ─────────────────────────────────────────────────────────
 
 /**
- * Click an option inside a Mantine `SegmentedControl`.
- *
- * The component must render each item's `label` as JSX carrying the
- * `optionTestId`, e.g.
+ * Wraps a Mantine `SegmentedControl`. The component must render each item's
+ * `label` as JSX carrying the `optionTestId`, e.g.
  *   `{ value: 'expense', label: <span data-testid={...}>Despesa</span> }`.
  */
-export async function pickSegmented(
-  root: FieldRoot,
-  segmentedTestId: string,
-  optionTestId: string,
-): Promise<void> {
-  await root.getByTestId(segmentedTestId).getByTestId(optionTestId).click()
+export class SegmentedField extends FieldBase {
+  async pick(optionTestId: string): Promise<void> {
+    await this.locator().getByTestId(optionTestId).click()
+  }
 }
 
 // ─── FileInput ────────────────────────────────────────────────────────────────
@@ -187,10 +190,8 @@ export interface FilePayload {
 
 export type FileInputContent = string | string[] | FilePayload | FilePayload[]
 
-export async function setFileInput(
-  root: FieldRoot,
-  testid: string,
-  files: FileInputContent,
-): Promise<void> {
-  await root.getByTestId(testid).setInputFiles(files)
+export class FileField extends FieldBase {
+  async set(files: FileInputContent): Promise<void> {
+    await this.locator().setInputFiles(files)
+  }
 }
