@@ -33,3 +33,4 @@ export {
   type ImportTypeRule,
 } from './import'
 export { RecurrenceTestIds, type RecurrenceType } from './recurrence'
+export { OnboardingTestIds } from './onboarding'

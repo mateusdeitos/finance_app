@@ -79,6 +79,11 @@ type ChargeService interface {
 	Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error
 }
 
+type OnboardingService interface {
+	GetStatus(ctx context.Context, userID int) (*domain.OnboardingStatus, error)
+	Complete(ctx context.Context, userID int, req *domain.OnboardingSetupRequest) error
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
@@ -90,4 +95,5 @@ type Services struct {
 	UserConnection UserConnectionService
 	Settlement     SettlementService
 	Charge         ChargeService
+	Onboarding     OnboardingService
 }

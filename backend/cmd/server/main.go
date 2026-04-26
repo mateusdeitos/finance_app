@@ -73,7 +73,7 @@ func main() {
 		TransactionRecurrence: repository.NewTransactionRecurrenceRepository(db),
 		Settlement:            repository.NewSettlementRepository(db),
 		Charge:                repository.NewChargeRepository(db),
-		// 	UserSettings:          repository.NewUserSettingsRepository(db),
+		UserSettings:          repository.NewUserSettingsRepository(db),
 	}
 
 	// Initialize services
@@ -89,6 +89,7 @@ func main() {
 	services.UserConnection = service.NewUserConnectionService(repos, services)
 	services.Transaction = service.NewTransactionService(repos, services)
 	services.Charge = service.NewChargeService(repos, services)
+	services.Onboarding = service.NewOnboardingService(repos)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -98,6 +99,7 @@ func main() {
 	transactionHandler := handler.NewTransactionHandler(services)
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 	chargeHandler := handler.NewChargeHandler(services)
+	onboardingHandler := handler.NewOnboardingHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -182,6 +184,11 @@ func main() {
 	transactions.POST("/check-duplicate", transactionHandler.CheckDuplicate)
 	// transactions.GET("/suggest-category", transactionHandler.SuggestCategory)
 	// transactions.POST("/recurring", transactionHandler.CreateRecurring)
+
+	// Onboarding
+	onboarding := api.Group("/onboarding")
+	onboarding.GET("/status", onboardingHandler.GetStatus)
+	onboarding.POST("/complete", onboardingHandler.Complete)
 
 	// Charges
 	charges := api.Group("/charges")

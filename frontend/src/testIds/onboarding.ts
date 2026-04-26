@@ -1,0 +1,17 @@
+export const OnboardingTestIds = {
+  Page: 'page_onboarding',
+  Stepper: 'stepper_onboarding',
+  StepAccounts: 'step_onboarding_accounts',
+  StepCategories: 'step_onboarding_categories',
+  StepImport: 'step_onboarding_import',
+  BtnNext: 'btn_onboarding_next',
+  BtnBack: 'btn_onboarding_back',
+  BtnFinish: 'btn_onboarding_finish',
+  BtnGoToImport: 'btn_onboarding_go_to_import',
+  BtnSkipImport: 'btn_onboarding_skip_import',
+  AlertError: 'alert_onboarding_error',
+  AccountRow: (slug: string) => `row_onboarding_account_${slug}` as const,
+  CheckboxAccount: (slug: string) => `checkbox_onboarding_account_${slug}` as const,
+  CategoryRow: (slug: string) => `row_onboarding_category_${slug}` as const,
+  CheckboxCategory: (slug: string) => `checkbox_onboarding_category_${slug}` as const,
+} as const

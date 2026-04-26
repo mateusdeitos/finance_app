@@ -8,4 +8,5 @@ export const QueryKeys = {
   InviteInfo: 'invite-info',
   Charges: 'charges',
   ChargesPendingCount: 'charges-pending-count',
+  Onboarding: 'onboarding',
 } as const
