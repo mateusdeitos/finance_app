@@ -41,7 +41,7 @@ func (h *OnboardingHandler) GetStatus(c echo.Context) error {
 // @Accept       json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        body  body  domain.OnboardingSetupRequest  true  "Initial accounts and categories"
+// @Param        request  body  domain.OnboardingSetupRequest  true  "Initial accounts and categories"
 // @Success      204
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse

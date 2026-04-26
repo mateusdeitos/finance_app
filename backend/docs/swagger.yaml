@@ -1088,7 +1088,7 @@ paths:
       parameters:
       - description: Initial accounts and categories
         in: body
-        name: body
+        name: request
         required: true
         schema:
           $ref: '#/definitions/domain.OnboardingSetupRequest'

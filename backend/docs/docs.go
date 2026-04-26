@@ -874,7 +874,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Initial accounts and categories",
-                        "name": "body",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
