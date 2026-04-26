@@ -4,9 +4,18 @@ import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
 
 const OPTIONS = [
-  { value: 'date', label: 'Data' },
-  { value: 'category', label: 'Categoria' },
-  { value: 'account', label: 'Conta' },
+  {
+    value: 'date',
+    label: <span data-testid={TransactionsTestIds.SegmentGroupBy('date')}>Data</span>,
+  },
+  {
+    value: 'category',
+    label: <span data-testid={TransactionsTestIds.SegmentGroupBy('category')}>Categoria</span>,
+  },
+  {
+    value: 'account',
+    label: <span data-testid={TransactionsTestIds.SegmentGroupBy('account')}>Conta</span>,
+  },
 ]
 
 export function GroupBySelector() {

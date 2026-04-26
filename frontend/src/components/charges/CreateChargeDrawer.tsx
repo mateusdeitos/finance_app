@@ -207,6 +207,11 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                   onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                   error={fieldState.error?.message}
                   required
+                  renderOption={({ option }) => (
+                    <span data-testid={ChargesTestIds.OptionConnection(option.value)}>
+                      {option.label}
+                    </span>
+                  )}
                   data-testid={ChargesTestIds.SelectConnection}
                 />
               )}
@@ -225,6 +230,11 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
+                renderOption={({ option }) => (
+                  <span data-testid={ChargesTestIds.OptionMyAccount(option.value)}>
+                    {option.label}
+                  </span>
+                )}
                 data-testid={ChargesTestIds.SelectMyAccount}
               />
             )}

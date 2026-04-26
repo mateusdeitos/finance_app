@@ -109,7 +109,7 @@ test.describe('Bulk Delete Transactions', () => {
     await expect(transactionsPage.page.getByTestId(TransactionsTestIds.PropagationDrawerBody)).toBeVisible()
 
     // Choose "Somente esta" and confirm
-    await transactionsPage.selectPropagation('Somente esta')
+    await transactionsPage.selectPropagation('current')
 
     await transactionsPage.closeBulkDeleteDrawer()
     await transactionsPage.goto()

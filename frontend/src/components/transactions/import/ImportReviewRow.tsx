@@ -17,7 +17,7 @@ import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
 import { AccountDrawer } from "@/components/accounts/AccountDrawer";
-import { ImportTestIds } from '@/testIds'
+import { ImportTestIds, type ImportRowAction, type ImportRowTransactionType } from '@/testIds'
 
 const TRANSACTION_TYPE_OPTIONS = [
   { value: "expense", label: "Despesa" },
@@ -246,6 +246,17 @@ export const ImportReviewRow = memo(
                 }}
                 disabled={disabled || isSkipped}
                 withCheckIcon={false}
+                renderOption={({ option }) => (
+                  <span
+                    data-testid={ImportTestIds.RowOptionTransactionType(
+                      rowIndex,
+                      option.value as ImportRowTransactionType,
+                    )}
+                  >
+                    {option.label}
+                  </span>
+                )}
+                data-testid={ImportTestIds.RowSelectTransactionType(rowIndex)}
               />
             )}
           />
@@ -270,6 +281,11 @@ export const ImportReviewRow = memo(
                     clearable
                     placeholder="Selecionar..."
                     withCheckIcon={false}
+                    renderOption={({ option }) => (
+                      <span data-testid={ImportTestIds.RowOptionCategory(rowIndex, option.value)}>
+                        {option.label}
+                      </span>
+                    )}
                     data-testid={ImportTestIds.RowSelectCategory(rowIndex)}
                     style={{ flex: 1 }}
                   />
@@ -318,6 +334,14 @@ export const ImportReviewRow = memo(
                     placeholder="Selecionar..."
                     withCheckIcon={false}
                     error={rowErrors?.destination_account_id?.message}
+                    renderOption={({ option }) => (
+                      <span
+                        data-testid={ImportTestIds.RowOptionDestinationAccount(rowIndex, option.value)}
+                      >
+                        {option.label}
+                      </span>
+                    )}
+                    data-testid={ImportTestIds.RowSelectDestinationAccount(rowIndex)}
                     style={{ flex: 1 }}
                   />
                 )}
@@ -386,6 +410,16 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 disabled={disabled}
                 withCheckIcon={false}
+                renderOption={({ option }) => (
+                  <span
+                    data-testid={ImportTestIds.RowOptionAction(
+                      rowIndex,
+                      option.value as ImportRowAction,
+                    )}
+                  >
+                    {option.label}
+                  </span>
+                )}
                 data-testid={ImportTestIds.RowSelectAction(rowIndex)}
               />
             )}

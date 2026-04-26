@@ -27,6 +27,17 @@ export const TransactionsTestIds = {
   SelectCategory: 'select_category',
   SegmentedTransactionType: 'segmented_transaction_type',
 
+  // Select options (renderOption testids — pass the entity id)
+  OptionAccount: (accountId: number | string) => `option_account_${accountId}` as const,
+  OptionDestinationAccount: (accountId: number | string) =>
+    `option_destination_account_${accountId}` as const,
+  OptionCategory: (categoryId: number | string) => `option_category_${categoryId}` as const,
+
+  // SegmentedControl items
+  SegmentTransactionType: (type: TransactionType) => `segment_transaction_type_${type}` as const,
+  SegmentGroupBy: (option: 'date' | 'category' | 'account') =>
+    `segment_group_by_${option}` as const,
+
   // Split
   InputSplitAmount: 'input_split_amount',
   InputSplitPercentage: 'input_split_percentage',

@@ -44,7 +44,7 @@ test.describe('Transfer Transactions', () => {
     const description = `Transferência Teste ${Date.now()}`
 
     await transactionsPage.openCreateForm()
-    await transactionsPage.fillTransfer(20000, description, sourceAccountName, destAccountName)
+    await transactionsPage.fillTransfer(20000, description, sourceAccountId, destAccountId)
     await transactionsPage.submitForm()
 
     // A transfer creates two rows (debit + credit) with the same description

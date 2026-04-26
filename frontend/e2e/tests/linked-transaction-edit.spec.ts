@@ -39,7 +39,7 @@ test.describe("Linked Transaction Edit", () => {
   let partnerToken: string;
   let partnerAccountId: number;
   let partnerCategoryId: number;
-  let primaryCategoryName: string;
+  let primaryCategoryId: number;
   let connectionId: number;
   let primaryConnAccountId: number;
   const createdTransactionIds: number[] = [];
@@ -52,8 +52,11 @@ test.describe("Linked Transaction Edit", () => {
     // Fresh primary user + account + category
     primaryToken = await getAuthTokenForUser(PRIMARY_EMAIL);
     await apiCreateAccount({ name: `LinkedEdit Primary ${ts}`, initial_balance: 0 }, { token: primaryToken });
-    primaryCategoryName = `LinkedEdit PrimaryCat ${ts}`;
-    await apiCreateCategory({ name: primaryCategoryName }, { token: primaryToken });
+    const primaryCat = await apiCreateCategory(
+      { name: `LinkedEdit PrimaryCat ${ts}` },
+      { token: primaryToken },
+    );
+    primaryCategoryId = primaryCat.id;
 
     // Fresh partner user + account + category
     partnerToken = await getAuthTokenForUser(PARTNER_EMAIL);
@@ -186,7 +189,7 @@ test.describe("Linked Transaction Edit", () => {
 
     const drawer = transactionsPage.linkedSplitDrawer;
     await transactionsPage.clearAndFillAmount(8000, drawer);
-    await transactionsPage.selectCategory(primaryCategoryName, drawer);
+    await transactionsPage.selectCategory(primaryCategoryId, drawer);
     await transactionsPage.submitUpdate(drawer);
 
     // Primary user's linked tx must reflect the new amount

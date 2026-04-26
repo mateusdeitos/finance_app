@@ -38,7 +38,7 @@ test.describe('Transactions', () => {
     const description = `Despesa Teste ${Date.now()}`
 
     await transactionsPage.openCreateForm()
-    await transactionsPage.fillExpense(5000, description, testAccountName, testCategoryName)
+    await transactionsPage.fillExpense(5000, description, testAccountId, testCategoryId)
     await transactionsPage.submitForm()
 
     await expect(transactionsPage.page.getByText(description)).toBeVisible()
@@ -49,7 +49,7 @@ test.describe('Transactions', () => {
     const description = `Receita Teste ${Date.now()}`
 
     await transactionsPage.openCreateForm()
-    await transactionsPage.fillIncome(10000, description, testAccountName, testCategoryName)
+    await transactionsPage.fillIncome(10000, description, testAccountId, testCategoryId)
     await transactionsPage.submitForm()
 
     await expect(transactionsPage.page.getByText(description)).toBeVisible()

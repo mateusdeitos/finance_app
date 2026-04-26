@@ -181,9 +181,30 @@ export const TransactionForm = ({
           render={({ field }) => (
             <SegmentedControl
               data={[
-                { value: "expense", label: "Despesa" },
-                { value: "income", label: "Receita" },
-                { value: "transfer", label: "Transferência" },
+                {
+                  value: "expense",
+                  label: (
+                    <span data-testid={TransactionsTestIds.SegmentTransactionType("expense")}>
+                      Despesa
+                    </span>
+                  ),
+                },
+                {
+                  value: "income",
+                  label: (
+                    <span data-testid={TransactionsTestIds.SegmentTransactionType("income")}>
+                      Receita
+                    </span>
+                  ),
+                },
+                {
+                  value: "transfer",
+                  label: (
+                    <span data-testid={TransactionsTestIds.SegmentTransactionType("transfer")}>
+                      Transferência
+                    </span>
+                  ),
+                },
               ]}
               value={field.value}
               onChange={(val) => {
@@ -261,6 +282,11 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                   error={errors.account_id?.message}
                   searchable
+                  renderOption={({ option }) => (
+                    <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
+                      {option.label}
+                    </span>
+                  )}
                   data-testid={TransactionsTestIds.SelectAccount}
                 />
               )}
@@ -279,6 +305,11 @@ export const TransactionForm = ({
                   onBlur={makeSelectBlurHandler(destinationAccountOptions, (val) => field.onChange(val))}
                   error={errors.destination_account_id?.message}
                   searchable
+                  renderOption={({ option }) => (
+                    <span data-testid={TransactionsTestIds.OptionDestinationAccount(option.value)}>
+                      {option.label}
+                    </span>
+                  )}
                   data-testid={TransactionsTestIds.SelectDestinationAccount}
                 />
               )}
@@ -301,6 +332,11 @@ export const TransactionForm = ({
                     error={errors.category_id?.message}
                     searchable
                     clearable
+                    renderOption={({ option }) => (
+                      <span data-testid={TransactionsTestIds.OptionCategory(option.value)}>
+                        {option.label}
+                      </span>
+                    )}
                     data-testid={TransactionsTestIds.SelectCategory}
                   />
                 )}
@@ -319,6 +355,11 @@ export const TransactionForm = ({
                     onBlur={makeSelectBlurHandler(accountOptions, (val) => field.onChange(val))}
                     error={errors.account_id?.message}
                     searchable
+                    renderOption={({ option }) => (
+                      <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
+                        {option.label}
+                      </span>
+                    )}
                     data-testid={TransactionsTestIds.SelectAccount}
                   />
                 )}
