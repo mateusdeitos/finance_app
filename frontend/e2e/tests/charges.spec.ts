@@ -184,6 +184,7 @@ test.describe("Charges", () => {
     await chargesPage.openCreateDrawer();
     await chargesPage.fillCreateForm({
       accountId: primaryAccountId,
+      connectionId,
       role: "charger",
       description,
     });
@@ -287,6 +288,7 @@ test.describe("Charges", () => {
     await pageCharges.openCreateDrawer();
     await pageCharges.fillCreateForm({
       accountId: privAcc.id,
+      connectionId: freshConn.id,
       role: "charger",
       amount: arbitraryAmount,
       description,
@@ -342,6 +344,7 @@ test.describe("Charges", () => {
     await pageCharges.openCreateDrawer();
     await pageCharges.fillCreateForm({
       accountId: privAcc.id,
+      connectionId: freshConn.id,
       role: "payer",
       amount: arbitraryAmount,
       description,

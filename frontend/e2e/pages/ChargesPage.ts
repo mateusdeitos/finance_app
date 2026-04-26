@@ -70,12 +70,19 @@ export class ChargesPage {
 
   async fillCreateForm(opts: {
     accountId: number;
-    connectionId?: number;
+    connectionId: number;
     role: ChargeRole;
     description?: string;
     amount?: number;
   }) {
-    if (opts.connectionId != null) {
+    // The drawer hides the connection Select when there's exactly one
+    // connection (`singleConnection` branch). But on a cold render `useAccounts`
+    // hasn't resolved when the form's `defaultValues` are computed, so the
+    // Select can render briefly even for single-connection users — leaving
+    // `connection_id` undefined unless we click it. Probe visibility and pick
+    // the requested connection's option only if the Select actually rendered.
+    const connectionSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectConnection);
+    if (await connectionSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
       await selectOption(
         this.createDrawer,
         ChargesTestIds.SelectConnection,
