@@ -77,16 +77,20 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
 	suite.Require().NoError(err)
 
+	personal1, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
 	category, err := suite.createTestCategory(ctx, user1)
 	suite.Require().NoError(err)
 
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-	// User1 creates a 1000-cent expense split 50% with user2 → settlement credit of 500 for user1
+	// User1 creates a 1000-cent expense from personal account, split 50% with user2
+	// → user1: expense -1000 (personal1), settlement credit +500 (conn.FromAccountID)
 	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID,
+		AccountID:       personal1.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
 		Date:            date,
@@ -99,7 +103,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 
 	result, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	// expense: -1000, settlement: +500 → net = -500 (no fromTx for shared expenses)
+	// expense: -1000, settlement: +500 → net = -500
 	suite.Assert().Equal(int64(-500), result.Balance)
 }
 

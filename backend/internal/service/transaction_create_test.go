@@ -1588,9 +1588,13 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount_
 	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
 	suite.Require().NoError(err)
 
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
 	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
 		Amount:          1000,
 		Date:            now(),
 		Description:     "should fail",

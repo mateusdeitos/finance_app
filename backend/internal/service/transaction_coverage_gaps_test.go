@@ -260,13 +260,16 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_AccountIDChangeForChil
 	categoryA, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
+	personalA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
 	// userB needs an extra account to pass as the new AccountID
 	extraAccountB, err := suite.createTestAccount(ctx, userB)
 	suite.Require().NoError(err)
 
 	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID,
+		AccountID:       personalA.ID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
 		Date:            d,
@@ -417,12 +420,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 
+	personalA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
 	category, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
 	// Create a real split expense so we have valid transaction IDs.
 	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
-		AccountID:       conn.FromAccountID,
+		AccountID:       personalA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
