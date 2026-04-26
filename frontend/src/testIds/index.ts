@@ -18,11 +18,18 @@
 export { CommonTestIds } from './common'
 export { AccountsTestIds } from './accounts'
 export { CategoriesTestIds } from './categories'
-export { ChargesTestIds, type ChargeAction } from './charges'
+export { ChargesTestIds, type ChargeAction, type ChargeRole, type ChargesTab } from './charges'
 export {
   TransactionsTestIds,
   type TransactionType,
   type PropagationOption,
+  type TransactionFilterKind,
 } from './transactions'
-export { ImportTestIds } from './import'
-export { RecurrenceTestIds } from './recurrence'
+export {
+  ImportTestIds,
+  type ImportRowAction,
+  type ImportRowTransactionType,
+  type ImportDecimalSeparator,
+  type ImportTypeRule,
+} from './import'
+export { RecurrenceTestIds, type RecurrenceType } from './recurrence'

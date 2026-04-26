@@ -286,6 +286,45 @@ All ids — static or parametric — are declared as `as const` objects:
 
 When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
 
+### Form fields: use `e2e/helpers/formFields.ts` (mandatory)
+
+**Every interaction with a form field in an e2e test must go through a field class from `frontend/e2e/helpers/formFields.ts`.** Do not call `.fill()`, `.click()`, `.check()`, `.setChecked()`, `.setInputFiles()`, or `press(digit)` loops directly on a form field locator — that's how Mantine quirks (the `CurrencyInput` keydown handler, combobox option portals, SegmentedControl item targeting) leak back into Page Objects and tests start failing intermittently.
+
+The module exposes one class per field kind. Each class is constructed with `(root: Page | Locator, testid: string)` and exposes only the methods that make sense for that kind, so the type system stops you from calling `.fillCents()` on a text input or `.pick()` on a checkbox.
+
+| Field kind | Class | Methods |
+|---|---|---|
+| Text input | `TextField` | `fill(value)`, `clear()` |
+| Textarea | `TextareaField` | `fill(value)` |
+| `NumberInput` | `NumberField` | `fill(value)` |
+| `CurrencyInput` (cents) | `CurrencyField` | `fillCents(cents)`, `clearAndFillCents(cents)` |
+| `DateInput` | `DateField` | `fill(formattedDate)` |
+| Mantine `Select` | `SelectField` | `pick(optionTestId, { search? })` |
+| `TagsInput` | `TagsField` | `add(values)` |
+| `Radio` | `RadioField` | `pick()` |
+| `Checkbox` | `CheckboxField` | `set(checked)` |
+| `Switch` | `SwitchField` | `set(on)` |
+| `SegmentedControl` | `SegmentedField` | `pick(optionTestId)` |
+| `FileInput` | `FileField` | `set(content)` |
+
+Call shape:
+
+```ts
+await new CurrencyField(this.formDrawer, TransactionsTestIds.InputAmount).fillCents(5000)
+await new SelectField(this.formDrawer, TransactionsTestIds.SelectAccount)
+  .pick(TransactionsTestIds.OptionAccount(accountId))
+await new SegmentedField(this.formDrawer, TransactionsTestIds.SegmentedTransactionType)
+  .pick(TransactionsTestIds.SegmentTransactionType('expense'))
+```
+
+Rules:
+- **Always pass an option testid**, never a label, to `SelectField.pick` and `SegmentedField.pick`. Both refuse label fallbacks. If a Mantine `Select` doesn't have a `renderOption` testid yet, add one in the same PR (factory under `src/testIds/`, then `renderOption={({ option }) => <span data-testid={...}>{option.label}</span>}` on the `Select`). Same pattern for `SegmentedControl`: render each item's `label` as JSX with a per-option testid.
+- **Always scope `root` to a drawer/form locator** when the form lives inside one (e.g. `formDrawer`, `updateDrawer`, `createDrawer`). Defaulting to `page` lets stale duplicates match silently.
+- **Page Object methods that fill a form field must instantiate a field class** — they shouldn't reimplement the keydown loop, the click+option dance, or hardcoded label maps. If you find yourself writing one of those in a Page Object, the class is missing or the testid is missing; fix the source rather than work around it in the test.
+- **Specs themselves should also use the classes** when they need to touch a field that the Page Object doesn't expose — don't reach into `page.getByLabel(...)` / `getByRole('option', ...)`.
+
+Add a new field class (or extend an existing one) when a new form-field kind first appears in a real test. Don't ship a one-off interaction inline.
+
 ## Known divergences (migrate when touching)
 
 These exist in the codebase and agents should **not** copy them. When touching a file listed here, prefer migrating it toward the conventions above within the scope of the task.

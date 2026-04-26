@@ -83,7 +83,7 @@ test.describe("Import shift+click selection", () => {
     page = await context.newPage();
     importPage = new ImportPage(page);
     await importPage.goto();
-    await importPage.uploadCSV(csv, freshAccountName);
+    await importPage.uploadCSV(csv, freshAccountId);
   });
 
   test.afterEach(async () => {

@@ -1,5 +1,15 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-import { AccountsTestIds, CategoriesTestIds, ImportTestIds, RecurrenceTestIds, TransactionsTestIds } from '@/testIds'
+import {
+  AccountsTestIds,
+  CategoriesTestIds,
+  ImportTestIds,
+  RecurrenceTestIds,
+  TransactionsTestIds,
+  type ImportRowAction,
+  type RecurrenceType,
+} from '@/testIds'
+import { FileField, NumberField, SelectField, TextField } from '../helpers/formFields'
+
 export class ImportPage {
   readonly page: Page;
   readonly uploadStep: Locator;
@@ -26,18 +36,16 @@ export class ImportPage {
     await expect(this.uploadStep).toBeVisible({ timeout: 8000 });
   }
 
-  /** Select the account in the upload step (Mantine Select is readonly, use click+option). */
-  async selectAccount(accountName: string) {
-    const input = this.uploadStep.getByTestId(ImportTestIds.SelectAccount);
-    await input.click();
-    // Mantine Select options are portalled — documented escape (see Phase 7 plan).
-    await this.page.getByRole("option", { name: accountName }).click();
+  /** Select the account in the upload step. */
+  async selectAccount(accountId: number) {
+    await new SelectField(this.uploadStep, ImportTestIds.SelectAccount).pick(
+      ImportTestIds.OptionAccount(accountId),
+    );
   }
 
   /** Upload a CSV file by writing content into the hidden file input. */
   async uploadCSVContent(csvContent: string) {
-    const fileInput = this.uploadStep.getByTestId(ImportTestIds.InputCsvFile);
-    await fileInput.setInputFiles({
+    await new FileField(this.uploadStep, ImportTestIds.InputCsvFile).set({
       name: "import.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csvContent, "utf-8"),
@@ -51,8 +59,8 @@ export class ImportPage {
   }
 
   /** Full upload flow: select account, upload CSV, submit. */
-  async uploadCSV(csvContent: string, accountName: string) {
-    await this.selectAccount(accountName);
+  async uploadCSV(csvContent: string, accountId: number) {
+    await this.selectAccount(accountId);
     await this.uploadCSVContent(csvContent);
     await this.submitUpload();
   }
@@ -115,11 +123,10 @@ export class ImportPage {
   }
 
   /** Set the category for a row via the searchable category select. */
-  async setRowCategory(rowIndex: number, categoryName: string) {
-    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectCategory(rowIndex));
-    await select.click();
-    await select.fill(categoryName);
-    await this.page.getByRole("option", { name: categoryName }).click();
+  async setRowCategory(rowIndex: number, categoryId: number) {
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectCategory(rowIndex)).pick(
+      ImportTestIds.RowOptionCategory(rowIndex, categoryId),
+    );
   }
 
   /** Click the + button next to the category select to open the category creation drawer. */
@@ -181,7 +188,7 @@ export class ImportPage {
   /** Create a new account inside the account drawer. */
   async createAccountInDrawer(name: string) {
     const form = this.page.getByTestId(AccountsTestIds.Form);
-    await form.getByTestId(AccountsTestIds.InputName).fill(name);
+    await new TextField(form, AccountsTestIds.InputName).fill(name);
     await form.getByTestId(AccountsTestIds.BtnSave).click();
     await expect(form).not.toBeVisible({ timeout: 10000 });
   }
@@ -214,15 +221,10 @@ export class ImportPage {
   }
 
   /** Change the action for a row via the action select. */
-  async setRowAction(rowIndex: number, action: "import" | "skip" | "duplicate") {
-    const labels: Record<string, string> = {
-      import: "Importar",
-      skip: "Não importar",
-      duplicate: "Duplicado",
-    };
-    const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
-    await select.click();
-    await this.page.getByRole("option", { name: labels[action] }).click();
+  async setRowAction(rowIndex: number, action: ImportRowAction) {
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectAction(rowIndex)).pick(
+      ImportTestIds.RowOptionAction(rowIndex, action),
+    );
   }
 
   /** Check whether a row's action select shows a particular value (by visible label). */
@@ -238,7 +240,7 @@ export class ImportPage {
    */
   async setRowInstallments(
     rowIndex: number,
-    opts: { type: "monthly" | "weekly" | "daily" | "yearly"; current: number; total: number },
+    opts: { type: RecurrenceType; current: number; total: number },
   ) {
     const btn = this.reviewStep.getByTestId(ImportTestIds.RowBtnRecurrencePopover(rowIndex));
     await btn.click();
@@ -246,24 +248,11 @@ export class ImportPage {
     const dropdown = this.page.getByTestId(ImportTestIds.RecurrencePopoverDropdown(rowIndex));
     await expect(dropdown).toBeVisible({ timeout: 5000 });
 
-    // Select frequency type
-    const typeSelect = dropdown.getByTestId(RecurrenceTestIds.TypeSelect);
-    await typeSelect.click();
-    const typeLabels: Record<string, string> = {
-      monthly: "Mensal",
-      weekly: "Semanal",
-      daily: "Diário",
-      yearly: "Anual",
-    };
-    await this.page.getByRole("option", { name: typeLabels[opts.type] }).click();
-
-    // Fill current installment
-    const currentInput = dropdown.getByTestId(RecurrenceTestIds.CurrentInstallmentInput);
-    await currentInput.fill(String(opts.current));
-
-    // Fill total installments
-    const totalInput = dropdown.getByTestId(RecurrenceTestIds.TotalInstallmentsInput);
-    await totalInput.fill(String(opts.total));
+    await new SelectField(dropdown, RecurrenceTestIds.TypeSelect).pick(
+      RecurrenceTestIds.OptionType(opts.type),
+    );
+    await new NumberField(dropdown, RecurrenceTestIds.CurrentInstallmentInput).fill(opts.current);
+    await new NumberField(dropdown, RecurrenceTestIds.TotalInstallmentsInput).fill(opts.total);
 
     // Dismiss the popover with Escape so onClose fires and syncs values to the parent form.
     // Using keyboard is more reliable than position-based clicks inside a trapFocus popover.

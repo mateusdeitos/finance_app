@@ -1,5 +1,11 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-import { ChargesTestIds, CommonTestIds } from '@/testIds'
+import { ChargesTestIds, CommonTestIds, type ChargeRole } from '@/testIds'
+import {
+  NumberField,
+  RadioField,
+  SelectField,
+  TextareaField,
+} from '../helpers/formFields'
 
 export class ChargesPage {
   readonly page: Page;
@@ -63,33 +69,42 @@ export class ChargesPage {
   }
 
   async fillCreateForm(opts: {
-    accountName: string;
-    role: "charger" | "payer";
+    accountId: number;
+    connectionId: number;
+    role: ChargeRole;
     description?: string;
     amount?: number;
   }) {
-    // If the connection dropdown is visible (multiple connections or accounts still loading),
-    // select the first available option so connection_id gets set.
+    // The drawer hides the connection Select when there's exactly one
+    // connection (`singleConnection` branch). But on a cold render `useAccounts`
+    // hasn't resolved when the form's `defaultValues` are computed, so the
+    // Select can render briefly even for single-connection users — leaving
+    // `connection_id` undefined unless we click it. Probe visibility and pick
+    // the requested connection's option only if the Select actually rendered.
     const connectionSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectConnection);
     if (await connectionSelect.isVisible({ timeout: 1000 }).catch(() => false)) {
-      await connectionSelect.click();
-      await this.page.getByRole("option").first().click();
+      await new SelectField(this.createDrawer, ChargesTestIds.SelectConnection).pick(
+        ChargesTestIds.OptionConnection(opts.connectionId),
+      );
     }
 
-    const accountSelect = this.createDrawer.getByTestId(ChargesTestIds.SelectMyAccount);
-    await accountSelect.click();
-    await this.page.getByRole("option", { name: opts.accountName }).click();
+    await new SelectField(this.createDrawer, ChargesTestIds.SelectMyAccount).pick(
+      ChargesTestIds.OptionMyAccount(opts.accountId),
+    );
 
-    const radioTestId = opts.role === "charger" ? "radio_role_charger" : "radio_role_payer";
-    await this.createDrawer.getByTestId(radioTestId).check();
+    await new RadioField(this.createDrawer, ChargesTestIds.RadioRole(opts.role)).pick();
 
     if (opts.amount != null) {
-      const amountInput = this.createDrawer.getByTestId(ChargesTestIds.InputAmount);
-      await amountInput.fill(opts.amount.toFixed(2).replace(".", ","));
+      // Mantine NumberInput uses comma as the decimal separator (locale pt-BR).
+      await new NumberField(this.createDrawer, ChargesTestIds.InputAmount).fill(
+        opts.amount.toFixed(2).replace('.', ','),
+      );
     }
 
     if (opts.description) {
-      await this.createDrawer.getByTestId(ChargesTestIds.InputDescription).fill(opts.description);
+      await new TextareaField(this.createDrawer, ChargesTestIds.InputDescription).fill(
+        opts.description,
+      );
     }
   }
 
@@ -105,10 +120,10 @@ export class ChargesPage {
     await expect(this.acceptDrawer).toBeVisible({ timeout: 5000 });
   }
 
-  async fillAcceptForm(accountName: string) {
-    const accountSelect = this.acceptDrawer.getByTestId(ChargesTestIds.SelectAcceptAccount);
-    await accountSelect.click();
-    await this.page.getByRole("option", { name: accountName }).click();
+  async fillAcceptForm(accountId: number) {
+    await new SelectField(this.acceptDrawer, ChargesTestIds.SelectAcceptAccount).pick(
+      ChargesTestIds.OptionAcceptAccount(accountId),
+    );
   }
 
   async submitAccept() {

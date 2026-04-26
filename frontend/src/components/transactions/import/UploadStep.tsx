@@ -23,7 +23,7 @@ import { Transactions } from '@/types/transactions'
 import { parseApiError } from '@/utils/apiErrors'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { CSV_COLUMNS } from './importPayload'
-import { ImportTestIds } from '@/testIds'
+import { ImportTestIds, type ImportDecimalSeparator, type ImportTypeRule } from '@/testIds'
 
 type Props = {
   onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
@@ -95,6 +95,9 @@ export function UploadStep({ onParsed, onBack }: Props) {
           data={ownAccountOptions}
           value={accountId ? String(accountId) : null}
           onChange={(val) => setAccountId(val ? Number(val) : null)}
+          renderOption={({ option }) => (
+            <span data-testid={ImportTestIds.OptionAccount(option.value)}>{option.label}</span>
+          )}
           data-testid={ImportTestIds.SelectAccount}
         />
         <ActionIcon
@@ -123,6 +126,13 @@ export function UploadStep({ onParsed, onBack }: Props) {
           ]}
           value={decimalSeparator}
           onChange={(val) => setDecimalSeparator((val as Transactions.DecimalSeparatorValue | null) ?? 'comma')}
+          renderOption={({ option }) => (
+            <span
+              data-testid={ImportTestIds.OptionDecimalSeparator(option.value as ImportDecimalSeparator)}
+            >
+              {option.label}
+            </span>
+          )}
           data-testid={ImportTestIds.SelectDecimalSeparator}
         />
         <Select
@@ -136,7 +146,12 @@ export function UploadStep({ onParsed, onBack }: Props) {
           onChange={(val) =>
             setTypeDefinitionRule((val as Transactions.TypeDefinitionRule | null) ?? 'positive_as_income')
           }
-          data-testid={ImportTestIds.SelectDecimalSeparator}
+          renderOption={({ option }) => (
+            <span data-testid={ImportTestIds.OptionTypeRule(option.value as ImportTypeRule)}>
+              {option.label}
+            </span>
+          )}
+          data-testid={ImportTestIds.SelectTypeRule}
         />
       </Flex>
 

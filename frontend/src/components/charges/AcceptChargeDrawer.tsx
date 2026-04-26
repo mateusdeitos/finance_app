@@ -165,6 +165,11 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
                 error={fieldState.error?.message}
                 required
+                renderOption={({ option }) => (
+                  <span data-testid={ChargesTestIds.OptionAcceptAccount(option.value)}>
+                    {option.label}
+                  </span>
+                )}
                 data-testid={ChargesTestIds.SelectAcceptAccount}
               />
             )}

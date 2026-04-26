@@ -13,6 +13,8 @@ import {
   apiFetchAs,
   openAuthedPage,
 } from "../helpers/api";
+import { ChargesTestIds } from "@/testIds";
+import { SelectField } from "../helpers/formFields";
 
 /**
  * Charges E2E Tests
@@ -181,7 +183,8 @@ test.describe("Charges", () => {
 
     await chargesPage.openCreateDrawer();
     await chargesPage.fillCreateForm({
-      accountName: primaryAccountName,
+      accountId: primaryAccountId,
+      connectionId,
       role: "charger",
       description,
     });
@@ -269,10 +272,11 @@ test.describe("Charges", () => {
     });
 
     const privAccName = `Arb Charger Acc ${Date.now()}`;
-    await apiFetchAs(freshPrimaryToken, "/api/accounts", {
+    const privAccRes = await apiFetchAs(freshPrimaryToken, "/api/accounts", {
       method: "POST",
       body: JSON.stringify({ name: privAccName, initial_balance: 0 }),
     });
+    const privAcc = await privAccRes.json();
 
     // Drive the UI as the fresh primary
     const page = await openAuthedPage(browser, freshPrimaryToken);
@@ -283,7 +287,8 @@ test.describe("Charges", () => {
     const arbitraryAmount = 123.45; // reais in the UI → 12345 cents in the DB
     await pageCharges.openCreateDrawer();
     await pageCharges.fillCreateForm({
-      accountName: privAccName,
+      accountId: privAcc.id,
+      connectionId: freshConn.id,
       role: "charger",
       amount: arbitraryAmount,
       description,
@@ -324,10 +329,11 @@ test.describe("Charges", () => {
     });
 
     const privAccName = `Arb Payer Acc ${Date.now()}`;
-    await apiFetchAs(freshPrimaryToken, "/api/accounts", {
+    const privAccRes = await apiFetchAs(freshPrimaryToken, "/api/accounts", {
       method: "POST",
       body: JSON.stringify({ name: privAccName, initial_balance: 0 }),
     });
+    const privAcc = await privAccRes.json();
 
     const page = await openAuthedPage(browser, freshPrimaryToken);
     const pageCharges = new ChargesPage(page);
@@ -337,7 +343,8 @@ test.describe("Charges", () => {
     const arbitraryAmount = 67.89;
     await pageCharges.openCreateDrawer();
     await pageCharges.fillCreateForm({
-      accountName: privAccName,
+      accountId: privAcc.id,
+      connectionId: freshConn.id,
       role: "payer",
       amount: arbitraryAmount,
       description,
@@ -361,12 +368,11 @@ test.describe("Charges", () => {
   test("submitting the create drawer without selecting a role is rejected", async () => {
     // The radio is required in the schema, so submit without picking charger/payer stays on-form.
     await chargesPage.openCreateDrawer();
-    // Fill everything except role
-    const accountSelect = chargesPage.createDrawer.getByRole("textbox", { name: "Minha conta" });
-    await accountSelect.click();
-    await chargesPage.page.getByRole("option", { name: primaryAccountName }).click();
-
-    await chargesPage.createDrawer.getByRole("button", { name: "Criar Cobrança" }).click();
+    // Fill everything except role — submit must stay on the form.
+    await new SelectField(chargesPage.createDrawer, ChargesTestIds.SelectMyAccount).pick(
+      ChargesTestIds.OptionMyAccount(primaryAccountId),
+    );
+    await chargesPage.createDrawer.getByTestId(ChargesTestIds.BtnSubmitCreate).click();
 
     // The drawer must stay open and show a validation error for the role field.
     await expect(chargesPage.createDrawer).toBeVisible();
