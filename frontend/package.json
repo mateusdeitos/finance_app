@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@hookform/devtools": "^4.4.0",
     "@playwright/test": "^1.58.2",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/router-devtools": "^1.166.9",

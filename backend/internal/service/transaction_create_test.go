@@ -407,7 +407,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactionsUser1, 2)
+	// user1 sees 3 txs: main debit (transfer1) + fromTx credit (transfer1) + toTx credit (transfer2)
+	suite.Assert().Len(transactionsUser1, 3)
 
 	suite.Assert().NoError(err)
 
@@ -418,17 +419,25 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.Assert().Equal(user1.ID, transactionsUser1[i].UserID, fmt.Sprintf("transactionsUser1[%d].UserID should be %d", i, user1.ID))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser1[i].Type, fmt.Sprintf("transactionsUser1[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 
-		if i == 0 {
+		switch i {
+		case 0:
+			// Main tx of transfer1: debit on private account
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 100))
 			suite.Assert().Equal(account1.ID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, account1.ID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (to_account_id)", i))
+			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 2, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 2 (fromTx + toTx)", i))
 			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
-		} else {
+		case 1:
+			// fromTx of transfer1: credit on user1's shared account
+			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user1.ID))
+			suite.Assert().Equal(int64(100), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 100))
+			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
+			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+		case 2:
+			// toTx from transfer2: credit on user1's shared account (received from user2)
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -444,7 +453,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactionsUser2, 2)
+	// user2 sees 3 txs: main debit (transfer2) + fromTx credit (transfer2) + toTx credit (transfer1)
+	// Sorted by original_user_id DESC: user2 first, then user1
+	suite.Assert().Len(transactionsUser2, 3)
 
 	suite.Assert().NoError(err)
 
@@ -455,17 +466,25 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		suite.Assert().Equal(user2.ID, transactionsUser2[i].UserID, fmt.Sprintf("transactionsUser2[%d].UserID should be %d", i, user2.ID))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser2[i].Type, fmt.Sprintf("transactionsUser2[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 
-		if i == 0 {
+		switch i {
+		case 0:
+			// Main tx of transfer2: debit on private account
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user2.ID))
-			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
+			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(account2.ID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, account2.ID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (to_account_id)", i))
+			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 2, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 2 (fromTx + toTx)", i))
 			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
-		} else {
-			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
-			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
+		case 1:
+			// fromTx of transfer2: credit on user2's shared account
+			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user2.ID))
+			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (source tx)", i))
+			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+		case 2:
+			// toTx from transfer1: credit on user2's shared account (received from user1)
+			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
+			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
+			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -563,7 +582,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactionsUser1, 6)
+	// user1 sees 9 txs: 3 main (debit) + 3 fromTx (credit) from transfer1 + 3 toTx (credit) from transfer2
+	suite.Assert().Len(transactionsUser1, 9)
 
 	suite.Assert().NoError(err)
 
@@ -574,17 +594,24 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		suite.Assert().Equal(user1.ID, transactionsUser1[i].UserID, fmt.Sprintf("transactionsUser1[%d].UserID should be %d", i, user1.ID))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser1[i].Type, fmt.Sprintf("transactionsUser1[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 
-		if i < 3 {
+		if i < 6 {
+			// First 6: from transfer1 (OriginalUserID=user1), interleaved main + fromTx by ID
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 100))
-			suite.Assert().Equal(account1.ID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, account1.ID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (to_account_id)", i))
-			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+			if transactionsUser1[i].AccountID == account1.ID {
+				// Main tx: debit on private account, has 2 linked txs (fromTx + toTx)
+				suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 2, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 2 (fromTx + toTx)", i))
+				suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+			} else {
+				// fromTx: credit on shared account
+				suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
+				suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			}
 		} else {
+			// Last 3: toTx from transfer2 (OriginalUserID=user2), credit on shared account
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Len(transactionsUser1[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser1[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -600,7 +627,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		suite.T().Fatalf("Failed to get transaction: %v", err)
 	}
 
-	suite.Assert().Len(transactionsUser2, 6)
+	// user2 sees 9 txs: 3 main (debit) + 3 fromTx (credit) from transfer2 + 3 toTx (credit) from transfer1
+	suite.Assert().Len(transactionsUser2, 9)
 
 	suite.Assert().NoError(err)
 
@@ -611,17 +639,24 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		suite.Assert().Equal(user2.ID, transactionsUser2[i].UserID, fmt.Sprintf("transactionsUser2[%d].UserID should be %d", i, user2.ID))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, transactionsUser2[i].Type, fmt.Sprintf("transactionsUser2[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 
-		if i < 3 {
+		if i < 6 {
+			// First 6: from transfer2 (OriginalUserID=user2, sorted DESC), interleaved main + fromTx
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user2.ID))
-			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
-			suite.Assert().Equal(account2.ID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, account2.ID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (to_account_id)", i))
-			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+			suite.Assert().Equal(int64(500), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
+			if transactionsUser2[i].AccountID == account2.ID {
+				// Main tx: debit on private account, has 2 linked txs (fromTx + toTx)
+				suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 2, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 2 (fromTx + toTx)", i))
+				suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
+			} else {
+				// fromTx: credit on shared account
+				suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
+				suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			}
 		} else {
+			// Last 3: toTx from transfer1 (OriginalUserID=user1), credit on shared account
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
-			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 500))
+			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Len(transactionsUser2[i].LinkedTransactions, 1, fmt.Sprintf("transactionsUser2[%d].LinkedTransactions should have 1 (source tx)", i))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		}
 	}
@@ -847,6 +882,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {
@@ -869,6 +905,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 
 	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 1)
 
+	// LinkedTransactions[0] is the toTransaction (user2, conn.ToAccountID)
 	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
 	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[0].CategoryID)
 	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[0].Amount))
@@ -879,13 +916,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser1[0].LinkedTransactions[0].OriginalUserID))
 
 	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
-	settlement := transactionsUser1[0].SettlementsFromSource[0]
-	suite.Assert().Equal(user1.ID, settlement.UserID)
-	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
-	suite.Assert().Equal(int64(amount/2), settlement.Amount)
-	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
-	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
+	// Find the settlement for the toTransaction (ParentTransactionID = toTx.ID)
+	var settlementForTo *domain.Settlement
+	for i := range transactionsUser1[0].SettlementsFromSource {
+		s := &transactionsUser1[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].LinkedTransactions[0].ID {
+			settlementForTo = s
+		}
+	}
+	suite.Require().NotNil(settlementForTo, "should find settlement for toTransaction")
+	suite.Assert().Equal(user1.ID, settlementForTo.UserID)
+	suite.Assert().Equal(domain.SettlementTypeCredit, settlementForTo.Type)
+	suite.Assert().Equal(int64(amount/2), settlementForTo.Amount)
+	suite.Assert().Equal(userConnection.FromAccountID, settlementForTo.AccountID)
+	suite.Assert().Equal(transactionsUser1[0].ID, settlementForTo.SourceTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -963,6 +1007,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {
@@ -983,6 +1028,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 
 	suite.Assert().Len(transactionsUser1[0].LinkedTransactions, 1)
 
+	// LinkedTransactions[0] is the toTransaction (user2, conn.ToAccountID)
 	suite.Assert().Equal(userConnection.ToAccountID, transactionsUser1[0].LinkedTransactions[0].AccountID)
 	suite.Assert().Nil(transactionsUser1[0].LinkedTransactions[0].CategoryID)
 	suite.Assert().Equal(int64(amount/2), int64(transactionsUser1[0].LinkedTransactions[0].Amount))
@@ -994,13 +1040,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 
 	// Settlement should be debit for income (author owes partner)
 	suite.Assert().Len(transactionsUser1[0].SettlementsFromSource, 1)
-	settlement := transactionsUser1[0].SettlementsFromSource[0]
+	// Find the settlement for the toTransaction
+	var settlement *domain.Settlement
+	for i := range transactionsUser1[0].SettlementsFromSource {
+		s := &transactionsUser1[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].LinkedTransactions[0].ID {
+			settlement = s
+		}
+	}
+	suite.Require().NotNil(settlement, "should find settlement for toTransaction")
 	suite.Assert().Equal(user1.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeDebit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.FromAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser1[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].LinkedTransactions[0].ID, settlement.ParentTransactionID)
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -1072,9 +1125,10 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	})
 	suite.Require().NoError(err)
 
-	suite.Require().Len(sharedOnly, 1, "shared-account view should surface the settlement as a synthetic entry")
+	suite.Require().Len(sharedOnly, 1, "shared-account view should surface only the settlement as a synthetic entry (no fromTransaction for shared expenses)")
+	// The only entry is the synthetic settlement (has OriginSettlementID set).
 	synthetic := sharedOnly[0]
-	suite.Require().NotNil(synthetic.OriginSettlementID, "synthetic entry must carry origin_settlement_id")
+	suite.Require().NotNil(synthetic.OriginSettlementID, "should be a synthetic settlement entry")
 	suite.Assert().Less(synthetic.ID, 0, "synthetic entry must have a negative sentinel id")
 	suite.Assert().Equal(userConnection.FromAccountID, synthetic.AccountID, "synthetic entry lives on the shared account")
 	suite.Assert().Equal(int64(amount/2), synthetic.Amount, "synthetic entry amount equals the settlement amount")
@@ -1107,7 +1161,15 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Equal(account.ID, personal.AccountID)
 	suite.Assert().Equal(amount, personal.Amount)
 	suite.Require().Len(personal.SettlementsFromSource, 1, "settlement must be preloaded inline for display context under the source transaction")
-	suite.Assert().Equal(userConnection.FromAccountID, personal.SettlementsFromSource[0].AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
+	// Find the settlement for the toTransaction (accountID = conn.FromAccountID)
+	var toSettlement *domain.Settlement
+	for i := range personal.SettlementsFromSource {
+		if personal.SettlementsFromSource[i].AccountID == userConnection.FromAccountID {
+			toSettlement = &personal.SettlementsFromSource[i]
+		}
+	}
+	suite.Require().NotNil(toSettlement, "should find settlement for toTransaction")
+	suite.Assert().Equal(userConnection.FromAccountID, toSettlement.AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
 
 	// Case 2b (balance consistency): GetBalance filtered by the personal
 	// account returns the source transaction plus the settlement whose source
@@ -1124,17 +1186,19 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	// transaction is in the filter AND the settlement's account is in the
 	// filter. The source tx is returned with its settlement preloaded (scoped
 	// preload admits it), and NO synthetic entry is appended (would be a
-	// duplicate of the attached settlement).
+	// duplicate of the attached settlement). No fromTx exists for shared expenses.
 	both, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
 		UserID:          &user1.ID,
 		AccountIDs:      []int{account.ID, userConnection.FromAccountID},
 		WithSettlements: true,
 	})
 	suite.Require().NoError(err)
-	suite.Require().Len(both, 1, "combined filter must not duplicate the source transaction")
-	suite.Assert().Equal(account.ID, both[0].AccountID)
-	suite.Require().Len(both[0].SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
-	suite.Assert().Equal(userConnection.FromAccountID, both[0].SettlementsFromSource[0].AccountID)
+	suite.Require().Len(both, 1, "combined filter returns only the source transaction (no fromTx, no synthetic duplicate)")
+	sourceTx := both[0]
+	suite.Assert().Equal(account.ID, sourceTx.AccountID)
+	suite.Assert().Nil(sourceTx.OriginSettlementID)
+	suite.Require().Len(sourceTx.SettlementsFromSource, 1, "scoped preload should attach the settlement since its account matches the filter")
+	suite.Assert().Equal(userConnection.FromAccountID, sourceTx.SettlementsFromSource[0].AccountID)
 
 	// Case 4: user2 filters by user1's FromAccountID — must return nothing,
 	// because the settlement's user_id scopes the query to user1.
@@ -1217,9 +1281,10 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user1.ID, transactionsUser1[0].UserID)
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[0].OriginalUserID))
 
-	// User2 (criador) não tem transação na própria conta
+	// User2 (criador) has the main expense on personal account
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID:          &user2.ID,
+		AccountIDs:      []int{account.ID},
 		WithSettlements: true,
 	})
 	if err != nil {
@@ -1239,13 +1304,20 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 	suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 
 	suite.Assert().Len(transactionsUser2[0].SettlementsFromSource, 1)
-	settlement := transactionsUser2[0].SettlementsFromSource[0]
+	// Find the settlement for the toTransaction (whose ParentTransactionID = transactionsUser1[0].ID)
+	var settlement *domain.Settlement
+	for i := range transactionsUser2[0].SettlementsFromSource {
+		s := &transactionsUser2[0].SettlementsFromSource[i]
+		if s.ParentTransactionID == transactionsUser1[0].ID {
+			settlement = s
+		}
+	}
+	suite.Require().NotNil(settlement, "should find settlement for toTransaction")
 	suite.Assert().Equal(user2.ID, settlement.UserID)
 	suite.Assert().Equal(domain.SettlementTypeCredit, settlement.Type)
 	suite.Assert().Equal(int64(amount/2), settlement.Amount)
 	suite.Assert().Equal(userConnection.ToAccountID, settlement.AccountID)
 	suite.Assert().Equal(transactionsUser2[0].ID, settlement.SourceTransactionID)
-	suite.Assert().Equal(transactionsUser1[0].ID, settlement.ParentTransactionID)
 }
 
 func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of5() {

@@ -3,164 +3,189 @@
  * These make direct HTTP calls using the auth cookie from the storage state.
  */
 
-import * as fs from 'fs'
-import * as path from 'path'
-import { fileURLToPath } from 'url'
-import type { Transactions } from '../../src/types/transactions'
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
+import type { Transactions } from "../../src/types/transactions";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:8080'
-const STORAGE_STATE_PATH = path.join(__dirname, '..', '.auth', 'storageState.json')
+const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL ?? "http://localhost:8080";
+const STORAGE_STATE_PATH = path.join(__dirname, "..", ".auth", "storageState.json");
 
 function getAuthToken(): string {
   if (!fs.existsSync(STORAGE_STATE_PATH)) {
-    throw new Error('auth_token cookie not found in storage state. Run global setup first.')
+    throw new Error("auth_token cookie not found in storage state. Run global setup first.");
   }
-  const state = JSON.parse(fs.readFileSync(STORAGE_STATE_PATH, 'utf-8'))
-  const cookie = state?.cookies?.find((c: { name: string }) => c.name === 'auth_token')
-  if (!cookie) throw new Error('auth_token cookie not found in storage state. Run global setup first.')
-  return cookie.value
+  const state = JSON.parse(fs.readFileSync(STORAGE_STATE_PATH, "utf-8"));
+  const cookie = state?.cookies?.find((c: { name: string }) => c.name === "auth_token");
+  if (!cookie) throw new Error("auth_token cookie not found in storage state. Run global setup first.");
+  return cookie.value;
 }
 
-async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = getAuthToken()
+type RequestOptions = { token?: string } & RequestInit;
+
+async function apiFetch(path: string, options: RequestOptions = {}) {
+  const token = options.token ?? getAuthToken();
   const res = await fetch(`${BACKEND_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
-  })
+  });
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`API ${options.method ?? 'GET'} ${path} failed: ${res.status} ${text}`)
+    const text = await res.text();
+    throw new Error(`API ${options.method ?? "GET"} ${path} failed: ${res.status} ${text}`);
   }
-  return res
+  return res;
 }
 
 export interface AccountPayload {
-  name: string
-  description?: string
-  initial_balance: number
-  avatar_background_color?: string
+  name: string;
+  description?: string;
+  initial_balance: number;
+  avatar_background_color?: string;
 }
 
-export async function apiCreateAccount(payload: AccountPayload): Promise<{ id: number; name: string }> {
-  const res = await apiFetch('/api/accounts', {
-    method: 'POST',
+export async function apiCreateAccount(
+  payload: AccountPayload,
+  options: RequestOptions = {},
+): Promise<{ id: number; name: string }> {
+  const res = await apiFetch("/api/accounts", {
+    ...options,
+    method: "POST",
     body: JSON.stringify(payload),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
-export async function apiDeleteAccount(id: number): Promise<void> {
-  await apiFetch(`/api/accounts/${id}`, { method: 'DELETE' })
+export async function apiDeleteAccount(id: number, options: RequestOptions = {}): Promise<void> {
+  await apiFetch(`/api/accounts/${id}`, { ...options, method: "DELETE" });
 }
 
-export async function apiCreateCategory(payload: { name: string; parent_id?: number }): Promise<{ id: number; name: string }> {
-  const res = await apiFetch('/api/categories', {
-    method: 'POST',
+export async function apiCreateCategory(
+  payload: { name: string; parent_id?: number },
+  options: RequestOptions = {},
+): Promise<{ id: number; name: string }> {
+  const res = await apiFetch("/api/categories", {
+    ...options,
+    method: "POST",
     body: JSON.stringify(payload),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
-export async function apiDeleteCategory(id: number, replaceWithId?: number): Promise<void> {
+export async function apiDeleteCategory(id: number, replaceWithId?: number, options: RequestOptions = {}): Promise<void> {
   await apiFetch(`/api/categories/${id}`, {
-    method: 'DELETE',
+    ...options,
+    method: "DELETE",
     body: replaceWithId ? JSON.stringify({ replace_with_id: replaceWithId }) : undefined,
-  })
+  });
 }
 
 function localMidnightISO(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const d = new Date(year, month - 1, day, 0, 0, 0)
-  const offsetMin = -d.getTimezoneOffset()
-  const sign = offsetMin >= 0 ? '+' : '-'
-  const absMin = Math.abs(offsetMin)
-  const hh = String(Math.floor(absMin / 60)).padStart(2, '0')
-  const mm = String(absMin % 60).padStart(2, '0')
-  return `${dateStr}T00:00:00${sign}${hh}:${mm}`
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const d = new Date(year, month - 1, day, 0, 0, 0);
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const absMin = Math.abs(offsetMin);
+  const hh = String(Math.floor(absMin / 60)).padStart(2, "0");
+  const mm = String(absMin % 60).padStart(2, "0");
+  return `${dateStr}T00:00:00${sign}${hh}:${mm}`;
 }
 
-export async function apiCreateTransaction(payload: Transactions.CreateTransactionPayload): Promise<{ id: number }> {
+export async function apiCreateTransaction(
+  payload: Transactions.CreateTransactionPayload,
+  options: RequestOptions = {},
+): Promise<{ id: number }> {
   const body = {
     ...payload,
     date: payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
-  }
-  const res = await apiFetch('/api/transactions', {
-    method: 'POST',
+  };
+  const res = await apiFetch("/api/transactions", {
+    ...options,
+    method: "POST",
     body: JSON.stringify(body),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
 export async function apiDeleteTransaction(
   id: number,
-  propagation?: 'current' | 'current_and_future' | 'all',
+  propagation?: "current" | "current_and_future" | "all",
+  options: RequestOptions = {},
 ): Promise<void> {
-  const url = propagation
-    ? `/api/transactions/${id}?propagation_settings=${propagation}`
-    : `/api/transactions/${id}`
-  await apiFetch(url, { method: 'DELETE' })
+  const url = propagation ? `/api/transactions/${id}?propagation_settings=${propagation}` : `/api/transactions/${id}`;
+  await apiFetch(url, { ...options, method: "DELETE" });
 }
 
-export async function apiCreateTag(payload: { name: string }): Promise<{ id: number; name: string }> {
-  const res = await apiFetch('/api/tags', {
-    method: 'POST',
+export async function apiCreateTag(payload: { name: string }, options: RequestOptions = {}): Promise<{ id: number; name: string }> {
+  const res = await apiFetch("/api/tags", {
+    ...options,
+    method: "POST",
     body: JSON.stringify(payload),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
-export async function apiDeleteTag(id: number): Promise<void> {
-  await apiFetch(`/api/tags/${id}`, { method: 'DELETE' })
+export async function apiDeleteTag(id: number, options: RequestOptions = {}): Promise<void> {
+  await apiFetch(`/api/tags/${id}`, { ...options, method: "DELETE" });
 }
 
 // --- User Connections ---
 
-export async function apiCreateUserConnection(toUserId: number, splitPercentage = 50): Promise<{ id: number }> {
-  const res = await apiFetch('/api/user-connections', {
-    method: 'POST',
+export async function apiCreateUserConnection(
+  toUserId: number,
+  splitPercentage = 50,
+  options: RequestOptions = {},
+): Promise<{ id: number }> {
+  const res = await apiFetch("/api/user-connections", {
+    ...options,
+    method: "POST",
     body: JSON.stringify({
       to_user_id: toUserId,
       from_default_split_percentage: splitPercentage,
     }),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
-export async function apiAcceptConnection(connectionId: number): Promise<void> {
+export async function apiAcceptConnection(connectionId: number, options: RequestOptions = {}): Promise<void> {
   await apiFetch(`/api/user-connections/${connectionId}/accepted`, {
-    method: 'PATCH',
-  })
+    ...options,
+    method: "PATCH",
+  });
 }
 
 // --- Charges ---
 
 export interface ChargePayload {
-  connection_id: number
-  my_account_id: number
-  period_month: number
-  period_year: number
-  description?: string
-  amount?: number
-  role?: 'charger' | 'payer'
-  date: string
+  connection_id: number;
+  my_account_id: number;
+  period_month: number;
+  period_year: number;
+  description?: string;
+  amount?: number;
+  role?: "charger" | "payer";
+  date: string;
 }
 
-export async function apiCreateCharge(payload: ChargePayload): Promise<{ id: number; amount?: number; charger_user_id: number; payer_user_id: number }> {
-  const res = await apiFetch('/api/charges', {
-    method: 'POST',
+export async function apiCreateCharge(
+  payload: ChargePayload,
+  options: RequestOptions = {},
+): Promise<{ id: number; amount?: number; charger_user_id: number; payer_user_id: number }> {
+  const res = await apiFetch("/api/charges", {
+    ...options,
+    method: "POST",
     body: JSON.stringify(payload),
-  })
-  return res.json()
+  });
+  return res.json();
 }
 
-export async function apiCancelCharge(id: number): Promise<void> {
-  await apiFetch(`/api/charges/${id}/cancel`, { method: 'POST' })
+export async function apiCancelCharge(id: number, options: RequestOptions = {}): Promise<void> {
+  await apiFetch(`/api/charges/${id}/cancel`, { ...options, method: "POST" });
 }
 
 // --- Auth helpers for multi-user tests ---
@@ -168,90 +193,91 @@ export async function apiCancelCharge(id: number): Promise<void> {
 /** Get auth token for a specific user email via test-login */
 export async function getAuthTokenForUser(email: string): Promise<string> {
   const res = await fetch(`${BACKEND_URL}/auth/test-login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
-  })
-  if (!res.ok) throw new Error(`Test login failed for ${email}: ${res.status}`)
-  const setCookie = res.headers.get('set-cookie')
-  const match = setCookie?.match(/auth_token=([^;]+)/)
-  if (!match) throw new Error('No auth_token in response')
-  return match[1]
+  });
+  if (!res.ok) throw new Error(`Test login failed for ${email}: ${res.status}`);
+  const setCookie = res.headers.get("set-cookie");
+  const match = setCookie?.match(/auth_token=([^;]+)/);
+  if (!match) throw new Error("No auth_token in response");
+  return match[1];
 }
 
 /** Open a new Playwright page authenticated as the given user token. */
-export async function openAuthedPage(browser: import('@playwright/test').Browser, token: string) {
-  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
-  const url = new URL(baseURL)
+export async function openAuthedPage(browser: import("@playwright/test").Browser, token: string) {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+  const url = new URL(baseURL);
   const context = await browser.newContext({
     storageState: {
       cookies: [
         {
-          name: 'auth_token',
+          name: "auth_token",
           value: token,
           domain: url.hostname,
-          path: '/',
+          path: "/",
           expires: -1,
           httpOnly: true,
           secure: false,
-          sameSite: 'Lax' as const,
+          sameSite: "Lax" as const,
         },
       ],
       origins: [],
     },
-  })
-  return context.newPage()
+  });
+  return context.newPage();
 }
 
 /** Make an API call authenticated as a specific user */
-export async function apiFetchAs(token: string, path: string, options: RequestInit = {}) {
+export async function apiFetchAs(token: string, path: string, options: RequestOptions = {}) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
-  })
+  });
   if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`API ${options.method ?? 'GET'} ${path} failed: ${res.status} ${text}`)
+    const text = await res.text();
+    throw new Error(`API ${options.method ?? "GET"} ${path} failed: ${res.status} ${text}`);
   }
-  return res
+  return res;
 }
 
-export async function apiGetTransaction(id: number): Promise<Transactions.Transaction> {
-  const res = await apiFetch(`/api/transactions/${id}`)
-  const transactions = await res.json()
+export async function apiGetTransaction(id: number, options: RequestOptions = {}): Promise<Transactions.Transaction> {
+  const res = await apiFetch(`/api/transactions/${id}`, options);
+  const transactions = await res.json();
   // The endpoint returns an array; find the one with matching ID
   if (Array.isArray(transactions)) {
-    const tx = transactions.find((t: { id: number }) => t.id === id)
-    if (!tx) throw new Error(`Transaction ${id} not found in response`)
-    return tx
+    const tx = transactions.find((t: { id: number }) => t.id === id);
+    if (!tx) throw new Error(`Transaction ${id} not found in response`);
+    return tx;
   }
-  return transactions
+  return transactions;
 }
 
 export async function apiListTransactions(
   month: number,
   year: number,
+  options: RequestOptions = {},
 ): Promise<Transactions.Transaction[]> {
-  const res = await apiFetch(`/api/transactions?month=${month}&year=${year}`)
-  return res.json()
+  const res = await apiFetch(`/api/transactions?month=${month}&year=${year}`, options);
+  return res.json();
 }
 
 export async function apiUpdateTransaction(
   id: number,
   payload: Partial<Transactions.CreateTransactionPayload>,
+  options: RequestOptions = {},
 ): Promise<void> {
   const body = {
     ...payload,
-    date: payload.date && payload.date.length === 10
-      ? localMidnightISO(payload.date)
-      : payload.date,
-  }
+    date: payload.date && payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
+  };
   await apiFetch(`/api/transactions/${id}`, {
-    method: 'PUT',
+    ...options,
+    method: "PUT",
     body: JSON.stringify(body),
-  })
+  });
 }

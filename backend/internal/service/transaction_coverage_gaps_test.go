@@ -455,6 +455,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 	// account.  The lookup connAccountByToAccount[conn.FromAccountID] then misses
 	// (since we only store ToAccountID → FromAccountID), triggering the fallback.
 	ownCopy := *own
+	// Use the toTransaction (index 0, belongs to userB).
 	linkedCopy := own.LinkedTransactions[0]
 	linkedCopy.AccountID = conn.FromAccountID // use FROM account to force a miss
 	ownCopy.LinkedTransactions = []domain.Transaction{linkedCopy}

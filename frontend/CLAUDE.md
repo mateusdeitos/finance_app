@@ -286,6 +286,18 @@ All ids — static or parametric — are declared as `as const` objects:
 
 When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
 
+### Error detection after form submission
+
+Every form that can fail (validation or API errors) must render its general error using an `Alert` with a stable `data-testid` (e.g. `TransactionsTestIds.AlertFormError`). After submitting a form in e2e tests, always assert that no error is visible before waiting for the drawer to close:
+
+```ts
+// After clicking submit
+await transactionsPage.assertNoFormErrors();
+await expect(drawer).not.toBeVisible({ timeout: 10000 });
+```
+
+This prevents silent failures where a form error causes a timeout instead of an actionable assertion. When a test fails, the error message shows exactly what went wrong (e.g. "expected alert_form_error to not be visible") instead of a generic timeout.
+
 ### Form fields: use `e2e/helpers/formFields.ts` (mandatory)
 
 **Every interaction with a form field in an e2e test must go through a field class from `frontend/e2e/helpers/formFields.ts`.** Do not call `.fill()`, `.click()`, `.check()`, `.setChecked()`, `.setInputFiles()`, or `press(digit)` loops directly on a form field locator — that's how Mantine quirks (the `CurrencyInput` keydown handler, combobox option portals, SegmentedControl item targeting) leak back into Page Objects and tests start failing intermittently.

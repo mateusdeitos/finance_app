@@ -468,10 +468,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionReject
 	childTxID := childTxs[0].ID
 
 	// userB tries to update a disallowed field on the child transaction — should be rejected
-	newAmount := int64(200)
+	// Amount is allowed for linked tx edits, but TransactionType is not.
 	err = suite.Services.Transaction.Update(ctx, childTxID, userB.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-		Amount:              &newAmount,
+		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
 	})
 	suite.Require().Error(err)
 	suite.Assert().True(

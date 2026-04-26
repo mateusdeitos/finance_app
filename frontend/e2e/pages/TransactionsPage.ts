@@ -11,11 +11,15 @@ export class TransactionsPage {
   readonly page: Page;
   readonly formDrawer: Locator;
   readonly updateDrawer: Locator;
+  readonly linkedSplitDrawer: Locator;
+  readonly linkedTransferDrawer: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.formDrawer = page.getByTestId(TransactionsTestIds.DrawerCreate);
     this.updateDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdate);
+    this.linkedSplitDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedSplit);
+    this.linkedTransferDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedTransfer);
   }
 
   async goto() {
@@ -49,22 +53,38 @@ export class TransactionsPage {
     await expect(this.updateDrawer).toBeVisible({ timeout: 8000 });
   }
 
+  async waitForLinkedSplitDrawer() {
+    await expect(this.linkedSplitDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  async waitForLinkedTransferDrawer() {
+    await expect(this.linkedTransferDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Assert no form error alert is visible. Call after submit to catch validation/API errors early. */
+  async assertNoFormErrors() {
+    await expect(this.page.getByTestId(TransactionsTestIds.AlertFormError)).not.toBeVisible();
+  }
+
   /** Clear the description input and type a new value. */
   async clearAndFillDescription(description: string) {
     await new TextField(this.updateDrawer, TransactionsTestIds.InputDescription).fill(description);
   }
 
-  /** Replace amount in the update form by selecting all and pressing digits. */
-  async clearAndFillAmount(amountCents: number) {
-    await new CurrencyField(this.updateDrawer, TransactionsTestIds.InputAmount).clearAndFillCents(
+  /** Replace amount by clearing the input then typing digits. Defaults to update drawer. */
+  async clearAndFillAmount(amountCents: number, drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    await new CurrencyField(container, TransactionsTestIds.InputAmount).clearAndFillCents(
       amountCents,
     );
   }
 
   /** Click save in the update drawer and wait for it to close. */
-  async submitUpdate() {
-    await this.updateDrawer.getByTestId(TransactionsTestIds.BtnSave).click();
-    await expect(this.updateDrawer).not.toBeVisible({ timeout: 10000 });
+  async submitUpdate(drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    await container.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.assertNoFormErrors();
+    await expect(container).not.toBeVisible({ timeout: 10000 });
   }
 
   /** Select a propagation option in the update drawer. */
@@ -109,8 +129,10 @@ export class TransactionsPage {
     );
   }
 
-  async selectCategory(categoryId: number) {
-    await new SelectField(this.formDrawer, TransactionsTestIds.SelectCategory).pick(
+  /** Select a category. Pass `drawer` to scope to a non-create drawer (e.g. linked split). */
+  async selectCategory(categoryId: number, drawer?: Locator) {
+    const container = drawer ?? this.formDrawer;
+    await new SelectField(container, TransactionsTestIds.SelectCategory).pick(
       TransactionsTestIds.OptionCategory(categoryId),
     );
   }

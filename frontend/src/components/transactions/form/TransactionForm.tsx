@@ -1,5 +1,6 @@
 import { type FocusEvent, type ReactNode } from "react";
 import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
+import { DevTool } from "@hookform/devtools";
 import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
@@ -169,7 +170,7 @@ export const TransactionForm = ({
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <Stack gap="md">
         {generalError && (
-          <Alert color="red" title="Erro" variant="light">
+          <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
             {generalError}
           </Alert>
         )}
@@ -430,6 +431,7 @@ export const TransactionForm = ({
           </Button>
         </Group>
       </Box>
+      <DevTool control={control} />
     </form>
   );
 };

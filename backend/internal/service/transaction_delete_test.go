@@ -106,17 +106,24 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
 	})
 
 	parent, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
+		SortBy:     &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 	assert.NotNil(suite.T(), parent)
-	assert.Len(suite.T(), parent.LinkedTransactions, 1, "transfer creates 1 linked transaction")
+	assert.Len(suite.T(), parent.LinkedTransactions, 1, "split creates 1 linked transaction (to)")
 
-	child := parent.LinkedTransactions[0]
-	assert.NotNil(suite.T(), child)
+	// Find the toTransaction (user2's linked tx)
+	var child domain.Transaction
+	for _, lt := range parent.LinkedTransactions {
+		if lt.UserID == user2.ID {
+			child = lt
+			break
+		}
+	}
 
 	assert.Equal(suite.T(), userConnection.ToAccountID, child.AccountID)
 	assert.Equal(suite.T(), user2.ID, child.UserID)
@@ -402,14 +409,14 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		},
 	})
 
-	// Despesa compartilhada: criada apenas na to_account (user2). User1 tem 0 transações.
+	// User1 has only the main expense (no fromTransaction for shared expenses)
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user.ID,
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser1, 1, "should create main expense for user1")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -501,7 +508,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, 1, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser1, 1, "should create main expense for user1")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -510,7 +517,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 
-	assert.Len(suite.T(), transactionsUser2, 1, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser2, 1, "should create one expense transaction in to_account")
 	assert.Equal(suite.T(), transactionsUser2[0].Amount, int64(50), "transactionsUser2[0].Amount should be 50")
 	assert.Equal(suite.T(), transactionsUser2[0].Type, domain.TransactionTypeExpense, "transactionsUser2[0].Type should be domain.TransactionTypeExpense")
 	assert.Equal(suite.T(), userConnection.ToAccountID, transactionsUser2[0].AccountID)
@@ -585,12 +592,13 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 	})
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction per installment on personal account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -679,12 +687,13 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	})
 
 	transactionsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
-	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction in from_account")
+	assert.Len(suite.T(), transactionsUser1, installments, "should create one expense transaction per installment on personal account")
 
 	transactionsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &user2.ID,
@@ -706,7 +715,8 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 	suite.NoError(err)
 
 	transactionsUser1, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
+		UserID:     &user.ID,
+		AccountIDs: []int{account.ID},
 	})
 	if err != nil {
 		suite.T().Fatalf("Failed to search transactions: %v", err)

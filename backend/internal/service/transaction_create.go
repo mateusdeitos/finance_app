@@ -263,6 +263,13 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 	}
 
 	for _, lt := range authorTransaction.LinkedTransactions {
+		// Skip linked transactions belonging to the same user (e.g. the from-side
+		// of a split on the author's connection account). Settlements only track
+		// debts between different users.
+		if lt.UserID == userID {
+			continue
+		}
+
 		accountID := authorTransaction.AccountID
 		if connAccount, ok := connAccountByToAccount[lt.AccountID]; ok {
 			accountID = connAccount
@@ -404,12 +411,32 @@ func (s *transactionService) injectLinkedTransactions(
 			return pkgErrors.ErrSplitSettingInvalidConnectionID(i).AddTag("user_id_not_in_connection")
 		}
 
-		toAccountID := connection.ToAccountID
-		if req.TransactionType == domain.TransactionTypeTransfer {
-			toAccountID = *req.DestinationAccountID
-		}
-
 		amount := s.calculateAmount(transaction.Amount, splitSetting)
+
+		// Cross-user transfers create a fromTransaction on the author's shared account
+		// (credit mirror of the debit on the private account). Shared expenses/income
+		// do NOT get a fromTransaction — a settlement handles the author's shared account.
+		if req.TransactionType == domain.TransactionTypeTransfer {
+			fromTransaction := domain.Transaction{
+				ID:                      0,
+				InstallmentNumber:       transaction.InstallmentNumber,
+				Date:                    transaction.Date,
+				Description:             transaction.Description,
+				UserID:                  connection.FromUserID,
+				OriginalUserID:          &userID,
+				Type:                    transaction.Type,
+				OperationType:           transaction.OperationType.Invert(),
+				AccountID:              connection.FromAccountID,
+				CategoryID:              nil,
+				Amount:                  amount,
+				Tags:                    nil,
+				CreatedAt:               nil,
+				UpdatedAt:               nil,
+				ChargeID:                transaction.ChargeID,
+				TransactionRecurrenceID: transaction.TransactionRecurrenceID,
+			}
+			transaction.LinkedTransactions = append(transaction.LinkedTransactions, fromTransaction)
+		}
 
 		toTransaction := domain.Transaction{
 			ID:                0,
@@ -420,7 +447,7 @@ func (s *transactionService) injectLinkedTransactions(
 			OriginalUserID:    &userID,
 			Type:              transaction.Type,
 			OperationType:     lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, transaction.OperationType.Invert(), transaction.OperationType),
-			AccountID:         toAccountID,
+			AccountID:         connection.ToAccountID,
 			CategoryID:        nil,
 			Amount:            amount,
 			Tags:              nil,
@@ -444,23 +471,20 @@ func (s *transactionService) injectLinkedTransactions(
 }
 
 func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
-	acc, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
-		IDs: []int{destinationAccountID},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if acc.UserID == userID {
-		return nil, nil
-	}
-
 	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
 		AccountIDs: []int{destinationAccountID},
 	})
 	if err != nil {
+		// A regular (non-connection) account has no user_connection record.
+		// This is the same-user transfer case — return nil so the caller
+		// falls back to the single-credit-side same-user path.
+		if pkgErrors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
+
+	conn.SwapIfNeeded(userID)
 
 	return conn, nil
 }

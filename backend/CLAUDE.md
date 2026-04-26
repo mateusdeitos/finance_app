@@ -48,11 +48,13 @@ just docker-down             # stop all services
 ## Architecture
 
 Layered architecture:
+
 ```
 HTTP Handler (Echo) → Service (business logic) → Repository (data access) → PostgreSQL (GORM)
 ```
 
 Key packages:
+
 - `internal/domain/` — Domain models and business types used across all layers
 - `internal/entity/` — ORM structs (GORM) with `ToDomain()`/`FromDomain()` conversions
 - `internal/repository/` — Data access; interfaces in `repository/interfaces.go`, `Repositories` struct holds all impls
@@ -69,6 +71,7 @@ Key packages:
 Services and repositories are constructed in `cmd/server/main.go` and passed through constructors. The `Services` struct depends on the `Repositories` struct. Some services (`TransactionService`, `UserConnectionService`, `ChargeService`) depend on the `Services` struct itself for cross-service calls.
 
 When adding a new service/repository:
+
 1. Define the interface in `service/interfaces.go` or `repository/interfaces.go`.
 2. Implement with a lowercase struct name (e.g. `transactionService`) and pointer receivers.
 3. Wire it in `cmd/server/main.go` into the `Repositories`/`Services` struct.
@@ -82,6 +85,7 @@ Error codes (map 1:1 to HTTP status):
 `NOT_FOUND` (404), `ALREADY_EXISTS` (409), `UNAUTHORIZED` (401), `FORBIDDEN` (403), `VALIDATION_ERROR` / `BAD_REQUEST` (400), `INTERNAL_ERROR` (500).
 
 Constructors:
+
 - Helpers: `NotFound(resource)`, `AlreadyExists(resource)`, `Forbidden(msg)`, `Unauthorized(msg)`, `Validation(msg)`, `BadRequest(msg)`, `Internal(msg, err)`.
 - Low-level: `New(code, msg)`, `Wrap(code, msg, err)`, `NewWithTag(code, tags, msg)`.
 - Detection: `IsServiceError`, `AsServiceError`, `IsNotFound`.
@@ -98,9 +102,15 @@ Constructors:
    ```
 
 `ToHTTPError` produces a `*TaggedHTTPError{Code, Message, Tags}`; the `ErrorHandler` middleware serializes it as:
+
 ```json
-{ "error": "Bad Request", "message": "...", "tags": ["TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"] }
+{
+  "error": "Bad Request",
+  "message": "...",
+  "tags": ["TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"]
+}
 ```
+
 The frontend consumes `tags` to render localized messages — keep tag names stable across releases.
 
 ## Middleware (`internal/middleware`)
@@ -120,6 +130,7 @@ applog.FromContext(c.Request().Context()).
 ```
 
 Rules:
+
 - **Do not** create a new `zerolog.Logger` inside a handler or service — always fetch from context.
 - **Do not** call `.Msg(...)` yourself; the logging middleware emits the single final line with status and latency.
 - Use `.With(key, value)` to accumulate structured fields that will show up on the request's log line.
@@ -129,6 +140,7 @@ Rules:
 A `DBTransaction` interface (`Begin/Commit/Rollback`) stores the active `*gorm.DB` inside `context.Context`. Every repository method uses `GetTxFromContext(ctx, r.db)` so it automatically joins the caller's transaction when one is active.
 
 Service pattern for multi-step writes:
+
 ```go
 ctx, err := s.tx.Begin(ctx)
 if err != nil { return nil, err }
@@ -148,6 +160,7 @@ Pre-mock `Begin/Commit/Rollback` with `.Maybe()` in unit tests (see `test_setup.
 Routes are registered in `cmd/server/main.go` using Echo groups. Authenticated routes live under `api := e.Group("/api")` with `api.Use(authMiddleware.RequireAuth)`; subgroups organize routes by resource.
 
 Handler layer responsibilities (keep thin):
+
 1. Extract user id: `userID := appcontext.GetUserIDFromContext(c.Request().Context())`.
 2. Bind request: `c.Bind(&dto)`; return `echo.NewHTTPError(http.StatusBadRequest, "...")` on parse error.
 3. Parse path/query params (e.g. `strconv.Atoi(c.Param("id"))`).
@@ -201,6 +214,7 @@ Always write a symmetric `Down` block. **Create migrations with `just migrate-cr
 ## Transaction domain
 
 The central domain concept. Key types in `internal/domain/transaction.go`:
+
 - `TransactionType`: `expense`, `income`, `transfer`
 - `OperationType`: `credit`, `debit` (derived from `TransactionType`)
 - `TransactionPropagationSettings`: `all`, `current`, `current_and_future` — controls how updates/deletes propagate to recurring installments
@@ -215,6 +229,7 @@ Two suites, both embedding `testify/suite.Suite`:
 - **`ServiceTestWithDBSuite`** (`internal/service/test_setup_with_db.go`) — integration tests against real PostgreSQL via testcontainers. Naming convention: types include `WithDB`.
 
 Integration DB setup:
+
 - Container started once per process via `sync.Once`; goose migrations applied at startup.
 - No truncate/rollback between tests — isolation via **randomized data** (e.g. `math/rand.Int64()` in emails/names). Design new helpers the same way.
 - Short-mode guards (`if testing.Short() { t.Skip(...) }`) keep DB-heavy tests out of `just test-unit`.
@@ -222,12 +237,14 @@ Integration DB setup:
 Helper methods on `ServiceTestWithDBSuite`: `createTestUser`, `createTestAccount`, `createTestCategory`, `createTestTag`, `createAcceptedTestUserConnection`, `createManyConnections`. Reuse and extend these instead of creating ad-hoc fixtures.
 
 Mocks:
+
 - Generated by mockery; located under `mocks/` with `DO NOT EDIT` headers.
 - Use the fluent API: `mock.EXPECT().Method(args).Return(...).Once()` / `.Maybe()` / `.RunAndReturn(...)`.
 - `DBTransaction.Begin/Commit/Rollback` are pre-mocked with `.Maybe()` in `test_setup.go`.
 - Regenerate with `just generate-mocks` whenever an interface changes.
 
 Handler tests (`internal/handler/*_test.go`):
+
 - Inject the authenticated user with `appcontext.WithUserID(ctx, userID)`.
 - Use `httptest.NewRecorder()` and assert on status code + `errors.As` for typed service errors.
 
@@ -261,3 +278,74 @@ Handler tests (`internal/handler/*_test.go`):
 - `OriginalUserID` tracks which user originally created a transaction (relevant for shared/split expenses).
 - Multi-repo writes go through `DBTransaction` so the same tx flows via context.
 - Always convert service errors to HTTP with `pkgErrors.ToHTTPError(err)` at the handler boundary.
+
+## Business rules
+
+### Shared transactions
+
+#### Shared expenses
+
+When users create a shared expense, 3 transactions are created:
+
+- 1 transaction for the author in its private account with an operation type = 'debit' with the whole amount of the transaction
+- 1 settlement for the author in its shared account from the user_connection with the amount being the amount set on the split setting
+- 1 transaction for the other end user in its shared account from the user_connection with an operation type = 'debit' with the amount being the amount set on the split setting
+
+Transactions created in the shared accounts and related settlements should ALWAYS match amount, meaning that if the main transaction amount is updated or the split_setting, both should be updated.
+
+Example:
+
+We have 2 users: User A (id=1) and User B (id=2), both are connected
+
+The connection has:
+
+- from_user_id: 1
+- from_account_id: 10
+- to_user_Id: 2
+- to_account_id: 20
+
+User A create a shared expense with the amount of R$ 100,00, splitting it in 50% with User B, then:
+
+- An expense is created on whatever account User A chooses with the amount of R$ 100,00 and operation_type = 'debit'
+- A settlement is created on account_id = 10 with the amount of R$ 50,00 with type = 'credit'
+- An expense is created on account_id = 20 with the amount of R$ 50,00 with the operation_type = 'debit'
+
+When User A filter transactions by account_id = 10 it will see only a settlement of R$ 50,00 being credited and the balance for that account in that MM/YYYY will be +R$50,00
+When User B filter transactions by account_id = 20 it will see only an expense of R$ 50,00 being debited and the balance for that account in that MM/YYYY will be -R$50,00
+
+#### Shared incomes
+
+It's the same as expenses but with operation type flipped
+
+#### Transfers between different users
+
+When users create a transfer to another user through a connection account, 3 transactions are created:
+
+- 1 transfer operation type = 'debit' with the account being the author private account
+- 1 transfer operation type = 'credit' with the account being the author side's account of the user_connection
+- 1 transfer operation type = 'credit' with the account being the other user side's account of the user_connection
+
+### Balance
+
+The previous rules are created in a way that when we fetch the balance of a month we:
+
+- sum incomes
+- subtract expenses
+- subtract debit transfers
+- sum credit transfers
+- sum credit settlements (conditionally to hide_settlements params)
+- subtract debit settlements (conditionally to hide_settlements params)
+
+### Charges
+
+Charges are entitites created to group transfers used to level the balance of shared accounts.
+
+In the example of the shared expense, User A had a balance of +50,00 and User B a balance of -50,00.
+
+If User A create a charge as a charger he can charge the 50,00 that User B is due.
+
+User B can also initiate the process as a payer and create a charge to pay User A 50,00.
+
+Users can also set arbitrary amounts to charges, thats not an issue.
+
+When a charge is accepted we create a transfer on both users to credit/debit the shared accounts and make the balance 0 (if the amount is exactly what the user is due to one another)

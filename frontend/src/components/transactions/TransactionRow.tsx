@@ -16,8 +16,6 @@ interface CategoryCellProps {
   tx: Transactions.Transaction;
   groupBy: Transactions.GroupBy;
   category: Transactions.Category | null | undefined;
-  fromAccount: Transactions.Account | null | undefined;
-  toAccount: Transactions.Account | null | undefined;
 }
 
 function CategoryCell({ tx, groupBy, category }: CategoryCellProps) {
@@ -39,13 +37,7 @@ interface AccountCellProps {
   toAccount: Transactions.Account | null | undefined;
 }
 
-function AccountCell({
-  tx,
-  groupBy,
-  account,
-  fromAccount,
-  toAccount,
-}: AccountCellProps) {
+function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCellProps) {
   if (groupBy === "account") return null;
 
   if (tx.type === "transfer") {
@@ -59,7 +51,7 @@ function AccountCell({
         <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
-            <AccountAvatar account={toAccount} size={28} />
+            <AccountAvatar account={toAccount} direction="to" size={28} />
           </span>
         </Tooltip>
       </Group>
@@ -101,23 +93,78 @@ export function TransactionRow({
   const account = accounts.find((a) => a.id === tx.account_id);
   const linkedAccount =
     tx.type === "transfer" && (tx.linked_transactions ?? []).length > 0
-      ? accounts.find((a) => a.id === tx.linked_transactions![0].account_id)
+      ? accounts.find((a) => {
+          const ids = [a.id];
+          const lt = tx.linked_transactions![0];
+          if (a.user_connection) {
+            ids.push(a.user_connection?.from_account_id, a.user_connection?.to_account_id);
+          }
+
+          return (
+            ids.includes(lt.account_id) ||
+            a.user_connection?.from_user_id == lt.original_user_id ||
+            a.user_connection?.to_user_id == lt.original_user_id
+          );
+        })
       : null;
-  const fromAccount = tx.operation_type === "debit" ? account : linkedAccount;
+
+  // For cross-user transfers: if any linked tx was authored by another user, find the
+  // connection account where that user appears to correctly render the originator's avatar
+  // (their private account has no user_connection and would only show initials).
+  const linkedTxFromOtherUser =
+    tx.type === "transfer"
+      ? (tx.linked_transactions ?? []).find(
+          (lt) => lt.original_user_id != null && lt.original_user_id !== currentUserId,
+        )
+      : undefined;
+  const fromConnectionAccount: Transactions.Account | null = (() => {
+    if (linkedTxFromOtherUser?.original_user_id == null) {
+      return null;
+    }
+
+    const account = accounts.find(
+      (a) =>
+        a.user_connection &&
+        (a.user_connection.from_user_id === linkedTxFromOtherUser.original_user_id ||
+          a.user_connection.to_user_id === linkedTxFromOtherUser.original_user_id),
+    );
+
+    if (!account) {
+      return null;
+    }
+
+    const acc: Transactions.Account = {
+      ...account,
+      name: (() => {
+        let name = account.name;
+        if (!account.user_connection) return name;
+
+        if (
+          account.user_connection?.from_user_id === linkedTxFromOtherUser.original_user_id &&
+          !!account.user_connection.from_user_name
+        ) {
+          name = account!.user_connection!.from_user_name!;
+        } else if (account?.user_connection?.to_user_name) {
+          name = account.user_connection.to_user_name;
+        }
+
+        return name;
+      })(),
+    };
+
+    return acc;
+  })();
+
+  const fromAccount = tx.operation_type === "debit" ? account : (fromConnectionAccount ?? linkedAccount);
   const toAccount = tx.operation_type === "debit" ? linkedAccount : account;
-  const category = tx.category_id
-    ? categories.find((c) => c.id === tx.category_id)
-    : null;
+  const category = tx.category_id ? categories.find((c) => c.id === tx.category_id) : null;
   const tags = tx.tags ?? [];
   const visibleTags = tags.slice(0, MAX_TAGS);
   const extraTags = tags.length - MAX_TAGS;
 
-  const hasLinkedUser = (tx.linked_transactions ?? []).some(
-    (l) => l.user_id !== currentUserId
-  );
+  const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId);
 
-  const isFromOtherUser =
-    tx.original_user_id != null && tx.original_user_id !== currentUserId;
+  const isFromOtherUser = tx.original_user_id != null && tx.original_user_id !== currentUserId;
 
   const originalUserLinkedTx = isFromOtherUser
     ? (tx.linked_transactions ?? []).find((l) => l.user_id === tx.original_user_id)
@@ -136,9 +183,7 @@ export function TransactionRow({
 
   const selectionMode = isSelectionMode ?? false;
 
-  function colClick(
-    field: FocusField
-  ): MouseEventHandler<HTMLDivElement> | undefined {
+  function colClick(field: FocusField): MouseEventHandler<HTMLDivElement> | undefined {
     if (selectionMode) return undefined;
     return (e) => {
       e.stopPropagation();
@@ -165,10 +210,7 @@ export function TransactionRow({
             multiline
             maw={260}
           >
-            <IconAlertCircle
-              size={18}
-              style={{ color: "var(--mantine-color-yellow-6)", flexShrink: 0 }}
-            />
+            <IconAlertCircle size={18} style={{ color: "var(--mantine-color-yellow-6)", flexShrink: 0 }} />
           </Tooltip>
         ) : (
           <Checkbox
@@ -217,33 +259,17 @@ export function TransactionRow({
 
       {/* Col 3: category */}
       <div className={classes.category} onClick={colClick("category_id")}>
-        <CategoryCell
-          tx={tx}
-          groupBy={groupBy}
-          category={category}
-          fromAccount={fromAccount}
-          toAccount={toAccount}
-        />
+        <CategoryCell tx={tx} groupBy={groupBy} category={category} />
       </div>
 
       {/* Col 4: account (or from→to for transfers) */}
       <div className={classes.account} onClick={colClick("account_id")}>
-        <AccountCell
-          tx={tx}
-          groupBy={groupBy}
-          account={account}
-          fromAccount={fromAccount}
-          toAccount={toAccount}
-        />
+        <AccountCell tx={tx} groupBy={groupBy} account={account} fromAccount={fromAccount} toAccount={toAccount} />
       </div>
 
       {/* Col 5: amount */}
       <div className={classes.amount} onClick={colClick("amount")}>
-        <Text
-          size="sm"
-          fw={600}
-          c={tx.operation_type === "credit" ? "teal" : "red"}
-        >
+        <Text size="sm" fw={600} c={tx.operation_type === "credit" ? "teal" : "red"}>
           {formatCents(tx.amount, tx.operation_type)}
         </Text>
       </div>
