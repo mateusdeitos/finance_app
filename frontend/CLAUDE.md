@@ -286,6 +286,35 @@ All ids — static or parametric — are declared as `as const` objects:
 
 When a testid is missing, the fix is to add it to the component, not to invent a fragile selector in the test.
 
+### Form fields: use `e2e/helpers/formFields.ts` (mandatory)
+
+**Every interaction with a form field in an e2e test must go through a helper from `frontend/e2e/helpers/formFields.ts`.** Do not call `.fill()`, `.click()`, `.check()`, `.setChecked()`, `.setInputFiles()`, or `press(digit)` loops directly on a form field locator — that's how Mantine quirks (the `CurrencyInput` keydown handler, combobox option portals, SegmentedControl item targeting) leak back into Page Objects and tests start failing intermittently.
+
+Helpers in v1 — pick the one that matches the field:
+
+| Field kind | Helper |
+|---|---|
+| Text input | `fillText` / `clearText` |
+| Textarea | `fillTextarea` |
+| `NumberInput` | `fillNumber` |
+| `CurrencyInput` (cents) | `fillCurrencyCents` / `clearAndFillCurrencyCents` |
+| `DateInput` | `fillDateInput` |
+| Mantine `Select` | `selectOption(root, triggerTestId, optionTestId)` |
+| `TagsInput` | `fillTagsInput` |
+| `Radio` | `pickRadio` |
+| `Checkbox` | `setCheckbox` |
+| `Switch` | `setSwitch` |
+| `SegmentedControl` | `pickSegmented(root, segmentedTestId, optionTestId)` |
+| `FileInput` | `setFileInput` |
+
+Rules:
+- **Always pass an option testid**, never a label, to `selectOption` and `pickSegmented`. Both helpers refuse label fallbacks. If a Mantine `Select` doesn't have a `renderOption` testid yet, add one in the same PR (factory under `src/testIds/`, then `renderOption={({ option }) => <span data-testid={...}>{option.label}</span>}` on the `Select`). Same pattern for `SegmentedControl`: render each item's `label` as JSX with a per-option testid.
+- **Always scope `root` to a drawer/form locator** when the form lives inside one (e.g. `formDrawer`, `updateDrawer`, `createDrawer`). Defaulting to `page` lets stale duplicates match silently.
+- **Page Object methods that fill a form field must call a helper** — they shouldn't reimplement the keydown loop, the click+option dance, or hardcoded label maps. If you find yourself writing one of those in a Page Object, the helper is missing or the testid is missing; fix the source rather than work around it in the test.
+- **Specs themselves should also call helpers** when they need to touch a field that the Page Object doesn't expose — don't reach into `page.getByLabel(...)` / `getByRole('option', ...)`.
+
+Add a new helper (or extend an existing one) when a new form-field kind first appears in a real test. Don't ship a one-off interaction inline.
+
 ## Known divergences (migrate when touching)
 
 These exist in the codebase and agents should **not** copy them. When touching a file listed here, prefer migrating it toward the conventions above within the scope of the task.
