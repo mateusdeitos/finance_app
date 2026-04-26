@@ -109,17 +109,18 @@ func (t *Transaction) SetType(newType TransactionType) {
 }
 
 type TransactionCreateRequest struct {
-	TransactionType      TransactionType     `json:"transaction_type"`
-	AccountID            int                 `json:"account_id"`
-	CategoryID           int                 `json:"category_id,omitempty"`
-	Amount               int64               `json:"amount"`
-	Date                 time.Time           `json:"date"`
-	Description          string              `json:"description"`
-	DestinationAccountID *int                `json:"destination_account_id,omitempty"`
-	Tags                 []Tag               `json:"tags,omitempty"`
-	RecurrenceSettings   *RecurrenceSettings `json:"recurrence_settings,omitempty"`
-	SplitSettings        []SplitSettings     `json:"split_settings,omitempty"`
-	ChargeID             *int                `json:"charge_id,omitempty"`
+	TransactionType          TransactionType     `json:"transaction_type"`
+	AccountID                int                 `json:"account_id"`
+	CategoryID               int                 `json:"category_id,omitempty"`
+	Amount                   int64               `json:"amount"`
+	Date                     time.Time           `json:"date"`
+	Description              string              `json:"description"`
+	DestinationAccountID     *int                `json:"destination_account_id,omitempty"`
+	Tags                     []Tag               `json:"tags,omitempty"`
+	RecurrenceSettings       *RecurrenceSettings `json:"recurrence_settings,omitempty"`
+	SplitSettings            []SplitSettings     `json:"split_settings,omitempty"`
+	ChargeID                 *int                `json:"charge_id,omitempty"`
+	SharedAccountConnection  *UserConnection     `json:"-"`
 }
 
 type TransactionUpdateRequest struct {

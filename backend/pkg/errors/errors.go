@@ -52,6 +52,8 @@ const (
 	ErrorTagSplitSettingPercentageMustBeBetween1And100          ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_MUST_BE_BETWEEN_1_AND_100"
 	ErrorTagSplitSettingAmountMustBeGreaterThanZero             ErrorTag = "TRANSACTION.SPLIT_SETTING_AMOUNT_MUST_BE_GREATER_THAN_ZERO"
 	ErrorTagSplitSettingInvalidDestinationAccountID             ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_DESTINATION_ACCOUNT_ID"
+	ErrorTagSplitSettingsNotAllowedOnSharedAccount              ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_ON_SHARED_ACCOUNT"
+	ErrorTagTransferNotAllowedOnSharedAccount                   ErrorTag = "TRANSACTION.TRANSFER_NOT_ALLOWED_ON_SHARED_ACCOUNT"
 	ErrorTagInvalidPeriod                                       ErrorTag = "TRANSACTION.INVALID_PERIOD"
 	ErrorTagInvalidPropagationSettings                          ErrorTag = "TRANSACTION.INVALID_PROPAGATION_SETTINGS"
 	ErrorTagParentTransactionBelongsToAnotherUser               ErrorTag = "TRANSACTION.PARENT_TRANSACTION_BELONGS_TO_ANOTHER_USER"
@@ -73,7 +75,9 @@ const (
 
 var (
 	ErrMissingDestinationAccount          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagMissingDestinationAccount)}, "missing destination account")
-	ErrSplitSettingsNotAllowedForTransfer = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedForTransfer)}, "split settings are not allowed for transfer transactions")
+	ErrSplitSettingsNotAllowedForTransfer      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedForTransfer)}, "split settings are not allowed for transfer transactions")
+	ErrSplitSettingsNotAllowedOnSharedAccount  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedOnSharedAccount)}, "split settings are not allowed on shared accounts")
+	ErrTransferNotAllowedOnSharedAccount       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTransferNotAllowedOnSharedAccount)}, "transfers are not allowed on shared accounts")
 	ErrAmountMustBeGreaterThanZero        = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAmountMustBeGreaterThanZero)}, "amount must be greater than zero")
 	ErrDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDateIsRequired)}, "date is required")
 	ErrDescriptionIsRequired              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDescriptionIsRequired)}, "description is required")

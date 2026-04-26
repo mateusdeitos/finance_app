@@ -1465,6 +1465,169 @@ func now() time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
 
+func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	amount := int64(1000)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          amount,
+		Date:            d,
+		Description:     "shared account expense",
+	})
+	suite.Require().NoError(err)
+
+	// user1: 1 expense (debit) on conn.FromAccountID
+	txsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user1.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsUser1, 1)
+	suite.Assert().Equal(conn.FromAccountID, txsUser1[0].AccountID)
+	suite.Assert().Equal(domain.TransactionTypeExpense, txsUser1[0].Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, txsUser1[0].OperationType)
+	suite.Assert().Equal(amount, txsUser1[0].Amount)
+	suite.Assert().Len(txsUser1[0].LinkedTransactions, 1)
+
+	// Linked tx: user2 gets income (credit) on conn.ToAccountID
+	lt := txsUser1[0].LinkedTransactions[0]
+	suite.Assert().Equal(conn.ToAccountID, lt.AccountID)
+	suite.Assert().Equal(user2.ID, lt.UserID)
+	suite.Assert().Equal(domain.TransactionTypeIncome, lt.Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, lt.OperationType)
+	suite.Assert().Equal(amount, lt.Amount)
+	suite.Assert().Equal(user1.ID, lo.FromPtr(lt.OriginalUserID))
+
+	// user2: 1 income (credit) on conn.ToAccountID
+	txsUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user2.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsUser2, 1)
+	suite.Assert().Equal(conn.ToAccountID, txsUser2[0].AccountID)
+	suite.Assert().Equal(domain.TransactionTypeIncome, txsUser2[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, txsUser2[0].OperationType)
+
+	// No settlements
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{txsUser1[0].ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(settlements, "shared account expenses should not create settlements")
+}
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreateIncomeOnSharedAccount() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	amount := int64(2000)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeIncome,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          amount,
+		Date:            d,
+		Description:     "shared account income",
+	})
+	suite.Require().NoError(err)
+
+	// user1: 1 income (credit) on conn.FromAccountID
+	txsUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user1.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsUser1, 1)
+	suite.Assert().Equal(domain.TransactionTypeIncome, txsUser1[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, txsUser1[0].OperationType)
+
+	// Linked tx: user2 gets expense (debit) on conn.ToAccountID
+	suite.Assert().Len(txsUser1[0].LinkedTransactions, 1)
+	lt := txsUser1[0].LinkedTransactions[0]
+	suite.Assert().Equal(conn.ToAccountID, lt.AccountID)
+	suite.Assert().Equal(user2.ID, lt.UserID)
+	suite.Assert().Equal(domain.TransactionTypeExpense, lt.Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, lt.OperationType)
+	suite.Assert().Equal(amount, lt.Amount)
+}
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount_RejectsSplitSettings() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		Amount:          1000,
+		Date:            now(),
+		Description:     "should fail",
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Assert().Error(err)
+	suite.Assert().ErrorIs(err, pkgErrors.ErrSplitSettingsNotAllowedOnSharedAccount)
+}
+
+func (suite *TransactionCreateWithDBTestSuite) TestCreateTransferOnSharedAccount_Rejected() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType:      domain.TransactionTypeTransfer,
+		AccountID:            conn.FromAccountID,
+		DestinationAccountID: lo.ToPtr(account.ID),
+		Amount:               1000,
+		Date:                 now(),
+		Description:          "should fail",
+	})
+	suite.Assert().Error(err)
+	suite.Assert().ErrorIs(err, pkgErrors.ErrTransferNotAllowedOnSharedAccount)
+}
+
 func TestTransactionCreateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
