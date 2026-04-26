@@ -76,7 +76,15 @@ export class CurrencyField extends FieldBase {
   async clearAndFillCents(cents: number): Promise<void> {
     const input = this.locator()
     await input.click()
-    await input.press('Control+a')
+    // CurrencyInput's keydown handler treats each Backspace as `floor(value/10)`,
+    // so we need one Backspace per digit currently displayed to drain the value
+    // to 0 — Control+a + digit doesn't reliably trigger the "all selected"
+    // branch because React re-renders reset the selection between presses.
+    const display = await input.inputValue()
+    const digitCount = display.replace(/\D/g, '').length
+    for (let i = 0; i < digitCount; i++) {
+      await input.press('Backspace')
+    }
     for (const digit of String(cents)) {
       await input.press(digit)
     }
