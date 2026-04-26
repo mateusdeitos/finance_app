@@ -141,6 +141,11 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
                 error={errors.category_id?.message}
                 searchable
                 clearable
+                renderOption={({ option }) => (
+                  <span data-testid={TransactionsTestIds.OptionCategory(option.value)}>
+                    {option.label}
+                  </span>
+                )}
                 data-testid={TransactionsTestIds.SelectCategory}
               />
             )}

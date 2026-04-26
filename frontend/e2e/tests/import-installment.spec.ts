@@ -63,10 +63,10 @@ test.describe("Import with installment settings", () => {
     // Use a fixed date so we know which month/year to query
     const csv = buildCsvContent([["15/03/2026", description, "-300,00"]]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Set category (required for expenses)
-    await importPage.setRowCategory(0, testCategoryName);
+    await importPage.setRowCategory(0, testCategoryId);
 
     // Configure 1/3 monthly installments
     await importPage.setRowInstallments(0, { type: "monthly", current: 1, total: 3 });

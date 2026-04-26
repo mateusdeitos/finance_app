@@ -80,14 +80,14 @@ test.describe("Import transactions", () => {
       [formatDateBR(txDate), description, "-150,00"],
     ]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Verify review step shows 1 row
     const rowCount = await importPage.getRowCount();
     expect(rowCount).toBe(1);
 
     // Category is required for non-transfer rows before confirming
-    await importPage.setRowCategory(0, testCategoryName);
+    await importPage.setRowCategory(0, testCategoryId);
 
     await importPage.confirmImport();
 
@@ -122,7 +122,7 @@ test.describe("Import transactions", () => {
       [formatDateBR(txDate), description, "-80,00"],
     ]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Row 0 should have action "duplicate" (detected server-side)
     const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
@@ -142,13 +142,13 @@ test.describe("Import transactions", () => {
       [formatDateBR(txDate), description2, "-75,00"],
     ]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Change row 1 action to "skip"
     await importPage.setRowAction(1, "skip");
 
     // Category is required for the row being imported
-    await importPage.setRowCategory(0, testCategoryName);
+    await importPage.setRowCategory(0, testCategoryId);
 
     await importPage.confirmImport();
 
@@ -173,7 +173,7 @@ test.describe("Import transactions", () => {
       [formatDateBR(txDate), description, "-30,00"],
     ]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Open category drawer from the + button on row 0
     await importPage.openCreateCategoryDrawer(0);
@@ -209,7 +209,7 @@ test.describe("Import transactions", () => {
       [formatDateBR(txDate), description, "-45,00"],
     ]);
 
-    await importPage.uploadCSV(csv, testAccountName);
+    await importPage.uploadCSV(csv, testAccountId);
 
     // Open category drawer and create a category with emoji
     await importPage.openCreateCategoryDrawer(0);
@@ -239,7 +239,7 @@ test.describe("Import transactions", () => {
   test("invalid CSV: shows error message when header is missing required column", async () => {
     const invalidCsv = "Data;Descrição\n15/01/2026;Teste";
 
-    await importPage.selectAccount(testAccountName);
+    await importPage.selectAccount(testAccountId);
     await importPage.uploadCSVContent(invalidCsv);
     await importPage.processButton.click();
 

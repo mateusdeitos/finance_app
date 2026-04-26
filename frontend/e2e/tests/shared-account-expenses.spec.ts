@@ -15,7 +15,7 @@ const YEAR = now.getFullYear();
 test.describe("Shared account expenses", () => {
   let setup: UserAndPartnerResult;
   let categoryId: number;
-  let sharedAccountName: string;
+  let sharedAccountId: number;
 
   test.beforeAll(async () => {
     setup = await createUserAndPartner("e2e-shared-acct");
@@ -28,16 +28,8 @@ test.describe("Shared account expenses", () => {
     const cat = (await catRes.json()) as { id: number };
     categoryId = cat.id;
 
-    // Get the shared account name for UI selection
-    const accountsRes = await apiFetchAs(setup.userToken, "/api/accounts");
-    const accounts = (await accountsRes.json()) as Array<{
-      id: number;
-      name: string;
-      user_connection?: { id: number };
-    }>;
-    const sharedAccount = accounts.find((a) => a.id === setup.userConnAccountId);
-    if (!sharedAccount) throw new Error("Shared account not found");
-    sharedAccountName = sharedAccount.name;
+    // The shared account is the one backing the user connection.
+    sharedAccountId = setup.userConnAccountId;
   });
 
   test("create expense on shared account creates inverted tx for partner", async ({
@@ -50,7 +42,7 @@ test.describe("Shared account expenses", () => {
     await txPage.openCreateForm();
     await txPage.fillDescription("Shared expense test");
     await txPage.fillAmount(5000);
-    await txPage.selectAccount(sharedAccountName);
+    await txPage.selectAccount(sharedAccountId);
 
     // Split settings should NOT be visible when shared account is selected
     await expect(
@@ -97,7 +89,7 @@ test.describe("Shared account expenses", () => {
     await txPage.selectType("income");
     await txPage.fillDescription("Shared income test");
     await txPage.fillAmount(3000);
-    await txPage.selectAccount(sharedAccountName);
+    await txPage.selectAccount(sharedAccountId);
 
     await txPage.submitForm();
 
@@ -136,11 +128,11 @@ test.describe("Shared account expenses", () => {
     await txPage.openCreateForm();
     await txPage.selectType("transfer");
 
-    // Open the source account dropdown and verify shared account is not listed
+    // Open the source account dropdown and verify the shared account option is not listed
     const sourceInput = page.getByTestId(TransactionsTestIds.SelectAccount);
     await sourceInput.click();
     await expect(
-      page.getByRole("option", { name: sharedAccountName }),
+      page.getByTestId(TransactionsTestIds.OptionAccount(sharedAccountId)),
     ).not.toBeVisible();
 
     await page.close();

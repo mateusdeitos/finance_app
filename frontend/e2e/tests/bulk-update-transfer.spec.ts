@@ -281,10 +281,10 @@ test.describe('Bulk Update — data preservation', () => {
     const propagationOption = page.getByTestId(TransactionsTestIds.PropagationOption('current'))
     await expect(propagationOption.or(page.getByTestId(TransactionsTestIds.BulkSuccess))).toBeVisible({ timeout: 8000 })
 
-    // If propagation appears, select "Somente esta"
+    // If propagation appears, select "current"
     const propagationVisible = await propagationOption.isVisible().catch(() => false)
     if (propagationVisible) {
-      await transactionsPage.selectPropagation('Somente esta', 'update')
+      await transactionsPage.selectPropagation('current', 'update')
     }
 
     await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({ timeout: 15000 })

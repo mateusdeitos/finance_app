@@ -1,5 +1,12 @@
 import { type Page, type Locator, expect } from "@playwright/test";
-import { TransactionsTestIds, type PropagationOption } from '@/testIds'
+import { TransactionsTestIds, type PropagationOption, type TransactionType } from '@/testIds'
+import {
+  CurrencyField,
+  SegmentedField,
+  SelectField,
+  TextField,
+} from '../helpers/formFields'
+
 export class TransactionsPage {
   readonly page: Page;
   readonly formDrawer: Locator;
@@ -30,9 +37,10 @@ export class TransactionsPage {
   }
 
   async selectGroupBy(option: 'date' | 'category' | 'account') {
-    const labelMap: Record<string, string> = { date: 'Data', category: 'Categoria', account: 'Conta' }
-    await this.page.getByTestId(TransactionsTestIds.SegmentedGroupBy).getByText(labelMap[option]).click()
-    await this.page.waitForLoadState('networkidle')
+    await new SegmentedField(this.page, TransactionsTestIds.SegmentedGroupBy).pick(
+      TransactionsTestIds.SegmentGroupBy(option),
+    );
+    await this.page.waitForLoadState('networkidle');
   }
 
   /** Click the transaction row for the given transaction ID to open the update drawer. */
@@ -60,24 +68,15 @@ export class TransactionsPage {
 
   /** Clear the description input and type a new value. */
   async clearAndFillDescription(description: string) {
-    const input = this.updateDrawer.getByTestId(TransactionsTestIds.InputDescription);
-    await input.fill(description);
+    await new TextField(this.updateDrawer, TransactionsTestIds.InputDescription).fill(description);
   }
 
-  /** Replace amount in the update form by clearing with backspace then typing digits. */
+  /** Replace amount by clearing the input then typing digits. Defaults to update drawer. */
   async clearAndFillAmount(amountCents: number, drawer?: Locator) {
     const container = drawer ?? this.updateDrawer;
-    const input = container.getByTestId(TransactionsTestIds.InputAmount);
-    await input.click();
-    // Move to end and backspace to clear — Control+a doesn't work in this input
-    await input.press("End");
-    const currentValue = await input.inputValue();
-    for (let i = 0; i < currentValue.length; i++) {
-      await input.press("Backspace");
-    }
-    for (const digit of String(amountCents)) {
-      await input.press(digit);
-    }
+    await new CurrencyField(container, TransactionsTestIds.InputAmount).clearAndFillCents(
+      amountCents,
+    );
   }
 
   /** Click save in the update drawer and wait for it to close. */
@@ -108,49 +107,34 @@ export class TransactionsPage {
     await expect(this.formDrawer).toBeVisible();
   }
 
-  async selectType(type: "expense" | "income" | "transfer") {
-    if (type === "expense") return;
-    const labels: Record<string, string> = {
-      income: "Receita",
-      transfer: "Transferência",
-    };
-    await this.page
-      .getByTestId(TransactionsTestIds.SegmentedTransactionType)
-      .getByText(labels[type])
-      .click();
+  async selectType(type: TransactionType) {
+    await new SegmentedField(this.formDrawer, TransactionsTestIds.SegmentedTransactionType).pick(
+      TransactionsTestIds.SegmentTransactionType(type),
+    );
   }
 
   async fillAmount(amountCents: number) {
-    const amountInput = this.page.getByTestId(TransactionsTestIds.InputAmount);
-    await amountInput.click();
-    for (const digit of String(amountCents)) {
-      await amountInput.press(digit);
-    }
+    await new CurrencyField(this.formDrawer, TransactionsTestIds.InputAmount).fillCents(
+      amountCents,
+    );
   }
 
   async fillDescription(description: string) {
-    await this.page.getByTestId(TransactionsTestIds.InputDescription).fill(description);
+    await new TextField(this.formDrawer, TransactionsTestIds.InputDescription).fill(description);
   }
 
-  async selectAccount(accountName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectAccount);
-    await input.click();
-    await input.fill(accountName);
-    // Mantine Select options are portalled and aren't instrumented with a
-    // testid; getByRole('option') is the documented fallback until we switch
-    // Select consumers to renderOption with explicit testids.
-    await this.page.getByRole("option", { name: accountName }).first().click();
+  async selectAccount(accountId: number) {
+    await new SelectField(this.formDrawer, TransactionsTestIds.SelectAccount).pick(
+      TransactionsTestIds.OptionAccount(accountId),
+    );
   }
 
-  async selectCategory(categoryName: string, drawer?: Locator) {
-    const container = drawer ?? this.page;
-    const input = container.getByTestId(TransactionsTestIds.SelectCategory);
-    await input.click();
-    await input.fill(categoryName);
-    await this.page
-      .getByRole("option", { name: new RegExp(categoryName) })
-      .first()
-      .click();
+  /** Select a category. Pass `drawer` to scope to a non-create drawer (e.g. linked split). */
+  async selectCategory(categoryId: number, drawer?: Locator) {
+    const container = drawer ?? this.formDrawer;
+    await new SelectField(container, TransactionsTestIds.SelectCategory).pick(
+      TransactionsTestIds.OptionCategory(categoryId),
+    );
   }
 
   async submitForm() {
@@ -161,47 +145,46 @@ export class TransactionsPage {
   async fillExpense(
     amountCents: number,
     description: string,
-    accountName: string,
-    categoryName: string
+    accountId: number,
+    categoryId: number,
   ) {
     await this.selectType("expense");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(accountName);
-    await this.selectCategory(categoryName);
+    await this.selectAccount(accountId);
+    await this.selectCategory(categoryId);
   }
 
   async fillIncome(
     amountCents: number,
     description: string,
-    accountName: string,
-    categoryName: string
+    accountId: number,
+    categoryId: number,
   ) {
     await this.selectType("income");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(accountName);
-    await this.selectCategory(categoryName);
+    await this.selectAccount(accountId);
+    await this.selectCategory(categoryId);
   }
 
-  async selectDestinationAccount(accountName: string) {
-    const input = this.page.getByTestId(TransactionsTestIds.SelectDestinationAccount);
-    await input.click();
-    await input.fill(accountName);
-    await this.page.getByRole("option", { name: accountName }).first().click();
+  async selectDestinationAccount(accountId: number) {
+    await new SelectField(this.formDrawer, TransactionsTestIds.SelectDestinationAccount).pick(
+      TransactionsTestIds.OptionDestinationAccount(accountId),
+    );
   }
 
   async fillTransfer(
     amountCents: number,
     description: string,
-    sourceAccountName: string,
-    destAccountName: string
+    sourceAccountId: number,
+    destAccountId: number,
   ) {
     await this.selectType("transfer");
     await this.fillDescription(description);
     await this.fillAmount(amountCents);
-    await this.selectAccount(sourceAccountName);
-    await this.selectDestinationAccount(destAccountName);
+    await this.selectAccount(sourceAccountId);
+    await this.selectDestinationAccount(destAccountId);
   }
 
   async selectTransaction(transactionId: number) {
@@ -228,16 +211,11 @@ export class TransactionsPage {
   }
 
   async selectPropagation(
-    option: "Somente esta" | "Esta e as próximas" | "Todas",
+    option: PropagationOption,
     action: "delete" | "update" = "delete"
   ) {
-    const valueMap: Record<string, PropagationOption> = {
-      "Somente esta": "current",
-      "Esta e as próximas": "current_and_future",
-      Todas: "all",
-    };
     await this.page
-      .getByTestId(TransactionsTestIds.PropagationOption(valueMap[option]))
+      .getByTestId(TransactionsTestIds.PropagationOption(option))
       .click();
     const confirmTestId = action === "delete" ? "btn_propagation_confirm" : "btn_propagation_confirm_update";
     await this.page.getByTestId(confirmTestId).click();
