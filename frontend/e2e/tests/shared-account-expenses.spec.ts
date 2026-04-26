@@ -43,6 +43,7 @@ test.describe("Shared account expenses", () => {
     await txPage.fillDescription("Shared expense test");
     await txPage.fillAmount(5000);
     await txPage.selectAccount(sharedAccountId);
+    await txPage.selectCategory(categoryId);
 
     // Split settings should NOT be visible when shared account is selected
     await expect(
@@ -90,6 +91,7 @@ test.describe("Shared account expenses", () => {
     await txPage.fillDescription("Shared income test");
     await txPage.fillAmount(3000);
     await txPage.selectAccount(sharedAccountId);
+    await txPage.selectCategory(categoryId);
 
     await txPage.submitForm();
 
