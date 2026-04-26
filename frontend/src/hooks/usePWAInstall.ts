@@ -19,18 +19,18 @@ function isInStandaloneMode(): boolean {
 const DISMISSED_KEY = 'pwa-install-dismissed'
 
 export function usePWAInstall() {
-  const [showIOSBanner, setShowIOSBanner] = useState(false)
+  const [showIOSBanner, setShowIOSBanner] = useState(() => {
+    if (isInStandaloneMode()) return false
+    if (sessionStorage.getItem(DISMISSED_KEY)) return false
+    return isIOS()
+  })
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showAndroidBanner, setShowAndroidBanner] = useState(false)
 
   useEffect(() => {
     if (isInStandaloneMode()) return
     if (sessionStorage.getItem(DISMISSED_KEY)) return
-
-    if (isIOS()) {
-      setShowIOSBanner(true)
-      return
-    }
+    if (isIOS()) return
 
     const handler = (e: Event) => {
       e.preventDefault()
