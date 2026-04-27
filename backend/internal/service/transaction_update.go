@@ -33,8 +33,9 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	}
 	isLinkedTxEdit := len(sourceIDs) > 0
 
-	date := lo.CoalesceOrEmpty(req.Date, &previousTransaction.Date)
-	dateDiff := lo.FromPtr(date).Sub(previousTransaction.Date)
+	prevDate := domain.Date{Time: previousTransaction.Date}
+	date := lo.CoalesceOrEmpty(req.Date, &prevDate)
+	dateDiff := lo.FromPtr(date).Time.Sub(previousTransaction.Date)
 	dateDiffDays := int(dateDiff.Hours() / 24)
 
 	data := &transactionUpdateData{
@@ -424,11 +425,12 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 		lastInstallment := minInstallment + existingCount - 1
 		for i := existingCount; i < expectedCount; i++ {
 			installmentNum := lastInstallment + (i - existingCount) + 1
-			baseDate := lo.CoalesceOrEmpty(data.req.Date, &base.Date)
+			baseDateFallback := domain.Date{Time: base.Date}
+			baseDate := lo.CoalesceOrEmpty(data.req.Date, &baseDateFallback)
 			data.transactions = append(data.transactions, &domain.Transaction{
 				ID:                      0,
 				InstallmentNumber:       lo.ToPtr(installmentNum),
-				Date:                    s.incrementInstallmentDate(*baseDate, r.Type, i),
+				Date:                    s.incrementInstallmentDate(lo.FromPtr(baseDate).Time, r.Type, i),
 				UserID:                  base.UserID,
 				OriginalUserID:          base.OriginalUserID,
 				Type:                    base.Type,

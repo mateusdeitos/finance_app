@@ -44,7 +44,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_SplitSettingsItemValid
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 			SplitSettings:   ss,
 		}
@@ -141,7 +141,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors_Addit
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "base",
 	})
 	suite.Require().NoError(err)
@@ -269,7 +269,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_AccountIDChangeForChil
 		AccountID:       conn.FromAccountID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "split expense",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -330,7 +330,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_IncomeToDifferentUserT
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeIncome,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "income to be turned into cross-user transfer",
 	})
 	suite.Require().NoError(err)
@@ -426,7 +426,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "split for connection-miss test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -493,7 +493,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDelete_Standalone_Propagation
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "standalone tx",
 	})
 	suite.Require().NoError(err)
@@ -523,7 +523,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDelete_Standalone_Propagation
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "standalone tx",
 	})
 	suite.Require().NoError(err)

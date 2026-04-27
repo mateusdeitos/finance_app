@@ -46,7 +46,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CreditsAndDebits(
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          10000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "income",
 	})
 	suite.Require().NoError(err)
@@ -57,7 +57,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CreditsAndDebits(
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          6000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "expense",
 	})
 	suite.Require().NoError(err)
@@ -89,7 +89,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 		AccountID:       conn.FromAccountID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split expense",
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -124,7 +124,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter()
 		AccountID:       account1.ID,
 		CategoryID:      category.ID,
 		Amount:          5000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "income account1",
 	})
 	suite.Require().NoError(err)
@@ -134,7 +134,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter()
 		AccountID:       account2.ID,
 		CategoryID:      category.ID,
 		Amount:          3000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "income account2",
 	})
 	suite.Require().NoError(err)
@@ -166,7 +166,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CategoryIDFilter(
 		AccountID:       account.ID,
 		CategoryID:      category1.ID,
 		Amount:          2000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "category1",
 	})
 	suite.Require().NoError(err)
@@ -176,7 +176,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_CategoryIDFilter(
 		AccountID:       account.ID,
 		CategoryID:      category2.ID,
 		Amount:          8000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "category2",
 	})
 	suite.Require().NoError(err)
@@ -208,7 +208,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_TagIDFilter() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          4000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "tagged",
 		Tags:            []domain.Tag{*tag},
 	})
@@ -219,7 +219,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_TagIDFilter() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "no tag",
 	})
 	suite.Require().NoError(err)
@@ -261,7 +261,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesOtherMont
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          5000,
-		Date:            thisMonth,
+		Date:            domain.Date{Time: thisMonth},
 		Description:     "this month",
 	})
 	suite.Require().NoError(err)
@@ -271,7 +271,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesOtherMont
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          9999,
-		Date:            lastMonth,
+		Date:            domain.Date{Time: lastMonth},
 		Description:     "last month",
 	})
 	suite.Require().NoError(err)
@@ -312,7 +312,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitBothDirectio
 		AccountID:       personal1.ID,
 		CategoryID:      category1.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "user1 split",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -326,7 +326,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitBothDirectio
 		AccountID:       personal2.ID,
 		CategoryID:      category2.ID,
 		Amount:          800,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "user2 split",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -383,7 +383,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 		AccountID:       personal1.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split expense",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -469,7 +469,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split by to_user",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -530,7 +530,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split by to_user",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -594,7 +594,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split by to_user",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -668,7 +668,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 		AccountID:       personal2.ID,
 		CategoryID:      category.ID,
 		Amount:          2000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "split by to_user",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -731,7 +731,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               5000,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "same-user transfer",
 	})
 	suite.Require().NoError(err)
@@ -778,7 +778,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
 		Amount:               3000,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "diff-user transfer",
 	})
 	suite.Require().NoError(err)
@@ -833,7 +833,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               1000,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "transfer to update",
 	})
 	suite.Require().NoError(err)
@@ -890,7 +890,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
 		Amount:               1000,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "diff-user transfer to update",
 	})
 	suite.Require().NoError(err)
@@ -949,7 +949,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               2000,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "transfer before destination change",
 	})
 	suite.Require().NoError(err)
@@ -1013,7 +1013,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 		AccountID:            account1.ID,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               1500,
-		Date:                 date,
+		Date:                 domain.Date{Time: date},
 		Description:          "transfer to redirect to diff user",
 	})
 	suite.Require().NoError(err)
@@ -1076,7 +1076,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          3000,
-		Date:            prevMonth,
+		Date:            domain.Date{Time: prevMonth},
 		Description:     "prev month",
 	})
 	suite.Require().NoError(err)
@@ -1086,7 +1086,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          2000,
-		Date:            thisMonth,
+		Date:            domain.Date{Time: thisMonth},
 		Description:     "this month",
 	})
 	suite.Require().NoError(err)
@@ -1125,7 +1125,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_WithI
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1500,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "expense",
 	})
 	suite.Require().NoError(err)
@@ -1164,7 +1164,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Accou
 		AccountID:       account1.ID,
 		CategoryID:      category.ID,
 		Amount:          500,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "income account1",
 	})
 	suite.Require().NoError(err)
@@ -1203,7 +1203,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_False
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            date,
+		Date:            domain.Date{Time: date},
 		Description:     "income",
 	})
 	suite.Require().NoError(err)
@@ -1238,7 +1238,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          2000,
-		Date:            twoMonthsAgo,
+		Date:            domain.Date{Time: twoMonthsAgo},
 		Description:     "two months ago",
 	})
 	suite.Require().NoError(err)
@@ -1247,7 +1247,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          3000,
-		Date:            lastMonth,
+		Date:            domain.Date{Time: lastMonth},
 		Description:     "last month",
 	})
 	suite.Require().NoError(err)
@@ -1256,7 +1256,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            thisMonth,
+		Date:            domain.Date{Time: thisMonth},
 		Description:     "this month",
 	})
 	suite.Require().NoError(err)

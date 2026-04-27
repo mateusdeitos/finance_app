@@ -49,7 +49,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MultiSplit() {
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "multi-split expense",
 		SplitSettings: lo.Map(connections, func(conn *domain.UserConnection, _ int) domain.SplitSettings {
 			return domain.SplitSettings{
@@ -131,7 +131,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_IncomeToTransfer_SameU
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeIncome,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "income transaction",
 	})
 	suite.Require().NoError(err)
@@ -185,7 +185,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_SameUserToDif
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "same-user transfer",
 	})
 	suite.Require().NoError(err)
@@ -262,7 +262,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_DifferentUser
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "cross-user transfer",
 	})
 	suite.Require().NoError(err)
@@ -334,7 +334,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_DifferentUser
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(connAB.ToAccountID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "transfer to userB",
 	})
 	suite.Require().NoError(err)
@@ -402,7 +402,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_MonthlyRecurrence_DayC
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            jan31,
+		Date:            domain.Date{Time: jan31},
 		Description:     "monthly clamp test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -452,7 +452,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_YearlyRecurrence_LeapY
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            feb29,
+		Date:            domain.Date{Time: feb29},
 		Description:     "yearly leap clamp test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeYearly,

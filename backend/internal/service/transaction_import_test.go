@@ -212,7 +212,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 			TransactionType: domain.TransactionTypeExpense,
 			CategoryID:      category.ID,
 			Amount:          5000,
-			Date:            txDate,
+			Date:            domain.Date{Time: txDate},
 			Description:     "Netflix",
 		})
 		suite.Require().NoError(err)
@@ -261,7 +261,7 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 			TransactionType: domain.TransactionTypeExpense,
 			CategoryID:      category.ID,
 			Amount:          7500,
-			Date:            txDate,
+			Date:            domain.Date{Time: txDate},
 			Description:     "Spotify Check",
 		})
 		suite.Require().NoError(err)

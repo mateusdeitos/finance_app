@@ -60,7 +60,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateOwnExpense() {
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{*tag},
 	}
@@ -86,7 +86,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateOwnExpense() {
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{*tag2},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnOtherUsersTrans
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 	}
 
@@ -197,7 +197,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
@@ -252,7 +252,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -310,7 +310,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
@@ -375,7 +375,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -465,7 +465,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 		SplitSettings: []domain.SplitSettings{
@@ -544,7 +544,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -598,7 +598,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 		SplitSettings: []domain.SplitSettings{
@@ -689,7 +689,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -788,7 +788,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario5_OwnExpenseToOwnTran
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          5850 * 100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -839,7 +839,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario5_OwnExpenseToOwnTran
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -922,7 +922,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 		SplitSettings: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.SplitSettings {
@@ -1004,7 +1004,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1097,7 +1097,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 		SplitSettings: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.SplitSettings {
@@ -1176,7 +1176,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(destination.ToAccountID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1259,7 +1259,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1324,7 +1324,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		AccountID:            lo.ToPtr(account2.ID),
 		DestinationAccountID: lo.ToPtr(account3.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1398,7 +1398,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1457,7 +1457,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to expense"),
 	})
 	if err != nil {
@@ -1515,7 +1515,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1574,7 +1574,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to income"),
 	})
 	if err != nil {
@@ -1632,7 +1632,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1701,7 +1701,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to expense"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -1774,7 +1774,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario1_NoRecurr
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 	})
 	suite.Require().NoError(err)
@@ -1843,7 +1843,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario2_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1904,7 +1904,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario3_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1974,7 +1974,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario4_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2050,7 +2050,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2123,7 +2123,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_Decrease
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2196,7 +2196,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario7_Decrease
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2295,7 +2295,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario8_AddSplit
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2384,7 +2384,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2467,7 +2467,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10_AddSpli
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2553,7 +2553,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario11_AddSpli
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2656,7 +2656,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario12_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2747,7 +2747,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2835,7 +2835,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2927,7 +2927,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3010,7 +3010,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3162,7 +3162,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange()
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          200,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 	})
 	suite.Require().NoError(err)
@@ -3204,7 +3204,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3249,7 +3249,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToEx
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3298,7 +3298,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AddSplit() {
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 	})
 	suite.Require().NoError(err)
@@ -3337,7 +3337,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3376,7 +3376,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3428,7 +3428,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3495,7 +3495,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3575,7 +3575,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3650,7 +3650,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          150000,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Offset installment test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3722,7 +3722,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Increase total test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3783,7 +3783,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Decrease total test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3840,7 +3840,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Standalone
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Standalone to recurrence test",
 	})
 	suite.Require().NoError(err)
@@ -3901,7 +3901,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          150000,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Split offset test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3972,7 +3972,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for disallowed fields test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4080,7 +4080,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for allowed fields test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4118,7 +4118,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	newDesc := "updated by userB"
 
 	updateReq := &domain.TransactionUpdateRequest{
-		Date:                &newDate,
+		Date:                &domain.Date{Time: newDate},
 		Description:         &newDesc,
 		CategoryID:          &categoryB.ID,
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
@@ -4156,7 +4156,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for tags test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4220,7 +4220,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	originalDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            originalDate,
+		Date:            domain.Date{Time: originalDate},
 		Description:     "recurring shared expense",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4265,7 +4265,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	// userB shifts the linked transaction's date forward by 5 days, propagation=all
 	newDate := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
 	updateReq := &domain.TransactionUpdateRequest{
-		Date:                &newDate,
+		Date:                &domain.Date{Time: newDate},
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 	}
 
@@ -4314,7 +4314,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	originalDescription := "recurring shared expense description test"
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            originalDate,
+		Date:            domain.Date{Time: originalDate},
 		Description:     originalDescription,
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4420,7 +4420,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4530,7 +4530,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10b_AddSpl
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4630,7 +4630,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario17_EditDes
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     originalDescription,
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4713,7 +4713,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue83_EditDescriptionOnInst
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     originalDescription,
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
