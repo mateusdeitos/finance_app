@@ -442,13 +442,16 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionReject
 	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
 	categoryA, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
 	// Create a split expense — this generates a linked (child) transaction for userB
 	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID,
+		AccountID:       accountA.ID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
 		Date:            domain.Date{Time: d},

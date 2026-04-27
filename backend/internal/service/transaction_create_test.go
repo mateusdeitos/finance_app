@@ -69,7 +69,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType)
-	suite.Assert().Equal(transaction.Date, transactions[0].Date)
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
 	suite.Assert().Equal(user.ID, transactions[0].UserID)
@@ -144,7 +144,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(domain.OperationTypeCredit, transactions[0].OperationType)
-	suite.Assert().Equal(transaction.Date, transactions[0].Date)
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
 	suite.Assert().Equal(user.ID, transactions[0].UserID)
@@ -214,7 +214,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Greater(transactions[0].ID, 0, "transactions[0].ID should be greater than 0")
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID, "transactions[0].AccountID should be equal to transaction.AccountID")
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount, "transactions[0].Amount should be equal to transaction.Amount")
-	suite.Assert().Equal(transaction.Date, transactions[0].Date, "transactions[0].Date should be equal to transaction.Date")
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date, "transactions[0].Date should be equal to transaction.Date")
 	suite.Assert().Equal(transaction.Description, transactions[0].Description, "transactions[0].Description should be equal to transaction.Description")
 	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].Type, "transactions[0].Type should be equal to domain.TransactionTypeTransfer")
 	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType, "transactions[0].OperationType should be equal to domain.OperationTypeDebit")
@@ -225,7 +225,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Greater(transactions[0].LinkedTransactions[0].ID, 0, "transactions[0].LinkedTransactions[0].ID should be greater than 0")
 	suite.Assert().Equal(account2.ID, transactions[0].LinkedTransactions[0].AccountID, "transactions[0].LinkedTransactions[0].AccountID should be equal to account2.ID")
 	suite.Assert().Equal(transaction.Amount, transactions[0].LinkedTransactions[0].Amount, "transactions[0].LinkedTransactions[0].Amount should be equal to transaction.Amount")
-	suite.Assert().Equal(transaction.Date, transactions[0].LinkedTransactions[0].Date, "transactions[0].LinkedTransactions[0].Date should be equal to transaction.Date")
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].LinkedTransactions[0].Date, "transactions[0].LinkedTransactions[0].Date should be equal to transaction.Date")
 	suite.Assert().Equal(transaction.Description, transactions[0].LinkedTransactions[0].Description, "transactions[0].LinkedTransactions[0].Description should be equal to transaction.Description")
 	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].LinkedTransactions[0].Type, "transactions[0].LinkedTransactions[0].Type should be equal to domain.TransactionTypeTransfer")
 	suite.Assert().Equal(domain.OperationTypeCredit, transactions[0].LinkedTransactions[0].OperationType, "transactions[0].LinkedTransactions[0].OperationType should be equal to domain.OperationTypeCredit")
@@ -1588,9 +1588,13 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount_
 	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
 	suite.Require().NoError(err)
 
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
 	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
 		Amount:          1000,
 		Date:            domain.Date{Time: now()},
 		Description:     "should fail",

@@ -210,14 +210,13 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	hasSplitSettings := len(data.req.SplitSettings) > 0
 
 	checkIsTransferToSameUser := func(accountID, userID int) (bool, error) {
-		destinationAccount, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
-			IDs: []int{accountID},
-		})
+		conn, err := s.getConnectionFromDestinationAccountID(ctx, userID, accountID)
 		if err != nil {
 			return false, err
 		}
-
-		return destinationAccount.UserID == userID, nil
+		// If no connection found, the account is a regular private account → same-user transfer.
+		// If a connection exists, it's a cross-user transfer.
+		return conn == nil, nil
 	}
 
 	var scenario updateScenario
@@ -311,10 +310,10 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 				return updateChanges{}, err
 			}
 
-			transferWasToSameUser, err := checkIsTransferToSameUser(data.previousTransaction.AccountID, data.userID)
-			if err != nil {
-				return updateChanges{}, err
-			}
+			// The previous transfer was cross-user if any linked transaction belongs to a different user.
+			transferWasToSameUser := !lo.ContainsBy(data.previousTransaction.LinkedTransactions, func(lt domain.Transaction) bool {
+				return lt.UserID != data.userID
+			})
 
 			switch isTransferToSameUser {
 			case true:
@@ -667,9 +666,25 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 
 	c.SwapIfNeeded(data.userID)
 
-	// Cross-user transfer: only the receiver's credit side is a linked transaction.
-	// The sender's debit is already the main transaction — no extra linked tx needed.
+	// Cross-user transfer: create both the fromTx (author's credit on shared account)
+	// and the toTx (receiver's credit on their shared account), matching the creation
+	// logic in injectLinkedTransactions.
 	tx.LinkedTransactions = []domain.Transaction{
+		{
+			ID:             0,
+			Date:           tx.Date,
+			Description:    tx.Description,
+			UserID:         c.FromUserID,
+			OriginalUserID: tx.OriginalUserID,
+			Type:           domain.TransactionTypeTransfer,
+			OperationType:  domain.OperationTypeCredit,
+			AccountID:      c.FromAccountID,
+			CategoryID:     nil,
+			Amount:         baseAmount,
+			Tags:           []domain.Tag{},
+			CreatedAt:      nil,
+			UpdatedAt:      nil,
+		},
 		{
 			ID:             0,
 			Date:           tx.Date,

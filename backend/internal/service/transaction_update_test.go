@@ -1208,6 +1208,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 				Amount:                  200,
 				Type:                    domain.TransactionTypeTransfer,
 				OperationType:           domain.OperationTypeCredit,
+				AccountID:               destination.FromAccountID,
+				CategoryID:              nil,
+				Date:                    expectedDate,
+				Description:             "Test transaction updated to transfer",
+				Tags:                    []domain.Tag{{Name: "Test tag 4"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
+			{
+				Amount:                  200,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
 				AccountID:               destination.ToAccountID,
 				CategoryID:              nil,
 				Date:                    expectedDate,
@@ -4771,6 +4786,109 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue83_EditDescriptionOnInst
 	suite.Assert().Equal(originalRecurrenceID, recurrences[0].ID, "original recurrence ID preserved")
 	suite.Assert().Equal(24, recurrences[0].Installments,
 		"recurrence.Installments must remain 24 (no fragmentation)")
+}
+
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateTransferBetweenDifferentUsers_AuthorUpdatesAmount_ToUserStillSeesTransfer() {
+	ctx := context.Background()
+
+	// Create 2 fresh users
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	// Create private accounts
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+
+	// Create accepted connection between users
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	// Create transfer from author to toUser via connection account
+	transferReq := domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               10000, // R$ 100,00
+		Date:                 domain.Date{Time: d},
+		Description:          "Transfer to partner",
+	}
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &transferReq)
+	suite.Require().NoError(err)
+	suite.Require().Greater(createdID, 0)
+
+	// Verify initial state: author sees 2 txs (main debit + fromTx credit on shared account)
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 2, "author should see 2 transactions (debit + fromTx credit)")
+
+	// toUser sees 1 tx (credit on their shared account)
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 1, "toUser should see 1 transaction (credit)")
+	suite.Assert().Equal(int64(10000), toUserTxs[0].Amount)
+	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxs[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxs[0].OperationType)
+	suite.Assert().Equal(connection.ToAccountID, toUserTxs[0].AccountID)
+
+	// Update the transfer amount from the author
+	newAmount := int64(25000) // R$ 250,00
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
+	})
+	suite.Require().NoError(err)
+
+	// Verify author's main transaction was updated
+	updatedAuthorTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{createdID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, updatedAuthorTx.Amount, "author main tx amount should be updated")
+	suite.Assert().Equal(domain.TransactionTypeTransfer, updatedAuthorTx.Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, updatedAuthorTx.OperationType)
+	suite.Assert().Equal(authorAccount.ID, updatedAuthorTx.AccountID)
+
+	// Verify toUser's transaction still exists and amount was updated
+	toUserTxsAfterUpdate, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxsAfterUpdate, 1, "toUser should still see 1 transaction after update")
+	suite.Assert().Equal(newAmount, toUserTxsAfterUpdate[0].Amount, "toUser tx amount should be updated")
+	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxsAfterUpdate[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxsAfterUpdate[0].OperationType)
+	suite.Assert().Equal(connection.ToAccountID, toUserTxsAfterUpdate[0].AccountID)
+	suite.Assert().Equal(author.ID, lo.FromPtr(toUserTxsAfterUpdate[0].OriginalUserID), "originalUserID should be the author")
+
+	// Verify author still sees 2 transactions with updated amounts
+	authorTxsAfterUpdate, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxsAfterUpdate, 2, "author should still see 2 transactions after update")
+
+	// Main tx: debit on private account
+	suite.Assert().Equal(newAmount, authorTxsAfterUpdate[0].Amount)
+	suite.Assert().Equal(domain.OperationTypeDebit, authorTxsAfterUpdate[0].OperationType)
+	suite.Assert().Equal(authorAccount.ID, authorTxsAfterUpdate[0].AccountID)
+
+	// fromTx: credit on author's shared account
+	suite.Assert().Equal(newAmount, authorTxsAfterUpdate[1].Amount)
+	suite.Assert().Equal(domain.OperationTypeCredit, authorTxsAfterUpdate[1].OperationType)
+	suite.Assert().Equal(connection.FromAccountID, authorTxsAfterUpdate[1].AccountID)
 }
 
 func TestTransactionUpdateWithDB(t *testing.T) {

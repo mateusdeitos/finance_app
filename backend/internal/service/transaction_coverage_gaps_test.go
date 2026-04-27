@@ -257,6 +257,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_AccountIDChangeForChil
 	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
 	categoryA, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
@@ -266,7 +269,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_AccountIDChangeForChil
 
 	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID,
+		AccountID:       accountA.ID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
 		Date:            domain.Date{Time: d},
@@ -353,12 +356,19 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_IncomeToDifferentUserT
 
 	suite.Assert().Equal(domain.TransactionTypeTransfer, updated.Type)
 	suite.Assert().Equal(domain.OperationTypeDebit, updated.OperationType)
-	suite.Assert().Len(updated.LinkedTransactions, 1)
+	suite.Assert().Len(updated.LinkedTransactions, 2, "cross-user transfer: fromTx (author shared) + toTx (partner shared)")
 
-	lt := updated.LinkedTransactions[0]
-	suite.Assert().Equal(conn.ToAccountID, lt.AccountID)
-	suite.Assert().Equal(userB.ID, lt.UserID)
-	suite.Assert().Equal(domain.OperationTypeCredit, lt.OperationType)
+	// fromTx: credit on author's shared account
+	fromTx := updated.LinkedTransactions[0]
+	suite.Assert().Equal(conn.FromAccountID, fromTx.AccountID)
+	suite.Assert().Equal(userA.ID, fromTx.UserID)
+	suite.Assert().Equal(domain.OperationTypeCredit, fromTx.OperationType)
+
+	// toTx: credit on partner's shared account
+	toTx := updated.LinkedTransactions[1]
+	suite.Assert().Equal(conn.ToAccountID, toTx.AccountID)
+	suite.Assert().Equal(userB.ID, toTx.UserID)
+	suite.Assert().Equal(domain.OperationTypeCredit, toTx.OperationType)
 }
 
 // ─── shouldUpdateTransactionBasedOnPropagationSettings ───────────────────────
@@ -420,9 +430,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 	category, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
 	// Create a real split expense so we have valid transaction IDs.
 	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
-		AccountID:       conn.FromAccountID,
+		AccountID:       accountA.ID,
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
