@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group, Menu, Text } from '@mantine/core'
+import { Button, Group, Menu, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
@@ -16,21 +16,21 @@ interface SelectionActionBarProps {
 export function SelectionActionBar({ count, onClearSelection, onCategoryChange, onDateChange, onDivisaoChange, connectedAccountsCount, onDelete }: SelectionActionBarProps) {
   return (
     <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
-      <ActionIcon
-        className={classes.closeButton}
-        variant="default"
-        radius="xl"
-        size="md"
-        onClick={onClearSelection}
-        data-testid={TransactionsTestIds.BtnClearSelection}
-        aria-label="Limpar seleção"
-      >
-        <IconX size={14} />
-      </ActionIcon>
-      <Group justify="space-between" align="center">
-        <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
-          {count}
-        </Text>
+      <Group justify="space-between" align="center" style={{ flex: 1 }}>
+        <Group gap="xs" align="center">
+          <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
+            {count}
+          </Text>
+          <Button
+            size="compact-sm"
+            variant="subtle"
+            leftSection={<IconX size={14} />}
+            onClick={onClearSelection}
+            data-testid={TransactionsTestIds.BtnClearSelection}
+          >
+            Limpar seleção
+          </Button>
+        </Group>
         <Menu shadow="md" width={200}>
           <Menu.Target>
             <Button

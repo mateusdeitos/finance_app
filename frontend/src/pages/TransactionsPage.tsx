@@ -1,12 +1,13 @@
 import { ActionIcon, Box, Button, Group, Menu, Stack } from "@mantine/core";
 import { IconDots, IconFilter, IconPlus, IconTableImport } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
 import { renderDrawer } from "@/utils/renderDrawer";
@@ -39,15 +40,52 @@ export function TransactionsPage() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelection = useCallback((id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // Group map for shift+click range selection (groupKey → ordered tx IDs, excluding synthetics)
+  const groupTxIdsMap = useGroupedTransactions(
+    useMemo(() => (groups) =>
+      new Map(groups.map((g) => [
+        g.key,
+        g.transactions.filter((tx) => tx.origin_settlement_id === undefined).map((tx) => tx.id),
+      ])), []),
+  ).data;
+
+  const handleSelectTransaction = useCallback(
+    (id: number, shiftKey: boolean, groupKey: string) => {
+      if (shiftKey && selectedIds.size > 0) {
+        const groupTxIds = groupTxIdsMap.get(groupKey);
+        if (groupTxIds) {
+          // Derive anchor from last item in selectedIds (Set preserves insertion order)
+          const ids = [...selectedIds];
+          const lastSelected = ids[ids.length - 1];
+          const anchorIdx = groupTxIds.indexOf(lastSelected);
+          const targetIdx = groupTxIds.indexOf(id);
+
+          if (anchorIdx !== -1 && targetIdx !== -1) {
+            const start = Math.min(anchorIdx, targetIdx);
+            const end = Math.max(anchorIdx, targetIdx);
+            const rangeIds = groupTxIds.slice(start, end + 1);
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              for (const rid of rangeIds) next.add(rid);
+              return next;
+            });
+            return;
+          }
+        }
+      }
+
+      // Normal single toggle
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [selectedIds, groupTxIdsMap],
+  );
 
   const { query: accountsQuery } = useAccounts();
   const accounts = accountsQuery.data ?? [];
@@ -388,7 +426,7 @@ export function TransactionsPage() {
         <TransactionList
           currentUserId={currentUserId}
           selectedIds={selectedIds}
-          onSelectTransaction={toggleSelection}
+          onSelectTransaction={handleSelectTransaction}
         />
 
         {isSelecting ? (
@@ -473,7 +511,7 @@ export function TransactionsPage() {
         </Stack>
       </Box>
 
-      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={toggleSelection} />
+      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={handleSelectTransaction} />
 
       {isSelecting && (
         <SelectionActionBar

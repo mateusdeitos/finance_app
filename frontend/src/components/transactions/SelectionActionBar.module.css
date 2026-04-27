@@ -1,16 +1,10 @@
 .bar {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: var(--app-shell-navbar-offset, 0px);
   right: 0;
   z-index: 100;
   padding: 0.75rem 1rem;
   background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
-}
-
-.closeButton {
-  position: absolute;
-  top: -1rem;
-  right: 1rem;
 }
