@@ -94,7 +94,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -177,7 +177,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() 
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -242,7 +242,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAll() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -311,7 +311,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -398,7 +398,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -491,7 +491,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentWit
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -575,7 +575,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsAllWithLin
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -670,7 +670,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            time.Now().UTC(),
+		Date:            domain.Date{Time: time.Now().UTC()},
 		Description:     "Test Transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		RecurrenceSettings: &domain.RecurrenceSettings{

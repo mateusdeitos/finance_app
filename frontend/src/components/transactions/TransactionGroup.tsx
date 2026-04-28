@@ -48,7 +48,7 @@ interface TransactionGroupProps {
   runningBalance?: number;
   isFirst?: boolean;
   selectedIds?: Set<number>;
-  onSelectTransaction?: (id: number) => void;
+  onSelectTransaction?: (id: number, shiftKey: boolean) => void;
   hideSettlements?: boolean;
 }
 

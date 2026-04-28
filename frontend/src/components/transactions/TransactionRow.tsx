@@ -1,5 +1,5 @@
 import { Badge, Checkbox, Group, Text, Tooltip } from "@mantine/core";
-import { IconAlertCircle, IconArrowRight, IconUsers } from "@tabler/icons-react";
+import { IconArrowRight, IconUsers } from "@tabler/icons-react";
 import { AccountAvatar } from "@/components/AccountAvatar";
 import { Transactions } from "@/types/transactions";
 import { formatCents } from "@/utils/formatCents";
@@ -75,7 +75,7 @@ interface TransactionRowProps {
   currentUserId: number;
   isSelected?: boolean;
   isSelectionMode?: boolean;
-  onSelect?: (id: number) => void;
+  onSelect?: (id: number, shiftKey: boolean) => void;
   onEdit?: (fieldClicked: FocusField) => void;
 }
 
@@ -164,16 +164,6 @@ export function TransactionRow({
 
   const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId);
 
-  const isFromOtherUser = tx.original_user_id != null && tx.original_user_id !== currentUserId;
-
-  const originalUserLinkedTx = isFromOtherUser
-    ? (tx.linked_transactions ?? []).find((l) => l.user_id === tx.original_user_id)
-    : null;
-  const originalUserAccount = originalUserLinkedTx
-    ? accounts.find((a) => a.id === originalUserLinkedTx.account_id)
-    : null;
-  const originalUserAccountName = originalUserAccount?.name ?? null;
-
   const date = parseDate(tx.date);
   const dateLabel = date.toLocaleDateString("pt-BR", {
     day: "2-digit",
@@ -195,32 +185,17 @@ export function TransactionRow({
     <div
       data-transaction-id={tx.id}
       className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
-      onClick={selectionMode ? () => onSelect?.(tx.id) : undefined}
+      onClick={selectionMode ? (e) => onSelect?.(tx.id, e.shiftKey) : undefined}
     >
       {/* Col 1: checkbox or other-user warning */}
       <div className={classes.checkbox}>
-        {isFromOtherUser ? (
-          <Tooltip
-            label={
-              originalUserAccountName
-                ? `Essa transação não pode ser alterada pois foi criada pelo usuário"${originalUserAccountName}"`
-                : "Essa transação não pode ser alterada pois foi criada por outro usuário"
-            }
-            withArrow
-            multiline
-            maw={260}
-          >
-            <IconAlertCircle size={18} style={{ color: "var(--mantine-color-yellow-6)", flexShrink: 0 }} />
-          </Tooltip>
-        ) : (
-          <Checkbox
-            checked={isSelected ?? false}
-            onChange={() => onSelect?.(tx.id)}
-            onClick={(e) => e.stopPropagation()}
-            size="sm"
-            data-testid={TransactionsTestIds.Checkbox(tx.id)}
-          />
-        )}
+        <Checkbox
+          checked={isSelected ?? false}
+          onChange={(e) => { onSelect?.(tx.id, (e.nativeEvent as MouseEvent).shiftKey); }}
+          onClick={(e) => e.stopPropagation()}
+          size="sm"
+          data-testid={TransactionsTestIds.Checkbox(tx.id)}
+        />
       </div>
 
       {/* Col 2: date + description + tags */}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
+	"github.com/finance_app/backend/pkg/applog"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 )
@@ -33,8 +34,9 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	}
 	isLinkedTxEdit := len(sourceIDs) > 0
 
-	date := lo.CoalesceOrEmpty(req.Date, &previousTransaction.Date)
-	dateDiff := lo.FromPtr(date).Sub(previousTransaction.Date)
+	prevDate := domain.Date{Time: previousTransaction.Date}
+	date := lo.CoalesceOrEmpty(req.Date, &prevDate)
+	dateDiff := lo.FromPtr(date).Time.Sub(previousTransaction.Date)
 	dateDiffDays := int(dateDiff.Hours() / 24)
 
 	data := &transactionUpdateData{
@@ -209,14 +211,13 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	hasSplitSettings := len(data.req.SplitSettings) > 0
 
 	checkIsTransferToSameUser := func(accountID, userID int) (bool, error) {
-		destinationAccount, err := s.services.Account.SearchOne(ctx, domain.AccountSearchOptions{
-			IDs: []int{accountID},
-		})
+		conn, err := s.getConnectionFromDestinationAccountID(ctx, userID, accountID)
 		if err != nil {
 			return false, err
 		}
-
-		return destinationAccount.UserID == userID, nil
+		// If no connection found, the account is a regular private account → same-user transfer.
+		// If a connection exists, it's a cross-user transfer.
+		return conn == nil, nil
 	}
 
 	var scenario updateScenario
@@ -310,10 +311,10 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 				return updateChanges{}, err
 			}
 
-			transferWasToSameUser, err := checkIsTransferToSameUser(data.previousTransaction.AccountID, data.userID)
-			if err != nil {
-				return updateChanges{}, err
-			}
+			// The previous transfer was cross-user if any linked transaction belongs to a different user.
+			transferWasToSameUser := !lo.ContainsBy(data.previousTransaction.LinkedTransactions, func(lt domain.Transaction) bool {
+				return lt.UserID != data.userID
+			})
 
 			switch isTransferToSameUser {
 			case true:
@@ -365,7 +366,7 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	}, nil
 }
 
-func (s *transactionService) normalizeInstallments(_ context.Context, data *transactionUpdateData) error {
+func (s *transactionService) normalizeInstallments(ctx context.Context, data *transactionUpdateData) error {
 	if len(data.transactions) == 0 {
 		return nil
 	}
@@ -422,13 +423,21 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 	if expectedCount > existingCount {
 		base := data.previousTransaction
 		lastInstallment := minInstallment + existingCount - 1
+		// Use the last existing transaction's date as the anchor for new installments,
+		// so dates continue sequentially from where the series left off.
+		lastExisting, ok := lo.Last(data.transactions)
+		if !ok {
+			applog.FromContext(ctx).With("abort_recurrence_normalize", "last_transaction_not_found")
+			return nil
+		}
+		lastExistingDate := lastExisting.Date
 		for i := existingCount; i < expectedCount; i++ {
 			installmentNum := lastInstallment + (i - existingCount) + 1
-			baseDate := lo.CoalesceOrEmpty(data.req.Date, &base.Date)
+			increment := i - existingCount + 1
 			data.transactions = append(data.transactions, &domain.Transaction{
 				ID:                      0,
 				InstallmentNumber:       lo.ToPtr(installmentNum),
-				Date:                    s.incrementInstallmentDate(*baseDate, r.Type, i),
+				Date:                    s.incrementInstallmentDate(lastExistingDate, r.Type, increment),
 				UserID:                  base.UserID,
 				OriginalUserID:          base.OriginalUserID,
 				Type:                    base.Type,
@@ -494,17 +503,17 @@ func (s *transactionService) rebuildTransactions(
 				amount := s.calculateAmount(baseAmount, splitSetting)
 
 				lt := domain.Transaction{
-					ID:             0,
-					Date:           data.transactions[i].Date,
-					Description:    data.transactions[i].Description,
-					UserID:         conn.ToUserID,
-					OriginalUserID: &data.userID,
-					Type:           data.transactions[i].Type,
-					OperationType:  data.transactions[i].OperationType,
-					AccountID:      conn.ToAccountID,
-					CategoryID:     nil,
-					Amount:         amount,
-					Tags:           []domain.Tag{},
+					ID:                0,
+					Date:              data.transactions[i].Date,
+					Description:       data.transactions[i].Description,
+					UserID:            conn.ToUserID,
+					OriginalUserID:    &data.userID,
+					Type:              data.transactions[i].Type,
+					OperationType:     data.transactions[i].OperationType,
+					AccountID:         conn.ToAccountID,
+					CategoryID:        nil,
+					Amount:            amount,
+					Tags:              []domain.Tag{},
 					InstallmentNumber: data.transactions[i].InstallmentNumber,
 				}
 
@@ -640,19 +649,19 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 	if data.scenario.IsTransferToSameUser() {
 		tx.LinkedTransactions = []domain.Transaction{
 			{
-				ID:             0,
-				Date:           tx.Date,
-				Description:    tx.Description,
-				UserID:         tx.UserID,
-				OriginalUserID: tx.OriginalUserID,
-				Type:           domain.TransactionTypeTransfer,
-				OperationType:  domain.OperationTypeCredit,
-				AccountID:      accountID,
-				CategoryID:     nil,
-				Amount:         baseAmount,
-				Tags:           tx.Tags,
-				CreatedAt:      nil,
-				UpdatedAt:      nil,
+				ID:                      0,
+				InstallmentNumber:       tx.InstallmentNumber,
+				Date:                    tx.Date,
+				Description:             tx.Description,
+				UserID:                  tx.UserID,
+				OriginalUserID:          tx.OriginalUserID,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
+				AccountID:               accountID,
+				CategoryID:              nil,
+				Amount:                  baseAmount,
+				Tags:                    tx.Tags,
+				TransactionRecurrenceID: tx.TransactionRecurrenceID,
 			},
 		}
 		return nil
@@ -665,25 +674,59 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 
 	c.SwapIfNeeded(data.userID)
 
-	// Cross-user transfer: only the receiver's credit side is a linked transaction.
-	// The sender's debit is already the main transaction — no extra linked tx needed.
-	tx.LinkedTransactions = []domain.Transaction{
-		{
-			ID:             0,
-			Date:           tx.Date,
-			Description:    tx.Description,
-			UserID:         c.ToUserID,
-			OriginalUserID: tx.OriginalUserID,
-			Type:           domain.TransactionTypeTransfer,
-			OperationType:  domain.OperationTypeCredit,
-			AccountID:      c.ToAccountID,
-			CategoryID:     nil,
-			Amount:         baseAmount,
-			Tags:           []domain.Tag{},
-			CreatedAt:      nil,
-			UpdatedAt:      nil,
-		},
+	// Cross-user transfer: create both the fromTx (author's credit on shared account)
+	// and the toTx (receiver's credit on their shared account), matching the creation
+	// logic in injectLinkedTransactions.
+	fromTx := domain.Transaction{
+		ID:                      0,
+		InstallmentNumber:       tx.InstallmentNumber,
+		Date:                    tx.Date,
+		Description:             tx.Description,
+		UserID:                  c.FromUserID,
+		OriginalUserID:          tx.OriginalUserID,
+		Type:                    domain.TransactionTypeTransfer,
+		OperationType:           domain.OperationTypeCredit,
+		AccountID:               c.FromAccountID,
+		CategoryID:              nil,
+		Amount:                  baseAmount,
+		Tags:                    []domain.Tag{},
+		TransactionRecurrenceID: tx.TransactionRecurrenceID,
 	}
+
+	toTx := domain.Transaction{
+		ID:                0,
+		InstallmentNumber: tx.InstallmentNumber,
+		Date:              tx.Date,
+		Description:       tx.Description,
+		UserID:            c.ToUserID,
+		OriginalUserID:    tx.OriginalUserID,
+		Type:              domain.TransactionTypeTransfer,
+		OperationType:     domain.OperationTypeCredit,
+		AccountID:         c.ToAccountID,
+		CategoryID:        nil,
+		Amount:            baseAmount,
+		Tags:              []domain.Tag{},
+	}
+
+	// Propagate recurrence to the toTx: reuse the cached recurrence for the toUser
+	// or create a new one (once), matching the creation logic in injectLinkedTransactions.
+	if tx.TransactionRecurrenceID != nil && tx.TransactionRecurrence != nil {
+		if data.transferToUserRecurrence == nil {
+			r, err := s.transactionRecurRepo.Create(ctx, &domain.TransactionRecurrence{
+				UserID:       c.ToUserID,
+				Type:         tx.TransactionRecurrence.Type,
+				Installments: tx.TransactionRecurrence.Installments,
+			})
+			if err != nil {
+				return err
+			}
+			data.transferToUserRecurrence = r
+		}
+		toTx.TransactionRecurrenceID = &data.transferToUserRecurrence.ID
+		toTx.InstallmentNumber = tx.InstallmentNumber
+	}
+
+	tx.LinkedTransactions = []domain.Transaction{fromTx, toTx}
 	return nil
 }
 
@@ -1011,9 +1054,12 @@ func (s *transactionService) fetchRelatedTransactions(
 
 		idsNotIn := []int{data.previousTransaction.ID}
 
-		// aqui deve retornar o restante da transações relacionadas, incluindo os parents, own e siblings
+		// Fetch remaining installments on the same account. The AccountIDs filter
+		// prevents picking up fromTx children of cross-user transfers that share
+		// the author's recurrence ID but live on the shared account.
 		recurrenceTransactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
 			RecurrenceIDs:     []int{*data.previousTransaction.TransactionRecurrenceID},
+			AccountIDs:        []int{data.previousTransaction.AccountID},
 			InstallmentNumber: installmentNumberFilter,
 			IDsNotIn:          idsNotIn,
 		})

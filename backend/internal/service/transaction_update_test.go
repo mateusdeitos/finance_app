@@ -60,7 +60,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateOwnExpense() {
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{*tag},
 	}
@@ -86,7 +86,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateOwnExpense() {
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{*tag2},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestBlockUpdatesOnOtherUsersTrans
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 	}
 
@@ -197,7 +197,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
@@ -252,7 +252,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario1_OwnExpenseToOwnInco
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -310,7 +310,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 	}
@@ -375,7 +375,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario2_OwnExpenseToOwnInco
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -465,7 +465,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 		SplitSettings: []domain.SplitSettings{
@@ -544,7 +544,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario3_OwnExpenseWithLinke
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(d.AddDate(0, 0, 1)),
+		Date:            lo.ToPtr(domain.Date{Time: d.AddDate(0, 0, 1)}),
 		Description:     lo.ToPtr("Test transaction updated"),
 	})
 	if err != nil {
@@ -598,7 +598,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}},
 		SplitSettings: []domain.SplitSettings{
@@ -689,7 +689,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario4_OwnExpenseWithLinke
 		AccountID:       lo.ToPtr(account2.ID),
 		CategoryID:      lo.ToPtr(category2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 2"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -788,7 +788,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario5_OwnExpenseToOwnTran
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          5850 * 100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -839,7 +839,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario5_OwnExpenseToOwnTran
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -922,7 +922,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 		SplitSettings: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.SplitSettings {
@@ -1004,7 +1004,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1097,7 +1097,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 		SplitSettings: lo.Map(connections, func(connection *domain.UserConnection, _ int) domain.SplitSettings {
@@ -1176,7 +1176,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		AccountID:            lo.ToPtr(account.ID),
 		DestinationAccountID: lo.ToPtr(destination.ToAccountID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1204,6 +1204,21 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 		OriginalUserID:          lo.ToPtr(user.ID),
 		TransactionRecurrenceID: nil,
 		LinkedTransactions: []domain.Transaction{
+			{
+				Amount:                  200,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
+				AccountID:               destination.FromAccountID,
+				CategoryID:              nil,
+				Date:                    expectedDate,
+				Description:             "Test transaction updated to transfer",
+				Tags:                    []domain.Tag{{Name: "Test tag 4"}},
+				UserID:                  user.ID,
+				OriginalUserID:          lo.ToPtr(user.ID),
+				TransactionRecurrenceID: nil,
+				InstallmentNumber:       nil,
+				LinkedTransactions:      []domain.Transaction{},
+			},
 			{
 				Amount:                  200,
 				Type:                    domain.TransactionTypeTransfer,
@@ -1259,7 +1274,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1324,7 +1339,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario7_OwnTransfer() {
 		AccountID:            lo.ToPtr(account2.ID),
 		DestinationAccountID: lo.ToPtr(account3.ID),
 		Tags:                 []domain.Tag{{Name: "Test tag 4"}},
-		Date:                 lo.ToPtr(expectedDate),
+		Date:                 lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:          lo.ToPtr("Test transaction updated to transfer"),
 	})
 	if err != nil {
@@ -1398,7 +1413,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1457,7 +1472,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnExp
 		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to expense"),
 	})
 	if err != nil {
@@ -1515,7 +1530,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1574,7 +1589,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario8_OwnTransferToOwnInc
 		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to income"),
 	})
 	if err != nil {
@@ -1632,7 +1647,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		TransactionType:      domain.TransactionTypeTransfer,
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		Amount:               amount,
-		Date:                 d,
+		Date:                 domain.Date{Time: d},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}, {Name: "Test tag 1"}, {Name: "Test tag 2"}},
 	}
@@ -1701,7 +1716,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario9_OwnTransferToSplitE
 		TransactionType: lo.ToPtr(domain.TransactionTypeExpense),
 		AccountID:       lo.ToPtr(account2.ID),
 		Tags:            []domain.Tag{{Name: "Test tag 4"}},
-		Date:            lo.ToPtr(expectedDate),
+		Date:            lo.ToPtr(domain.Date{Time: expectedDate}),
 		Description:     lo.ToPtr("Test transaction updated to expense"),
 		SplitSettings: []domain.SplitSettings{
 			{
@@ -1774,7 +1789,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario1_NoRecurr
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 	})
 	suite.Require().NoError(err)
@@ -1843,7 +1858,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario2_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1904,7 +1919,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario3_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1974,7 +1989,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario4_WithRecu
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2050,7 +2065,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2104,6 +2119,564 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5_Increase
 	suite.Assert().Equal(5, installmentsAfter[0].TransactionRecurrence.Installments)
 }
 
+// TestInstallmentScenario5b: increase installments from 3→6 editing a MIDDLE installment (propagation=all).
+// Regression: new installments must continue sequentially from the last existing date, not
+// offset from the edited transaction's date.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5b_IncreaseInstallmentsFromMiddleInstallment() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC) // installment 1 = April
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: d},
+		Description:     "Test transaction",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	// Edit installment 3 (the LAST one, June) — increase total to 6
+	lastInstallment := before[2]
+	suite.Require().Equal(3, lo.FromPtr(lastInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, lastInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 3,
+			TotalInstallments:  6,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 6, "should have 6 installments after update")
+
+	// Dates must be sequential monthly: Apr, May, Jun, Jul, Aug, Sep
+	for i, t := range after {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
+}
+
+// TestInstallmentScenario5c: increase installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installments must continue sequentially from the last existing date (installment 3),
+// not offset from the edited transaction's date (installment 2).
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5c_IncreaseInstallmentsFromSecondInstallment() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC) // installment 1 = April
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: d},
+		Description:     "Test transaction",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	// Edit installment 2 (May) — increase total to 6
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 6, "should have 6 installments after update")
+
+	// Dates must be sequential monthly: Apr, May, Jun, Jul, Aug, Sep
+	// New installments (4,5,6) anchor from last existing (installment 3 = Jun),
+	// NOT from edited installment (2 = May)
+	for i, t := range after {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
+}
+
+// TestInstallmentScenario5d: increase shared expense installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installment dates must anchor from last existing, not from the edited transaction.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5d_IncreaseInstallments_SharedExpense_FromSecondInstallment() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	// Edit installment 2 (May) — increase total to 6
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 6, "userA should have 6 installments")
+
+	// Dates: Apr, May, Jun, Jul, Aug, Sep
+	for i, t := range after {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	// userB should also have 6 linked transactions
+	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(allUserB, 6, "userB should have 6 linked transactions")
+
+	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
+}
+
+// TestInstallmentScenario5e: increase own income installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installment dates must anchor from last existing, not from the edited transaction.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5e_IncreaseInstallments_OwnIncome_FromSecondInstallment() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeIncome,
+		Amount:          500,
+		Date:            domain.Date{Time: d},
+		Description:     "own income",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 6, "should have 6 installments")
+
+	for i, t := range after {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
+}
+
+// TestInstallmentScenario5f: increase shared income installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installment dates must anchor from last existing, not from the edited transaction.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5f_IncreaseInstallments_SharedIncome_FromSecondInstallment() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeIncome,
+		Amount:          500,
+		Date:            domain.Date{Time: d},
+		Description:     "shared income",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(after, 6, "userA should have 6 installments")
+
+	for i, t := range after {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	allUserB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(allUserB, 6, "userB should have 6 linked transactions")
+
+	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
+}
+
+// TestInstallmentScenario5g: increase same-user transfer installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installment dates must anchor from last existing, not from the edited transaction.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5g_IncreaseInstallments_OwnTransfer_FromSecondInstallment() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account1, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	account2, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:            account1.ID,
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               200,
+		Date:                 domain.Date{Time: d},
+		Description:          "own transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Same-user transfer: 3 debit + 3 credit = 6 txs
+	allBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(allBefore, 6)
+
+	// Get debit side (source account) sorted by installment
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user.ID,
+		AccountIDs: []int{account1.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, user.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Debit side: 6 installments with correct dates
+	afterDebit, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user.ID,
+		AccountIDs: []int{account1.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterDebit, 6, "should have 6 debit installments")
+
+	for i, t := range afterDebit {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "debit installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	// Credit side: also 6
+	afterCredit, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &user.ID,
+		AccountIDs: []int{account2.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterCredit, 6, "should have 6 credit installments")
+
+	// Total: 12 txs (6 debit + 6 credit)
+	allAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(allAfter, 12)
+}
+
+// TestInstallmentScenario5h: increase cross-user transfer installments from 3→6 editing installment 2 (propagation=all).
+// Regression: new installment dates must anchor from last existing, not from the edited transaction.
+func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5h_IncreaseInstallments_CrossUserTransfer_FromSecondInstallment() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               200,
+		Date:                 domain.Date{Time: d},
+		Description:          "cross-user transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Author: 3 debit (private) + 3 fromTx (shared) = 6
+	authorBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(authorBefore, 6)
+
+	// toUser: 3 credit (shared)
+	toUserBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(toUserBefore, 3)
+
+	// Get author debit side sorted by installment
+	before, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &author.ID,
+		AccountIDs: []int{authorAccount.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(before, 3)
+
+	secondInstallment := before[1]
+	suite.Require().Equal(2, lo.FromPtr(secondInstallment.InstallmentNumber))
+
+	err = suite.Services.Transaction.Update(ctx, secondInstallment.ID, author.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  6,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Author debit side: 6 installments with correct dates
+	afterDebit, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &author.ID,
+		AccountIDs: []int{authorAccount.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterDebit, 6, "author should have 6 debit installments")
+
+	for i, t := range afterDebit {
+		expected := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(i))
+		suite.Assert().Equal(expected, t.Date, "debit installment %d date should be %v, got %v", i+1, expected, t.Date)
+	}
+
+	// Author fromTx side: 6 credit on shared account
+	afterFromTx, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &author.ID,
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterFromTx, 6, "author should have 6 fromTx installments")
+
+	// toUser: 6 credit on shared account
+	toUserAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserAfter, 6, "toUser should have 6 credit installments")
+
+	// Total: author 12 + toUser 6 = 18
+	suite.Assert().Equal(6, afterDebit[0].TransactionRecurrence.Installments)
+}
+
 // TestInstallmentScenario6: recorrência 5x mensal sem split -> diminui para 3x (propagation=all)
 func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_DecreaseInstallmentCountPropagationAll() {
 	ctx := context.Background()
@@ -2123,7 +2696,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario6_Decrease
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2196,7 +2769,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario7_Decrease
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2295,7 +2868,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario8_AddSplit
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2384,7 +2957,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9_RemoveSp
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2467,7 +3040,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10_AddSpli
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2553,7 +3126,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario11_AddSpli
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2656,7 +3229,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario12_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2747,7 +3320,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario13_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2835,7 +3408,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario14_RemoveR
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -2927,7 +3500,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario15_Increas
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3010,7 +3583,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario16_Decreas
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3162,7 +3735,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AmountChange()
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          200,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 	})
 	suite.Require().NoError(err)
@@ -3204,7 +3777,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeExpenseToI
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3249,7 +3822,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_TypeIncomeToEx
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3298,7 +3871,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AddSplit() {
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 	})
 	suite.Require().NoError(err)
@@ -3337,7 +3910,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_RemoveSplit() 
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3376,7 +3949,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_AccountChange(
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})
@@ -3428,7 +4001,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3495,7 +4068,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationCur
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3575,7 +4148,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3650,7 +4223,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          150000,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Offset installment test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3722,7 +4295,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Increase total test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3783,7 +4356,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Propagatio
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Decrease total test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3840,7 +4413,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_Standalone
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Standalone to recurrence test",
 	})
 	suite.Require().NoError(err)
@@ -3901,7 +4474,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_WithSplit_
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          150000,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Split offset test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -3972,7 +4545,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for disallowed fields test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4080,7 +4653,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for allowed fields test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4118,7 +4691,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	newDesc := "updated by userB"
 
 	updateReq := &domain.TransactionUpdateRequest{
-		Date:                &newDate,
+		Date:                &domain.Date{Time: newDate},
 		Description:         &newDesc,
 		CategoryID:          &categoryB.ID,
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
@@ -4156,7 +4729,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_A
 	suite.Require().NoError(err)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "shared expense for tags test",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4220,7 +4793,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	originalDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            originalDate,
+		Date:            domain.Date{Time: originalDate},
 		Description:     "recurring shared expense",
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4265,7 +4838,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	// userB shifts the linked transaction's date forward by 5 days, propagation=all
 	newDate := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
 	updateReq := &domain.TransactionUpdateRequest{
-		Date:                &newDate,
+		Date:                &domain.Date{Time: newDate},
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 	}
 
@@ -4314,7 +4887,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	originalDescription := "recurring shared expense description test"
 
 	createReq := &domain.TransactionCreateRequest{
-		Date:            originalDate,
+		Date:            domain.Date{Time: originalDate},
 		Description:     originalDescription,
 		Amount:          10000,
 		AccountID:       accountA.ID,
@@ -4420,7 +4993,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario9b_RemoveS
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4530,7 +5103,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario10b_AddSpl
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4630,7 +5203,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario17_EditDes
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     originalDescription,
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4713,7 +5286,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue83_EditDescriptionOnInst
 		CategoryID:      category.ID,
 		TransactionType: domain.TransactionTypeExpense,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     originalDescription,
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -4771,6 +5344,407 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue83_EditDescriptionOnInst
 	suite.Assert().Equal(originalRecurrenceID, recurrences[0].ID, "original recurrence ID preserved")
 	suite.Assert().Equal(24, recurrences[0].Installments,
 		"recurrence.Installments must remain 24 (no fragmentation)")
+}
+
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateTransferBetweenDifferentUsers_AuthorUpdatesAmount_ToUserStillSeesTransfer() {
+	ctx := context.Background()
+
+	// Create 2 fresh users
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	// Create private accounts
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+
+	// Create accepted connection between users
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	// Create transfer from author to toUser via connection account
+	transferReq := domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               10000, // R$ 100,00
+		Date:                 domain.Date{Time: d},
+		Description:          "Transfer to partner",
+	}
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &transferReq)
+	suite.Require().NoError(err)
+	suite.Require().Greater(createdID, 0)
+
+	// Verify initial state: author sees 2 txs (main debit + fromTx credit on shared account)
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 2, "author should see 2 transactions (debit + fromTx credit)")
+
+	// toUser sees 1 tx (credit on their shared account)
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 1, "toUser should see 1 transaction (credit)")
+	suite.Assert().Equal(int64(10000), toUserTxs[0].Amount)
+	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxs[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxs[0].OperationType)
+	suite.Assert().Equal(connection.ToAccountID, toUserTxs[0].AccountID)
+
+	// Update the transfer amount from the author
+	newAmount := int64(25000) // R$ 250,00
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
+	})
+	suite.Require().NoError(err)
+
+	// Verify author's main transaction was updated
+	updatedAuthorTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		IDs: []int{createdID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, updatedAuthorTx.Amount, "author main tx amount should be updated")
+	suite.Assert().Equal(domain.TransactionTypeTransfer, updatedAuthorTx.Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, updatedAuthorTx.OperationType)
+	suite.Assert().Equal(authorAccount.ID, updatedAuthorTx.AccountID)
+
+	// Verify toUser's transaction still exists and amount was updated
+	toUserTxsAfterUpdate, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxsAfterUpdate, 1, "toUser should still see 1 transaction after update")
+	suite.Assert().Equal(newAmount, toUserTxsAfterUpdate[0].Amount, "toUser tx amount should be updated")
+	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxsAfterUpdate[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxsAfterUpdate[0].OperationType)
+	suite.Assert().Equal(connection.ToAccountID, toUserTxsAfterUpdate[0].AccountID)
+	suite.Assert().Equal(author.ID, lo.FromPtr(toUserTxsAfterUpdate[0].OriginalUserID), "originalUserID should be the author")
+
+	// Verify author still sees 2 transactions with updated amounts
+	authorTxsAfterUpdate, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxsAfterUpdate, 2, "author should still see 2 transactions after update")
+
+	// Main tx: debit on private account
+	suite.Assert().Equal(newAmount, authorTxsAfterUpdate[0].Amount)
+	suite.Assert().Equal(domain.OperationTypeDebit, authorTxsAfterUpdate[0].OperationType)
+	suite.Assert().Equal(authorAccount.ID, authorTxsAfterUpdate[0].AccountID)
+
+	// fromTx: credit on author's shared account
+	suite.Assert().Equal(newAmount, authorTxsAfterUpdate[1].Amount)
+	suite.Assert().Equal(domain.OperationTypeCredit, authorTxsAfterUpdate[1].OperationType)
+	suite.Assert().Equal(connection.FromAccountID, authorTxsAfterUpdate[1].AccountID)
+}
+
+// ── Recurring transfer update tests ──────────────────────────────────────────
+
+// TestRecurringTransfer_CrossUser_UpdateAmount_PropagationAll verifies that
+// updating the amount of a recurring cross-user transfer with propagation=all
+// preserves recurrence on all parties: author (debit + fromTx) and toUser (toTx).
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_UpdateAmount_PropagationAll() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               5000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring cross-user transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Initial: author 6 txs (3 debit + 3 fromTx), toUser 3 txs
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 3)
+	for _, tx := range toUserTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID)
+	}
+
+	// Update amount, propagation=all
+	newAmount := int64(8000)
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// Author: still 6 txs, all with recurrence and new amount
+	authorTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxsAfter, 6)
+	for _, tx := range authorTxsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence should be preserved")
+	}
+
+	// toUser: still 3 txs, all with recurrence and new amount
+	toUserTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxsAfter, 3)
+	for _, tx := range toUserTxsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "toUser tx recurrence should be preserved")
+		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+	}
+}
+
+// TestRecurringTransfer_SameUser_UpdateAmount_PropagationAll verifies that
+// updating a recurring same-user transfer preserves recurrence on both sides.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_SameUser_UpdateAmount_PropagationAll() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account1, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+	account2, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:            account1.ID,
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               3000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring same-user transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Initial: 6 txs (3 debit + 3 credit, all same user)
+	txsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsBefore, 6)
+	for _, tx := range txsBefore {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID)
+	}
+
+	// Update amount, propagation=all
+	newAmount := int64(7000)
+	err = suite.Services.Transaction.Update(ctx, createdID, user.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	txsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsAfter, 6)
+	for _, tx := range txsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "recurrence should be preserved")
+	}
+}
+
+// TestRecurringTransfer_CrossUser_UpdateAmount_PropagationCurrent verifies that
+// updating a single installment of a recurring cross-user transfer only touches
+// that installment while preserving recurrence on the updated linked txs.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_UpdateAmount_PropagationCurrent() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               2000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring transfer for current-only update",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Update only installment 1 amount, propagation=current
+	newAmount := int64(9999)
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsCurrent,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// Author: still 6 txs
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+
+	// All author txs keep recurrence
+	for _, tx := range authorTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence must be preserved")
+	}
+
+	// Updated installment has new amount
+	mainTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{createdID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, mainTx.Amount)
+	suite.Assert().Len(mainTx.LinkedTransactions, 2, "main tx should have fromTx + toTx")
+	for _, lt := range mainTx.LinkedTransactions {
+		suite.Assert().Equal(newAmount, lt.Amount, "linked tx amount should be updated")
+		suite.Assert().NotNil(lt.TransactionRecurrenceID, "linked tx recurrence should be preserved")
+	}
+
+	// toUser: still 3 txs, all with recurrence
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 3)
+
+	// Only installment 1 updated, installments 2+3 keep original amount
+	updatedCount := 0
+	originalCount := 0
+	for _, tx := range toUserTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "toUser tx recurrence should be preserved")
+		if tx.Amount == newAmount {
+			updatedCount++
+		} else if tx.Amount == 2000 {
+			originalCount++
+		}
+	}
+	suite.Assert().Equal(1, updatedCount, "only 1 toUser installment should have new amount")
+	suite.Assert().Equal(2, originalCount, "2 toUser installments should keep original amount")
+}
+
+// TestRecurringTransfer_CrossUser_ChangeDestination_PropagationAll verifies that
+// changing the destination of a recurring cross-user transfer to a different user
+// preserves recurrence and creates linked txs for the new partner.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_ChangeDestination_PropagationAll() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userC, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connAB, err := suite.createAcceptedTestUserConnection(ctx, author.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	connAC, err := suite.createAcceptedTestUserConnection(ctx, author.ID, userC.ID, 50)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(connAB.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               4000,
+		Date:                 domain.Date{Time: d},
+		Description:          "transfer to userB",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB has 3 txs
+	userBTxsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBTxsBefore, 3)
+
+	// Change destination to userC, propagation=all
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(connAC.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// userB: 0 txs (all deleted)
+	userBTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBTxsAfter, 0, "userB should have no txs after destination change")
+
+	// userC: 3 txs with recurrence
+	userCTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userC.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userCTxs, 3, "userC should have 3 installments")
+	for _, tx := range userCTxs {
+		suite.Assert().Equal(int64(4000), tx.Amount)
+		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+		suite.Assert().Equal(connAC.ToAccountID, tx.AccountID)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "userC tx recurrence should exist")
+	}
+
+	// Author: still 6 txs (3 debit + 3 fromTx on connAC), all with recurrence
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+	for _, tx := range authorTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence should be preserved")
+	}
 }
 
 func TestTransactionUpdateWithDB(t *testing.T) {

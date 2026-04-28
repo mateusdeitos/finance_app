@@ -285,11 +285,13 @@ Handler tests (`internal/handler/*_test.go`):
 
 #### Shared expenses
 
-When users create a shared expense, 3 transactions are created:
+When users create a shared expense, 3 things are created:
 
-- 1 transaction for the author in its private account with an operation type = 'debit' with the whole amount of the transaction
+- 1 transaction for the author in its **private** account with an operation type = 'debit' with the whole amount of the transaction
 - 1 settlement for the author in its shared account from the user_connection with the amount being the amount set on the split setting
 - 1 transaction for the other end user in its shared account from the user_connection with an operation type = 'debit' with the amount being the amount set on the split setting
+
+**Important:** Split settings are NOT allowed on shared (connection) accounts. The author's main transaction must be on a private account.
 
 Transactions created in the shared accounts and related settlements should ALWAYS match amount, meaning that if the main transaction amount is updated or the split_setting, both should be updated.
 
@@ -306,7 +308,7 @@ The connection has:
 
 User A create a shared expense with the amount of R$ 100,00, splitting it in 50% with User B, then:
 
-- An expense is created on whatever account User A chooses with the amount of R$ 100,00 and operation_type = 'debit'
+- An expense is created on whatever **private** account User A chooses with the amount of R$ 100,00 and operation_type = 'debit'
 - A settlement is created on account_id = 10 with the amount of R$ 50,00 with type = 'credit'
 - An expense is created on account_id = 20 with the amount of R$ 50,00 with the operation_type = 'debit'
 
@@ -322,8 +324,10 @@ It's the same as expenses but with operation type flipped
 When users create a transfer to another user through a connection account, 3 transactions are created:
 
 - 1 transfer operation type = 'debit' with the account being the author private account
-- 1 transfer operation type = 'credit' with the account being the author side's account of the user_connection
-- 1 transfer operation type = 'credit' with the account being the other user side's account of the user_connection
+- 1 transfer operation type = 'credit' with the account being the author side's account of the user_connection (fromTx)
+- 1 transfer operation type = 'credit' with the account being the other user side's account of the user_connection (toTx)
+
+**Updates must preserve the same 3-transaction structure.** When `rebuildTransferLinkedTransactions` runs (for `RemainedTransfer` or `TypeChangedToTransfer` scenarios), it must recreate both the fromTx and the toTx. To determine if a transfer is cross-user, check for a `UserConnection` on the destination account via `getConnectionFromDestinationAccountID` — do NOT check account ownership (`account.UserID`), because connection accounts may belong to the connection creator.
 
 ### Balance
 

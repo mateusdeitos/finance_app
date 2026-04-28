@@ -352,7 +352,7 @@ func seedTransactions(
 				TransactionType: txType,
 				AccountID:       account.ID,
 				Amount:          amount,
-				Date:            date,
+				Date:            domain.Date{Time: date},
 				Description:     description,
 			}
 
@@ -398,7 +398,7 @@ func seedTransactions(
 					TransactionType: domain.TransactionTypeExpense,
 					AccountID:       account.ID,
 					Amount:          amount,
-					Date:            date,
+					Date:            domain.Date{Time: date},
 					Description:     description,
 					SplitSettings: []domain.SplitSettings{
 						{ConnectionID: conn.ID, Percentage: &pct},
@@ -457,7 +457,7 @@ func seedRecurringTransactions(
 			TransactionType: txType,
 			AccountID:       account.ID,
 			Amount:          amount,
-			Date:            date,
+			Date:            domain.Date{Time: date},
 			Description:     description,
 			RecurrenceSettings: &domain.RecurrenceSettings{
 				Type:               domain.RecurrenceTypeMonthly,
