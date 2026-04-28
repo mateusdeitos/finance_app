@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
+	"github.com/finance_app/backend/pkg/applog"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
 	"github.com/samber/lo"
 )
@@ -365,7 +366,7 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 	}, nil
 }
 
-func (s *transactionService) normalizeInstallments(_ context.Context, data *transactionUpdateData) error {
+func (s *transactionService) normalizeInstallments(ctx context.Context, data *transactionUpdateData) error {
 	if len(data.transactions) == 0 {
 		return nil
 	}
@@ -422,14 +423,21 @@ func (s *transactionService) normalizeInstallments(_ context.Context, data *tran
 	if expectedCount > existingCount {
 		base := data.previousTransaction
 		lastInstallment := minInstallment + existingCount - 1
+		// Use the last existing transaction's date as the anchor for new installments,
+		// so dates continue sequentially from where the series left off.
+		lastExisting, ok := lo.Last(data.transactions)
+		if !ok {
+			applog.FromContext(ctx).With("abort_recurrence_normalize", "last_transaction_not_found")
+			return nil
+		}
+		lastExistingDate := lastExisting.Date
 		for i := existingCount; i < expectedCount; i++ {
 			installmentNum := lastInstallment + (i - existingCount) + 1
-			baseDateFallback := domain.Date{Time: base.Date}
-			baseDate := lo.CoalesceOrEmpty(data.req.Date, &baseDateFallback)
+			increment := i - existingCount + 1
 			data.transactions = append(data.transactions, &domain.Transaction{
 				ID:                      0,
 				InstallmentNumber:       lo.ToPtr(installmentNum),
-				Date:                    s.incrementInstallmentDate(lo.FromPtr(baseDate).Time, r.Type, i),
+				Date:                    s.incrementInstallmentDate(lastExistingDate, r.Type, increment),
 				UserID:                  base.UserID,
 				OriginalUserID:          base.OriginalUserID,
 				Type:                    base.Type,
@@ -495,17 +503,17 @@ func (s *transactionService) rebuildTransactions(
 				amount := s.calculateAmount(baseAmount, splitSetting)
 
 				lt := domain.Transaction{
-					ID:             0,
-					Date:           data.transactions[i].Date,
-					Description:    data.transactions[i].Description,
-					UserID:         conn.ToUserID,
-					OriginalUserID: &data.userID,
-					Type:           data.transactions[i].Type,
-					OperationType:  data.transactions[i].OperationType,
-					AccountID:      conn.ToAccountID,
-					CategoryID:     nil,
-					Amount:         amount,
-					Tags:           []domain.Tag{},
+					ID:                0,
+					Date:              data.transactions[i].Date,
+					Description:       data.transactions[i].Description,
+					UserID:            conn.ToUserID,
+					OriginalUserID:    &data.userID,
+					Type:              data.transactions[i].Type,
+					OperationType:     data.transactions[i].OperationType,
+					AccountID:         conn.ToAccountID,
+					CategoryID:        nil,
+					Amount:            amount,
+					Tags:              []domain.Tag{},
 					InstallmentNumber: data.transactions[i].InstallmentNumber,
 				}
 
