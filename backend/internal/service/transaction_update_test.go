@@ -4891,6 +4891,304 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateTransferBetweenDifferen
 	suite.Assert().Equal(connection.FromAccountID, authorTxsAfterUpdate[1].AccountID)
 }
 
+// ── Recurring transfer update tests ──────────────────────────────────────────
+
+// TestRecurringTransfer_CrossUser_UpdateAmount_PropagationAll verifies that
+// updating the amount of a recurring cross-user transfer with propagation=all
+// preserves recurrence on all parties: author (debit + fromTx) and toUser (toTx).
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_UpdateAmount_PropagationAll() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               5000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring cross-user transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Initial: author 6 txs (3 debit + 3 fromTx), toUser 3 txs
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 3)
+	for _, tx := range toUserTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID)
+	}
+
+	// Update amount, propagation=all
+	newAmount := int64(8000)
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// Author: still 6 txs, all with recurrence and new amount
+	authorTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxsAfter, 6)
+	for _, tx := range authorTxsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence should be preserved")
+	}
+
+	// toUser: still 3 txs, all with recurrence and new amount
+	toUserTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxsAfter, 3)
+	for _, tx := range toUserTxsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "toUser tx recurrence should be preserved")
+		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+	}
+}
+
+// TestRecurringTransfer_SameUser_UpdateAmount_PropagationAll verifies that
+// updating a recurring same-user transfer preserves recurrence on both sides.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_SameUser_UpdateAmount_PropagationAll() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account1, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+	account2, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:            account1.ID,
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               3000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring same-user transfer",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Initial: 6 txs (3 debit + 3 credit, all same user)
+	txsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsBefore, 6)
+	for _, tx := range txsBefore {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID)
+	}
+
+	// Update amount, propagation=all
+	newAmount := int64(7000)
+	err = suite.Services.Transaction.Update(ctx, createdID, user.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(account2.ID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	txsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(txsAfter, 6)
+	for _, tx := range txsAfter {
+		suite.Assert().Equal(newAmount, tx.Amount)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "recurrence should be preserved")
+	}
+}
+
+// TestRecurringTransfer_CrossUser_UpdateAmount_PropagationCurrent verifies that
+// updating a single installment of a recurring cross-user transfer only touches
+// that installment while preserving recurrence on the updated linked txs.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_UpdateAmount_PropagationCurrent() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	toUser, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, toUser.ID, 100)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               2000,
+		Date:                 domain.Date{Time: d},
+		Description:          "recurring transfer for current-only update",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Update only installment 1 amount, propagation=current
+	newAmount := int64(9999)
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		Amount:               lo.ToPtr(newAmount),
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(conn.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsCurrent,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// Author: still 6 txs
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &author.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+
+	// All author txs keep recurrence
+	for _, tx := range authorTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence must be preserved")
+	}
+
+	// Updated installment has new amount
+	mainTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{createdID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, mainTx.Amount)
+	suite.Assert().Len(mainTx.LinkedTransactions, 2, "main tx should have fromTx + toTx")
+	for _, lt := range mainTx.LinkedTransactions {
+		suite.Assert().Equal(newAmount, lt.Amount, "linked tx amount should be updated")
+		suite.Assert().NotNil(lt.TransactionRecurrenceID, "linked tx recurrence should be preserved")
+	}
+
+	// toUser: still 3 txs, all with recurrence
+	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &toUser.ID,
+		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(toUserTxs, 3)
+
+	// Only installment 1 updated, installments 2+3 keep original amount
+	updatedCount := 0
+	originalCount := 0
+	for _, tx := range toUserTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "toUser tx recurrence should be preserved")
+		if tx.Amount == newAmount {
+			updatedCount++
+		} else if tx.Amount == 2000 {
+			originalCount++
+		}
+	}
+	suite.Assert().Equal(1, updatedCount, "only 1 toUser installment should have new amount")
+	suite.Assert().Equal(2, originalCount, "2 toUser installments should keep original amount")
+}
+
+// TestRecurringTransfer_CrossUser_ChangeDestination_PropagationAll verifies that
+// changing the destination of a recurring cross-user transfer to a different user
+// preserves recurrence and creates linked txs for the new partner.
+func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_ChangeDestination_PropagationAll() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userC, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	authorAccount, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connAB, err := suite.createAcceptedTestUserConnection(ctx, author.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	connAC, err := suite.createAcceptedTestUserConnection(ctx, author.ID, userC.ID, 50)
+	suite.Require().NoError(err)
+
+	d := now()
+
+	createdID, err := suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:            authorAccount.ID,
+		DestinationAccountID: lo.ToPtr(connAB.ToAccountID),
+		TransactionType:      domain.TransactionTypeTransfer,
+		Amount:               4000,
+		Date:                 domain.Date{Time: d},
+		Description:          "transfer to userB",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB has 3 txs
+	userBTxsBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBTxsBefore, 3)
+
+	// Change destination to userC, propagation=all
+	err = suite.Services.Transaction.Update(ctx, createdID, author.ID, &domain.TransactionUpdateRequest{
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(connAC.ToAccountID),
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings:   &domain.RecurrenceSettings{Type: domain.RecurrenceTypeMonthly, CurrentInstallment: 1, TotalInstallments: 3},
+	})
+	suite.Require().NoError(err)
+
+	// userB: 0 txs (all deleted)
+	userBTxsAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBTxsAfter, 0, "userB should have no txs after destination change")
+
+	// userC: 3 txs with recurrence
+	userCTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userC.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userCTxs, 3, "userC should have 3 installments")
+	for _, tx := range userCTxs {
+		suite.Assert().Equal(int64(4000), tx.Amount)
+		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+		suite.Assert().Equal(connAC.ToAccountID, tx.AccountID)
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "userC tx recurrence should exist")
+	}
+
+	// Author: still 6 txs (3 debit + 3 fromTx on connAC), all with recurrence
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 6)
+	for _, tx := range authorTxs {
+		suite.Assert().NotNil(tx.TransactionRecurrenceID, "author tx recurrence should be preserved")
+	}
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")

@@ -641,19 +641,19 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 	if data.scenario.IsTransferToSameUser() {
 		tx.LinkedTransactions = []domain.Transaction{
 			{
-				ID:             0,
-				Date:           tx.Date,
-				Description:    tx.Description,
-				UserID:         tx.UserID,
-				OriginalUserID: tx.OriginalUserID,
-				Type:           domain.TransactionTypeTransfer,
-				OperationType:  domain.OperationTypeCredit,
-				AccountID:      accountID,
-				CategoryID:     nil,
-				Amount:         baseAmount,
-				Tags:           tx.Tags,
-				CreatedAt:      nil,
-				UpdatedAt:      nil,
+				ID:                      0,
+				InstallmentNumber:       tx.InstallmentNumber,
+				Date:                    tx.Date,
+				Description:             tx.Description,
+				UserID:                  tx.UserID,
+				OriginalUserID:          tx.OriginalUserID,
+				Type:                    domain.TransactionTypeTransfer,
+				OperationType:           domain.OperationTypeCredit,
+				AccountID:               accountID,
+				CategoryID:              nil,
+				Amount:                  baseAmount,
+				Tags:                    tx.Tags,
+				TransactionRecurrenceID: tx.TransactionRecurrenceID,
 			},
 		}
 		return nil
@@ -669,38 +669,56 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 	// Cross-user transfer: create both the fromTx (author's credit on shared account)
 	// and the toTx (receiver's credit on their shared account), matching the creation
 	// logic in injectLinkedTransactions.
-	tx.LinkedTransactions = []domain.Transaction{
-		{
-			ID:             0,
-			Date:           tx.Date,
-			Description:    tx.Description,
-			UserID:         c.FromUserID,
-			OriginalUserID: tx.OriginalUserID,
-			Type:           domain.TransactionTypeTransfer,
-			OperationType:  domain.OperationTypeCredit,
-			AccountID:      c.FromAccountID,
-			CategoryID:     nil,
-			Amount:         baseAmount,
-			Tags:           []domain.Tag{},
-			CreatedAt:      nil,
-			UpdatedAt:      nil,
-		},
-		{
-			ID:             0,
-			Date:           tx.Date,
-			Description:    tx.Description,
-			UserID:         c.ToUserID,
-			OriginalUserID: tx.OriginalUserID,
-			Type:           domain.TransactionTypeTransfer,
-			OperationType:  domain.OperationTypeCredit,
-			AccountID:      c.ToAccountID,
-			CategoryID:     nil,
-			Amount:         baseAmount,
-			Tags:           []domain.Tag{},
-			CreatedAt:      nil,
-			UpdatedAt:      nil,
-		},
+	fromTx := domain.Transaction{
+		ID:                      0,
+		InstallmentNumber:       tx.InstallmentNumber,
+		Date:                    tx.Date,
+		Description:             tx.Description,
+		UserID:                  c.FromUserID,
+		OriginalUserID:          tx.OriginalUserID,
+		Type:                    domain.TransactionTypeTransfer,
+		OperationType:           domain.OperationTypeCredit,
+		AccountID:               c.FromAccountID,
+		CategoryID:              nil,
+		Amount:                  baseAmount,
+		Tags:                    []domain.Tag{},
+		TransactionRecurrenceID: tx.TransactionRecurrenceID,
 	}
+
+	toTx := domain.Transaction{
+		ID:                0,
+		InstallmentNumber: tx.InstallmentNumber,
+		Date:              tx.Date,
+		Description:       tx.Description,
+		UserID:            c.ToUserID,
+		OriginalUserID:    tx.OriginalUserID,
+		Type:              domain.TransactionTypeTransfer,
+		OperationType:     domain.OperationTypeCredit,
+		AccountID:         c.ToAccountID,
+		CategoryID:        nil,
+		Amount:            baseAmount,
+		Tags:              []domain.Tag{},
+	}
+
+	// Propagate recurrence to the toTx: reuse the cached recurrence for the toUser
+	// or create a new one (once), matching the creation logic in injectLinkedTransactions.
+	if tx.TransactionRecurrenceID != nil && tx.TransactionRecurrence != nil {
+		if data.transferToUserRecurrence == nil {
+			r, err := s.transactionRecurRepo.Create(ctx, &domain.TransactionRecurrence{
+				UserID:       c.ToUserID,
+				Type:         tx.TransactionRecurrence.Type,
+				Installments: tx.TransactionRecurrence.Installments,
+			})
+			if err != nil {
+				return err
+			}
+			data.transferToUserRecurrence = r
+		}
+		toTx.TransactionRecurrenceID = &data.transferToUserRecurrence.ID
+		toTx.InstallmentNumber = tx.InstallmentNumber
+	}
+
+	tx.LinkedTransactions = []domain.Transaction{fromTx, toTx}
 	return nil
 }
 
@@ -1028,9 +1046,12 @@ func (s *transactionService) fetchRelatedTransactions(
 
 		idsNotIn := []int{data.previousTransaction.ID}
 
-		// aqui deve retornar o restante da transações relacionadas, incluindo os parents, own e siblings
+		// Fetch remaining installments on the same account. The AccountIDs filter
+		// prevents picking up fromTx children of cross-user transfers that share
+		// the author's recurrence ID but live on the shared account.
 		recurrenceTransactions, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
 			RecurrenceIDs:     []int{*data.previousTransaction.TransactionRecurrenceID},
+			AccountIDs:        []int{data.previousTransaction.AccountID},
 			InstallmentNumber: installmentNumberFilter,
 			IDsNotIn:          idsNotIn,
 		})
