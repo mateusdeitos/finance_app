@@ -266,8 +266,8 @@ test.describe("Import: duplicate detection ignores description", () => {
     await importPage.uploadCSV(csv, testAccountId);
 
     // Should be marked as duplicate despite different description
-    const actionLabel = await importPage.getRowActionLabel(0);
-    expect(actionLabel).toBe("Duplicado");
+    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
+    await expect(actionSelect).toHaveValue("Duplicado", { timeout: 5000 });
   });
 
   test("same date but different amount is NOT a duplicate", async () => {
@@ -290,7 +290,7 @@ test.describe("Import: duplicate detection ignores description", () => {
 
     await importPage.uploadCSV(csv, testAccountId);
 
-    const actionLabel = await importPage.getRowActionLabel(0);
-    expect(actionLabel).toBe("Importar");
+    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
+    await expect(actionSelect).toHaveValue("Importar", { timeout: 5000 });
   });
 });
