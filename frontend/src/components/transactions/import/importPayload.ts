@@ -9,6 +9,11 @@ export const CSV_COLUMNS = [
     required: true,
     description: 'Valor da transação, se negativo será considerada uma despesa, se positivo uma receita',
   },
+  {
+    col: 'Categoria',
+    required: false,
+    description: 'Nome da categoria (opcional). Se informada e encontrada, será pré-selecionada',
+  },
 ]
 
 export function buildPayload(row: ImportRowFormValues): Transactions.CreateTransactionPayload {
@@ -65,7 +70,7 @@ export function parsedRowToFormValues(
     destination_account_id: r.destination_account_id ?? null,
     recurrenceEnabled: !!r.recurrence_type,
     recurrenceType: r.recurrence_type ?? null,
-    recurrenceCurrentInstallment: null,
+    recurrenceCurrentInstallment: r.recurrence_current_installment ?? null,
     recurrenceTotalInstallments: r.recurrence_count ?? null,
     split_settings: [],
   }

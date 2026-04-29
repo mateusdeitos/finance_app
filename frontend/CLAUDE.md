@@ -254,6 +254,39 @@ Mobile is the primary target.
 
 Tests live in `frontend/e2e/` (tests in `tests/`, page objects in `pages/`, helpers in `helpers/`). Run with `npm run test:e2e`.
 
+### Test isolation: one user per test case
+
+Each test case must create a **fresh user** with its own account and category via `getAuthTokenForUser` + `apiFetchAs` (from `e2e/helpers/api.ts`). Use `openAuthedPage(browser, token)` to get a browser page authenticated as that user. This prevents cross-test state pollution and makes tests order-independent.
+
+```ts
+test("my test", async ({ browser }) => {
+  const email = `e2e-mytest-${Date.now()}@financeapp.local`;
+  const token = await getAuthTokenForUser(email);
+
+  // Create test data as this user
+  const accRes = await apiFetchAs(token, "/api/accounts", {
+    method: "POST",
+    body: JSON.stringify({ name: "Test Account", initial_balance: 0 }),
+  });
+  const account = (await accRes.json()) as { id: number };
+
+  // Get an authenticated browser page
+  const page = await openAuthedPage(browser, token);
+  const myPage = new MyPageObject(page);
+  await myPage.goto();
+
+  // ... test logic ...
+
+  await page.close();
+});
+```
+
+Rules:
+- Use `{ browser }` fixture (not `{ page }`) so you can create a fresh context per user.
+- Always `await page.close()` at the end to release the browser context.
+- No `beforeAll` for shared accounts/categories — each test is self-contained.
+- API verification calls (e.g. listing transactions) must use `apiFetchAs(token, ...)` with the test user's token, not the global helpers.
+
 ### Selectors: `data-testid` only
 
 **E2E selectors must use `data-testid`.** This is non-negotiable: the library is an implementation detail and may change — testid-based selectors are the only ones that survive a component-library swap or a Mantine upgrade.
@@ -353,3 +386,4 @@ These exist in the codebase and agents should **not** copy them. When touching a
   - `e2e/pages/AccountsPage.ts` — `locator('input[inputmode="numeric"]')`.
 
   Replacement approach: add a `data-testid` on the target element in the component, then switch the test to `getByTestId`.
+- **Shared test users via `beforeAll`** — `e2e/tests/import.spec.ts`, `import-installment.spec.ts`, `import-split-settings.spec.ts`, `import-shift-select.spec.ts` use a shared account/category created in `beforeAll`. Migrate to one fresh user per test case using `getAuthTokenForUser` + `openAuthedPage` (see "Test isolation" section above).

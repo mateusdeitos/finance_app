@@ -81,7 +81,6 @@ export const ImportReviewRow = memo(
       importError,
       parseErrors,
       date,
-      description,
       amount,
     ] = useWatch({
       control: form.control,
@@ -95,7 +94,6 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.import_error`,
         `rows.${rowIndex}.parse_errors`,
         `rows.${rowIndex}.date`,
-        `rows.${rowIndex}.description`,
         `rows.${rowIndex}.amount`,
       ],
     });
@@ -104,7 +102,6 @@ export const ImportReviewRow = memo(
 
     useDuplicateTransactionCheck({
       date: date as string,
-      description: description as string,
       amount: amount as number,
       accountId: form.getValues("accountId"),
       getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
