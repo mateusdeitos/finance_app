@@ -15,9 +15,10 @@ type Category struct {
 }
 
 type CategorySearchOptions struct {
-	IDs      []int `json:"ids"`
-	UserIDs  []int `json:"user_ids"`
-	ParentID *int  `json:"parent_id,omitempty"`
+	IDs      []int   `json:"ids"`
+	UserIDs  []int   `json:"user_ids"`
+	ParentID *int    `json:"parent_id,omitempty"`
+	Name     *string `json:"name,omitempty"` // case-insensitive exact match
 }
 
 type DeleteCategoryRequest struct {

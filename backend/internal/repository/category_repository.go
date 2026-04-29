@@ -43,6 +43,10 @@ func (r *categoryRepository) Search(ctx context.Context, options domain.Category
 		}
 	}
 
+	if options.Name != nil {
+		query = query.Where("LOWER(name) = LOWER(?)", *options.Name)
+	}
+
 	query = query.Order("parent_id desc, name ASC")
 
 	if err := query.Find(&ents).Error; err != nil {

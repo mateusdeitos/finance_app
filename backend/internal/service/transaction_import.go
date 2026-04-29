@@ -260,17 +260,12 @@ func parseCSVRow(
 	if categoryName != "" {
 		categories, err := s.services.Category.Search(ctx, domain.CategorySearchOptions{
 			UserIDs: []int{userID},
+			Name:    &categoryName,
 		})
-		if err == nil {
-			normalizedInput := normalize(categoryName)
-			for _, cat := range categories {
-				if normalize(cat.Name) == normalizedInput {
-					catID := cat.ID
-					row.CategoryID = &catID
-					row.CategoryInferred = true
-					break
-				}
-			}
+		if err == nil && len(categories) > 0 {
+			catID := categories[0].ID
+			row.CategoryID = &catID
+			row.CategoryInferred = true
 		}
 	}
 
