@@ -16,10 +16,12 @@ type Category struct {
 
 type CategorySearchOptions struct {
 	IDs           []int   `json:"ids"`
+	ExcludeIDs    []int   `json:"exclude_ids,omitempty"`
 	UserIDs       []int   `json:"user_ids"`
 	ParentID      *int    `json:"parent_id,omitempty"`
-	Name          *string `json:"name,omitempty"`           // case-insensitive exact match
+	Name          *string `json:"name,omitempty"`            // case-insensitive exact match
 	OnlyRootLevel bool    `json:"only_root_level,omitempty"` // when true, filters parent_id IS NULL
+	Limit         int     `json:"limit,omitempty"`
 }
 
 type DeleteCategoryRequest struct {

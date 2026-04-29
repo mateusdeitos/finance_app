@@ -47,11 +47,19 @@ func (r *categoryRepository) Search(ctx context.Context, options domain.Category
 		query = query.Where("parent_id IS NULL")
 	}
 
+	if len(options.ExcludeIDs) > 0 {
+		query = query.Where("id NOT IN ?", options.ExcludeIDs)
+	}
+
 	if options.Name != nil {
 		query = query.Where("LOWER(name) = LOWER(?)", *options.Name)
 	}
 
 	query = query.Order("parent_id desc, name ASC")
+
+	if options.Limit > 0 {
+		query = query.Limit(options.Limit)
+	}
 
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err

@@ -214,21 +214,22 @@ func (s *categoryService) checkSiblingUniqueness(ctx context.Context, userID int
 	opts := domain.CategorySearchOptions{
 		UserIDs: []int{userID},
 		Name:    &trimmed,
+		Limit:   1,
 	}
 	if parentID != nil {
 		opts.ParentID = parentID
 	} else {
 		opts.OnlyRootLevel = true
 	}
+	if excludeID != 0 {
+		opts.ExcludeIDs = []int{excludeID}
+	}
 	siblings, err := s.categoryRepo.Search(ctx, opts)
 	if err != nil {
 		return pkgErrors.Internal("failed to check sibling categories", err)
 	}
 
-	for _, sibling := range siblings {
-		if excludeID != 0 && sibling.ID == excludeID {
-			continue
-		}
+	if len(siblings) > 0 {
 		return pkgErrors.NewWithTag(
 			pkgErrors.ErrCodeValidation,
 			[]string{string(pkgErrors.ErrorTagDuplicateCategoryName)},
