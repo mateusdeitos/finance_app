@@ -104,7 +104,6 @@ export const ImportReviewRow = memo(
 
     useDuplicateTransactionCheck({
       date: date as string,
-      description: description as string,
       amount: amount as number,
       accountId: form.getValues("accountId"),
       getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),

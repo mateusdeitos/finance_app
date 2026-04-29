@@ -209,6 +209,7 @@ export namespace Transactions {
     destination_account_id?: number;
     recurrence_type?: RecurrenceType;
     recurrence_count?: number;
+    recurrence_current_installment?: number;
     parse_errors?: string[];
   }
 

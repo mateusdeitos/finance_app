@@ -138,7 +138,6 @@ export async function parseImportCSV(
 
 export async function checkDuplicateTransaction(params: {
   date: string;
-  description: string;
   amount: number;
   account_id: number;
 }): Promise<{ is_duplicate: boolean }> {
