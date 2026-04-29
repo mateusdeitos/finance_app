@@ -217,6 +217,8 @@ func (s *categoryService) checkSiblingUniqueness(ctx context.Context, userID int
 	}
 	if parentID != nil {
 		opts.ParentID = parentID
+	} else {
+		opts.OnlyRootLevel = true
 	}
 	siblings, err := s.categoryRepo.Search(ctx, opts)
 	if err != nil {
@@ -225,11 +227,6 @@ func (s *categoryService) checkSiblingUniqueness(ctx context.Context, userID int
 
 	for _, sibling := range siblings {
 		if excludeID != 0 && sibling.ID == excludeID {
-			continue
-		}
-		// For root-level categories (parentID == nil), the DB can't filter
-		// parent_id IS NULL via the current SearchOptions, so check in-memory.
-		if lo.FromPtr(sibling.ParentID) != lo.FromPtr(parentID) {
 			continue
 		}
 		return pkgErrors.NewWithTag(

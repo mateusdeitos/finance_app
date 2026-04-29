@@ -43,6 +43,10 @@ func (r *categoryRepository) Search(ctx context.Context, options domain.Category
 		}
 	}
 
+	if options.OnlyRootLevel {
+		query = query.Where("parent_id IS NULL")
+	}
+
 	if options.Name != nil {
 		query = query.Where("LOWER(name) = LOWER(?)", *options.Name)
 	}

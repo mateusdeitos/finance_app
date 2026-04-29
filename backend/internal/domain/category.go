@@ -15,10 +15,11 @@ type Category struct {
 }
 
 type CategorySearchOptions struct {
-	IDs      []int   `json:"ids"`
-	UserIDs  []int   `json:"user_ids"`
-	ParentID *int    `json:"parent_id,omitempty"`
-	Name     *string `json:"name,omitempty"` // case-insensitive exact match
+	IDs           []int   `json:"ids"`
+	UserIDs       []int   `json:"user_ids"`
+	ParentID      *int    `json:"parent_id,omitempty"`
+	Name          *string `json:"name,omitempty"`           // case-insensitive exact match
+	OnlyRootLevel bool    `json:"only_root_level,omitempty"` // when true, filters parent_id IS NULL
 }
 
 type DeleteCategoryRequest struct {
