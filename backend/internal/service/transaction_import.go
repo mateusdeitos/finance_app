@@ -339,7 +339,7 @@ var (
 // inferInstallment detects installment patterns in a transaction description.
 // When multiple matches exist, the last one wins.
 // Returns the cleaned description, current installment, total installments, and whether a match was found.
-func inferInstallment(description string) (cleanDesc string, current int, total int, found bool) {
+func inferInstallment(description string) (string, int, int, bool) {
 	type match struct {
 		current int
 		total   int
@@ -365,12 +365,9 @@ func inferInstallment(description string) (cleanDesc string, current int, total 
 
 	// Last match wins for values
 	last := matches[len(matches)-1]
-	current = last.current
-	total = last.total
 
 	// Remove all matches from description (right to left to preserve indices)
 	cleaned := description
-	// Sort by start position descending
 	for i := len(matches) - 1; i >= 0; i-- {
 		m := matches[i]
 		cleaned = cleaned[:m.start] + cleaned[m.end:]
@@ -379,7 +376,7 @@ func inferInstallment(description string) (cleanDesc string, current int, total 
 	cleaned = strings.TrimRight(cleaned, " -–—")
 	cleaned = strings.TrimSpace(cleaned)
 
-	return cleaned, current, total, true
+	return cleaned, last.current, last.total, true
 }
 
 func normalize(s string) string {
