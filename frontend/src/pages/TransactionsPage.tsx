@@ -12,6 +12,9 @@ import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
+import { TransactionFab } from "@/components/transactions/TransactionFab";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { successHaptic } from "@/utils/haptics";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionList } from "@/components/transactions/TransactionList";
@@ -362,8 +365,23 @@ export function TransactionsPage() {
 
   const isSelecting = selectedIds.size > 0;
 
+  async function handleSwipeDelete(tx: Transactions.Transaction) {
+    try {
+      let propagation: PropagationSetting | undefined;
+      if (tx.transaction_recurrence_id != null) {
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />);
+      }
+      await deleteTransaction(tx.id, propagation);
+      await invalidateTransactions();
+      successHaptic();
+    } catch {
+      // User dismissed the propagation drawer without confirming.
+    }
+  }
+
   if (isMobile) {
     return (
+      <PullToRefresh onRefresh={invalidateTransactions} enabled={!isSelecting}>
       <Stack gap="sm">
         <Box
           style={{
@@ -377,45 +395,11 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-              <PeriodNavigator
-                month={search.month}
-                year={search.year}
-                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-              />
-              <Group gap="xs" wrap="nowrap">
-                <ActionIcon
-                  size="lg"
-                  variant="filled"
-                  onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
-                  data-testid={TransactionsTestIds.BtnNew}
-                  aria-label="Nova Transação"
-                >
-                  <IconPlus size={18} />
-                </ActionIcon>
-                <Menu shadow="md" width={200}>
-                  <Menu.Target>
-                    <ActionIcon
-                      size="lg"
-                      variant="default"
-                      aria-label="Mais opções"
-                      data-testid={TransactionsTestIds.BtnMoreOptions}
-                    >
-                      <IconDots size={18} />
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Item
-                      leftSection={<IconTableImport size={14} />}
-                      onClick={() => void navigate({ to: "/transactions/import" })}
-                      data-testid={TransactionsTestIds.MenuItemImportTransactions}
-                    >
-                      Importar transações
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
-              </Group>
-            </Group>
+            <PeriodNavigator
+              month={search.month}
+              year={search.year}
+              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+            />
             <TextSearch />
             <TransactionFilters orientation="row" hideTextSearch scrollable />
           </Stack>
@@ -425,7 +409,10 @@ export function TransactionsPage() {
           currentUserId={currentUserId}
           selectedIds={selectedIds}
           onSelectTransaction={handleSelectTransaction}
+          onDeleteTransaction={handleSwipeDelete}
         />
+
+        {!isSelecting && <TransactionFab />}
 
         {isSelecting && (
           <SelectionActionBar
@@ -439,6 +426,7 @@ export function TransactionsPage() {
           />
         )}
       </Stack>
+      </PullToRefresh>
     );
   }
 

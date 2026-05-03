@@ -1,0 +1,35 @@
+.content {
+  border-top-left-radius: var(--mantine-radius-lg);
+  border-top-right-radius: var(--mantine-radius-lg);
+  padding-bottom: env(safe-area-inset-bottom);
+  max-height: 80vh;
+}
+
+.body {
+  padding: 0;
+}
+
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+  margin: 8px auto 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--mantine-spacing-md);
+  padding: 14px var(--mantine-spacing-md);
+  width: 100%;
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-gray-1));
+}
+
+.item:active {
+  background: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+.item[data-danger] {
+  color: var(--mantine-color-red-6);
+}

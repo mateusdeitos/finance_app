@@ -67,6 +67,9 @@ export const TransactionsTestIds = {
     `checkbox_filter_category_${categoryId}` as const,
   BadgeFilterTag: (tagId: number | string) => `badge_filter_tag_${tagId}` as const,
 
+  // Mobile swipe-to-delete (per row)
+  BtnSwipeDelete: (txId: number | string) => `btn_swipe_delete_${txId}` as const,
+
   // Selection & bulk menu
   SelectionActionBar: 'selection_action_bar',
   SelectionCount: 'selection_count',
