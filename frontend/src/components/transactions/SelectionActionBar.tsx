@@ -2,6 +2,7 @@ import { Button, Group, Menu, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
+import { tapHaptic, warningHaptic } from '@/utils/haptics'
 
 interface SelectionActionBarProps {
   count: number
@@ -25,7 +26,7 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
             size="compact-sm"
             variant="subtle"
             leftSection={<IconX size={14} />}
-            onClick={onClearSelection}
+            onClick={() => { tapHaptic(); onClearSelection(); }}
             data-testid={TransactionsTestIds.BtnClearSelection}
           >
             Limpar seleção
@@ -45,21 +46,21 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconCategory size={14} />}
-              onClick={onCategoryChange}
+              onClick={() => { tapHaptic(); onCategoryChange(); }}
               data-testid={TransactionsTestIds.BtnBulkCategory}
             >
               Alterar categoria
             </Menu.Item>
             <Menu.Item
               leftSection={<IconCalendar size={14} />}
-              onClick={onDateChange}
+              onClick={() => { tapHaptic(); onDateChange(); }}
               data-testid={TransactionsTestIds.BtnBulkDate}
             >
               Alterar data
             </Menu.Item>
             <Menu.Item
               leftSection={<IconShare size={14} />}
-              onClick={connectedAccountsCount === 0 ? undefined : onDivisaoChange}
+              onClick={connectedAccountsCount === 0 ? undefined : () => { tapHaptic(); onDivisaoChange(); }}
               disabled={connectedAccountsCount === 0}
               data-testid={TransactionsTestIds.BtnBulkDivision}
             >
@@ -73,7 +74,7 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconTrash size={14} color="var(--mantine-color-red-5)" />}
-              onClick={onDelete}
+              onClick={() => { warningHaptic(); onDelete(); }}
               data-testid={TransactionsTestIds.BtnBulkDelete}
             >
               Excluir

@@ -1,4 +1,4 @@
-import { Skeleton, Stack, Text } from "@mantine/core";
+import { Stack, Text } from "@mantine/core";
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
@@ -6,11 +6,13 @@ import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { Transactions } from "@/types/transactions";
 import { TransactionGroup } from "./TransactionGroup";
+import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
   currentUserId: number;
   selectedIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean, groupKey: string) => void;
+  onDeleteTransaction?: (tx: Transactions.Transaction) => void;
 }
 
 function groupNetTotal(
@@ -36,7 +38,7 @@ function groupNetTotal(
   }, 0);
 }
 
-export function TransactionList({ currentUserId, selectedIds, onSelectTransaction }: TransactionListProps) {
+export function TransactionList({ currentUserId, selectedIds, onSelectTransaction, onDeleteTransaction }: TransactionListProps) {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const filters = useActiveFilters();
 
@@ -64,18 +66,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
   }, [groupTotals, openingBalance]);
 
   if (isLoading) {
-    return (
-      <Stack gap="sm">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Stack key={i} gap={4}>
-            <Skeleton height={28} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-          </Stack>
-        ))}
-      </Stack>
-    );
+    return <TransactionListSkeleton />;
   }
 
   if (groups.length === 0) {
@@ -101,6 +92,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
           isFirst={i === 0}
           selectedIds={selectedIds}
           onSelectTransaction={onSelectTransaction && ((id, shiftKey) => onSelectTransaction(id, shiftKey, group.key))}
+          onDeleteTransaction={onDeleteTransaction}
           hideSettlements={search.hideSettlements}
         />
       ))}

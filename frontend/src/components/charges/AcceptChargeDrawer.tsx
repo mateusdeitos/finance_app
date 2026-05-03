@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Button, Drawer, Select, Stack, Text } from "@mantine/core";
+import { Alert, Button, Select, Stack, Text } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { DateInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
@@ -111,12 +112,10 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
   }
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title="Aceitar Cobrança"
-      position="right"
-      size="md"
       data-testid={ChargesTestIds.DrawerAccept}
     >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
@@ -202,6 +201,6 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
           </Button>
         </Stack>
       </form>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

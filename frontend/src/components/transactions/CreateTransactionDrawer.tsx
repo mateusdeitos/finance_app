@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Drawer } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "@/hooks/useCategories";
 import { useMe } from "@/hooks/useMe";
@@ -111,12 +111,10 @@ export function CreateTransactionDrawer() {
   }
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={close}
       title={TYPE_LABELS[transactionType]}
-      position="right"
-      size="md"
       data-testid={TransactionsTestIds.DrawerCreate}
     >
       <FormProvider {...methods}>
@@ -128,6 +126,6 @@ export function CreateTransactionDrawer() {
           submitError={submitError}
         />
       </FormProvider>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

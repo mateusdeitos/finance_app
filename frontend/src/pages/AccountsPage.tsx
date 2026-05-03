@@ -5,6 +5,7 @@ import { useActivateAccount } from '@/hooks/useActivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 import { AccountsTestIds } from '@/testIds'
@@ -35,6 +36,7 @@ export function AccountsPage() {
   const hasAccounts = (query.data?.length ?? 0) > 0
 
   return (
+    <PullToRefresh onRefresh={invalidate}>
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Contas</Text>
@@ -78,5 +80,6 @@ export function AccountsPage() {
       )}
 
     </Stack>
+    </PullToRefresh>
   )
 }

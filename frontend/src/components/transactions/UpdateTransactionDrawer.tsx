@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Divider, Drawer, Stack } from "@mantine/core";
+import { Divider, Stack } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -118,12 +119,10 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   }
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={close}
       title="Editar transação"
-      position="right"
-      size="md"
       data-testid={TransactionsTestIds.DrawerUpdate}
     >
       <FormProvider {...methods}>
@@ -148,6 +147,6 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           }
         />
       </FormProvider>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

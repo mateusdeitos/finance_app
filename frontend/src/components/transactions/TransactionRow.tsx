@@ -1,9 +1,12 @@
 import { Badge, Checkbox, Group, Text, Tooltip } from "@mantine/core";
 import { IconArrowRight, IconUsers } from "@tabler/icons-react";
 import { AccountAvatar } from "@/components/AccountAvatar";
+import { SwipeAction } from "@/components/SwipeAction";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Transactions } from "@/types/transactions";
 import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
+import { tapHaptic } from "@/utils/haptics";
 import { RecurrenceBadge } from "./RecurrenceBadge";
 import classes from "./TransactionRow.module.css";
 import { FocusField } from "./form/TransactionForm";
@@ -77,6 +80,7 @@ interface TransactionRowProps {
   isSelectionMode?: boolean;
   onSelect?: (id: number, shiftKey: boolean) => void;
   onEdit?: (fieldClicked: FocusField) => void;
+  onDelete?: (tx: Transactions.Transaction) => void;
 }
 
 export function TransactionRow({
@@ -89,7 +93,9 @@ export function TransactionRow({
   isSelectionMode,
   onSelect,
   onEdit,
+  onDelete,
 }: TransactionRowProps) {
+  const isMobile = useIsMobile();
   const account = accounts.find((a) => a.id === tx.account_id);
   const linkedAccount =
     tx.type === "transfer" && (tx.linked_transactions ?? []).length > 0
@@ -181,17 +187,19 @@ export function TransactionRow({
     };
   }
 
-  return (
+  const swipeEnabled = isMobile && !selectionMode && !!onDelete;
+
+  const rowContent = (
     <div
       data-transaction-id={tx.id}
       className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
-      onClick={selectionMode ? (e) => onSelect?.(tx.id, e.shiftKey) : undefined}
+      onClick={selectionMode ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); } : undefined}
     >
       {/* Col 1: checkbox or other-user warning */}
       <div className={classes.checkbox}>
         <Checkbox
           checked={isSelected ?? false}
-          onChange={(e) => { onSelect?.(tx.id, (e.nativeEvent as MouseEvent).shiftKey); }}
+          onChange={(e) => { tapHaptic(); onSelect?.(tx.id, (e.nativeEvent as MouseEvent).shiftKey); }}
           onClick={(e) => e.stopPropagation()}
           size="sm"
           data-testid={TransactionsTestIds.Checkbox(tx.id)}
@@ -250,4 +258,19 @@ export function TransactionRow({
       </div>
     </div>
   );
+
+  if (swipeEnabled) {
+    return (
+      <SwipeAction
+        actionLabel="Excluir"
+        actionColor="red"
+        actionTestId={TransactionsTestIds.BtnSwipeDelete(tx.id)}
+        onAction={() => onDelete!(tx)}
+      >
+        {rowContent}
+      </SwipeAction>
+    );
+  }
+
+  return rowContent;
 }

@@ -1,4 +1,5 @@
-import { Drawer, Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
 import { useDrawerContext } from "@/utils/renderDrawer";
@@ -44,12 +45,10 @@ export function SelectCategoryDrawer() {
   const categories = query.data ?? [];
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title="Selecionar categoria"
-      position="right"
-      size="md"
       data-testid={TransactionsTestIds.DrawerSelectCategory}
     >
       <Stack gap={4}>
@@ -63,6 +62,6 @@ export function SelectCategoryDrawer() {
           ))
         )}
       </Stack>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

@@ -1,8 +1,9 @@
-import { Drawer, Stack, Text, TextInput, Button, CopyButton, Group } from '@mantine/core'
+import { Stack, Text, TextInput, Button, CopyButton, Group } from '@mantine/core'
 import { IconCopy, IconCheck } from '@tabler/icons-react'
 import { useMe } from '@/hooks/useMe'
 import { CommonTestIds } from '@/testIds'
 import { useDrawerContext } from '@/utils/renderDrawer'
+import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 
 export function InviteDrawer() {
   const { opened, reject } = useDrawerContext<void>()
@@ -14,12 +15,10 @@ export function InviteDrawer() {
     : ''
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title="Criar Conexão"
-      position="right"
-      size="md"
       data-testid={CommonTestIds.DrawerInvite}
     >
       <Stack gap="lg">
@@ -50,6 +49,6 @@ export function InviteDrawer() {
           </Group>
         </Stack>
       </Stack>
-    </Drawer>
+    </ResponsiveDrawer>
   )
 }

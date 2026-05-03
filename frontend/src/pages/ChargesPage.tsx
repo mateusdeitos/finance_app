@@ -10,6 +10,7 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useRejectCharge } from "@/hooks/useRejectCharge";
 import { useCancelCharge } from "@/hooks/useCancelCharge";
 import { renderDrawer } from "@/utils/renderDrawer";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { Charges } from "@/types/charges";
 import { ChargeCard } from "@/components/charges/ChargeCard";
 import { ConfirmChargeActionDrawer, type ConfirmChargeAction } from "@/components/charges/ConfirmChargeActionDrawer";
@@ -86,7 +87,12 @@ export function ChargesPage() {
   const receivedCharges = receivedQuery.data ?? [];
   const sentCharges = sentQuery.data ?? [];
 
+  async function refreshAll() {
+    await Promise.all([invalidateCharges(), invalidatePendingCount()]);
+  }
+
   return (
+    <PullToRefresh onRefresh={refreshAll}>
     <Stack gap="md">
       <Box
         style={{
@@ -202,5 +208,6 @@ export function ChargesPage() {
         </Tabs.Panel>
       </Tabs>
     </Stack>
+    </PullToRefresh>
   );
 }
