@@ -10,3 +10,18 @@
   flex-direction: column;
   gap: 0.75rem;
 }
+
+.scrollable {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollable > * {
+  flex-shrink: 0;
+}

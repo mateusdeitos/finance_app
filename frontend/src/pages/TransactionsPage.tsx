@@ -1,5 +1,5 @@
 import { ActionIcon, Box, Button, Group, Menu, Stack } from "@mantine/core";
-import { IconDots, IconFilter, IconPlus, IconTableImport } from "@tabler/icons-react";
+import { IconDots, IconPlus, IconTableImport } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
@@ -11,10 +11,7 @@ import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { ClearFiltersButton } from "@/components/transactions/ClearFiltersButton";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
-import { FiltersDrawer } from "@/components/transactions/FiltersDrawer";
-import { MobileBottomBar } from "@/components/transactions/MobileBottomBar";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionList } from "@/components/transactions/TransactionList";
@@ -367,7 +364,7 @@ export function TransactionsPage() {
 
   if (isMobile) {
     return (
-      <Stack gap="sm" pb="5rem">
+      <Stack gap="sm">
         <Box
           style={{
             position: "sticky",
@@ -420,6 +417,7 @@ export function TransactionsPage() {
               </Group>
             </Group>
             <TextSearch />
+            <TransactionFilters orientation="row" hideTextSearch scrollable />
           </Stack>
         </Box>
 
@@ -429,7 +427,7 @@ export function TransactionsPage() {
           onSelectTransaction={handleSelectTransaction}
         />
 
-        {isSelecting ? (
+        {isSelecting && (
           <SelectionActionBar
             count={selectedIds.size}
             onClearSelection={clearSelection}
@@ -439,19 +437,6 @@ export function TransactionsPage() {
             connectedAccountsCount={connectedAccountsCount}
             onDelete={handleDeleteClick}
           />
-        ) : (
-          <MobileBottomBar>
-            <ClearFiltersButton variant="icon" />
-            <ActionIcon
-              size="lg"
-              radius="xl"
-              variant="filled"
-              onClick={() => void renderDrawer(() => <FiltersDrawer />).catch(() => {})}
-              aria-label="Abrir filtros"
-            >
-              <IconFilter size={18} />
-            </ActionIcon>
-          </MobileBottomBar>
         )}
       </Stack>
     );

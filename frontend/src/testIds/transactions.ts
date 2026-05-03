@@ -55,7 +55,6 @@ export const TransactionsTestIds = {
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
   BtnClearFilters: 'btn_clear_filters',
-  DrawerFilters: 'drawer_transaction_filters',
 
   // Per-kind filter Popover triggers + dropdowns
   BtnFilter: (kind: TransactionFilterKind) => `btn_filter_${kind}` as const,

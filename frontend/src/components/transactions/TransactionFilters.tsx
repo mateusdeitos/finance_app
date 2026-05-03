@@ -10,12 +10,16 @@ import classes from './TransactionFilters.module.css'
 interface TransactionFiltersProps {
   orientation?: 'row' | 'column'
   hideTextSearch?: boolean
+  scrollable?: boolean
 }
 
-export function TransactionFilters({ orientation = 'row', hideTextSearch }: TransactionFiltersProps) {
+export function TransactionFilters({ orientation = 'row', hideTextSearch, scrollable }: TransactionFiltersProps) {
   const inline = orientation === 'column'
+  const className = inline
+    ? classes.column
+    : `${classes.row}${scrollable ? ` ${classes.scrollable}` : ''}`
   return (
-    <div className={inline ? classes.column : classes.row}>
+    <div className={className}>
       {!hideTextSearch && <TextSearch />}
       <TagFilter inline={inline} />
       <CategoryFilter inline={inline} />
