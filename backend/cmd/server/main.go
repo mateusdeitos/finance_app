@@ -14,6 +14,7 @@ import (
 	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/repository"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg"
 	"github.com/finance_app/backend/pkg/database"
 	"github.com/finance_app/backend/pkg/oauth"
 	"github.com/labstack/echo/v4"
@@ -107,7 +108,10 @@ func main() {
 	e.Use(middleware.LoggingMiddleware(globalLogger))
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
-		AllowOrigins:     append([]string{cfg.App.FrontendURL}, cfg.App.AllowedOrigins...),
+		AllowOriginFunc: func(origin string) (bool, error) {
+			origins := append([]string{cfg.App.FrontendURL}, cfg.App.AllowedOrigins...)
+			return pkg.IsAllowedOrigin(origins, origin), nil
+		},
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
 		AllowCredentials: true,
