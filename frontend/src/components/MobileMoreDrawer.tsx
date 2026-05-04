@@ -58,20 +58,20 @@ export function MobileMoreDrawer() {
       opened={opened}
       onClose={() => close()}
       size="auto"
-      withCloseButton={false}
+      title=""
+      closeButtonProps={
+        {
+          'aria-label': 'Fechar',
+          'data-testid': MobileNavTestIds.MoreClose,
+          // Mantine types ModalBaseCloseButtonProps without data-* attrs, but
+          // spreads any extras onto the underlying CloseButton element.
+        } as React.ComponentProps<'button'>
+      }
       closeOnClickOutside
       closeOnEscape
       data-testid={MobileNavTestIds.MoreDrawer}
-      classNames={{ content: classes.contentNoGrabber, body: classes.body }}
+      classNames={{ body: classes.body, header: classes.header }}
     >
-      {/* Tappable grabber gives an explicit close path on top of click-outside. */}
-      <button
-        type="button"
-        className={classes.grabber}
-        onClick={() => close()}
-        aria-label="Fechar"
-        data-testid={MobileNavTestIds.MoreClose}
-      />
       {user && (
         <>
           <Group gap="sm" px="md" pt="xs" pb="md" wrap="nowrap">

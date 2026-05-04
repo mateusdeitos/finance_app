@@ -1,29 +1,13 @@
-.contentNoGrabber::before {
-  display: none !important;
-}
-
 .body {
   padding: 0;
 }
 
-.grabber {
-  display: block;
-  width: 100%;
-  padding: 10px 0 6px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.grabber::after {
-  content: '';
-  display: block;
-  width: 36px;
-  height: 4px;
-  border-radius: 999px;
-  margin: 0 auto;
-  background: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+/* Mantine renders the header bar with the close button. We have no title
+   so just compress the header to leave space for the close button on the
+   right while staying out of the way of the drag handle. */
+.header {
+  min-height: 32px;
+  padding: 4px 8px 0 0;
 }
 
 .item {
