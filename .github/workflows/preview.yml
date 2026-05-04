@@ -67,6 +67,7 @@ jobs:
           URLS: ${{ steps.deploy.outputs.urls }}
           EXPIRES: ${{ inputs.expires }}
         run: |
-          gh pr comment "$PR_NUMBER" --body "Preview frontend (apontando para o backend de prod): $URLS
+          URL=$(echo "$URLS" | jq -r '.[0]')
+          gh pr comment "$PR_NUMBER" --body "Preview frontend (apontando para o backend de prod): $URL
 
           Channel: \`pr-$PR_NUMBER\` — expira em $EXPIRES."
