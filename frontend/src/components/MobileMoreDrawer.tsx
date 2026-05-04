@@ -1,9 +1,10 @@
-import { Drawer, Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
+import { Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
 import { IconUsers, IconLogout, IconTableImport } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
 import { UserAvatar } from '@/components/UserAvatar'
+import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
 import { renderDrawer, useDrawerContext } from '@/utils/renderDrawer'
 import { MobileNavTestIds } from '@/testIds'
@@ -53,17 +54,24 @@ export function MobileMoreDrawer() {
   ]
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={() => close()}
-      position="bottom"
       size="auto"
-      radius="lg"
       withCloseButton={false}
+      closeOnClickOutside
+      closeOnEscape
       data-testid={MobileNavTestIds.MoreDrawer}
-      classNames={{ content: classes.content, body: classes.body }}
+      classNames={{ content: classes.contentNoGrabber, body: classes.body }}
     >
-      <div className={classes.grabber} aria-hidden />
+      {/* Tappable grabber gives an explicit close path on top of click-outside. */}
+      <button
+        type="button"
+        className={classes.grabber}
+        onClick={() => close()}
+        aria-label="Fechar"
+        data-testid={MobileNavTestIds.MoreClose}
+      />
       {user && (
         <>
           <Group gap="sm" px="md" pt="xs" pb="md" wrap="nowrap">
@@ -99,6 +107,6 @@ export function MobileMoreDrawer() {
           )
         })}
       </Stack>
-    </Drawer>
+    </ResponsiveDrawer>
   )
 }

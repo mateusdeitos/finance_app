@@ -8,5 +8,6 @@ export const MobileNavTestIds = {
   Tab: (route: string) => `mobile_tab_${route}` as const,
   MoreTab: 'mobile_tab_more',
   MoreDrawer: 'mobile_more_drawer',
+  MoreClose: 'mobile_more_close',
   MoreItem: (key: string) => `mobile_more_item_${key}` as const,
 } as const

@@ -1,8 +1,5 @@
-.content {
-  border-top-left-radius: var(--mantine-radius-lg);
-  border-top-right-radius: var(--mantine-radius-lg);
-  padding-bottom: env(safe-area-inset-bottom);
-  max-height: 80vh;
+.contentNoGrabber::before {
+  display: none !important;
 }
 
 .body {
@@ -10,11 +7,23 @@
 }
 
 .grabber {
+  display: block;
+  width: 100%;
+  padding: 10px 0 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.grabber::after {
+  content: '';
+  display: block;
   width: 36px;
   height: 4px;
   border-radius: 999px;
+  margin: 0 auto;
   background: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
-  margin: 8px auto 4px;
 }
 
 .item {
