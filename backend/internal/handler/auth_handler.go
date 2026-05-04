@@ -9,6 +9,7 @@ import (
 	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
+	"github.com/finance_app/backend/pkg"
 	"github.com/finance_app/backend/pkg/appcontext"
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth"
@@ -61,6 +62,21 @@ func (h *AuthHandler) OAuthStart(c echo.Context) error {
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   300,
 		})
+	}
+
+	if origin := c.QueryParam("origin"); origin != "" {
+		origins := append([]string{h.cfg.App.FrontendURL}, h.cfg.App.AllowedOrigins...)
+		if pkg.IsAllowedOrigin(origins, origin) {
+			c.SetCookie(&http.Cookie{
+				Name:     "oauth_origin",
+				Value:    origin,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   h.cfg.App.Env == envProduction,
+				SameSite: http.SameSiteLaxMode,
+				MaxAge:   300,
+			})
+		}
 	}
 
 	req := c.Request().WithContext(context.WithValue(c.Request().Context(), gothic.ProviderParamKey, provider))
@@ -117,7 +133,21 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 	}
 	c.SetCookie(cookie)
 
-	callbackURL := h.cfg.App.FrontendURL + "/auth/callback"
+	frontendURL := h.cfg.App.FrontendURL
+	if originCookie, err := c.Cookie("oauth_origin"); err == nil && originCookie.Value != "" {
+		frontendURL = originCookie.Value
+		c.SetCookie(&http.Cookie{
+			Name:     "oauth_origin",
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   h.cfg.App.Env == envProduction,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+	}
+
+	callbackURL := frontendURL + "/auth/callback"
 	if oauthRedirect, err := c.Cookie("oauth_redirect"); err == nil && oauthRedirect.Value != "" {
 		callbackURL += "?redirect=" + url.QueryEscape(oauthRedirect.Value)
 		c.SetCookie(&http.Cookie{

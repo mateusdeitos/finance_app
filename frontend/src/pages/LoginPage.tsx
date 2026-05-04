@@ -11,6 +11,7 @@ export function LoginPage() {
     const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
     const url = new URL(`${apiUrl}/auth/google`)
     if (redirectTo) url.searchParams.set('redirect', redirectTo)
+    url.searchParams.set('origin', window.location.origin)
     window.location.href = url.toString()
   }
 

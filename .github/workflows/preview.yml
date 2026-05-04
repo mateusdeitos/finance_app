@@ -1,0 +1,72 @@
+name: Preview Frontend (PR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to deploy as preview"
+        type: string
+        required: true
+      expires:
+        description: "Preview channel TTL (e.g. 7d, 30d)"
+        type: string
+        default: "7d"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-pr-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build & deploy preview channel
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Build frontend (against prod backend)
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting preview channel
+        id: deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          channelId: pr-${{ inputs.pr_number }}
+          expires: ${{ inputs.expires }}
+          entryPoint: frontend
+
+      - name: Comment preview URL on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          URLS: ${{ steps.deploy.outputs.urls }}
+          EXPIRES: ${{ inputs.expires }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "Preview frontend (apontando para o backend de prod): $URLS
+
+          Channel: \`pr-$PR_NUMBER\` — expira em $EXPIRES."
