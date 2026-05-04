@@ -107,7 +107,7 @@ func main() {
 	e.Use(middleware.LoggingMiddleware(globalLogger))
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
-		AllowOrigins:     []string{cfg.App.FrontendURL},
+		AllowOrigins:     append([]string{cfg.App.FrontendURL}, cfg.App.AllowedOrigins...),
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
 		AllowCredentials: true,
