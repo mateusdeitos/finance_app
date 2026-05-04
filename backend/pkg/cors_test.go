@@ -16,7 +16,7 @@ func TestIsAllowedOrigin(t *testing.T) {
 	}{
 		{"exact match", "https://example.com", true},
 		{"exact match localhost", "http://localhost:3000", true},
-		{"wildcard match", "https://finance-app-492023--pr-123-abc.web.app", true},
+		{"wildcard match", "https://finance-app-492023--pr-112-9mmoyybw.web.app", true},
 		{"wildcard match different channel", "https://finance-app-492023--pr-999-xyz.web.app", true},
 		{"no match", "https://evil.com", false},
 		{"partial prefix no match", "https://example.com.evil.com", false},

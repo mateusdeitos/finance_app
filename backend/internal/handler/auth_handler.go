@@ -122,20 +122,11 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 		return HandleServiceError(err)
 	}
 
-	cookie := &http.Cookie{
-		Name:     AuthCookieName,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   h.cfg.App.Env == envProduction,
-		SameSite: http.SameSiteLaxMode,
-		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
-	}
-	c.SetCookie(cookie)
-
 	frontendURL := h.cfg.App.FrontendURL
+	crossOrigin := false
 	if originCookie, err := c.Cookie("oauth_origin"); err == nil && originCookie.Value != "" {
 		frontendURL = originCookie.Value
+		crossOrigin = frontendURL != h.cfg.App.FrontendURL
 		c.SetCookie(&http.Cookie{
 			Name:     "oauth_origin",
 			Value:    "",
@@ -146,6 +137,22 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 			MaxAge:   -1,
 		})
 	}
+
+	sameSite := http.SameSiteLaxMode
+	if crossOrigin {
+		sameSite = http.SameSiteNoneMode
+	}
+
+	cookie := &http.Cookie{
+		Name:     AuthCookieName,
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   h.cfg.App.Env == envProduction,
+		SameSite: sameSite,
+		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
+	}
+	c.SetCookie(cookie)
 
 	callbackURL := frontendURL + "/auth/callback"
 	if oauthRedirect, err := c.Cookie("oauth_redirect"); err == nil && oauthRedirect.Value != "" {
