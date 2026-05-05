@@ -15,7 +15,7 @@ function localMidnightISO(dateStr: string): string {
 }
 
 export async function fetchBalance(params: Transactions.FetchBalanceParams): Promise<Transactions.BalanceResult> {
-  const url = new URL(`${apiUrl}/api/transactions/balance`);
+  const url = new URL(`${apiUrl}/api/transactions/balance`, window.location.origin);
 
   url.searchParams.set("month", String(params.month));
   url.searchParams.set("year", String(params.year));
@@ -40,7 +40,7 @@ export async function fetchBalance(params: Transactions.FetchBalanceParams): Pro
 }
 
 export async function fetchTransactions(params: Transactions.FetchParams): Promise<Transactions.Transaction[]> {
-  const url = new URL(`${apiUrl}/api/transactions`);
+  const url = new URL(`${apiUrl}/api/transactions`, window.location.origin);
 
   url.searchParams.set("month", String(params.month));
   url.searchParams.set("year", String(params.year));
@@ -77,7 +77,7 @@ export async function fetchTransactionSuggestions(
   q: string,
   limit = 10,
 ): Promise<Transactions.TransactionSuggestion[]> {
-  const url = new URL(`${apiUrl}/api/transactions/suggestions`);
+  const url = new URL(`${apiUrl}/api/transactions/suggestions`, window.location.origin);
   url.searchParams.set("q", q);
   url.searchParams.set("limit", String(limit));
 
@@ -90,7 +90,7 @@ export async function deleteTransaction(
   id: number,
   propagationSettings: "current" | "current_and_future" | "all" = "current",
 ): Promise<void> {
-  const url = new URL(`${apiUrl}/api/transactions/${id}`);
+  const url = new URL(`${apiUrl}/api/transactions/${id}`, window.location.origin);
   url.searchParams.set("propagation_settings", propagationSettings);
   const res = await fetch(url.toString(), {
     method: "DELETE",
@@ -101,7 +101,7 @@ export async function deleteTransaction(
 }
 
 export async function updateTransaction(id: number, payload: Transactions.UpdateTransactionPayload): Promise<void> {
-  const url = new URL(`${apiUrl}/api/transactions/${id}`);
+  const url = new URL(`${apiUrl}/api/transactions/${id}`, window.location.origin);
   const body = {
     ...payload,
     date: payload.date && payload.date.length === 10 ? localMidnightISO(payload.date) : payload.date,
