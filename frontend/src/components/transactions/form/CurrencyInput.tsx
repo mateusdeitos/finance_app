@@ -8,6 +8,7 @@ interface Props {
   label?: string;
   required?: boolean;
   disabled?: boolean;
+  allowNegative?: boolean;
   "data-testid"?: string;
 }
 
@@ -25,7 +26,7 @@ function formatCents(cents: number): string {
 }
 
 export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function CurrencyInput(
-  { value, onChange, error, label, required, disabled, "data-testid": dataTestId }: Props,
+  { value, onChange, error, label, required, disabled, allowNegative, "data-testid": dataTestId }: Props,
   ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,18 +45,28 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
     const el = e.currentTarget;
     const allSelected = el.selectionStart === 0 && el.selectionEnd === el.value.length;
 
+    if (allowNegative && e.key === "-") {
+      onChange(-value);
+      return;
+    }
+
+    const sign = value < 0 ? -1 : 1;
+    const abs = Math.abs(value);
+
     if (e.key === "Backspace" || e.key === "Delete") {
       if (allSelected) {
         onChange(0);
       } else if (e.key === "Backspace") {
-        onChange(Math.floor(value / 10));
+        const truncated = Math.floor(abs / 10);
+        onChange(truncated === 0 ? 0 : sign * truncated);
       }
       return;
     }
 
     if (/^\d$/.test(e.key)) {
-      const next = allSelected ? parseInt(e.key, 10) : value * 10 + parseInt(e.key, 10);
-      if (next <= MAX_CENTS) onChange(next);
+      const digit = parseInt(e.key, 10);
+      const nextAbs = allSelected ? digit : abs * 10 + digit;
+      if (nextAbs <= MAX_CENTS) onChange(nextAbs === 0 ? 0 : sign * nextAbs);
     }
   }
 
