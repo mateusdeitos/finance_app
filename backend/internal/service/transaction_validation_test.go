@@ -173,19 +173,31 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 	})
 
 	suite.Run("income_with_split_settings_is_allowed", func() {
-		// Income with split settings should pass type validation
-		// (will fail later on account/connection lookup, not on type check)
-		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+		// Build a fully-valid setup so the only thing under test is whether the
+		// type validator rejects income+split (it must not). Using hardcoded ids
+		// here previously made this case dependent on which prior test happened
+		// to populate id=1 in the shared testcontainer DB.
+		author, err := suite.createTestUser(ctx)
+		suite.Require().NoError(err)
+		partner, err := suite.createTestUser(ctx)
+		suite.Require().NoError(err)
+		account, err := suite.createTestAccount(ctx, author)
+		suite.Require().NoError(err)
+		category, err := suite.createTestCategory(ctx, author)
+		suite.Require().NoError(err)
+		connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, partner.ID, 50)
+		suite.Require().NoError(err)
+
+		_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
 			TransactionType: domain.TransactionTypeIncome,
-			AccountID:       1,
-			CategoryID:      1,
+			AccountID:       account.ID,
+			CategoryID:      category.ID,
 			Amount:          100,
 			Date:            domain.Date{Time: d},
 			Description:     "test",
-			SplitSettings:   []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
+			SplitSettings:   []domain.SplitSettings{{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)}},
 		})
-		suite.Require().Error(err)
-		suite.Assert().False(hasTag(err, pkgErrors.ErrorTagSplitSettingsNotAllowedForTransfer), "income should allow split settings")
+		suite.Assert().NoError(err, "income with split settings should be accepted")
 	})
 }
 
