@@ -4,14 +4,9 @@ import {
   getAuthTokenForUser,
   apiFetchAs,
 } from "../helpers/api";
+import { buildCsvContent } from "../helpers/csv";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const CSV_HEADER = "Data;Descrição;Valor";
-
-function buildCsvContent(rows: string[][]): string {
-  return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
-}
 
 // Fresh user so the import table is clean — no shared DB interference.
 const FRESH_USER_EMAIL = `e2e-shift-select-${Date.now()}@financeapp.local`;

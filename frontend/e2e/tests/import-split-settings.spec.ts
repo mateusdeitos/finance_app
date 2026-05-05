@@ -5,6 +5,7 @@ import {
   apiFetchAs,
   openAuthedPage,
 } from "../helpers/api";
+import { buildCsvContent } from "../helpers/csv";
 import { ImportTestIds, TransactionsTestIds } from "@/testIds";
 
 /**
@@ -18,12 +19,6 @@ import { ImportTestIds, TransactionsTestIds } from "@/testIds";
  * Uses a fresh unique primary user per test run so the user has exactly one
  * connection — guaranteeing the auto-select in the split popover triggers.
  */
-
-const CSV_HEADER = "Data;Descrição;Valor";
-
-function buildCsvContent(rows: string[][]): string {
-  return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
-}
 
 test.describe("Import with split settings", () => {
   let importPage: ImportPage;
