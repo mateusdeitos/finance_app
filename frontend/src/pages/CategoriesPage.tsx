@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { Button, Group, Skeleton, Stack, Text } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/useCategories'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { CategoryCard } from '@/components/categories/CategoryCard'
 import { DeleteCategoryModal } from '@/components/categories/DeleteCategoryModal'
+import { Fab } from '@/components/Fab'
 import { InlineNewCategory } from '@/components/categories/InlineNewCategory'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 import { CategoriesTestIds } from '@/testIds'
@@ -28,6 +31,7 @@ export function CategoriesPage() {
   const [pendingParentId, setPendingParentId] = useState<PendingParentId>(null)
 
   const categories = query.data ?? []
+  const isMobile = useIsMobile()
 
   async function handleCreateInline(name: string, parentId?: number) {
     await createMutation.mutateAsync({ name, parent_id: parentId })
@@ -55,10 +59,11 @@ export function CategoriesPage() {
   }
 
   return (
+    <PullToRefresh onRefresh={invalidate}>
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Categorias</Text>
-        {categories.length > 0 && (
+        {categories.length > 0 && !isMobile && (
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={() => setPendingParentId('root')}
@@ -110,5 +115,16 @@ export function CategoriesPage() {
         </Stack>
       )}
     </Stack>
+
+    {isMobile && categories.length > 0 && pendingParentId !== 'root' && (
+      <Fab
+        onClick={() => setPendingParentId('root')}
+        ariaLabel="Nova Categoria"
+        testId={CategoriesTestIds.BtnNew}
+      >
+        <IconPlus size={24} stroke={2.2} />
+      </Fab>
+    )}
+    </PullToRefresh>
   )
 }

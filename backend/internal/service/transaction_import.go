@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -23,6 +24,7 @@ type csvColumnIndex struct {
 	date        int
 	description int
 	amount      int
+	category    int // optional column; -1 when absent
 }
 
 func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
@@ -135,7 +137,7 @@ func detectSeparator(line string) rune {
 
 func parseCSVHeader(header []string) (csvColumnIndex, error) {
 	idx := csvColumnIndex{
-		date: -1, description: -1, amount: -1,
+		date: -1, description: -1, amount: -1, category: -1,
 	}
 
 	for i, col := range header {
@@ -146,6 +148,8 @@ func parseCSVHeader(header []string) (csvColumnIndex, error) {
 			idx.description = i
 		case "valor", "amount", "total":
 			idx.amount = i
+		case "categoria", "category":
+			idx.category = i
 		}
 	}
 
@@ -210,10 +214,19 @@ func parseCSVRow(
 		}
 	}
 
-	// 2. Descrição
+	// 2. Descrição + inferência de parcelamento
 	row.Description = getField(colIdx.description)
 	if row.Description == "" {
 		row.ParseErrors = append(row.ParseErrors, "Descrição é obrigatória")
+	} else {
+		cleanDesc, current, total, found := inferInstallment(row.Description)
+		if found {
+			row.Description = cleanDesc
+			recType := domain.RecurrenceTypeMonthly
+			row.RecurrenceType = &recType
+			row.RecurrenceCount = &total
+			row.RecurrenceCurrentInstallment = &current
+		}
 	}
 
 	// 3. Valor e Inferência de Tipo
@@ -242,9 +255,23 @@ func parseCSVRow(
 		}
 	}
 
-	// 4. Detecção de duplicados
-	if row.Date != nil && row.Description != "" && row.Amount > 0 {
-		if isDuplicate(ctx, s, userID, row.Description, *row.Date, row.Amount, &accountID) {
+	// 4. Categoria opcional
+	categoryName := getField(colIdx.category)
+	if categoryName != "" {
+		categories, err := s.services.Category.Search(ctx, domain.CategorySearchOptions{
+			UserIDs: []int{userID},
+			Name:    &categoryName,
+		})
+		if err == nil && len(categories) > 0 {
+			catID := categories[0].ID
+			row.CategoryID = &catID
+			row.CategoryInferred = true
+		}
+	}
+
+	// 5. Detecção de duplicados
+	if row.Date != nil && row.Amount > 0 {
+		if isDuplicate(ctx, s, userID, *row.Date, row.Amount, &accountID) {
 			row.Status = domain.ImportRowStatusDuplicate
 		}
 	}
@@ -271,16 +298,15 @@ func parseAmountSigned(s string, decimalSeparator domain.ImportDecimalSeparatorV
 	return int64(math.Round(f * 100)), nil
 }
 
-// isDuplicate verifica se a transação já existe.
-func isDuplicate(ctx context.Context, s *transactionService, userID int, description string, date time.Time, amount int64, accountID *int) bool {
+// isDuplicate verifica se a transação já existe baseado em data, valor e conta.
+func isDuplicate(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, accountID *int) bool {
 	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
 
 	filter := domain.TransactionFilter{
-		UserID:      &userID,
-		Description: &domain.TextSearch{Query: description, Exact: true},
-		StartDate:   &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
-		EndDate:     &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
+		UserID:    &userID,
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
@@ -296,6 +322,56 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, descrip
 		}
 	}
 	return false
+}
+
+var (
+	// "Parcela 1 de 2", "parcela 3 de 12"
+	installmentParcelaRe = regexp.MustCompile(`(?i)[-–—\s]*parcela\s+(\d+)\s+de\s+(\d+)`)
+	// "(1/2)", "(1 / 12)", "( 3 / 12 )"
+	installmentSlashRe = regexp.MustCompile(`\(\s*(\d+)\s*/\s*(\d+)\s*\)`)
+)
+
+// inferInstallment detects installment patterns in a transaction description.
+// When multiple matches exist, the last one wins.
+// Returns the cleaned description, current installment, total installments, and whether a match was found.
+func inferInstallment(description string) (string, int, int, bool) {
+	type match struct {
+		current int
+		total   int
+		start   int
+		end     int
+	}
+
+	var matches []match
+
+	for _, re := range []*regexp.Regexp{installmentParcelaRe, installmentSlashRe} {
+		for _, loc := range re.FindAllStringSubmatchIndex(description, -1) {
+			cur, _ := strconv.Atoi(description[loc[2]:loc[3]])
+			tot, _ := strconv.Atoi(description[loc[4]:loc[5]])
+			if cur > 0 && tot > 0 {
+				matches = append(matches, match{current: cur, total: tot, start: loc[0], end: loc[1]})
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		return description, 0, 0, false
+	}
+
+	// Last match wins for values
+	last := matches[len(matches)-1]
+
+	// Remove all matches from description (right to left to preserve indices)
+	cleaned := description
+	for i := len(matches) - 1; i >= 0; i-- {
+		m := matches[i]
+		cleaned = cleaned[:m.start] + cleaned[m.end:]
+	}
+
+	cleaned = strings.TrimRight(cleaned, " -–—")
+	cleaned = strings.TrimSpace(cleaned)
+
+	return cleaned, last.current, last.total, true
 }
 
 func normalize(s string) string {

@@ -1,19 +1,20 @@
 import { ActionIcon, Box, Button, Group, Menu, Stack } from "@mantine/core";
-import { IconDots, IconFilter, IconPlus, IconTableImport } from "@tabler/icons-react";
+import { IconDots, IconPlus, IconTableImport } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
+import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { ClearFiltersButton } from "@/components/transactions/ClearFiltersButton";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
-import { FiltersDrawer } from "@/components/transactions/FiltersDrawer";
-import { MobileBottomBar } from "@/components/transactions/MobileBottomBar";
+import { TransactionFab } from "@/components/transactions/TransactionFab";
+import { PullToRefresh } from "@/components/PullToRefresh";
+import { successHaptic } from "@/utils/haptics";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionList } from "@/components/transactions/TransactionList";
@@ -39,15 +40,52 @@ export function TransactionsPage() {
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const toggleSelection = useCallback((id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  // Group map for shift+click range selection (groupKey → ordered tx IDs, excluding synthetics)
+  const groupTxIdsMap = useGroupedTransactions(
+    useMemo(() => (groups) =>
+      new Map(groups.map((g) => [
+        g.key,
+        g.transactions.filter((tx) => tx.origin_settlement_id === undefined).map((tx) => tx.id),
+      ])), []),
+  ).data;
+
+  const handleSelectTransaction = useCallback(
+    (id: number, shiftKey: boolean, groupKey: string) => {
+      if (shiftKey && selectedIds.size > 0) {
+        const groupTxIds = groupTxIdsMap.get(groupKey);
+        if (groupTxIds) {
+          // Derive anchor from last item in selectedIds (Set preserves insertion order)
+          const ids = [...selectedIds];
+          const lastSelected = ids[ids.length - 1];
+          const anchorIdx = groupTxIds.indexOf(lastSelected);
+          const targetIdx = groupTxIds.indexOf(id);
+
+          if (anchorIdx !== -1 && targetIdx !== -1) {
+            const start = Math.min(anchorIdx, targetIdx);
+            const end = Math.max(anchorIdx, targetIdx);
+            const rangeIds = groupTxIds.slice(start, end + 1);
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              for (const rid of rangeIds) next.add(rid);
+              return next;
+            });
+            return;
+          }
+        }
+      }
+
+      // Normal single toggle
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [selectedIds, groupTxIdsMap],
+  );
 
   const { query: accountsQuery } = useAccounts();
   const accounts = accountsQuery.data ?? [];
@@ -327,9 +365,24 @@ export function TransactionsPage() {
 
   const isSelecting = selectedIds.size > 0;
 
+  async function handleSwipeDelete(tx: Transactions.Transaction) {
+    try {
+      let propagation: PropagationSetting | undefined;
+      if (tx.transaction_recurrence_id != null) {
+        propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />);
+      }
+      await deleteTransaction(tx.id, propagation);
+      await invalidateTransactions();
+      successHaptic();
+    } catch {
+      // User dismissed the propagation drawer without confirming.
+    }
+  }
+
   if (isMobile) {
     return (
-      <Stack gap="sm" pb="5rem">
+      <PullToRefresh onRefresh={invalidateTransactions} enabled={!isSelecting}>
+      <Stack gap="sm">
         <Box
           style={{
             position: "sticky",
@@ -342,56 +395,26 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-              <PeriodNavigator
-                month={search.month}
-                year={search.year}
-                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-              />
-              <Group gap="xs" wrap="nowrap">
-                <ActionIcon
-                  size="lg"
-                  variant="filled"
-                  onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
-                  data-testid={TransactionsTestIds.BtnNew}
-                  aria-label="Nova Transação"
-                >
-                  <IconPlus size={18} />
-                </ActionIcon>
-                <Menu shadow="md" width={200}>
-                  <Menu.Target>
-                    <ActionIcon
-                      size="lg"
-                      variant="default"
-                      aria-label="Mais opções"
-                      data-testid={TransactionsTestIds.BtnMoreOptions}
-                    >
-                      <IconDots size={18} />
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Item
-                      leftSection={<IconTableImport size={14} />}
-                      onClick={() => void navigate({ to: "/transactions/import" })}
-                      data-testid={TransactionsTestIds.MenuItemImportTransactions}
-                    >
-                      Importar transações
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
-              </Group>
-            </Group>
+            <PeriodNavigator
+              month={search.month}
+              year={search.year}
+              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+            />
             <TextSearch />
+            <TransactionFilters orientation="row" hideTextSearch scrollable />
           </Stack>
         </Box>
 
         <TransactionList
           currentUserId={currentUserId}
           selectedIds={selectedIds}
-          onSelectTransaction={toggleSelection}
+          onSelectTransaction={handleSelectTransaction}
+          onDeleteTransaction={handleSwipeDelete}
         />
 
-        {isSelecting ? (
+        {!isSelecting && <TransactionFab />}
+
+        {isSelecting && (
           <SelectionActionBar
             count={selectedIds.size}
             onClearSelection={clearSelection}
@@ -401,21 +424,9 @@ export function TransactionsPage() {
             connectedAccountsCount={connectedAccountsCount}
             onDelete={handleDeleteClick}
           />
-        ) : (
-          <MobileBottomBar>
-            <ClearFiltersButton variant="icon" />
-            <ActionIcon
-              size="lg"
-              radius="xl"
-              variant="filled"
-              onClick={() => void renderDrawer(() => <FiltersDrawer />).catch(() => {})}
-              aria-label="Abrir filtros"
-            >
-              <IconFilter size={18} />
-            </ActionIcon>
-          </MobileBottomBar>
         )}
       </Stack>
+      </PullToRefresh>
     );
   }
 
@@ -473,7 +484,7 @@ export function TransactionsPage() {
         </Stack>
       </Box>
 
-      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={toggleSelection} />
+      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={handleSelectTransaction} />
 
       {isSelecting && (
         <SelectionActionBar

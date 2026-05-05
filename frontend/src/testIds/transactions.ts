@@ -55,7 +55,6 @@ export const TransactionsTestIds = {
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
   BtnClearFilters: 'btn_clear_filters',
-  DrawerFilters: 'drawer_transaction_filters',
 
   // Per-kind filter Popover triggers + dropdowns
   BtnFilter: (kind: TransactionFilterKind) => `btn_filter_${kind}` as const,
@@ -67,6 +66,9 @@ export const TransactionsTestIds = {
   CheckboxFilterCategory: (categoryId: number | string) =>
     `checkbox_filter_category_${categoryId}` as const,
   BadgeFilterTag: (tagId: number | string) => `badge_filter_tag_${tagId}` as const,
+
+  // Mobile swipe-to-delete (per row)
+  BtnSwipeDelete: (txId: number | string) => `btn_swipe_delete_${txId}` as const,
 
   // Selection & bulk menu
   SelectionActionBar: 'selection_action_bar',

@@ -1,7 +1,8 @@
-import { ActionIcon, Button, Group, Menu, Text } from '@mantine/core'
+import { Button, Group, Menu, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
+import { tapHaptic, warningHaptic } from '@/utils/haptics'
 
 interface SelectionActionBarProps {
   count: number
@@ -16,21 +17,21 @@ interface SelectionActionBarProps {
 export function SelectionActionBar({ count, onClearSelection, onCategoryChange, onDateChange, onDivisaoChange, connectedAccountsCount, onDelete }: SelectionActionBarProps) {
   return (
     <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
-      <ActionIcon
-        className={classes.closeButton}
-        variant="default"
-        radius="xl"
-        size="md"
-        onClick={onClearSelection}
-        data-testid={TransactionsTestIds.BtnClearSelection}
-        aria-label="Limpar seleção"
-      >
-        <IconX size={14} />
-      </ActionIcon>
-      <Group justify="space-between" align="center">
-        <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
-          {count}
-        </Text>
+      <Group justify="space-between" align="center" style={{ flex: 1 }}>
+        <Group gap="xs" align="center">
+          <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
+            {count}
+          </Text>
+          <Button
+            size="compact-sm"
+            variant="subtle"
+            leftSection={<IconX size={14} />}
+            onClick={() => { tapHaptic(); onClearSelection(); }}
+            data-testid={TransactionsTestIds.BtnClearSelection}
+          >
+            Limpar seleção
+          </Button>
+        </Group>
         <Menu shadow="md" width={200}>
           <Menu.Target>
             <Button
@@ -45,21 +46,21 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
           <Menu.Dropdown>
             <Menu.Item
               leftSection={<IconCategory size={14} />}
-              onClick={onCategoryChange}
+              onClick={() => { tapHaptic(); onCategoryChange(); }}
               data-testid={TransactionsTestIds.BtnBulkCategory}
             >
               Alterar categoria
             </Menu.Item>
             <Menu.Item
               leftSection={<IconCalendar size={14} />}
-              onClick={onDateChange}
+              onClick={() => { tapHaptic(); onDateChange(); }}
               data-testid={TransactionsTestIds.BtnBulkDate}
             >
               Alterar data
             </Menu.Item>
             <Menu.Item
               leftSection={<IconShare size={14} />}
-              onClick={connectedAccountsCount === 0 ? undefined : onDivisaoChange}
+              onClick={connectedAccountsCount === 0 ? undefined : () => { tapHaptic(); onDivisaoChange(); }}
               disabled={connectedAccountsCount === 0}
               data-testid={TransactionsTestIds.BtnBulkDivision}
             >
@@ -73,7 +74,7 @@ export function SelectionActionBar({ count, onClearSelection, onCategoryChange, 
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconTrash size={14} color="var(--mantine-color-red-5)" />}
-              onClick={onDelete}
+              onClick={() => { warningHaptic(); onDelete(); }}
               data-testid={TransactionsTestIds.BtnBulkDelete}
             >
               Excluir

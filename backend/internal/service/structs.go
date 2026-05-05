@@ -14,6 +14,10 @@ type transactionUpdateData struct {
 	transactionIDsToRemove map[int]bool
 	scenario               updateChanges
 	isLinkedTxEdit         bool
+
+	// transferToUserRecurrence caches the recurrence created for the toUser
+	// during rebuildTransferLinkedTransactions so it's reused across installments.
+	transferToUserRecurrence *domain.TransactionRecurrence
 }
 
 type updateScenario int

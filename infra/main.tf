@@ -188,6 +188,16 @@ resource "google_cloud_run_v2_service" "backend" {
         name  = "ENV"
         value = "production"
       }
+
+      env {
+        name = "ALLOWED_ORIGINS"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.allowed_origins.secret_id
+            version = "latest"
+          }
+        }
+      }
     }
   }
 

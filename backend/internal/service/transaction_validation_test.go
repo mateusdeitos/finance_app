@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
@@ -32,7 +31,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagInvalidTransactionType)
@@ -44,7 +43,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       0,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagInvalidAccountID)
@@ -56,7 +55,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      0,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagInvalidCategoryID)
@@ -68,7 +67,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      0,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagInvalidCategoryID)
@@ -80,7 +79,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          0,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
@@ -92,7 +91,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          -100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagAmountMustBeGreaterThanZero)
@@ -104,7 +103,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            time.Time{},
+			Date:            domain.Date{},
 			Description:     "test",
 		})
 		assertTag(err, pkgErrors.ErrorTagDateIsRequired)
@@ -116,7 +115,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "",
 		})
 		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
@@ -128,7 +127,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "   ",
 		})
 		assertTag(err, pkgErrors.ErrorTagDescriptionIsRequired)
@@ -140,7 +139,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 			Tags:            []domain.Tag{{Name: ""}},
 		})
@@ -152,7 +151,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			TransactionType:      domain.TransactionTypeTransfer,
 			AccountID:            1,
 			Amount:               100,
-			Date:                 d,
+			Date:                 domain.Date{Time: d},
 			Description:          "test",
 			DestinationAccountID: nil,
 		})
@@ -165,7 +164,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			TransactionType:      domain.TransactionTypeTransfer,
 			AccountID:            1,
 			Amount:               100,
-			Date:                 d,
+			Date:                 domain.Date{Time: d},
 			Description:          "test",
 			DestinationAccountID: &destID,
 			SplitSettings:        []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
@@ -181,7 +180,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 			AccountID:       1,
 			CategoryID:      1,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "test",
 			SplitSettings:   []domain.SplitSettings{{ConnectionID: 1, Percentage: lo.ToPtr(50)}},
 		})
@@ -208,7 +207,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_RecurrenceValidation()
 			AccountID:          1,
 			CategoryID:         1,
 			Amount:             100,
-			Date:               d,
+			Date:               domain.Date{Time: d},
 			Description:        "test",
 			RecurrenceSettings: r,
 		}
@@ -280,7 +279,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "base transaction",
 	})
 	suite.Require().NoError(err)
@@ -317,10 +316,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ValidationErrors() {
 	})
 
 	suite.Run("date_zero", func() {
-		zeroDate := time.Time{}
 		err := suite.Services.Transaction.Update(ctx, txID, user.ID, &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-			Date:                &zeroDate,
+			Date:                &domain.Date{},
 		})
 		assertTag(err, pkgErrors.ErrorTagDateIsRequired)
 	})
@@ -413,7 +411,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_OwnershipValidation() 
 		AccountID:       accountA.ID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "userA transaction",
 	})
 	suite.Require().NoError(err)
@@ -444,19 +442,19 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ChildTransactionReject
 	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
 	suite.Require().NoError(err)
 
-	categoryA, err := suite.createTestCategory(ctx, userA)
+	accountA, err := suite.createTestAccount(ctx, userA)
 	suite.Require().NoError(err)
 
-	personalA, err := suite.createTestAccount(ctx, userA)
+	categoryA, err := suite.createTestCategory(ctx, userA)
 	suite.Require().NoError(err)
 
 	// Create a split expense — this generates a linked (child) transaction for userB
 	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       personalA.ID,
+		AccountID:       accountA.ID,
 		CategoryID:      categoryA.ID,
 		Amount:          100,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "split expense",
 		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
 	})

@@ -1,19 +1,18 @@
-import { Skeleton, Stack, Text } from "@mantine/core";
+import { Stack, Text } from "@mantine/core";
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useFlattenCategories } from "@/hooks/useCategories";
+import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
-import { useTransactions } from "@/hooks/useTransactions";
 import { Transactions } from "@/types/transactions";
-import { groupTransactions } from "@/utils/groupTransactions";
 import { TransactionGroup } from "./TransactionGroup";
+import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
   currentUserId: number;
   selectedIds?: Set<number>;
-  onSelectTransaction?: (id: number) => void;
+  onSelectTransaction?: (id: number, shiftKey: boolean, groupKey: string) => void;
+  onDeleteTransaction?: (tx: Transactions.Transaction) => void;
 }
 
 function groupNetTotal(
@@ -39,15 +38,12 @@ function groupNetTotal(
   }, 0);
 }
 
-export function TransactionList({ currentUserId, selectedIds, onSelectTransaction }: TransactionListProps) {
+export function TransactionList({ currentUserId, selectedIds, onSelectTransaction, onDeleteTransaction }: TransactionListProps) {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const filters = useActiveFilters();
 
-  const { query: txQuery } = useTransactions({
-    month: search.month,
-    year: search.year,
-    ...filters,
-  });
+  const { groups, accounts, categories, isLoading } = useGroupedTransactions();
+
   const { query: balanceQuery } = useOpeningBalance({
     month: search.month,
     year: search.year,
@@ -55,24 +51,7 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
     hideSettlements: search.hideSettlements,
   });
 
-  const { query: accountsQuery } = useAccounts();
-  const { query: categoriesQuery } = useFlattenCategories();
-  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
-  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
-
   const openingBalance = balanceQuery.data?.balance ?? 0;
-
-  const filtered = useMemo(() => {
-    const transactions = txQuery.data ?? [];
-    if (!search.query) return transactions;
-    const lower = search.query.toLowerCase();
-    return transactions.filter((tx) => tx.description.toLowerCase().includes(lower));
-  }, [txQuery.data, search.query]);
-
-  const groups = useMemo(
-    () => groupTransactions(filtered, search.groupBy, accounts, categories),
-    [filtered, search.groupBy, accounts, categories],
-  );
 
   const groupTotals = useMemo(
     () => groups.map((g) => groupNetTotal(g, search.hideSettlements, filters.accountIds)),
@@ -86,19 +65,8 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
     }, []);
   }, [groupTotals, openingBalance]);
 
-  if (txQuery.isLoading) {
-    return (
-      <Stack gap="sm">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Stack key={i} gap={4}>
-            <Skeleton height={28} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-            <Skeleton height={48} radius="sm" />
-          </Stack>
-        ))}
-      </Stack>
-    );
+  if (isLoading) {
+    return <TransactionListSkeleton />;
   }
 
   if (groups.length === 0) {
@@ -123,7 +91,8 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
           runningBalance={runningBalances[i]}
           isFirst={i === 0}
           selectedIds={selectedIds}
-          onSelectTransaction={onSelectTransaction}
+          onSelectTransaction={onSelectTransaction && ((id, shiftKey) => onSelectTransaction(id, shiftKey, group.key))}
+          onDeleteTransaction={onDeleteTransaction}
           hideSettlements={search.hideSettlements}
         />
       ))}

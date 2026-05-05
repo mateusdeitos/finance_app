@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Button, Drawer, Stack, Text } from '@mantine/core'
+import { Button, Stack, Text } from '@mantine/core'
+import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { IconPlus } from '@tabler/icons-react'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/useCategories'
@@ -44,7 +45,7 @@ export function CreateCategoryDrawer() {
   }
 
   return (
-    <Drawer opened={opened} onClose={reject} title="Categorias" position="right" size="md" data-testid={ImportTestIds.DrawerCreateCategory}>
+    <ResponsiveDrawer opened={opened} onClose={reject} title="Categorias" data-testid={ImportTestIds.DrawerCreateCategory}>
       <Stack gap="sm">
         <Button
           leftSection={<IconPlus size={16} />}
@@ -92,6 +93,6 @@ export function CreateCategoryDrawer() {
           Fechar
         </Button>
       </Stack>
-    </Drawer>
+    </ResponsiveDrawer>
   )
 }

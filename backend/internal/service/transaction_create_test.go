@@ -43,7 +43,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 		TransactionType: domain.TransactionTypeExpense,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            now(),
+		Date:            domain.Date{Time: now()},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{*tag},
 	}
@@ -69,7 +69,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpense() {
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType)
-	suite.Assert().Equal(transaction.Date, transactions[0].Date)
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
 	suite.Assert().Equal(user.ID, transactions[0].UserID)
@@ -118,7 +118,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 		TransactionType: domain.TransactionTypeIncome,
 		CategoryID:      category.ID,
 		Amount:          100,
-		Date:            now(),
+		Date:            domain.Date{Time: now()},
 		Description:     "Test transaction",
 		Tags:            []domain.Tag{*tag},
 	}
@@ -144,7 +144,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncome() {
 	suite.Assert().Equal(transaction.CategoryID, lo.FromPtr(transactions[0].CategoryID))
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount)
 	suite.Assert().Equal(domain.OperationTypeCredit, transactions[0].OperationType)
-	suite.Assert().Equal(transaction.Date, transactions[0].Date)
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date)
 	suite.Assert().Equal(transaction.Description, transactions[0].Description)
 
 	suite.Assert().Equal(user.ID, transactions[0].UserID)
@@ -188,7 +188,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               100,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
@@ -214,7 +214,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Greater(transactions[0].ID, 0, "transactions[0].ID should be greater than 0")
 	suite.Assert().Equal(transaction.AccountID, transactions[0].AccountID, "transactions[0].AccountID should be equal to transaction.AccountID")
 	suite.Assert().Equal(transaction.Amount, transactions[0].Amount, "transactions[0].Amount should be equal to transaction.Amount")
-	suite.Assert().Equal(transaction.Date, transactions[0].Date, "transactions[0].Date should be equal to transaction.Date")
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].Date, "transactions[0].Date should be equal to transaction.Date")
 	suite.Assert().Equal(transaction.Description, transactions[0].Description, "transactions[0].Description should be equal to transaction.Description")
 	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].Type, "transactions[0].Type should be equal to domain.TransactionTypeTransfer")
 	suite.Assert().Equal(domain.OperationTypeDebit, transactions[0].OperationType, "transactions[0].OperationType should be equal to domain.OperationTypeDebit")
@@ -225,7 +225,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransfer() {
 	suite.Assert().Greater(transactions[0].LinkedTransactions[0].ID, 0, "transactions[0].LinkedTransactions[0].ID should be greater than 0")
 	suite.Assert().Equal(account2.ID, transactions[0].LinkedTransactions[0].AccountID, "transactions[0].LinkedTransactions[0].AccountID should be equal to account2.ID")
 	suite.Assert().Equal(transaction.Amount, transactions[0].LinkedTransactions[0].Amount, "transactions[0].LinkedTransactions[0].Amount should be equal to transaction.Amount")
-	suite.Assert().Equal(transaction.Date, transactions[0].LinkedTransactions[0].Date, "transactions[0].LinkedTransactions[0].Date should be equal to transaction.Date")
+	suite.Assert().Equal(transaction.Date.Time, transactions[0].LinkedTransactions[0].Date, "transactions[0].LinkedTransactions[0].Date should be equal to transaction.Date")
 	suite.Assert().Equal(transaction.Description, transactions[0].LinkedTransactions[0].Description, "transactions[0].LinkedTransactions[0].Description should be equal to transaction.Description")
 	suite.Assert().Equal(domain.TransactionTypeTransfer, transactions[0].LinkedTransactions[0].Type, "transactions[0].LinkedTransactions[0].Type should be equal to domain.TransactionTypeTransfer")
 	suite.Assert().Equal(domain.OperationTypeCredit, transactions[0].LinkedTransactions[0].OperationType, "transactions[0].LinkedTransactions[0].OperationType should be equal to domain.OperationTypeCredit")
@@ -274,7 +274,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		DestinationAccountID: lo.ToPtr(account2.ID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               100,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transaction",
 		Tags:                 []domain.Tag{*tag},
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -371,7 +371,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               100,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transfer from user1 to user2",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
@@ -386,7 +386,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 		DestinationAccountID: lo.ToPtr(connection.FromAccountID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               500,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transfer from user2 to user1",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 	}
@@ -536,7 +536,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		DestinationAccountID: lo.ToPtr(connection.ToAccountID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               100,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transfer from user1 to user2",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -556,7 +556,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 		DestinationAccountID: lo.ToPtr(connection.FromAccountID),
 		TransactionType:      domain.TransactionTypeTransfer,
 		Amount:               500,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "Test transfer from user2 to user1",
 		Tags:                 []domain.Tag{{Name: "Test tag"}},
 		RecurrenceSettings: &domain.RecurrenceSettings{
@@ -692,7 +692,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			CategoryID:      category.ID,
 			TransactionType: domain.TransactionTypeExpense,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "Test daily expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
@@ -706,7 +706,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			CategoryID:      category.ID,
 			TransactionType: domain.TransactionTypeExpense,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "Test weekly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
@@ -720,7 +720,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			CategoryID:      category.ID,
 			TransactionType: domain.TransactionTypeExpense,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "Test monthly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
@@ -734,7 +734,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 			CategoryID:      category.ID,
 			TransactionType: domain.TransactionTypeExpense,
 			Amount:          100,
-			Date:            d,
+			Date:            domain.Date{Time: d},
 			Description:     "Test yearly expense",
 			Tags:            []domain.Tag{*tag},
 			RecurrenceSettings: &domain.RecurrenceSettings{
@@ -866,7 +866,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -991,7 +991,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Shared income",
 		TransactionType: domain.TransactionTypeIncome,
 		SplitSettings: []domain.SplitSettings{
@@ -1100,7 +1100,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Shared expense",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -1246,7 +1246,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseWithToUser
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "Test transaction",
 		TransactionType: domain.TransactionTypeExpense,
 		SplitSettings: []domain.SplitSettings{
@@ -1344,7 +1344,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of
 		TransactionType: domain.TransactionTypeExpense,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            baseDate,
+		Date:            domain.Date{Time: baseDate},
 		Description:     "TST-01 recurring expense",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1407,7 +1407,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom3of
 		TransactionType: domain.TransactionTypeExpense,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            baseDate,
+		Date:            domain.Date{Time: baseDate},
 		Description:     "TST-02 recurring expense",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1487,7 +1487,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount(
 		AccountID:       conn.FromAccountID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "shared account expense",
 	})
 	suite.Require().NoError(err)
@@ -1553,7 +1553,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateIncomeOnSharedAccount()
 		AccountID:       conn.FromAccountID,
 		CategoryID:      category.ID,
 		Amount:          amount,
-		Date:            d,
+		Date:            domain.Date{Time: d},
 		Description:     "shared account income",
 	})
 	suite.Require().NoError(err)
@@ -1596,7 +1596,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateExpenseOnSharedAccount_
 		AccountID:       conn.FromAccountID,
 		CategoryID:      category.ID,
 		Amount:          1000,
-		Date:            now(),
+		Date:            domain.Date{Time: now()},
 		Description:     "should fail",
 		SplitSettings: []domain.SplitSettings{
 			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
@@ -1625,7 +1625,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateTransferOnSharedAccount
 		AccountID:            conn.FromAccountID,
 		DestinationAccountID: lo.ToPtr(account.ID),
 		Amount:               1000,
-		Date:                 now(),
+		Date:                 domain.Date{Time: now()},
 		Description:          "should fail",
 	})
 	suite.Assert().Error(err)
@@ -1650,7 +1650,7 @@ func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsMissingC
 		AccountID:       1,
 		CategoryID:      1,
 		Amount:          100,
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1670,7 +1670,7 @@ func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsCurrentG
 		AccountID:       1,
 		CategoryID:      1,
 		Amount:          100,
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,
@@ -1690,7 +1690,7 @@ func (suite *TransactionCreateValidationTestSuite) TestValidationRejectsTotalGre
 		AccountID:       1,
 		CategoryID:      1,
 		Amount:          100,
-		Date:            time.Now(),
+		Date:            domain.Date{Time: time.Now()},
 		Description:     "test",
 		RecurrenceSettings: &domain.RecurrenceSettings{
 			Type:               domain.RecurrenceTypeMonthly,

@@ -3,7 +3,7 @@ import { Charges } from '@/types/charges'
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 export async function fetchCharges(params: Charges.FetchParams): Promise<Charges.ListResponse> {
-  const url = new URL(`${apiUrl}/api/charges`)
+  const url = new URL(`${apiUrl}/api/charges`, window.location.origin)
   url.searchParams.set('month', String(params.month))
   url.searchParams.set('year', String(params.year))
   if (params.direction) url.searchParams.set('direction', params.direction)

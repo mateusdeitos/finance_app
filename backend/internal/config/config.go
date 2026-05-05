@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -58,10 +59,11 @@ type OAuthProviderConfig struct {
 }
 
 type AppConfig struct {
-	URL         string
-	FrontendURL string
-	Env         string
-	LogLevel    string
+	URL            string
+	FrontendURL    string
+	AllowedOrigins []string
+	Env            string
+	LogLevel       string
 }
 
 func Load(files ...string) (*Config, error) {
@@ -99,10 +101,11 @@ func Load(files ...string) (*Config, error) {
 			SessionSecret: getEnv("OAUTH_SESSION_SECRET", "change-me-in-production"),
 		},
 		App: AppConfig{
-			URL:         getEnv("APP_URL", "http://localhost:8080"),
-			FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
-			Env:         getEnv("ENV", "development"),
-			LogLevel:    getEnv("LOG_LEVEL", "info"),
+			URL:            getEnv("APP_URL", "http://localhost:8080"),
+			FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:3000"),
+			AllowedOrigins: parseCSV(getEnv("ALLOWED_ORIGINS", "")),
+			Env:            getEnv("ENV", "development"),
+			LogLevel:       getEnv("LOG_LEVEL", "info"),
 		},
 	}
 
@@ -122,4 +125,18 @@ func getEnvAsInt(key string, defaultValue int) int {
 		return value
 	}
 	return defaultValue
+}
+
+func parseCSV(value string) []string {
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

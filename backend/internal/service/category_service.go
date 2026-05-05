@@ -210,29 +210,31 @@ func (s *categoryService) Delete(ctx context.Context, userID, id int, req domain
 // checkSiblingUniqueness returns an error if a sibling with the same trimmed, case-insensitive name exists.
 // excludeID = 0 means no exclusion (create case); pass the category's own ID for update.
 func (s *categoryService) checkSiblingUniqueness(ctx context.Context, userID int, parentID *int, name string, excludeID int) error {
-	siblings, err := s.categoryRepo.Search(ctx, domain.CategorySearchOptions{
+	trimmed := strings.TrimSpace(name)
+	opts := domain.CategorySearchOptions{
 		UserIDs: []int{userID},
-	})
+		Name:    &trimmed,
+		Limit:   1,
+	}
+	if parentID != nil {
+		opts.ParentID = parentID
+	} else {
+		opts.OnlyRootLevel = true
+	}
+	if excludeID != 0 {
+		opts.ExcludeIDs = []int{excludeID}
+	}
+	siblings, err := s.categoryRepo.Search(ctx, opts)
 	if err != nil {
 		return pkgErrors.Internal("failed to check sibling categories", err)
 	}
 
-	trimmed := strings.ToLower(strings.TrimSpace(name))
-	for _, sibling := range siblings {
-		if excludeID != 0 && sibling.ID == excludeID {
-			continue
-		}
-		// Same parent level check
-		if lo.FromPtr(sibling.ParentID) != lo.FromPtr(parentID) {
-			continue
-		}
-		if strings.ToLower(strings.TrimSpace(sibling.Name)) == trimmed {
-			return pkgErrors.NewWithTag(
-				pkgErrors.ErrCodeValidation,
-				[]string{string(pkgErrors.ErrorTagDuplicateCategoryName)},
-				"a category with this name already exists at this level",
-			)
-		}
+	if len(siblings) > 0 {
+		return pkgErrors.NewWithTag(
+			pkgErrors.ErrCodeValidation,
+			[]string{string(pkgErrors.ErrorTagDuplicateCategoryName)},
+			"a category with this name already exists at this level",
+		)
 	}
 	return nil
 }

@@ -42,6 +42,13 @@ resource "google_secret_manager_secret" "google_client_secret" {
   }
 }
 
+resource "google_secret_manager_secret" "allowed_origins" {
+  secret_id = "ALLOWED_ORIGINS"
+  replication {
+    auto {}
+  }
+}
+
 # ── IAM: Cloud Run SA pode ler todos os secrets ───────────────────────────────
 
 locals {
@@ -50,6 +57,7 @@ locals {
     "JWT_SECRET",
     "OAUTH_SESSION_SECRET",
     "GOOGLE_CLIENT_SECRET",
+    "ALLOWED_ORIGINS",
   ])
 }
 

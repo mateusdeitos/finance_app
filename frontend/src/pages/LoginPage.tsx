@@ -9,8 +9,9 @@ export function LoginPage() {
 
   function handleGoogleLogin() {
     const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
-    const url = new URL(`${apiUrl}/auth/google`)
+    const url = new URL(`${apiUrl}/auth/google`, window.location.origin)
     if (redirectTo) url.searchParams.set('redirect', redirectTo)
+    url.searchParams.set('origin', window.location.origin)
     window.location.href = url.toString()
   }
 

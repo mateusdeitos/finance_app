@@ -4,7 +4,6 @@ import { checkDuplicateTransaction } from '@/api/transactions'
 
 interface Args {
   date: string
-  description: string
   amount: number
   accountId: number
   /**
@@ -19,12 +18,11 @@ interface Args {
 
 /**
  * Re-checks the import row against the backend for duplicates whenever the
- * date / description / amount change (debounced). Skips the initial mount
- * because the backend already returned duplicate status for the parsed CSV.
+ * date / amount change (debounced). Skips the initial mount because the
+ * backend already returned duplicate status for the parsed CSV.
  */
 export function useDuplicateTransactionCheck({
   date,
-  description,
   amount,
   accountId,
   getCurrentAction,
@@ -32,7 +30,6 @@ export function useDuplicateTransactionCheck({
   debounceMs = 500,
 }: Args) {
   const [debouncedDate] = useDebouncedValue(date, debounceMs)
-  const [debouncedDescription] = useDebouncedValue(description, debounceMs)
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
 
   const isFirstRender = useRef(true)
@@ -42,11 +39,10 @@ export function useDuplicateTransactionCheck({
       isFirstRender.current = false
       return
     }
-    if (!debouncedDate || !debouncedDescription || !debouncedAmount || debouncedAmount <= 0) return
+    if (!debouncedDate || !debouncedAmount || debouncedAmount <= 0) return
 
     void checkDuplicateTransaction({
       date: debouncedDate,
-      description: debouncedDescription,
       amount: debouncedAmount,
       account_id: accountId,
     })
@@ -61,8 +57,8 @@ export function useDuplicateTransactionCheck({
       .catch(() => {
         /* ignore network errors */
       })
-    // Only react to the three debounced values; getCurrentAction/setAction
+    // Only react to the two debounced values; getCurrentAction/setAction
     // are stable RHF callbacks in practice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDate, debouncedDescription, debouncedAmount])
+  }, [debouncedDate, debouncedAmount])
 }

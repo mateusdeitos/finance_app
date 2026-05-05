@@ -1,17 +1,18 @@
-import { Drawer, Group, Stack, Text, UnstyledButton } from '@mantine/core'
-import { useCategories } from '@/hooks/useCategories'
-import { Transactions } from '@/types/transactions'
-import { useDrawerContext } from '@/utils/renderDrawer'
-import { TransactionsTestIds } from '@/testIds'
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
+import { useFlattenCategories } from "@/hooks/useCategories";
+import { Transactions } from "@/types/transactions";
+import { useDrawerContext } from "@/utils/renderDrawer";
+import { TransactionsTestIds } from "@/testIds";
 
 function CategoryRow({
   category,
   depth,
   onSelect,
 }: {
-  category: Transactions.Category
-  depth: number
-  onSelect: (c: Transactions.Category) => void
+  category: Transactions.Category;
+  depth: number;
+  onSelect: (c: Transactions.Category) => void;
 }) {
   return (
     <>
@@ -21,8 +22,8 @@ function CategoryRow({
         px="sm"
         style={{
           paddingLeft: `calc(${depth} * var(--mantine-spacing-lg) + var(--mantine-spacing-sm))`,
-          borderRadius: 'var(--mantine-radius-sm)',
-          width: '100%',
+          borderRadius: "var(--mantine-radius-sm)",
+          width: "100%",
         }}
         data-testid={TransactionsTestIds.CategoryOption(category.id)}
       >
@@ -35,21 +36,19 @@ function CategoryRow({
         <CategoryRow key={child.id} category={child} depth={depth + 1} onSelect={onSelect} />
       ))}
     </>
-  )
+  );
 }
 
 export function SelectCategoryDrawer() {
-  const { opened, close, reject } = useDrawerContext<Transactions.Category>()
-  const { query } = useCategories()
-  const categories = query.data ?? []
+  const { opened, close, reject } = useDrawerContext<Transactions.Category>();
+  const { query } = useFlattenCategories();
+  const categories = query.data ?? [];
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title="Selecionar categoria"
-      position="right"
-      size="md"
       data-testid={TransactionsTestIds.DrawerSelectCategory}
     >
       <Stack gap={4}>
@@ -63,6 +62,6 @@ export function SelectCategoryDrawer() {
           ))
         )}
       </Stack>
-    </Drawer>
-  )
+    </ResponsiveDrawer>
+  );
 }
