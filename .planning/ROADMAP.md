@@ -69,11 +69,11 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 <details open>
 <summary>🔄 v1.5 Import Transactions Performance — ACTIVE</summary>
 
-- [ ] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline (50/200/500-row CSV fixtures) using React DevTools Profiler so the milestone has numeric before/after evidence
+- [ ] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in `npm run preview` mode
 - [ ] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
 - [ ] **Phase 18: Move Select Options to Query `select`** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks so Mantine `Select.data` receives stable references across row renders
 - [ ] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating so date/amount edits stop firing N requests across hundreds of subscribed rows
-- [ ] **Phase 20: Virtualize Import Review Table** — Introduce `@tanstack/react-virtual` and convert `<Table>` to a CSS-grid layout so CSVs with hundreds of rows render only visible rows (~10–15 in DOM)
+- [ ] **Phase 20: Virtualize Import Review Table** *(gated post-P19)* — Introduce `@tanstack/react-virtual` and convert `<Table>` to a CSS-grid layout. With 100-row hard limit, this is future-proofing + extra polish; orchestrator may skip if P19 measurements already meet the perf bar
 - [ ] **Phase 21: Verification & E2E Coverage** — Re-run profiler vs baseline, run lint/build/e2e suite, add 1 new e2e covering edit-after-scroll on a >100-row CSV, plus a manual smoke test
 
 </details>
@@ -105,15 +105,16 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Status:** Shipped (v1.4) — see `.planning/milestones/v1.4-ROADMAP.md`
 
 ### Phase 16: Baseline Profiling & Diagnostics
-**Goal**: A reproducible CSV fixture (50/200/500 rows) and a documented React DevTools Profiler baseline exist so subsequent phases can be measured against numeric before/after evidence
+**Goal**: A reproducible 100-row CSV fixture and a documented React DevTools Profiler baseline (production preview build) exist so subsequent phases can be measured against numeric before/after evidence
 **Depends on**: Nothing (first phase of v1.5)
 **Requirements**: PROF-01, PROF-02, PROF-03
 **Success Criteria** (what must be TRUE):
-  1. A CSV fixture (or generator script) under `frontend/scripts/` produces deterministic 50/200/500-row CSVs that the import flow accepts end-to-end
-  2. `babel-plugin-react-compiler` is verified active in the dev/build pipeline (Vite config + build output check), and the result is documented
-  3. A baseline profile (component re-render count and commit duration for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 row select on a 200-row CSV) is captured and saved to a referenceable artifact in `.planning/`
-  4. The page-level `useWatch({ name: 'rows' })` re-render hypothesis is empirically validated against the profile (or contradicted, with the actual culprit identified)
+  1. A TS generator script under `frontend/scripts/` produces a deterministic 100-row CSV (matching the system's hard-limit max) that the import flow accepts end-to-end; `buildCsvContent` is centralized in `frontend/e2e/helpers/csv.ts` (consumed by both the generator and the 4 e2e files that currently inline it)
+  2. `babel-plugin-react-compiler` is empirically checked in the production build (`vite.config.ts` plugin chain + `npm run build` output); the result (active/inactive) is documented in `16-PERF-BASELINE.md`. Wiring is **not** changed in this phase — Phase 17 absorbs it if needed
+  3. A baseline profile (commit duration ms + rendered component count for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 shift-click row select; all on a fixed mid-list row of the 100-row fixture, captured in `npm run preview` mode with React DevTools) is saved to `.planning/phases/16-baseline-profiling/16-PERF-BASELINE.md`
+  4. The page-level `useWatch({ name: 'rows' })` re-render hypothesis is empirically validated against the profile; if contradicted, an additional `16-DIAGNOSIS.md` is produced naming the actual culprit and recommending replan changes (the roadmap is **not** auto-edited)
 **Plans:** TBD (defined during plan-phase)
+**Context:** `.planning/phases/16-baseline-profiling/16-CONTEXT.md`
 
 ### Phase 17: Eliminate Page-Level useWatch Cascade
 **Goal**: Per-row field edits no longer re-render `ImportTransactionsPage` — the page subscribes only to derived aggregates via `useWatch` `compute` callbacks
@@ -149,9 +150,9 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Plans:** TBD
 
 ### Phase 20: Virtualize Import Review Table
-**Goal**: Importing CSVs with hundreds of rows renders only the rows in (and near) the viewport, using `@tanstack/react-virtual`, while preserving the existing form behavior, popovers, and scroll-to-error UX
+**Goal**: The 100-row import review renders only rows in (and near) the viewport via `@tanstack/react-virtual`, while preserving the existing form behavior, popovers, and scroll-to-error UX. **Gated post-Phase 19** — if Phase 19 already brings the 100-row fixture to a fluid baseline, this phase is downsized or skipped at the orchestrator's call.
 **Depends on**: Phase 19
-**Requirements**: VIRT-01, VIRT-02, VIRT-03
+**Requirements**: VIRT-01, VIRT-02, VIRT-03 (under review)
 **Success Criteria** (what must be TRUE):
   1. `@tanstack/react-virtual` is installed and `ImportTransactionsPage` uses `useVirtualizer` over `fields` with `overscan` configured
   2. Mantine `Table.Tr`/`Table.Td` is replaced by a CSS-grid based row layout (`<div role="row" />` + `<div role="cell" />`) with the column template applied at the row level so headers and rows align without a `<table>` element

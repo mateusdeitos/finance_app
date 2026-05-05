@@ -10,9 +10,9 @@ Eliminate per-keystroke lag on the transaction-import review screen and keep the
 
 ### Profiling & Diagnostics
 
-- [ ] **PROF-01**: A reproducible CSV fixture (or generator script) under `frontend/scripts/` produces deterministic 50-row, 200-row, and 500-row test inputs that the existing import flow accepts end-to-end without manual editing
-- [ ] **PROF-02**: `babel-plugin-react-compiler` is empirically verified active in the dev/build pipeline (Vite config inspection + build-output inspection); the result is documented inline in the baseline artifact
-- [ ] **PROF-03**: A baseline profile (component re-render count + commit duration for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 row select, all on the 200-row fixture) is captured via React DevTools Profiler and persisted to a referenceable artifact in `.planning/`
+- [ ] **PROF-01**: A reproducible CSV fixture (TS generator script under `frontend/scripts/`) produces a deterministic 100-row test input that the existing import flow accepts end-to-end without manual editing. The 100-row size matches the system's current hard-limit on import row count, so the fixture represents the production worst case
+- [ ] **PROF-02**: `babel-plugin-react-compiler` is empirically checked in the production build pipeline (`vite.config.ts` plugin chain inspection + `npm run build` output inspection for compiler-emitted markers); the result (active or inactive) is documented inline in the baseline artifact. If inactive, the wiring change is **not** done in Phase 16 — it is absorbed into Phase 17
+- [ ] **PROF-03**: A baseline profile (commit duration in ms + rendered component count for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 row select via shift-click, all on a fixed mid-list row of the 100-row fixture) is captured via React DevTools Profiler in production preview mode (`npm run build && npm run preview`) and persisted to `.planning/phases/16-baseline-profiling/16-PERF-BASELINE.md`. If the page-level `useWatch({ name: 'rows' })` hypothesis is contradicted by the profiler, an additional `16-DIAGNOSIS.md` naming the actual culprit and recommending replan changes is produced
 
 ### Re-render Reduction
 
@@ -26,7 +26,9 @@ Eliminate per-keystroke lag on the transaction-import review screen and keep the
 - [ ] **NET-01**: `useDuplicateTransactionCheck` is gated by `enabled: action === 'import'` so rows already marked `skip` or `duplicate` do not contribute subscriptions or checks
 - [ ] **NET-02**: The hook applies a debounce (200–300ms) on the `[date, amount]` dependency before triggering any cache lookup or network call; editing a single row's amount on a 500-row CSV does not produce a sustained burst of duplicate-check calls (verified via Network panel or instrumentation), while true duplicates are still detected and flip `action` to `duplicate` on the debounced trigger
 
-### Virtualization
+### Virtualization (scope under review post-Phase 19)
+
+> **Gate:** the import flow has a 100-row hard limit. With root-cause fixes in Phases 17–19, the 100-row fixture may already be fluid, in which case Phase 20 is downsized or skipped. The orchestrator decides at the P19 → P20 transition based on Phase 19 measurements vs. the Phase 16 baseline. If kept, the requirements below stand as-is.
 
 - [ ] **VIRT-01**: `@tanstack/react-virtual` is installed and `ImportTransactionsPage` uses `useVirtualizer` over the `useFieldArray` `fields`, with sensible `overscan` and `estimateSize` for the row layout
 - [ ] **VIRT-02**: The Mantine `Table` block is replaced by a CSS-grid layout — the header row and each `ImportReviewRow` use the same `grid-template-columns` so columns align without a `<table>` element; `forwardRef` on `ImportReviewRow` is preserved for the existing `rowRefs` mechanism
@@ -34,9 +36,9 @@ Eliminate per-keystroke lag on the transaction-import review screen and keep the
 
 ### Verification & Testing
 
-- [ ] **TEST-01**: A new Playwright e2e test imports a >100-row CSV, scrolls to a row that was never in the initial viewport, edits a field in that row, scrolls back, and asserts the edit persisted — proving form state survives virtualization unmount/remount
+- [ ] **TEST-01**: If Phase 20 ships, a new Playwright e2e test imports the 100-row fixture, scrolls to a row that was never in the initial viewport, edits a field in that row, scrolls back, and asserts the edit persisted — proving form state survives virtualization unmount/remount. If Phase 20 is skipped at the P19 gate, this requirement is dropped
 - [ ] **TEST-02**: The existing import e2e suite (`frontend/e2e/tests/import*.spec.ts`) and `npm run lint` + `npm run build` all pass against the v1.5 code
-- [ ] **TEST-03**: Phase-21 re-runs the Phase-16 profile scenarios on the same 50/200/500-row fixtures; the comparison artifact (post vs. baseline) is saved alongside the baseline and shows measurable improvement on at least the 200-row description-keystroke commit duration
+- [ ] **TEST-03**: Phase 21 re-runs the Phase 16 profile scenarios on the same 100-row fixture; the comparison artifact (post vs. baseline) is saved alongside the baseline and shows measurable improvement on at least the description-keystroke commit duration
 
 ## Future Requirements
 
@@ -80,6 +82,12 @@ Eliminate per-keystroke lag on the transaction-import review screen and keep the
 - Mapped to phases: 15 (Phase 16: 3 · Phase 17: 2 · Phase 18: 2 · Phase 19: 2 · Phase 20: 3 · Phase 21: 3)
 - Unmapped: 0
 
+## Constraints
+
+- **Hard limit: 100 rows per CSV import.** This is a system constraint of the existing import flow; v1.5 does not change it. The 100-row figure is treated as the production worst case for all baseline and verification metrics.
+- **Frontend-only milestone.** Backend code, the import payload contract, and the duplicate-detection API are unchanged.
+- **Production preview is the measurement environment.** All before/after metrics are captured via `npm run build && npm run preview`. Dev mode (Vite dev server with `<StrictMode>` double-render) is not authoritative for v1.5 numbers.
+
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 — roadmap created (Phases 16–21)*
+*Last updated: 2026-05-05 — Phase 16 context locked: 100-row hard limit, prod-build measurement, P20 gated post-P19, compiler wiring deferred to P17*
