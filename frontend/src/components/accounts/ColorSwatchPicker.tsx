@@ -3,7 +3,7 @@ import { AccountsTestIds } from '@/testIds'
 
 export const DEFAULT_AVATAR_COLOR = "#457b9d"
 
-const PRESET_COLORS = [
+export const PRESET_COLORS = [
   "#e63946",  // red
   "#ef7819",  // orange
   "#2a9d8f",  // teal

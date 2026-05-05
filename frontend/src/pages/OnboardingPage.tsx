@@ -7,10 +7,12 @@ import { useCompleteOnboarding, useOnboardingStatus } from '@/hooks/useOnboardin
 import { AccountsStep } from '@/components/onboarding/AccountsStep'
 import { CategoriesStep } from '@/components/onboarding/CategoriesStep'
 import { ImportStep } from '@/components/onboarding/ImportStep'
+import { PRESET_COLORS } from '@/components/accounts/ColorSwatchPicker'
 import {
-  SUGGESTED_ACCOUNTS,
-  SUGGESTED_CATEGORIES,
-  type SuggestedCategory,
+  buildInitialAccounts,
+  buildInitialCategories,
+  type OnboardingAccount,
+  type OnboardingCategoryItem,
 } from '@/components/onboarding/onboardingDefaults'
 import type { OnboardingSetupRequest } from '@/api/onboarding'
 import { OnboardingTestIds } from '@/testIds'
@@ -19,27 +21,10 @@ const STEP_ACCOUNTS = 0
 const STEP_CATEGORIES = 1
 const STEP_IMPORT = 2
 
-function buildInitialSlugs(items: { slug: string }[]): Set<string> {
-  return new Set(items.map((i) => i.slug))
-}
-
-function buildInitialCategorySlugs(categories: SuggestedCategory[]): Set<string> {
-  const slugs = new Set<string>()
-  categories.forEach((parent) => {
-    slugs.add(parent.slug)
-    parent.children?.forEach((child) => slugs.add(child.slug))
-  })
-  return slugs
-}
-
 export function OnboardingPage() {
   const [step, setStep] = useState(STEP_ACCOUNTS)
-  const [selectedAccountSlugs, setSelectedAccountSlugs] = useState<Set<string>>(() =>
-    buildInitialSlugs(SUGGESTED_ACCOUNTS),
-  )
-  const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<Set<string>>(() =>
-    buildInitialCategorySlugs(SUGGESTED_CATEGORIES),
-  )
+  const [accounts, setAccounts] = useState<OnboardingAccount[]>(buildInitialAccounts)
+  const [categories, setCategories] = useState<OnboardingCategoryItem[]>(buildInitialCategories)
 
   const { invalidate: invalidateOnboarding } = useOnboardingStatus()
   const { invalidate: invalidateAccounts } = useAccounts()
@@ -54,43 +39,105 @@ export function OnboardingPage() {
     },
   })
 
-  const payload = useMemo<OnboardingSetupRequest>(() => {
-    const accounts = SUGGESTED_ACCOUNTS.filter((a) => selectedAccountSlugs.has(a.slug)).map((a) => ({
-      name: a.name,
-      initial_balance: a.initial_balance,
-      avatar_background_color: a.avatar_background_color,
-    }))
+  // --- Account handlers ---
 
-    const categories = SUGGESTED_CATEGORIES.filter((c) => selectedCategorySlugs.has(c.slug)).map(
-      (parent) => ({
-        name: parent.name,
-        emoji: parent.emoji,
-        children: (parent.children ?? [])
-          .filter((child) => selectedCategorySlugs.has(child.slug))
-          .map((child) => ({ name: child.name, emoji: child.emoji })),
+  function toggleAccount(id: string) {
+    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, selected: !a.selected } : a)))
+  }
+
+  function updateAccountBalance(id: string, cents: number) {
+    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, initial_balance: cents } : a)))
+  }
+
+  function updateAccountDescription(id: string, description: string) {
+    setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, description } : a)))
+  }
+
+  function addAccount(name: string) {
+    const usedColors = new Set(accounts.map((a) => a.avatar_background_color))
+    const nextColor = PRESET_COLORS.find((c) => !usedColors.has(c)) ?? PRESET_COLORS[accounts.length % PRESET_COLORS.length]
+    const id = `custom_${Date.now()}`
+    setAccounts((prev) => [
+      ...prev,
+      { id, name, description: '', initial_balance: 0, avatar_background_color: nextColor, selected: true, isCustom: true },
+    ])
+  }
+
+  function removeAccount(id: string) {
+    setAccounts((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  // --- Category handlers ---
+
+  function toggleCategory(id: string) {
+    setCategories((prev) =>
+      prev.map((p) => {
+        if (p.id === id) return { ...p, selected: !p.selected }
+        return { ...p, children: p.children.map((c) => (c.id === id ? { ...c, selected: !c.selected } : c)) }
       }),
     )
+  }
 
-    return { accounts, categories }
-  }, [selectedAccountSlugs, selectedCategorySlugs])
+  function updateCategoryName(id: string, name: string) {
+    setCategories((prev) =>
+      prev.map((p) => {
+        if (p.id === id) return { ...p, name }
+        return { ...p, children: p.children.map((c) => (c.id === id ? { ...c, name } : c)) }
+      }),
+    )
+  }
 
-  function toggleAccount(slug: string) {
-    setSelectedAccountSlugs((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
+  function addParentCategory(name: string) {
+    const id = `custom_${Date.now()}`
+    setCategories((prev) => [
+      ...prev,
+      { id, name, emoji: '📌', selected: true, isCustom: true, children: [] },
+    ])
+  }
+
+  function addChildCategory(parentId: string, name: string) {
+    const id = `custom_${Date.now()}_child`
+    setCategories((prev) =>
+      prev.map((p) =>
+        p.id === parentId
+          ? { ...p, children: [...p.children, { id, name, emoji: '📌', selected: true, isCustom: true, children: [] }] }
+          : p,
+      ),
+    )
+  }
+
+  function removeCategory(id: string) {
+    setCategories((prev) => {
+      const withoutParent = prev.filter((p) => p.id !== id)
+      if (withoutParent.length < prev.length) return withoutParent
+      return prev.map((p) => ({ ...p, children: p.children.filter((c) => c.id !== id) }))
     })
   }
 
-  function toggleCategory(slug: string) {
-    setSelectedCategorySlugs((prev) => {
-      const next = new Set(prev)
-      if (next.has(slug)) next.delete(slug)
-      else next.add(slug)
-      return next
-    })
-  }
+  // --- Payload ---
+
+  const payload = useMemo<OnboardingSetupRequest>(() => {
+    const accs = accounts
+      .filter((a) => a.selected)
+      .map((a) => ({
+        name: a.name,
+        description: a.description || undefined,
+        initial_balance: a.initial_balance,
+        avatar_background_color: a.avatar_background_color,
+      }))
+
+    const cats = categories
+      .filter((c) => c.selected)
+      .map((p) => ({
+        name: p.name,
+        emoji: p.emoji,
+        children: p.children
+          .filter((c) => c.selected)
+          .map((c) => ({ name: c.name, emoji: c.emoji })),
+      }))
+
+    return { accounts: accs, categories: cats }
+  }, [accounts, categories])
 
   function handleSubmit() {
     completeMutation.mutate(payload)
@@ -125,16 +172,22 @@ export function OnboardingPage() {
         <Paper withBorder radius="md" p="md">
           {step === STEP_ACCOUNTS && (
             <AccountsStep
-              accounts={SUGGESTED_ACCOUNTS}
-              selectedSlugs={selectedAccountSlugs}
+              accounts={accounts}
               onToggle={toggleAccount}
+              onUpdateBalance={updateAccountBalance}
+              onUpdateDescription={updateAccountDescription}
+              onAddAccount={addAccount}
+              onRemoveAccount={removeAccount}
             />
           )}
           {step === STEP_CATEGORIES && (
             <CategoriesStep
-              categories={SUGGESTED_CATEGORIES}
-              selectedSlugs={selectedCategorySlugs}
+              categories={categories}
               onToggle={toggleCategory}
+              onUpdateName={updateCategoryName}
+              onAddParent={addParentCategory}
+              onAddChild={addChildCategory}
+              onRemove={removeCategory}
             />
           )}
           {step === STEP_IMPORT && <ImportStep />}
