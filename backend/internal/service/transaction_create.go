@@ -293,6 +293,7 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 			AccountID:           accountID,
 			SourceTransactionID: authorTransaction.ID,
 			ParentTransactionID: lt.ID,
+			Date:                authorTransaction.Date,
 		})
 		if err != nil {
 			return err

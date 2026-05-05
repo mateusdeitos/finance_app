@@ -253,7 +253,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 			s.account_id AS account_id,
 			t.category_id AS category_id,
 			s.amount AS amount,
-			t.date AS date,
+			s.date AS date,
 			t.description AS description,
 			s.source_transaction_id AS source_transaction_id,
 			s.created_at AS created_at,
@@ -265,10 +265,10 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 		Where("t.account_id NOT IN ?", filter.AccountIDs)
 
 	if filter.StartDate != nil && filter.StartDate.IsValid() {
-		query = query.Where(filter.StartDate.ToSQL("t.date"))
+		query = query.Where(filter.StartDate.ToSQL("s.date"))
 	}
 	if filter.EndDate != nil && filter.EndDate.IsValid() {
-		query = query.Where(filter.EndDate.ToSQL("t.date"))
+		query = query.Where(filter.EndDate.ToSQL("s.date"))
 	}
 
 	if err := query.Scan(&rows).Error; err != nil {
