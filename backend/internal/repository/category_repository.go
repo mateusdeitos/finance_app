@@ -55,7 +55,7 @@ func (r *categoryRepository) Search(ctx context.Context, options domain.Category
 		query = query.Where("LOWER(name) = LOWER(?)", *options.Name)
 	}
 
-	query = query.Order("parent_id desc, name ASC")
+	query = query.Order("id ASC")
 
 	if options.Limit > 0 {
 		query = query.Limit(options.Limit)
