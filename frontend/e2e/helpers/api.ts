@@ -201,7 +201,17 @@ export async function getAuthTokenForUser(email: string): Promise<string> {
   const setCookie = res.headers.get("set-cookie");
   const match = setCookie?.match(/auth_token=([^;]+)/);
   if (!match) throw new Error("No auth_token in response");
-  return match[1];
+  const token = match[1];
+
+  // Auto-complete onboarding so the user isn't redirected away from test pages
+  await apiFetchAs(token, "/api/onboarding/complete", {
+    method: "POST",
+    body: JSON.stringify({ accounts: [], categories: [] }),
+  }).catch(() => {
+    /* ignore if already completed */
+  });
+
+  return token;
 }
 
 /** Open a new Playwright page authenticated as the given user token. */

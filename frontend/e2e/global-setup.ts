@@ -59,6 +59,19 @@ async function globalSetup() {
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true })
   fs.writeFileSync(STORAGE_STATE_PATH, JSON.stringify(storageState, null, 2))
 
+  // Auto-complete onboarding so the user isn't redirected to /onboarding
+  const token = cookieMatch[1]
+  await fetch(`${BACKEND_URL}/api/onboarding/complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ accounts: [], categories: [] }),
+  }).catch(() => {
+    /* ignore if already completed */
+  })
+
   console.log(`✓ Test user authenticated: ${TEST_USER_EMAIL}`)
 
   // Verify the cookie works by launching a browser and navigating to a protected route
