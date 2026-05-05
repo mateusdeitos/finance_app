@@ -21,8 +21,13 @@ type Settlement struct {
 	AccountID            int            `json:"account_id"`
 	SourceTransactionID  int            `json:"source_transaction_id"`
 	ParentTransactionID  int            `json:"parent_transaction_id"`
+	Date                 time.Time      `json:"date"`
 	CreatedAt            *time.Time     `json:"created_at"`
 	UpdatedAt            *time.Time     `json:"updated_at"`
+}
+
+type SettlementUpdateRequest struct {
+	Date *Date `json:"date,omitempty"`
 }
 
 type SettlementFilter struct {
