@@ -48,21 +48,16 @@ This phase produces measurement artifacts only. No source code under `frontend/s
 #### Addendum 2026-05-05 (during Wave 2 execution) — REVISED COMMAND
 **Discovered constraint:** the standard production build (`npm run build`) bundles `react-dom.production.min.js`, which strips React's profiling instrumentation. React DevTools shows: *"Profiling not supported. Profiling support requires either a development or profiling build of React v16.5+."*
 
-Considered three workarounds; user picked the middle ground:
+**First attempt — REJECTED:** `vite build --mode development && vite preview`. Vite's `--mode development` flag controls `.env` resolution, NOT `process.env.NODE_ENV` for the bundle. The build still picked the React production bundle and the profiler stayed blocked. Lesson: getting React's dev bundle into a Vite **build** requires either an explicit `define` override or the profiling-alias pattern; `--mode` alone is insufficient.
 
-**Revised command (LOCKED):** `cd frontend && npx vite build --mode development && npx vite preview`
-- Tira Terser/minification (build-time)
-- Mantém React em dev bundle → profiler funciona
-- Sem HMR / sem dev-server overhead
-- Sem mudar `vite.config.ts` (decisão original "compiler not wired in P16" preservada)
+**Second (final) revision (LOCKED):** `cd frontend && just profile` → runs `npm run dev` (Vite dev server, port 5173) plus regenerates `/tmp/fixture-100.csv` first. Profiler works out-of-the-box.
+- Sem mudar `vite.config.ts` ✓ (decisão original "compiler not wired in P16" preservada)
+- Profiler funciona sem fricção ✓
+- Trade-offs aceitos:
+  - **HMR adiciona runtime overhead vs prod**. Os ms absolutos não representam prod. Aceito porque Phase 21 vai medir com o mesmo recipe (`just profile`), então a comparação before/after é interna-consistente.
+  - **`<StrictMode>` em `main.tsx:14` duplica todo render em dev React.** Commit duration ~2x, rendered count ~2x. *Quais* componentes re-renderizam e a ordem relativa entre cenários NÃO são afetados — ambas as métricas chave para validar/refutar a hipótese permanecem corretas.
 
-**Caveat to interpret numbers:** `frontend/src/main.tsx:14` envolve a app em `<StrictMode>`. Em dev React, StrictMode duplica todos os renders. Implicação para o baseline:
-- Commit duration absoluto fica ~2x do que usuário sente em prod real
-- Rendered component count também duplica
-- **A ordem relativa entre cenários continua válida** — se cenário 1 mostra 100 rows re-renderizadas e cenário 3 mostra 1, isso NÃO é artefato de StrictMode
-- A pergunta-chave ("`useWatch` re-renderiza a página inteira?") é respondida por *quais* componentes aparecem na flame chart, não pelos ms absolutos — StrictMode não muda isso
-
-**Phase 21 implication:** o re-run de comparação em P21 deve usar o mesmo comando (`vite build --mode development`) para apples-to-apples. Documentado também na Profiling Runbook section de `16-PERF-BASELINE.md`.
+**Phase 21 implication:** o re-run de comparação em P21 deve usar o mesmo `just profile` para apples-to-apples. Documentado também na Profiling Runbook section de `16-PERF-BASELINE.md`.
 
 ### Fixture mechanism
 - **Locked: TS generator script + centralized helper**
