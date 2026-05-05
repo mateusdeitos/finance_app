@@ -312,6 +312,12 @@ func (suite *SettlementServiceWithDBTestSuite) TestUpdateDateAmountChangeDoesNot
 	suite.Assert().Equal(newAmount/2, settlements[0].Amount, "settlement amount tracks split")
 }
 
+// File deliberately named "zz_*" so its tests run after the other
+// Test*WithDB suites in this package. Several existing tests (notably
+// TestTransactionCreateWithDB / TestCreate_ValidationErrors) implicitly
+// depend on the order in which entities with id=1 are created across
+// the shared testcontainer DB; running this suite earlier would change
+// that ordering and break those assertions.
 func TestSettlementServiceWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")

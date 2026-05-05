@@ -28,8 +28,8 @@ func NewSettlementHandler(services *service.Services) *SettlementHandler {
 // @Accept       json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        id    path  int                              true  "Settlement ID"
-// @Param        body  body  domain.SettlementUpdateRequest   true  "Fields to update"
+// @Param        id       path  int                              true  "Settlement ID"
+// @Param        request  body  domain.SettlementUpdateRequest   true  "Fields to update"
 // @Success      204
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse

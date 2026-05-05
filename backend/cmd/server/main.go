@@ -101,7 +101,6 @@ func main() {
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 	chargeHandler := handler.NewChargeHandler(services)
 	onboardingHandler := handler.NewOnboardingHandler(services)
-	settlementHandler := handler.NewSettlementHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -205,8 +204,7 @@ func main() {
 	charges.POST("/:id/accept", chargeHandler.Accept)
 
 	// Settlements
-	settlements := api.Group("/settlements")
-	settlements.PATCH("/:id", settlementHandler.Update)
+	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
