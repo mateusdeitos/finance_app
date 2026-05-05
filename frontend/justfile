@@ -1,0 +1,25 @@
+# Recipes for the finance-app frontend.
+# Run `just` (or `just --list`) to see available recipes.
+
+set shell := ["bash", "-cu"]
+
+default:
+    @just --list
+
+# Run the full perf-profiling chain in one shot:
+# 1. Regenerate the deterministic 100-row CSV fixture at /tmp/fixture-100.csv
+# 2. Build the app in dev mode (keeps React profiling instrumentation;
+#    vite.config.ts is NOT modified — see 16-CONTEXT.md for rationale)
+# 3. Serve the build via `vite preview` so React DevTools can profile it
+#
+# After preview is up, open the URL it prints, log in, and import
+# /tmp/fixture-100.csv. Note: <StrictMode> in main.tsx still doubles
+# renders in dev React — interpret commit-duration ms as ~2x, but
+# the set of re-rendered components and the relative ordering across
+# scenarios remain valid for the hypothesis verdict.
+profile:
+    npx tsx scripts/genImportFixture.ts > /tmp/fixture-100.csv
+    @echo "✓ fixture: $(wc -l < /tmp/fixture-100.csv) lines at /tmp/fixture-100.csv"
+    @echo "✓ header: $(head -1 /tmp/fixture-100.csv)"
+    npx vite build --mode development
+    npx vite preview
