@@ -113,9 +113,9 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   2. `babel-plugin-react-compiler` is empirically checked in the production build (`vite.config.ts` plugin chain + `npm run build` output); the result (active/inactive) is documented in `16-PERF-BASELINE.md`. Wiring is **not** changed in this phase — Phase 17 absorbs it if needed
   3. A baseline profile (commit duration ms + rendered component count for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 shift-click row select; all on a fixed mid-list row of the 100-row fixture, captured in `npm run preview` mode with React DevTools) is saved to `.planning/phases/16-baseline-profiling/16-PERF-BASELINE.md`
   4. The page-level `useWatch({ name: 'rows' })` re-render hypothesis is empirically validated against the profile; if contradicted, an additional `16-DIAGNOSIS.md` is produced naming the actual culprit and recommending replan changes (the roadmap is **not** auto-edited)
-**Plans:** 3 plans
-- [ ] 16-01-PLAN.md — Extract CSV helper + write deterministic 100-row fixture generator (PROF-01)
-- [ ] 16-02-PLAN.md — Empirical compiler-presence check + baseline doc skeleton (PROF-02)
+**Plans:** 2/3 plans executed
+- [x] 16-01-PLAN.md — Extract CSV helper + write deterministic 100-row fixture generator (PROF-01)
+- [x] 16-02-PLAN.md — Empirical compiler-presence check + baseline doc skeleton (PROF-02)
 - [ ] 16-03-PLAN.md — Capture 4-scenario profiler baseline + validate useWatch hypothesis (PROF-03)
 **Context:** `.planning/phases/16-baseline-profiling/16-CONTEXT.md`
 
@@ -195,7 +195,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 13. BulkDivisionDrawer Form | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 15. E2E Coverage & Rounding Verification | v1.4 | 3/3 | Complete | 2026-05-05 |
-| 16. Baseline Profiling & Diagnostics | v1.5 | 0/3 | Planned | - |
+| 16. Baseline Profiling & Diagnostics | v1.5 | 2/3 | In Progress|  |
 | 17. Eliminate Page-Level useWatch Cascade | v1.5 | 0/? | Not started | - |
 | 18. Move Select Options to Query select | v1.5 | 0/? | Not started | - |
 | 19. Scope & Debounce Duplicate Check | v1.5 | 0/? | Not started | - |
