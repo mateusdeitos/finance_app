@@ -1,9 +1,10 @@
-import { Drawer, Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
+import { Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
 import { IconUsers, IconLogout, IconTableImport } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
 import { UserAvatar } from '@/components/UserAvatar'
+import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
 import { renderDrawer, useDrawerContext } from '@/utils/renderDrawer'
 import { MobileNavTestIds } from '@/testIds'
@@ -53,17 +54,24 @@ export function MobileMoreDrawer() {
   ]
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={() => close()}
-      position="bottom"
       size="auto"
-      radius="lg"
-      withCloseButton={false}
+      title=""
+      closeButtonProps={
+        {
+          'aria-label': 'Fechar',
+          'data-testid': MobileNavTestIds.MoreClose,
+          // Mantine types ModalBaseCloseButtonProps without data-* attrs, but
+          // spreads any extras onto the underlying CloseButton element.
+        } as React.ComponentProps<'button'>
+      }
+      closeOnClickOutside
+      closeOnEscape
       data-testid={MobileNavTestIds.MoreDrawer}
-      classNames={{ content: classes.content, body: classes.body }}
+      classNames={{ body: classes.body, header: classes.header }}
     >
-      <div className={classes.grabber} aria-hidden />
       {user && (
         <>
           <Group gap="sm" px="md" pt="xs" pb="md" wrap="nowrap">
@@ -99,6 +107,6 @@ export function MobileMoreDrawer() {
           )
         })}
       </Stack>
-    </Drawer>
+    </ResponsiveDrawer>
   )
 }

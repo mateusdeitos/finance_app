@@ -1,8 +1,9 @@
-import { ActionIcon, Box, Button, Group, Skeleton, Stack, Tabs, Text } from "@mantine/core";
+import { Box, Button, Group, Skeleton, Stack, Tabs, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconPlus } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCharges } from "@/hooks/useCharges";
@@ -10,6 +11,7 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useRejectCharge } from "@/hooks/useRejectCharge";
 import { useCancelCharge } from "@/hooks/useCancelCharge";
 import { renderDrawer } from "@/utils/renderDrawer";
+import { Fab } from "@/components/Fab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { Charges } from "@/types/charges";
 import { ChargeCard } from "@/components/charges/ChargeCard";
@@ -86,6 +88,11 @@ export function ChargesPage() {
 
   const receivedCharges = receivedQuery.data ?? [];
   const sentCharges = sentQuery.data ?? [];
+  const isMobile = useIsMobile();
+
+  function openCreateCharge() {
+    void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />);
+  }
 
   async function refreshAll() {
     await Promise.all([invalidateCharges(), invalidatePendingCount()]);
@@ -111,28 +118,15 @@ export function ChargesPage() {
             year={search.year}
             onPeriodChange={(m, y) => navigate({ search: { ...search, month: m, year: y } })}
           />
-          <Button
-            visibleFrom="xs"
-            leftSection={<IconPlus size={16} />}
-            onClick={() =>
-              void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
-            }
-            data-testid={ChargesTestIds.BtnNew}
-          >
-            Nova Cobrança
-          </Button>
-          <ActionIcon
-            hiddenFrom="xs"
-            size="lg"
-            variant="filled"
-            aria-label="Nova Cobrança"
-            onClick={() =>
-              void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />)
-            }
-            data-testid={ChargesTestIds.BtnNew}
-          >
-            <IconPlus size={18} />
-          </ActionIcon>
+          {!isMobile && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={openCreateCharge}
+              data-testid={ChargesTestIds.BtnNew}
+            >
+              Nova Cobrança
+            </Button>
+          )}
         </Group>
       </Box>
 
@@ -208,6 +202,12 @@ export function ChargesPage() {
         </Tabs.Panel>
       </Tabs>
     </Stack>
+
+    {isMobile && (
+      <Fab onClick={openCreateCharge} ariaLabel="Nova Cobrança" testId={ChargesTestIds.BtnNew}>
+        <IconPlus size={24} stroke={2.2} />
+      </Fab>
+    )}
     </PullToRefresh>
   );
 }
