@@ -1,5 +1,19 @@
 # Milestones
 
+## v1.4 Bulk Update Split Settings (Shipped: 2026-05-05)
+
+**Phases completed:** 3 phases (13–15), 5 plans
+**Timeline:** 2026-04-20 → 2026-05-05
+
+**Key accomplishments:**
+
+1. `BulkDivisionDrawer` — percentage-only split form with `useFieldArray`, Σ=100% Zod validation, smart pre-selection (1 connected account → auto-pick; 0 → menu disabled)
+2. "Divisão" wired into `SelectionActionBar` with cent-exact percentage→cents conversion (last split absorbs remainder so `Σ split.amount === tx.amount`); payload contains only `connection_id` + `amount`; full PUT payload pattern preserved
+3. Linked/unsplittable transactions silently skipped in the bulk batch (SEL-02 pattern); income transactions handled normally; existing `BulkProgressDrawer` reused for sequential per-transaction updates
+4. Unit test infra (`tsx` devDep + `test:unit` script + `splitMath.test.ts` with 6 rounding cases) and Playwright e2e coverage (happy path, disabled state, transfer silent-skip) wired into `.github/workflows/e2e.yml`
+
+---
+
 ## v1.3 Editing Linked Transactions (Shipped: 2026-04-20)
 
 **Phases completed:** 1 phase (Phase 11 backend only), 2 plans
