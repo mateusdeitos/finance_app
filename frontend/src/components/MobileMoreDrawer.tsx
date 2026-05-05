@@ -1,11 +1,11 @@
 import { Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
 import { IconUsers, IconLogout, IconTableImport } from '@tabler/icons-react'
-import { useNavigate } from '@tanstack/react-router'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
 import { UserAvatar } from '@/components/UserAvatar'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
+import { router } from '@/router'
 import { renderDrawer, useDrawerContext } from '@/utils/renderDrawer'
 import { MobileNavTestIds } from '@/testIds'
 import classes from './MobileMoreDrawer.module.css'
@@ -23,7 +23,6 @@ export function MobileMoreDrawer() {
   const { query: meQuery } = useMe()
   const user = meQuery.data
   const { mutation: logoutMutation } = useLogout()
-  const navigate = useNavigate()
 
   const items: MoreItem[] = [
     {
@@ -41,7 +40,10 @@ export function MobileMoreDrawer() {
       icon: IconTableImport,
       onSelect: (closeSheet) => {
         closeSheet()
-        void navigate({ to: '/transactions/import' })
+        // renderDrawer mounts in an isolated React root without RouterProvider,
+        // so useNavigate() returns null here. Drive navigation through the
+        // global router instance instead.
+        void router.navigate({ to: '/transactions/import' })
       },
     },
     {
