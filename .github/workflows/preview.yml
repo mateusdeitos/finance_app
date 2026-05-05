@@ -43,10 +43,10 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
 
-      - name: Build frontend (proxied via Firebase Hosting)
+      - name: Build frontend (against prod backend)
         working-directory: frontend
         env:
-          VITE_API_URL: ""
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
       - name: Deploy to Firebase Hosting preview channel
