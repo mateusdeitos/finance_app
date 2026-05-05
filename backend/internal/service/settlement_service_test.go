@@ -27,8 +27,12 @@ func (suite *SettlementServiceWithDBTestSuite) createSharedExpense(
 	amount int64,
 	d time.Time,
 ) *domain.Transaction {
-	_, err := suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
 		AccountID:       account.ID,
+		CategoryID:      category.ID,
 		Amount:          amount,
 		Date:            domain.Date{Time: d},
 		Description:     "shared expense",
@@ -99,11 +103,15 @@ func (suite *SettlementServiceWithDBTestSuite) TestUpdateDatePersistsCustomDateA
 	suite.Require().NoError(err)
 
 	// Editing the source transaction's date must NOT overwrite the customized
-	// settlement date.
+	// settlement date. The caller resends the existing split so the flow does
+	// not interpret the absent split as a removal.
 	newSourceDate := time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC)
 	err = suite.Services.Transaction.Update(ctx, source.ID, user1.ID, &domain.TransactionUpdateRequest{
 		Date:                lo.ToPtr(domain.Date{Time: newSourceDate}),
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
 	})
 	suite.Require().NoError(err)
 
@@ -215,6 +223,93 @@ func (suite *SettlementServiceWithDBTestSuite) TestSyntheticSettlementListingFil
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Len(orphansMarch, 0, "March filter should not include April settlement")
+}
+
+// TestUpdateDateNonCustomizedSettlementKeepsOriginalDateAfterSourceUpdate
+// asserts the stickiness invariant from the snapshot map in
+// syncSettlementsForTransaction: the existing settlement date is always
+// reused on recreate, even when the user never explicitly customized it.
+// This guarantees that any user-visible settlement date — once written —
+// is the only authoritative source for that settlement.
+func (suite *SettlementServiceWithDBTestSuite) TestUpdateDateNonCustomizedSettlementKeepsOriginalDateAfterSourceUpdate() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	originalDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	source := suite.createSharedExpense(ctx, user1, user2, account, connection, 10000, originalDate)
+
+	// Source updates to a different date; the user never touched the
+	// settlement date.
+	newSourceDate := time.Date(2026, 5, 15, 0, 0, 0, 0, time.UTC)
+	err = suite.Services.Transaction.Update(ctx, source.ID, user1.ID, &domain.TransactionUpdateRequest{
+		Date:                lo.ToPtr(domain.Date{Time: newSourceDate}),
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	settlements, err := suite.Services.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{source.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlements, 1)
+	suite.Assert().Equal(originalDate, settlements[0].Date,
+		"settlement date should be sticky: snapshot in sync must reuse the existing date")
+}
+
+// TestUpdateDateAmountChangeDoesNotClobberSettlementDate covers the snapshot
+// path for an update that does not touch the source date at all (amount-only
+// edit). The sync still tears down and recreates settlements, so the snapshot
+// is the only mechanism that keeps the previously customized date.
+func (suite *SettlementServiceWithDBTestSuite) TestUpdateDateAmountChangeDoesNotClobberSettlementDate() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	originalDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	source := suite.createSharedExpense(ctx, user1, user2, account, connection, 10000, originalDate)
+	settlement := source.SettlementsFromSource[0]
+
+	customDate := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
+	err = suite.Services.Settlement.UpdateDate(ctx, user1.ID, settlement.ID, customDate)
+	suite.Require().NoError(err)
+
+	// Update only the amount — source date stays the same. Sync must still
+	// preserve the customized settlement date.
+	newAmount := int64(20000)
+	err = suite.Services.Transaction.Update(ctx, source.ID, user1.ID, &domain.TransactionUpdateRequest{
+		Amount:              &newAmount,
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	settlements, err := suite.Services.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{source.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlements, 1)
+	suite.Assert().Equal(customDate, settlements[0].Date)
+	suite.Assert().Equal(newAmount/2, settlements[0].Amount, "settlement amount tracks split")
 }
 
 func TestSettlementServiceWithDB(t *testing.T) {
