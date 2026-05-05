@@ -1,4 +1,4 @@
-import { Drawer } from '@mantine/core'
+import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCreateAccount } from '@/hooks/useCreateAccount'
@@ -45,12 +45,10 @@ export function AccountDrawer({ account }: Props) {
     : undefined
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title={account ? 'Editar Conta' : 'Nova Conta'}
-      position="right"
-      size="md"
       data-testid={AccountsTestIds.Drawer}
     >
       <AccountForm
@@ -59,6 +57,6 @@ export function AccountDrawer({ account }: Props) {
         isPending={isPending}
         error={error}
       />
-    </Drawer>
+    </ResponsiveDrawer>
   )
 }

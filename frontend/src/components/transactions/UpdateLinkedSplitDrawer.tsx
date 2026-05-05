@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Box, Button, Drawer, Group, Select, SimpleGrid, Stack } from "@mantine/core";
+import { Alert, Box, Button, Group, Select, SimpleGrid, Stack } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { DatePickerInput } from "@mantine/dates";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
@@ -77,12 +78,10 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
   }
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={close}
       title="Editar transação"
-      position="right"
-      size="md"
       data-testid={TransactionsTestIds.DrawerUpdateLinkedSplit}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -170,6 +169,6 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
           </Group>
         </Box>
       </form>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

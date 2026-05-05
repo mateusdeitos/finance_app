@@ -4,7 +4,7 @@
   left: var(--app-shell-navbar-offset, 0px);
   right: 0;
   z-index: 100;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
   background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
 }

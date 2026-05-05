@@ -3,8 +3,11 @@ import { IconPlus } from '@tabler/icons-react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useActivateAccount } from '@/hooks/useActivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
+import { Fab } from '@/components/Fab'
+import { PullToRefresh } from '@/components/PullToRefresh'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 import { AccountsTestIds } from '@/testIds'
@@ -33,14 +36,18 @@ export function AccountsPage() {
   }
 
   const hasAccounts = (query.data?.length ?? 0) > 0
+  const isMobile = useIsMobile()
 
   return (
+    <PullToRefresh onRefresh={invalidate}>
     <Stack gap="md">
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Contas</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid={AccountsTestIds.BtnNew}>
-          Nova Conta
-        </Button>
+        {!isMobile && (
+          <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid={AccountsTestIds.BtnNew}>
+            Nova Conta
+          </Button>
+        )}
       </Group>
 
       {query.isLoading ? (
@@ -78,5 +85,12 @@ export function AccountsPage() {
       )}
 
     </Stack>
+
+    {isMobile && (
+      <Fab onClick={handleAdd} ariaLabel="Nova Conta" testId={AccountsTestIds.BtnNew}>
+        <IconPlus size={24} stroke={2.2} />
+      </Fab>
+    )}
+    </PullToRefresh>
   )
 }

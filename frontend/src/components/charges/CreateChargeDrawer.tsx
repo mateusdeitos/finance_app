@@ -6,7 +6,6 @@ import {
   Alert,
   Avatar,
   Button,
-  Drawer,
   Group,
   NumberInput,
   Radio,
@@ -16,6 +15,7 @@ import {
   Text,
   Textarea,
 } from "@mantine/core";
+import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { DateInput, MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
@@ -171,12 +171,10 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
   }
 
   return (
-    <Drawer
+    <ResponsiveDrawer
       opened={opened}
       onClose={reject}
       title="Criar Cobrança"
-      position="right"
-      size="md"
       data-testid={ChargesTestIds.DrawerCreate}
     >
       <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
@@ -337,6 +335,6 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
           </Button>
         </Stack>
       </form>
-    </Drawer>
+    </ResponsiveDrawer>
   );
 }

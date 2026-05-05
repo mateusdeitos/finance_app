@@ -1,11 +1,12 @@
-import { AppShell, Badge, Burger, Group, Text, NavLink, Menu } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
+import { AppShell, Badge, Group, Text, NavLink, Menu, Box } from "@mantine/core";
 import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree, IconCreditCard } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { InviteDrawer } from "@/components/InviteDrawer";
+import { MobileTabBar } from "@/components/MobileTabBar";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { renderDrawer } from "@/utils/renderDrawer";
@@ -19,12 +20,12 @@ const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> 
 ];
 
 export function AppLayout() {
-  const [opened, { toggle, close }] = useDisclosure();
   const { query: meQuery } = useMe();
   const user = meQuery.data;
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
   const { mutation: logoutMutation } = useLogout();
+  const isMobile = useIsMobile();
 
   const { query: pendingCountQuery } = useChargesPendingCount();
   const pendingCount = pendingCountQuery.data?.count ?? 0;
@@ -36,7 +37,7 @@ export function AppLayout() {
   return (
     <AppShell
       header={{ height: 60 }}
-      navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: true, desktop: false } }}
       padding="md"
       style={{
         ["--app-shell-header-height" as string]: "calc(60px + env(safe-area-inset-top))",
@@ -47,17 +48,14 @@ export function AppLayout() {
         style={{ height: "calc(60px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}
       >
         <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Link to="/transactions" style={{ textDecoration: "none" }}>
-              <Group gap="xs">
-                <img src="/icon.svg" width={36} height={36} alt="FinanceApp" />
-                <Text fw={700} size="lg" c="blue.7">
-                  FinanceApp
-                </Text>
-              </Group>
-            </Link>
-          </Group>
+          <Link to="/transactions" style={{ textDecoration: "none" }}>
+            <Group gap="xs">
+              <img src="/icon.svg" width={36} height={36} alt="FinanceApp" />
+              <Text fw={700} size="lg" c="blue.7">
+                FinanceApp
+              </Text>
+            </Group>
+          </Link>
 
           {user && (
             <Menu shadow="md" position="bottom-end">
@@ -72,13 +70,17 @@ export function AppLayout() {
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Label>{user.email}</Menu.Label>
-                <Menu.Item
-                  leftSection={<IconUsers size={16} />}
-                  onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
-                >
-                  Criar Conexão
-                </Menu.Item>
-                <Menu.Divider />
+                {!isMobile && (
+                  <>
+                    <Menu.Item
+                      leftSection={<IconUsers size={16} />}
+                      onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
+                    >
+                      Criar Conexão
+                    </Menu.Item>
+                    <Menu.Divider />
+                  </>
+                )}
                 <Menu.Item onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
                   Sair
                 </Menu.Item>
@@ -88,7 +90,7 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs">
+      <AppShell.Navbar p="xs" visibleFrom="sm">
         {chargeNavLinks.map(({ label, icon: Icon, to, badge }) => (
           <NavLink
             key={to}
@@ -104,7 +106,6 @@ export function AppLayout() {
               ) : undefined
             }
             active={currentPath === to}
-            onClick={close}
           />
         ))}
       </AppShell.Navbar>
@@ -115,10 +116,17 @@ export function AppLayout() {
           height: "100dvh",
           overflow: "hidden auto",
           boxSizing: "border-box",
+          paddingBottom: isMobile
+            ? "calc(var(--mantine-spacing-md) + 56px + env(safe-area-inset-bottom))"
+            : undefined,
         }}
       >
         <Outlet />
       </AppShell.Main>
+
+      <Box hiddenFrom="sm">
+        <MobileTabBar />
+      </Box>
 
       <PWAInstallBanner />
     </AppShell>

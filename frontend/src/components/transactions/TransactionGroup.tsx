@@ -49,6 +49,7 @@ interface TransactionGroupProps {
   isFirst?: boolean;
   selectedIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean) => void;
+  onDeleteTransaction?: (tx: Transactions.Transaction) => void;
   hideSettlements?: boolean;
 }
 
@@ -63,6 +64,7 @@ export function TransactionGroup({
   isFirst = false,
   selectedIds,
   onSelectTransaction,
+  onDeleteTransaction,
   hideSettlements,
 }: TransactionGroupProps) {
   const isSelectionActive = (selectedIds?.size ?? 0) > 0;
@@ -177,6 +179,7 @@ export function TransactionGroup({
                     ? (fieldClicked: FocusField) => openEditDrawer(tx, fieldClicked)
                     : undefined
                 }
+                onDelete={!isSelectionActive && isOwner ? onDeleteTransaction : undefined}
               />
               {!hideSettlements && (tx.settlements_from_source ?? []).map((s) => (
                 <SettlementRow
