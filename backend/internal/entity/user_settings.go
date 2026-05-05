@@ -18,6 +18,10 @@ func (j JSONB) Value() (driver.Value, error) {
 	return json.Marshal(j)
 }
 
+func (JSONB) GormDataType() string {
+	return "jsonb"
+}
+
 func (j *JSONB) Scan(value interface{}) error {
 	if value == nil {
 		*j = nil
@@ -33,7 +37,7 @@ func (j *JSONB) Scan(value interface{}) error {
 }
 
 type UserSettings struct {
-	UserID    int
+	UserID    int `gorm:"primaryKey"`
 	Settings  JSONB
 	CreatedAt *time.Time
 	UpdatedAt *time.Time

@@ -1074,7 +1074,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
 	// expense in previous month
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1084,7 +1084,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_NoIni
 	})
 	suite.Require().NoError(err)
 	// income in current month
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1123,7 +1123,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_WithI
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1162,7 +1162,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Accou
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account1.ID,
 		CategoryID:      category.ID,
@@ -1201,7 +1201,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_False
 	date := now()
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1236,7 +1236,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 	thisMonth := now()
 	period := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
 
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1245,7 +1245,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 		Description:     "two months ago",
 	})
 	suite.Require().NoError(err)
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,
@@ -1254,7 +1254,7 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 		Description:     "last month",
 	})
 	suite.Require().NoError(err)
-		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeIncome,
 		AccountID:       account.ID,
 		CategoryID:      category.ID,

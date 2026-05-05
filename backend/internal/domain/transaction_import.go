@@ -55,7 +55,7 @@ type ImportCSVResponse struct {
 
 // CheckDuplicateRequest is the request body for the check-duplicate endpoint.
 type CheckDuplicateRequest struct {
-	Date      string `json:"date"`       // YYYY-MM-DD
-	Amount    int64  `json:"amount"`     // cents
-	AccountID *int   `json:"account_id"` // optional; when set, only checks within that account
+	Date      Date  `json:"date"`       // accepts YYYY-MM-DD, datetime, or RFC3339
+	Amount    int64 `json:"amount"`     // cents
+	AccountID *int  `json:"account_id"` // optional; when set, only checks within that account
 }

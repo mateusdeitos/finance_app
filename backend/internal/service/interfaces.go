@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 )
@@ -25,7 +26,7 @@ type TransactionService interface {
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
-	CheckDuplicateTransaction(ctx context.Context, userID int, date string, amount int64, accountID *int) (bool, error)
+	CheckDuplicateTransaction(ctx context.Context, userID int, date time.Time, amount int64, accountID *int) (bool, error)
 }
 
 type AccountService interface {
@@ -41,6 +42,7 @@ type AccountService interface {
 type CategoryService interface {
 	Create(ctx context.Context, userID int, category *domain.Category) (*domain.Category, error)
 	GetByID(ctx context.Context, userID, id int) (domain.Category, error)
+	GetTree(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error)
 	Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error)
 	Update(ctx context.Context, userID int, category *domain.Category) error
 	Delete(ctx context.Context, userID, id int, req domain.DeleteCategoryRequest) error
@@ -79,6 +81,11 @@ type ChargeService interface {
 	Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error
 }
 
+type OnboardingService interface {
+	GetStatus(ctx context.Context, userID int) (*domain.OnboardingStatus, error)
+	Complete(ctx context.Context, userID int, req *domain.OnboardingSetupRequest) error
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth           AuthService
@@ -90,4 +97,5 @@ type Services struct {
 	UserConnection UserConnectionService
 	Settlement     SettlementService
 	Charge         ChargeService
+	Onboarding     OnboardingService
 }

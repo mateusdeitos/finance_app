@@ -60,7 +60,7 @@ func (h *CategoryHandler) Create(c echo.Context) error {
 func (h *CategoryHandler) Search(c echo.Context) error {
 	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 
-	categories, err := h.categoryService.Search(c.Request().Context(), domain.CategorySearchOptions{
+	categories, err := h.categoryService.GetTree(c.Request().Context(), domain.CategorySearchOptions{
 		UserIDs: []int{userID},
 	})
 	if err != nil {

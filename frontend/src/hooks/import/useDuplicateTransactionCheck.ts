@@ -32,11 +32,11 @@ export function useDuplicateTransactionCheck({
   const [debouncedDate] = useDebouncedValue(date, debounceMs)
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
 
-  const isFirstRender = useRef(true)
+  const initialRef = useRef({ date, amount })
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
+    // Skip when values match the initial mount — backend already checked duplicates for those.
+    if (debouncedDate === initialRef.current.date && debouncedAmount === initialRef.current.amount) {
       return
     }
     if (!debouncedDate || !debouncedAmount || debouncedAmount <= 0) return

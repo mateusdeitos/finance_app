@@ -15,22 +15,23 @@
  * - When adding a new testid: add it here first, then reference it from the
  *   component and the test in the same PR.
  */
-export { CommonTestIds } from './common'
-export { AccountsTestIds } from './accounts'
-export { CategoriesTestIds } from './categories'
-export { ChargesTestIds, type ChargeAction, type ChargeRole, type ChargesTab } from './charges'
+export { CommonTestIds } from "./common";
+export { AccountsTestIds } from "./accounts";
+export { CategoriesTestIds } from "./categories";
+export { ChargesTestIds, type ChargeAction, type ChargeRole, type ChargesTab } from "./charges";
 export {
   TransactionsTestIds,
   type TransactionType,
   type PropagationOption,
   type TransactionFilterKind,
-} from './transactions'
+} from "./transactions";
 export {
   ImportTestIds,
   type ImportRowAction,
   type ImportRowTransactionType,
   type ImportDecimalSeparator,
   type ImportTypeRule,
-} from './import'
-export { RecurrenceTestIds, type RecurrenceType } from './recurrence'
-export { MobileNavTestIds } from './mobileNav'
+} from "./import";
+export { RecurrenceTestIds, type RecurrenceType } from "./recurrence";
+export { OnboardingTestIds } from "./onboarding";
+export { MobileNavTestIds } from "./mobileNav";

@@ -301,7 +301,7 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 		})
 		suite.Require().NoError(err)
 
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", 7500, &account.ID)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 7500, &account.ID)
 		suite.Require().NoError(err)
 		suite.True(isDup)
 	})
@@ -317,19 +317,20 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 		})
 		suite.Require().NoError(err)
 
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", 8800, &account.ID)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 8800, &account.ID)
 		suite.Require().NoError(err)
 		suite.True(isDup)
 	})
 
 	suite.Run("no matching amount returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-03-20", 9999, &account.ID)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 9999, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})
 
 	suite.Run("different date returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, "2026-04-01", 7500, &account.ID)
+		differentDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, differentDate, 7500, &account.ID)
 		suite.Require().NoError(err)
 		suite.False(isDup)
 	})
@@ -395,6 +396,22 @@ func TestInferInstallment(t *testing.T) {
 		{
 			name:        "parcela with em-dash separator",
 			input:       "Compra — Parcela 2 de 6",
+			wantDesc:    "Compra",
+			wantCurrent: 2,
+			wantTotal:   6,
+			wantFound:   true,
+		},
+		{
+			name:        "Parcela X/Y without parens",
+			input:       "Squid*Squid*Pharmas - Parcela 1/3",
+			wantDesc:    "Squid*Squid*Pharmas",
+			wantCurrent: 1,
+			wantTotal:   3,
+			wantFound:   true,
+		},
+		{
+			name:        "Parcela X/Y without parens with spaces",
+			input:       "Compra - Parcela 2 / 6",
 			wantDesc:    "Compra",
 			wantCurrent: 2,
 			wantTotal:   6,

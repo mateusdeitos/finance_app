@@ -656,7 +656,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int64"
                             }
                         }
                     },
@@ -846,6 +847,86 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/onboarding/complete": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Complete onboarding by creating starter accounts and categories",
+                "parameters": [
+                    {
+                        "description": "Initial accounts and categories",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.OnboardingSetupRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/onboarding/status": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "onboarding"
+                ],
+                "summary": "Get onboarding status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.OnboardingStatus"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/middleware.ErrorResponse"
                         }
@@ -1286,6 +1367,12 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Include all prior periods",
                         "name": "accumulated",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Exclude settlements from balance",
+                        "name": "hide_settlements",
                         "in": "query"
                     }
                 ],
@@ -2120,6 +2207,9 @@ const docTemplate = `{
         "domain.Account": {
             "type": "object",
             "properties": {
+                "avatar_background_color": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2239,6 +2329,17 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ChargeInitiatorRole": {
+            "type": "string",
+            "enum": [
+                "charger",
+                "payer"
+            ],
+            "x-enum-varnames": [
+                "ChargeInitiatorRoleCharger",
+                "ChargeInitiatorRolePayer"
+            ]
+        },
         "domain.ChargeStatus": {
             "type": "string",
             "enum": [
@@ -2273,17 +2374,6 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
-        },
-        "domain.ChargeInitiatorRole": {
-            "type": "string",
-            "enum": [
-                "charger",
-                "payer"
-            ],
-            "x-enum-varnames": [
-                "ChargeInitiatorRoleCharger",
-                "ChargeInitiatorRolePayer"
-            ]
         },
         "domain.CreateChargeRequest": {
             "type": "object",
@@ -2352,6 +2442,65 @@ const docTemplate = `{
                 "ImportRowStatusPending",
                 "ImportRowStatusDuplicate"
             ]
+        },
+        "domain.OnboardingAccountInput": {
+            "type": "object",
+            "properties": {
+                "avatar_background_color": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "initial_balance": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OnboardingCategoryInput": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OnboardingCategoryInput"
+                    }
+                },
+                "emoji": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.OnboardingSetupRequest": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OnboardingAccountInput"
+                    }
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OnboardingCategoryInput"
+                    }
+                }
+            }
+        },
+        "domain.OnboardingStatus": {
+            "type": "object",
+            "properties": {
+                "completed": {
+                    "type": "boolean"
+                }
+            }
         },
         "domain.OperationType": {
             "type": "string",
@@ -2562,6 +2711,10 @@ const docTemplate = `{
                 "operation_type": {
                     "$ref": "#/definitions/domain.OperationType"
                 },
+                "origin_settlement_id": {
+                    "description": "OriginSettlementID is set only on synthetic Transaction entries produced\nby the listing endpoint to surface settlements whose source transaction\nlives on a different (non-filtered) account. The ID field of such entries\nis a negative sentinel; the row is read-only and should not be edited.",
+                    "type": "integer"
+                },
                 "original_user_id": {
                     "type": "integer"
                 },
@@ -2570,6 +2723,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/domain.Settlement"
                     }
+                },
+                "source_transaction_id": {
+                    "description": "SourceTransactionID is set only on synthetic Transaction entries (see\nOriginSettlementID). It points to the real source transaction backing\nthe surfaced settlement so the frontend can fetch the full transaction\nand open it for editing when the synthetic row is clicked.",
+                    "type": "integer"
                 },
                 "tags": {
                     "type": "array",
@@ -2734,6 +2891,9 @@ const docTemplate = `{
         "domain.User": {
             "type": "object",
             "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2769,8 +2929,14 @@ const docTemplate = `{
                 "from_default_split_percentage": {
                     "type": "integer"
                 },
+                "from_user_avatar_url": {
+                    "type": "string"
+                },
                 "from_user_id": {
                     "type": "integer"
+                },
+                "from_user_name": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer"
@@ -2781,8 +2947,14 @@ const docTemplate = `{
                 "to_default_split_percentage": {
                     "type": "integer"
                 },
+                "to_user_avatar_url": {
+                    "type": "string"
+                },
                 "to_user_id": {
                     "type": "integer"
+                },
+                "to_user_name": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"

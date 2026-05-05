@@ -187,7 +187,7 @@ func seedAccounts(ctx context.Context, svcs *service.Services, userID int) []*do
 }
 
 func seedCategories(ctx context.Context, svcs *service.Services, userID int) []*domain.Category {
-	existing, err := svcs.Category.Search(ctx, domain.CategorySearchOptions{UserIDs: []int{userID}})
+	existing, err := svcs.Category.GetTree(ctx, domain.CategorySearchOptions{UserIDs: []int{userID}})
 	if err != nil {
 		log.Fatalf("failed to fetch existing categories: %v", err)
 	}

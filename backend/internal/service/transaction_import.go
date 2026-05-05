@@ -15,6 +15,7 @@ import (
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
+	"github.com/samber/lo"
 )
 
 const importMaxRows = 100
@@ -141,8 +142,9 @@ func parseCSVHeader(header []string) (csvColumnIndex, error) {
 	}
 
 	for i, col := range header {
-		switch normalize(col) {
-		case "data", "date":
+		normalized := normalize(col)
+		switch normalized {
+		case "data", "date", "data ocorrencia", "data ocorrência", "data lançamento":
 			idx.date = i
 		case "descrição", "descricao", "título", "titulo", "title", "description":
 			idx.description = i
@@ -269,6 +271,19 @@ func parseCSVRow(
 		}
 	}
 
+	if row.CategoryID == nil && row.Description != "" {
+		txs, err := s.services.Transaction.Suggestions(ctx, userID, domain.TransactionFilter{Description: &domain.TextSearch{Query: row.Description, Exact: true}})
+		if err == nil {
+			t, found := lo.Find(txs, func(t *domain.Transaction) bool {
+				return t.CategoryID != nil
+			})
+			if found {
+				row.CategoryID = t.CategoryID
+				row.CategoryInferred = true
+			}
+		}
+	}
+
 	// 5. Detecção de duplicados
 	if row.Date != nil && row.Amount > 0 {
 		if isDuplicate(ctx, s, userID, *row.Date, row.Amount, &accountID) {
@@ -299,14 +314,15 @@ func parseAmountSigned(s string, decimalSeparator domain.ImportDecimalSeparatorV
 }
 
 // isDuplicate verifica se a transação já existe baseado em data, valor e conta.
+// Range: start of previous month → end of transaction's date month.
 func isDuplicate(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, accountID *int) bool {
-	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
-	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
+	currentMonthStart := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.UTC)
+	currentMonthEnd := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond)
 
 	filter := domain.TransactionFilter{
 		UserID:    &userID,
-		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
-		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &currentMonthStart},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &currentMonthEnd},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
@@ -327,6 +343,8 @@ func isDuplicate(ctx context.Context, s *transactionService, userID int, date ti
 var (
 	// "Parcela 1 de 2", "parcela 3 de 12"
 	installmentParcelaRe = regexp.MustCompile(`(?i)[-–—\s]*parcela\s+(\d+)\s+de\s+(\d+)`)
+	// "Parcela 1/3", "parcela 1 / 12"
+	installmentParcelaSlashRe = regexp.MustCompile(`(?i)[-–—\s]*parcela\s+(\d+)\s*/\s*(\d+)`)
 	// "(1/2)", "(1 / 12)", "( 3 / 12 )"
 	installmentSlashRe = regexp.MustCompile(`\(\s*(\d+)\s*/\s*(\d+)\s*\)`)
 )
@@ -344,7 +362,7 @@ func inferInstallment(description string) (string, int, int, bool) {
 
 	var matches []match
 
-	for _, re := range []*regexp.Regexp{installmentParcelaRe, installmentSlashRe} {
+	for _, re := range []*regexp.Regexp{installmentParcelaRe, installmentParcelaSlashRe, installmentSlashRe} {
 		for _, loc := range re.FindAllStringSubmatchIndex(description, -1) {
 			cur, _ := strconv.Atoi(description[loc[2]:loc[3]])
 			tot, _ := strconv.Atoi(description[loc[4]:loc[5]])

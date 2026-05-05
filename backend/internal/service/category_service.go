@@ -74,6 +74,10 @@ func (s *categoryService) GetByID(ctx context.Context, userID, id int) (domain.C
 }
 
 func (s *categoryService) Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
+	return s.categoryRepo.Search(ctx, options)
+}
+
+func (s *categoryService) GetTree(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
 	categories, err := s.categoryRepo.Search(ctx, options)
 	if err != nil {
 		return nil, pkgErrors.Internal("failed to get categories", err)

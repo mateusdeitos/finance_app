@@ -12,7 +12,8 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { IconAlertCircle, IconArrowLeft, IconCircleCheck } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowLeft, IconCircleCheck, IconExclamationMark } from '@tabler/icons-react'
+import { notifications } from '@mantine/notifications'
 import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useForm, useFieldArray, FormProvider, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -211,6 +212,15 @@ export function ImportTransactionsPage() {
     const isValid = await form.trigger('rows')
     if (!isValid) {
       const rowErrors = form.formState.errors.rows as (object | undefined)[] | undefined
+      const errorRowCount = rowErrors?.filter((e) => e !== undefined).length ?? 0
+
+      notifications.show({
+        color: 'red',
+        icon: <IconExclamationMark size={16} />,
+        title: 'Erros na importação',
+        message: `${errorRowCount} linha${errorRowCount !== 1 ? 's' : ''} com erros de validação. Corrija antes de importar.`,
+      })
+
       if (rowErrors) {
         const firstErrorIndex = rowErrors.findIndex((e) => e !== undefined)
         if (firstErrorIndex >= 0) {

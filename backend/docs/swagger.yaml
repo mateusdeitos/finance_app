@@ -11,6 +11,8 @@ definitions:
     type: object
   domain.Account:
     properties:
+      avatar_background_color:
+        type: string
       created_at:
         type: string
       description:
@@ -89,6 +91,14 @@ definitions:
       updated_at:
         type: string
     type: object
+  domain.ChargeInitiatorRole:
+    enum:
+    - charger
+    - payer
+    type: string
+    x-enum-varnames:
+    - ChargeInitiatorRoleCharger
+    - ChargeInitiatorRolePayer
   domain.ChargeStatus:
     enum:
     - pending
@@ -115,14 +125,6 @@ definitions:
       description:
         type: string
     type: object
-  domain.ChargeInitiatorRole:
-    enum:
-      - charger
-      - payer
-    type: string
-    x-enum-varnames:
-      - ChargeInitiatorRoleCharger
-      - ChargeInitiatorRolePayer
   domain.CreateChargeRequest:
     properties:
       amount:
@@ -168,6 +170,44 @@ definitions:
     x-enum-varnames:
     - ImportRowStatusPending
     - ImportRowStatusDuplicate
+  domain.OnboardingAccountInput:
+    properties:
+      avatar_background_color:
+        type: string
+      description:
+        type: string
+      initial_balance:
+        type: integer
+      name:
+        type: string
+    type: object
+  domain.OnboardingCategoryInput:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/domain.OnboardingCategoryInput'
+        type: array
+      emoji:
+        type: string
+      name:
+        type: string
+    type: object
+  domain.OnboardingSetupRequest:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/domain.OnboardingAccountInput'
+        type: array
+      categories:
+        items:
+          $ref: '#/definitions/domain.OnboardingCategoryInput'
+        type: array
+    type: object
+  domain.OnboardingStatus:
+    properties:
+      completed:
+        type: boolean
+    type: object
   domain.OperationType:
     enum:
     - credit
@@ -310,12 +350,26 @@ definitions:
         type: array
       operation_type:
         $ref: '#/definitions/domain.OperationType'
+      origin_settlement_id:
+        description: |-
+          OriginSettlementID is set only on synthetic Transaction entries produced
+          by the listing endpoint to surface settlements whose source transaction
+          lives on a different (non-filtered) account. The ID field of such entries
+          is a negative sentinel; the row is read-only and should not be edited.
+        type: integer
       original_user_id:
         type: integer
       settlements_from_source:
         items:
           $ref: '#/definitions/domain.Settlement'
         type: array
+      source_transaction_id:
+        description: |-
+          SourceTransactionID is set only on synthetic Transaction entries (see
+          OriginSettlementID). It points to the real source transaction backing
+          the surfaced settlement so the frontend can fetch the full transaction
+          and open it for editing when the synthetic row is clicked.
+        type: integer
       tags:
         items:
           $ref: '#/definitions/domain.Tag'
@@ -426,6 +480,8 @@ definitions:
     type: object
   domain.User:
     properties:
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:
@@ -449,16 +505,24 @@ definitions:
         type: integer
       from_default_split_percentage:
         type: integer
+      from_user_avatar_url:
+        type: string
       from_user_id:
         type: integer
+      from_user_name:
+        type: string
       id:
         type: integer
       to_account_id:
         type: integer
       to_default_split_percentage:
         type: integer
+      to_user_avatar_url:
+        type: string
       to_user_id:
         type: integer
+      to_user_name:
+        type: string
       updated_at:
         type: string
     type: object
@@ -1004,6 +1068,7 @@ paths:
           description: OK
           schema:
             additionalProperties:
+              format: int64
               type: integer
             type: object
         "401":
@@ -1016,6 +1081,53 @@ paths:
       summary: Count pending charges requiring caller's action
       tags:
       - charges
+  /api/onboarding/complete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Initial accounts and categories
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.OnboardingSetupRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Complete onboarding by creating starter accounts and categories
+      tags:
+      - onboarding
+  /api/onboarding/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.OnboardingStatus'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get onboarding status
+      tags:
+      - onboarding
   /api/tags:
     get:
       produces:
@@ -1392,6 +1504,10 @@ paths:
       - description: Include all prior periods
         in: query
         name: accumulated
+        type: boolean
+      - description: Exclude settlements from balance
+        in: query
+        name: hide_settlements
         type: boolean
       produces:
       - application/json
