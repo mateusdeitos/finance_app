@@ -45,6 +45,25 @@ This phase produces measurement artifacts only. No source code under `frontend/s
 - Rationale: dev mode includes `<StrictMode>` double-renders, HMR overhead, and dev-only warnings; numbers would not represent what users feel. Prod preview is the single source of truth for v1.5 metrics.
 - No dev-mode capture is required by Phase 16. If P21 wants dev-mode comparison later, it can add it.
 
+#### Addendum 2026-05-05 (during Wave 2 execution) — REVISED COMMAND
+**Discovered constraint:** the standard production build (`npm run build`) bundles `react-dom.production.min.js`, which strips React's profiling instrumentation. React DevTools shows: *"Profiling not supported. Profiling support requires either a development or profiling build of React v16.5+."*
+
+Considered three workarounds; user picked the middle ground:
+
+**Revised command (LOCKED):** `cd frontend && npx vite build --mode development && npx vite preview`
+- Tira Terser/minification (build-time)
+- Mantém React em dev bundle → profiler funciona
+- Sem HMR / sem dev-server overhead
+- Sem mudar `vite.config.ts` (decisão original "compiler not wired in P16" preservada)
+
+**Caveat to interpret numbers:** `frontend/src/main.tsx:14` envolve a app em `<StrictMode>`. Em dev React, StrictMode duplica todos os renders. Implicação para o baseline:
+- Commit duration absoluto fica ~2x do que usuário sente em prod real
+- Rendered component count também duplica
+- **A ordem relativa entre cenários continua válida** — se cenário 1 mostra 100 rows re-renderizadas e cenário 3 mostra 1, isso NÃO é artefato de StrictMode
+- A pergunta-chave ("`useWatch` re-renderiza a página inteira?") é respondida por *quais* componentes aparecem na flame chart, não pelos ms absolutos — StrictMode não muda isso
+
+**Phase 21 implication:** o re-run de comparação em P21 deve usar o mesmo comando (`vite build --mode development`) para apples-to-apples. Documentado também na Profiling Runbook section de `16-PERF-BASELINE.md`.
+
 ### Fixture mechanism
 - **Locked: TS generator script + centralized helper**
 - Create `frontend/scripts/genImportFixture.ts` — deterministic (fixed seed, no `Math.random()` without seed), produces a 100-row CSV via `npx tsx frontend/scripts/genImportFixture.ts > fixture-100.csv`
