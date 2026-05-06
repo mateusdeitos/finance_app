@@ -71,8 +71,15 @@ export namespace Transactions {
     account_id: number;
     source_transaction_id: number;
     parent_transaction_id: number;
+    /** YYYY-MM-DD; serialized as RFC3339 by the API but mirrors transaction.date semantics. */
+    date?: string;
     created_at?: string;
     updated_at?: string;
+  }
+
+  export interface UpdateSettlementPayload {
+    /** YYYY-MM-DD or RFC3339; the API parses both. */
+    date?: string;
   }
 
   export interface Transaction {
