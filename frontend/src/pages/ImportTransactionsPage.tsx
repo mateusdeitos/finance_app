@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -44,20 +44,6 @@ export function ImportTransactionsPage() {
   })
   const pauseRef = useRef(false)
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
-  const fieldsRef = useRef<{ id: string }[]>([])
-  const rowRefCallbacksRef = useRef<Map<number, (el: HTMLTableRowElement | null) => void>>(new Map())
-
-  const getRowRefCallback = (i: number) => {
-    let cb = rowRefCallbacksRef.current.get(i)
-    if (!cb) {
-      cb = (el: HTMLTableRowElement | null) => {
-        if (el) rowRefs.current.set(i, el)
-        else rowRefs.current.delete(i)
-      }
-      rowRefCallbacksRef.current.set(i, cb)
-    }
-    return cb
-  }
 
   const totalSelected = useSelectionStore((s) => s.selected.size)
   const toggleSelection = useSelectionStore((s) => s.toggle)
@@ -88,7 +74,18 @@ export function ImportTransactionsPage() {
     name: 'rows',
   })
 
-  fieldsRef.current = fields
+  // Stable per-index ref callbacks so React.memo on ImportReviewRow can bail out
+  // when only one row's selection slot changes; an inline arrow would invalidate
+  // the memo for all 100 rows on every page render.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const rowRefCallbacks = useMemo(
+    () =>
+      fields.map((_, i) => (el: HTMLTableRowElement | null) => {
+        if (el) rowRefs.current.set(i, el)
+        else rowRefs.current.delete(i)
+      }),
+    [fields],
+  )
 
   const queryClient = useQueryClient()
   const invalidateTransactions = () => queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
@@ -116,10 +113,10 @@ export function ImportTransactionsPage() {
       toggleSelection(
         index,
         shiftKey,
-        fieldsRef.current.map((f) => f.id),
+        fields.map((f) => f.id),
       )
     },
-    [toggleSelection],
+    [toggleSelection, fields],
   )
 
   const handleSelectAll = () => selectAllSelection(fields.map((f) => f.id))
@@ -129,7 +126,7 @@ export function ImportTransactionsPage() {
 
   const forEachSelectedRow = (fn: (index: number) => void) => {
     const { selected } = useSelectionStore.getState()
-    fieldsRef.current.forEach((f, i) => {
+    fields.forEach((f, i) => {
       if (selected.has(f.id)) fn(i)
     })
   }
@@ -379,7 +376,7 @@ export function ImportTransactionsPage() {
                   {fields.map((field, i) => (
                     <ImportReviewRow
                       key={field.id}
-                      ref={getRowRefCallback(i)}
+                      ref={rowRefCallbacks[i]}
                       rowIndex={i}
                       fieldId={field.id}
                       disabled={importing && !paused}
