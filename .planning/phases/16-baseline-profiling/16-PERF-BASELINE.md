@@ -89,7 +89,7 @@ Aggregate: every scenario re-renders all 100 review rows and produces a commit o
 
 ## Hypothesis Verdict
 
-**Verdict: CONFIRMED.**
+**Verdict:** CONFIRMED — page-level `useWatch({ name: 'rows' })` is the dominant re-render trigger.
 
 The page-level subscription `useWatch({ control: form.control, name: 'rows' })` at `frontend/src/pages/ImportTransactionsPage.tsx:70` is the dominant re-render trigger for both keystroke scenarios — and the page-level cascade pattern (`ImportTransactionsPage` as updater of every row) is reproduced even in non-RHF scenarios.
 
