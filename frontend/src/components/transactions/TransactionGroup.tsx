@@ -87,12 +87,12 @@ export function TransactionGroup({
     return false;
   }
 
-  function openSyntheticEditDrawer(sourceTxId: number, parentTransactionId?: number) {
+  function openSyntheticEditDrawer(sourceTxId: number) {
     // Synthetic settlement rows don't carry their source's full state;
-    // fetch the source by id and open its update drawer focused on the
-    // split row that produced this specific settlement (matched by
-    // parent_transaction_id). Falls back to index 0 when the parent
-    // can't be resolved (legacy/empty payload).
+    // fetch the source by id and open its update drawer. The user picks
+    // which split row to edit from there. The source is always owned by
+    // the same user as the settlement, so no extra ownership check is
+    // needed (the backend already filters by caller user_id).
     const notifId = notifications.show({
       loading: true,
       title: "Carregando transação...",
@@ -103,17 +103,7 @@ export function TransactionGroup({
     fetchTransaction(sourceTxId)
       .then((source) => {
         notifications.hide(notifId);
-        let splitIndex = 0;
-        if (parentTransactionId != null) {
-          const found = (source.linked_transactions ?? []).findIndex(
-            (lt) => lt.id === parentTransactionId,
-          );
-          if (found >= 0) splitIndex = found;
-        }
-        const focusField = `split_settings.${splitIndex}.amount` as FocusField;
-        void renderDrawer(() => (
-          <UpdateTransactionDrawer transaction={source} focusField={focusField} />
-        ));
+        void renderDrawer(() => <UpdateTransactionDrawer transaction={source} />);
       })
       .catch(() => {
         notifications.update({
@@ -213,7 +203,7 @@ export function TransactionGroup({
                 onSelect={onSelectSettlement}
                 onEdit={
                   !isSelectionActive && sourceTxId
-                    ? () => openSyntheticEditDrawer(sourceTxId, tx.parent_transaction_id)
+                    ? () => openSyntheticEditDrawer(sourceTxId)
                     : undefined
                 }
               />

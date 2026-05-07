@@ -46,7 +46,6 @@ function expandInlineSettlementsForDateGrouping(
         id: -(s.id + PROMOTED_INLINE_SETTLEMENT_ID_OFFSET),
         origin_settlement_id: s.id,
         source_transaction_id: tx.id,
-        parent_transaction_id: s.parent_transaction_id,
         user_id: s.user_id,
         original_user_id: tx.original_user_id,
         type: tx.type,
