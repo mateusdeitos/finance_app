@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Import Transactions Performance
 status: in-progress
-last_updated: "2026-05-06T00:00:00.000Z"
-last_activity: 2026-05-06
+last_updated: "2026-05-07T00:00:00.000Z"
+last_activity: 2026-05-07
 progress:
   total_phases: 6
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 16
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 33
 ---
 
 ## Current Position
 
-Phase: 17 — Eliminate Page-Level useWatch Cascade (next)
+Phase: 18 — Move Select Options to Query `select` (next; user has approved Zustand-style external store for selection rearch)
 Plan: —
-Status: Phase 16 complete; planning Phase 17
-Last activity: 2026-05-06 — Phase 16 baseline + verdict committed (CONFIRMED)
+Status: Phase 17 complete (SC1–SC4 PASSED, description keystroke 262× faster); planning Phase 18
+Last activity: 2026-05-07 — Phase 17 refactor + perf-comparison committed
 
 ## Project Reference
 

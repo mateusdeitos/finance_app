@@ -70,7 +70,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 <summary>🔄 v1.5 Import Transactions Performance — ACTIVE</summary>
 
 - [x] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in dev-server mode (`just profile`)
-- [ ] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
+- [x] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
 - [ ] **Phase 18: Move Select Options to Query `select`** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks so Mantine `Select.data` receives stable references across row renders
 - [ ] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating so date/amount edits stop firing N requests across hundreds of subscribed rows
 - [ ] **Phase 20: Virtualize Import Review Table** *(gated post-P19)* — Introduce `@tanstack/react-virtual` and convert `<Table>` to a CSS-grid layout. With 100-row hard limit, this is future-proofing + extra polish; orchestrator may skip if P19 measurements already meet the perf bar
@@ -129,7 +129,9 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   2. `handleSelectAll` derives count from `useFieldArray.fields.length` instead of a watched array
   3. `toImportRows`/`errorCount` are derived inside `useWatch({ ..., compute })` returning only scalars (`toImportCount`, `errorCount`) — never the raw row array
   4. Profiler re-run on the 100-row baseline (`just profile` recipe, same fixture as Phase 16) shows `ImportTransactionsPage` does NOT re-render on a single description keystroke in any row (i.e. it does NOT appear in the React DevTools "updaters" list of the user-action commit). Scenarios 3 & 4 are out of scope — they belong to P18/P19 per `16/deferred-items.md`.
-**Plans:** TBD
+**Plans:** ad-hoc (single small refactor; no formal plan file)
+**Outcome:** SC1–SC4 all PASSED. Description keystroke 761 ms → 2.9 ms (262×). Amount keystroke 929 ms → 62.5 ms (15×). `ImportTransactionsPage` removed from updaters for keystroke scenarios. Compiler wiring SKIPPED (user-chosen scope reduction). Scenarios 3 & 4 (checkbox/shift-click) still cascade — owned by P18/P19 per `16/deferred-items.md`. Full numbers in `.planning/phases/17-eliminate-page-usewatch-cascade/17-PERF-COMPARISON.md`.
+**Context:** `.planning/phases/17-eliminate-page-usewatch-cascade/17-CONTEXT.md`
 
 ### Phase 18: Move Select Options to Query `select`
 **Goal**: Mantine `Select` components in `ImportReviewRow` receive stable `data` references across row renders, by deriving option arrays inside TanStack Query `select` callbacks per `frontend/CLAUDE.md` §3
