@@ -67,8 +67,6 @@ export const ImportReviewRow = memo(
       importStatus,
       importError,
       parseErrors,
-      date,
-      amount,
     ] = useWatch({
       control: form.control,
       name: [
@@ -80,19 +78,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.import_status`,
         `rows.${rowIndex}.import_error`,
         `rows.${rowIndex}.parse_errors`,
-        `rows.${rowIndex}.date`,
-        `rows.${rowIndex}.amount`,
       ],
-    });
-
-    // ─── Duplicate re-detection ─────────────────────────────────────────────────
-
-    useDuplicateTransactionCheck({
-      date: date as string,
-      amount: amount as number,
-      accountId: form.getValues("accountId"),
-      getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
-      setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
     });
 
     const rowErrors = form.formState.errors.rows?.[rowIndex];
@@ -138,6 +124,7 @@ export const ImportReviewRow = memo(
 
     return (
       <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={ImportTestIds.Row(rowIndex)}>
+        <RowDuplicateCheck rowIndex={rowIndex} />
         {/* Checkbox */}
         <Table.Td style={{ cursor: "pointer" }}>
           <Checkbox
@@ -372,7 +359,6 @@ export const ImportReviewRow = memo(
               summary={splitSummary}
               hasSplit={!!splitSettings?.length}
               disabled={disabled || isSkipped}
-              rowAmount={amount as number}
               rowIndex={rowIndex}
             />
           ) : (
@@ -498,4 +484,32 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
       </Popover>
     </FormProvider>
   );
+}
+
+// ─── RowDuplicateCheck ────────────────────────────────────────────────────────
+// Subscribes to date/amount/action for a single row and runs the duplicate
+// check. Returns null so it adds no DOM. Lives as a sibling of the row's
+// table cells so amount/date keystrokes do NOT re-render the row outer.
+
+function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
+  const form = useFormContext<ImportFormValues>();
+  const [date, amount, action] = useWatch({
+    control: form.control,
+    name: [
+      `rows.${rowIndex}.date`,
+      `rows.${rowIndex}.amount`,
+      `rows.${rowIndex}.action`,
+    ],
+  });
+
+  useDuplicateTransactionCheck({
+    date: date as string,
+    amount: amount as number,
+    accountId: form.getValues("accountId"),
+    enabled: action === "import",
+    getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
+    setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
+  });
+
+  return null;
 }

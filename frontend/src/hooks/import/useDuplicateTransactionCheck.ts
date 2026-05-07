@@ -14,6 +14,8 @@ interface Args {
   getCurrentAction: () => 'import' | 'skip' | 'duplicate'
   setAction: (action: 'import' | 'duplicate') => void
   debounceMs?: number
+  /** When false, the hook never calls the backend. Default `true`. */
+  enabled?: boolean
 }
 
 /**
@@ -28,6 +30,7 @@ export function useDuplicateTransactionCheck({
   getCurrentAction,
   setAction,
   debounceMs = 500,
+  enabled = true,
 }: Args) {
   const [debouncedDate] = useDebouncedValue(date, debounceMs)
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
@@ -35,6 +38,7 @@ export function useDuplicateTransactionCheck({
   const initialRef = useRef({ date, amount })
 
   useEffect(() => {
+    if (!enabled) return
     // Skip when values match the initial mount — backend already checked duplicates for those.
     if (debouncedDate === initialRef.current.date && debouncedAmount === initialRef.current.amount) {
       return
@@ -57,8 +61,8 @@ export function useDuplicateTransactionCheck({
       .catch(() => {
         /* ignore network errors */
       })
-    // Only react to the two debounced values; getCurrentAction/setAction
+    // Only react to the two debounced values + enabled flag; getCurrentAction/setAction
     // are stable RHF callbacks in practice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDate, debouncedAmount])
+  }, [debouncedDate, debouncedAmount, enabled])
 }

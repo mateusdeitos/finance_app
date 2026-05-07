@@ -15,15 +15,14 @@ interface SplitPopoverProps {
   summary: string;
   hasSplit: boolean;
   disabled: boolean;
-  rowAmount: number;
   rowIndex: number;
 }
-export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmount, rowIndex }: SplitPopoverProps) {
+export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowIndex }: SplitPopoverProps) {
   const parentForm = useFormContext<ImportFormValues>();
 
   const localForm = useForm<SplitLocalValues>({
     defaultValues: {
-      amount: rowAmount,
+      amount: 0,
       split_settings: [],
     },
   });
@@ -35,7 +34,7 @@ export function SplitPopover({ namePrefix, summary, hasSplit, disabled, rowAmoun
     // getValues result to the row schema.
     const rowValues = parentForm.getValues(rowPath as `rows.${number}`) as ImportRowFormValues;
     localForm.reset({
-      amount: rowValues.amount ?? rowAmount,
+      amount: rowValues.amount ?? 0,
       split_settings: rowValues.split_settings ?? [],
     });
   }
