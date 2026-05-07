@@ -7,18 +7,18 @@ last_updated: "2026-05-07T00:00:00.000Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
+  percent: 50
 ---
 
 ## Current Position
 
-Phase: 18 — Move Select Options to Query `select` (next; user has approved Zustand-style external store for selection rearch)
+Phase: 19 — Scope & Debounce Duplicate Check (next)
 Plan: —
-Status: Phase 17 complete (SC1–SC4 PASSED, description keystroke 262× faster); planning Phase 18
-Last activity: 2026-05-07 — Phase 17 refactor + perf-comparison committed
+Status: Phase 18 complete (SC1–SC4 PASSED, SC5 partial — cenários 3/4 cascade broken, cenário 2 still hits intra-row updater which is P19 territory)
+Last activity: 2026-05-07 — Phase 18 perf-comparison + summary committed
 
 ## Project Reference
 

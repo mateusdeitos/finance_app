@@ -71,7 +71,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
 - [x] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in dev-server mode (`just profile`)
 - [x] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
-- [ ] **Phase 18: Move Select Options to Query `select`** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks so Mantine `Select.data` receives stable references across row renders
+- [x] **Phase 18: Memoize Options + Rearch Selection** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks; move row selection into a Zustand store keyed by `field.id` so single-row toggle re-renders only the toggled row
 - [ ] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating so date/amount edits stop firing N requests across hundreds of subscribed rows
 - [ ] **Phase 20: Virtualize Import Review Table** *(gated post-P19)* — Introduce `@tanstack/react-virtual` and convert `<Table>` to a CSS-grid layout. With 100-row hard limit, this is future-proofing + extra polish; orchestrator may skip if P19 measurements already meet the perf bar
 - [ ] **Phase 21: Verification & E2E Coverage** — Re-run profiler vs baseline, run lint/build/e2e suite, add 1 new e2e covering edit-after-scroll on a >100-row CSV, plus a manual smoke test
@@ -145,6 +145,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   5. Profiler re-run on the 100-row baseline (`just profile`, same recipe as Phases 16/17) shows: (a) cenário 2 commit duration drops further; (b) cenários 3 & 4 no longer cascade through all 100 rows — `ImportReviewRow2` instance count drops dramatically (target: ≤2 in cenário 3, ≤51 in cenário 4 — only the toggled row plus the range expansion in 4)
 **Plans:** ad-hoc (single phase, executed inline 2026-05-07)
 **Context:** `.planning/phases/18-options-and-selection-rearch/18-CONTEXT.md`
+**Outcome:** SC1–SC4 PASSED. SC5 partial — cenário 3 (single toggle): 791ms → 183.9ms (4.3× faster, only toggled row re-renders); cenário 4 (shift-click 0..50): 720ms → 455.3ms (1.6× faster, 49 rows re-render = exactly the range expansion). Cenário 2 unchanged (64ms; intra-row updater is P19 territory). Discovery during execution: P18 v1 measurements showed the cascade still active because of an unrelated unstable ref callback in fields.map; fix in `4fee0ff` + `299f753` (lint cleanup) restored the architecture's intended behavior. Full numbers in `.planning/phases/18-options-and-selection-rearch/18-PERF-COMPARISON.md`.
 
 ### Phase 19: Scope & Debounce Duplicate Check
 **Goal**: `useDuplicateTransactionCheck` no longer fires per keystroke across all rows simultaneously — the check is debounced, disabled for skipped rows, and provably no longer the bottleneck for amount/date editing in large imports
