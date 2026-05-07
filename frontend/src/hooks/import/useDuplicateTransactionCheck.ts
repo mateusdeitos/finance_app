@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useDebouncedValue } from '@mantine/hooks'
+import { useQuery } from '@tanstack/react-query'
 import { checkDuplicateTransaction } from '@/api/transactions'
+import { QueryKeys } from '@/utils/queryKeys'
 
 interface Args {
   date: string
@@ -21,7 +23,10 @@ interface Args {
 /**
  * Re-checks the import row against the backend for duplicates whenever the
  * date / amount change (debounced). Skips the initial mount because the
- * backend already returned duplicate status for the parsed CSV.
+ * backend already returned duplicate status for the parsed CSV, and skips
+ * `enabled: false → true` toggles when neither field has actually changed
+ * (the user flipping the action between `import` ↔ `duplicate` should not
+ * refire the request).
  */
 export function useDuplicateTransactionCheck({
   date,
@@ -37,32 +42,35 @@ export function useDuplicateTransactionCheck({
 
   const initialRef = useRef({ date, amount })
 
-  useEffect(() => {
-    if (!enabled) return
-    // Skip when values match the initial mount — backend already checked duplicates for those.
-    if (debouncedDate === initialRef.current.date && debouncedAmount === initialRef.current.amount) {
-      return
-    }
-    if (!debouncedDate || !debouncedAmount || debouncedAmount <= 0) return
+  const fieldsChanged =
+    debouncedDate !== initialRef.current.date ||
+    debouncedAmount !== initialRef.current.amount
 
-    void checkDuplicateTransaction({
-      date: debouncedDate,
-      amount: debouncedAmount,
-      account_id: accountId,
-    })
-      .then((result) => {
-        const currentAction = getCurrentAction()
-        if (result.is_duplicate && currentAction === 'import') {
-          setAction('duplicate')
-        } else if (!result.is_duplicate && currentAction === 'duplicate') {
-          setAction('import')
-        }
-      })
-      .catch(() => {
-        /* ignore network errors */
-      })
-    // Only react to the two debounced values + enabled flag; getCurrentAction/setAction
-    // are stable RHF callbacks in practice.
+  const { data } = useQuery({
+    queryKey: [QueryKeys.CheckDuplicate, debouncedDate, debouncedAmount, accountId],
+    queryFn: () =>
+      checkDuplicateTransaction({
+        date: debouncedDate,
+        amount: debouncedAmount,
+        account_id: accountId,
+      }),
+    enabled:
+      enabled &&
+      !!debouncedDate &&
+      debouncedAmount > 0 &&
+      fieldsChanged,
+    staleTime: Infinity,
+  })
+
+  useEffect(() => {
+    if (!data) return
+    const currentAction = getCurrentAction()
+    if (data.is_duplicate && currentAction === 'import') {
+      setAction('duplicate')
+    } else if (!data.is_duplicate && currentAction === 'duplicate') {
+      setAction('import')
+    }
+    // getCurrentAction/setAction are stable RHF callbacks in practice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedDate, debouncedAmount, enabled])
+  }, [data])
 }

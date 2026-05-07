@@ -31,6 +31,8 @@ export const ImportTestIds = {
   // Row-scoped (parametric)
   Row: (rowIndex: number) => `import_row_${rowIndex}` as const,
   RowStatus: (rowIndex: number) => `import_status_${rowIndex}` as const,
+  RowInputDate: (rowIndex: number) => `input_row_date_${rowIndex}` as const,
+  RowInputAmount: (rowIndex: number) => `input_row_amount_${rowIndex}` as const,
   RowSelectCategory: (rowIndex: number) => `select_category_${rowIndex}` as const,
   RowSelectAction: (rowIndex: number) => `select_import_action_${rowIndex}` as const,
   RowSelectTransactionType: (rowIndex: number) =>

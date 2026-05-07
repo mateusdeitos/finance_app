@@ -162,6 +162,7 @@ export const ImportReviewRow = memo(
                 disabled={disabled || isSkipped}
                 error={rowErrors?.date?.message}
                 popoverProps={{ withinPortal: true }}
+                data-testid={ImportTestIds.RowInputDate(rowIndex)}
               />
             )}
           />
@@ -195,6 +196,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 error={rowErrors?.amount?.message}
                 disabled={disabled || isSkipped}
+                data-testid={ImportTestIds.RowInputAmount(rowIndex)}
               />
             )}
           />
