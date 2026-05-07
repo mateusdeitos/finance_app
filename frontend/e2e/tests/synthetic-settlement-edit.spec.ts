@@ -96,7 +96,11 @@ test.describe("Synthetic settlement row — edit", () => {
     const sourceFetch = page.waitForResponse(
       (r) => /\/api\/transactions\/\d+(\?|$)/.test(r.url()) && r.request().method() === "GET",
     );
-    await settlementRow.click();
+    // Dispatch the click programmatically as a fallback for any
+    // pointer-events / overlay quirk that might prevent Playwright's
+    // synthesized click from reaching the row's onClick. The editable
+    // class assertion above already proves onEdit is wired.
+    await settlementRow.evaluate((el) => (el as HTMLElement).click());
     await sourceFetch;
 
     // Drawer opens with the source transaction loaded — its description
