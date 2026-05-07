@@ -72,24 +72,27 @@ async function apiCreateSharedExpense(
   return { sourceTx, settlement };
 }
 
-async function apiGetSettlementById(
+async function apiGetSettlementBySourceTx(
   setup: UserAndPartnerResult,
-  settlementId: number,
+  sourceTxId: number,
 ): Promise<Transactions.Settlement> {
-  // No dedicated GET endpoint for settlements; settlements are reached through
-  // their source transaction. Re-list and find it inline so the test asserts
-  // on the same field the UI reads.
+  // No dedicated GET endpoint for settlements. We list transactions filtered
+  // to the user's private account (where the source tx lives), find the
+  // source tx by id, and return its first inline settlement. Looking up by
+  // source tx — rather than by settlement id — is necessary because
+  // syncSettlementsForTransaction deletes and recreates settlements on every
+  // source update, which means the settlement id changes even when the date
+  // is preserved by the snapshot logic.
   const res = await apiFetchAs(
     setup.userToken,
     `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}&with_settlements=true`,
   );
   const txs = (await res.json()) as Transactions.Transaction[];
-  for (const t of txs) {
-    for (const s of t.settlements_from_source ?? []) {
-      if (s.id === settlementId) return s;
-    }
-  }
-  throw new Error(`Settlement ${settlementId} not found via tx listing`);
+  const tx = txs.find((t) => t.id === sourceTxId);
+  if (!tx) throw new Error(`Source tx ${sourceTxId} not found via listing`);
+  const s = tx.settlements_from_source?.[0];
+  if (!s) throw new Error(`No settlement on source tx ${sourceTxId}`);
+  return s;
 }
 
 test.describe("Bulk settlement date change", () => {
@@ -109,7 +112,7 @@ test.describe("Bulk settlement date change", () => {
   // ── Test 1: happy path — synthetic settlement bulk-date ────────────────────
   test("changes the date of a selected synthetic settlement row", async ({ browser }) => {
     const description = `synthetic-bulk-${Date.now()}`;
-    const { settlement } = await apiCreateSharedExpense(
+    const { sourceTx, settlement } = await apiCreateSharedExpense(
       setup,
       categoryId,
       description,
@@ -117,9 +120,13 @@ test.describe("Bulk settlement date change", () => {
       TODAY,
     );
 
-    // Pick a target date 5 days ahead so it won't collide with TODAY.
-    const target = new Date(now);
-    target.setDate(now.getDate() + 5);
+    // Pick a target day > 12 so the DD/MM/YYYY input string can't be
+    // misparsed as MM/DD/YYYY by Mantine's DateInput dayjs parser. Stay
+    // inside the current month so the post-update listing (filtered by
+    // current month) still surfaces the settlement.
+    const todayDay = now.getDate();
+    const targetDay = todayDay >= 25 ? 13 : 25;
+    const target = new Date(YEAR, MONTH - 1, targetDay);
     const targetYmd = ymd(target);
 
     const page = await openAuthedPage(browser, setup.userToken);
@@ -153,7 +160,11 @@ test.describe("Bulk settlement date change", () => {
       timeout: 15000,
     });
 
-    const updated = await apiGetSettlementById(setup, settlement.id);
+    // Look up the settlement by source tx id rather than by the original
+    // settlement.id — sync deletes and recreates settlements after every
+    // source update, so the id changes even though the date is preserved.
+    void settlement; // intentionally unused; the sync loop replaces it.
+    const updated = await apiGetSettlementBySourceTx(setup, sourceTx.id);
     expect(updated.date?.slice(0, 10)).toBe(targetYmd);
 
     await page.close();
@@ -219,9 +230,10 @@ test.describe("Bulk settlement date change", () => {
     const updatedTx = txs.find((t) => t.description === description);
     expect(updatedTx?.category_id).toBe(otherCat.id);
 
-    const updatedSettlement = await apiGetSettlementById(setup, settlement.id);
-    // Settlement category isn't a thing — what we assert is that nothing
-    // about the settlement changed. Date stays the same.
+    // Settlement is recreated on every source-tx update, so its id changes
+    // even though the snapshot preserves the date. Re-look up by source.
+    void settlement; // intentionally unused after the sync loop.
+    const updatedSettlement = await apiGetSettlementBySourceTx(setup, sourceTx.id);
     expect(updatedSettlement.date?.slice(0, 10)).toBe(initialSettlementDate);
 
     await page.close();
