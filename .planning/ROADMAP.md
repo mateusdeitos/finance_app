@@ -133,16 +133,18 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Outcome:** SC1–SC4 all PASSED. Description keystroke 761 ms → 2.9 ms (262×). Amount keystroke 929 ms → 62.5 ms (15×). `ImportTransactionsPage` removed from updaters for keystroke scenarios. Compiler wiring SKIPPED (user-chosen scope reduction). Scenarios 3 & 4 (checkbox/shift-click) still cascade — owned by P18/P19 per `16/deferred-items.md`. Full numbers in `.planning/phases/17-eliminate-page-usewatch-cascade/17-PERF-COMPARISON.md`.
 **Context:** `.planning/phases/17-eliminate-page-usewatch-cascade/17-CONTEXT.md`
 
-### Phase 18: Move Select Options to Query `select`
-**Goal**: Mantine `Select` components in `ImportReviewRow` receive stable `data` references across row renders, by deriving option arrays inside TanStack Query `select` callbacks per `frontend/CLAUDE.md` §3
+### Phase 18: Memoize Options + Rearch Selection
+**Goal**: (a) Mantine `Select` components in `ImportReviewRow` receive stable `data` references across row renders, by deriving option arrays inside TanStack Query `select` callbacks per `frontend/CLAUDE.md` §3; (b) Per-row selection state moves out of `ImportTransactionsPage`'s `useState<Set<number>>` into a Zustand store keyed by `field.id`, so toggling row N re-renders only row N (and the page-level cardinality subscriber) instead of cascading through all 100 rows. Scope expanded from the original "options only" by user-approved decision (2026-05-07) to absorb the deferred selection cascade in one phase.
 **Depends on**: Phase 17 (so per-row optimizations are isolated and measurable)
 **Requirements**: RR-03, RR-04
 **Success Criteria** (what must be TRUE):
-  1. `useFlattenCategories` accepts a generic `select<T>` parameter (matching the convention already exposed by `useAccounts`)
-  2. `ImportReviewRow` consumes `categoryOptions` and `accountOptions` via `select`-derived query data, not via inline `categories.map(...)` per render
-  3. `sharedAccounts` derivation also moves to a `select` slice or is otherwise made reference-stable across row re-renders
-  4. Profiler re-run on the 200-row baseline shows that an isolated row re-render commit cost is reduced vs. the post-Phase-17 measurement
-**Plans:** TBD
+  1. `useFlattenCategories` accepts a generic `select<T>` parameter (matching the convention already exposed by `useAccounts`) — already in place pre-P18, verified
+  2. `ImportReviewRow` consumes `categoryOptions` and `accountOptions` via `select`-derived query data through dedicated hooks (`useCategoryOptions`, `useAccountOptions`), not via inline `categories.map(...)` per render
+  3. `sharedAccounts` derivation also moves to a `select` slice (`useSharedAccounts`) reference-stable across row re-renders
+  4. `ImportTransactionsPage` no longer holds row-selection in `useState<Set<number>>`; selection lives in `frontend/src/components/transactions/import/selectionStore.ts` (Zustand), keyed by stable `field.id`. Bulk handlers iterate `useFieldArray.fields` and check store membership; the page subscribes only to `selected.size` for `someSelected`/`allSelected` derivations.
+  5. Profiler re-run on the 100-row baseline (`just profile`, same recipe as Phases 16/17) shows: (a) cenário 2 commit duration drops further; (b) cenários 3 & 4 no longer cascade through all 100 rows — `ImportReviewRow2` instance count drops dramatically (target: ≤2 in cenário 3, ≤51 in cenário 4 — only the toggled row plus the range expansion in 4)
+**Plans:** ad-hoc (single phase, executed inline 2026-05-07)
+**Context:** `.planning/phases/18-options-and-selection-rearch/18-CONTEXT.md`
 
 ### Phase 19: Scope & Debounce Duplicate Check
 **Goal**: `useDuplicateTransactionCheck` no longer fires per keystroke across all rows simultaneously — the check is debounced, disabled for skipped rows, and provably no longer the bottleneck for amount/date editing in large imports
