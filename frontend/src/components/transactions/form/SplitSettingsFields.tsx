@@ -125,21 +125,18 @@ function SplitRowControls({
         </Tooltip>
       )}
 
-      <Tooltip
-        label={hasCustomDate ? "Data customizada do acerto" : "Definir data do acerto"}
-        withArrow
+      <ActionIcon
+        size="lg"
+        radius="xl"
+        variant={hasCustomDate ? "filled" : "default"}
+        color={hasCustomDate ? "violet" : undefined}
+        onClick={handleOpenDatePicker}
+        aria-label={hasCustomDate ? "Data customizada do acerto" : "Definir data do acerto"}
+        title={hasCustomDate ? "Data customizada do acerto" : "Definir data do acerto"}
+        data-testid={TransactionsTestIds.BtnSplitRowDate(rowIndex)}
       >
-        <ActionIcon
-          size="lg"
-          radius="xl"
-          variant={hasCustomDate ? "filled" : "default"}
-          color={hasCustomDate ? "violet" : undefined}
-          onClick={handleOpenDatePicker}
-          data-testid={TransactionsTestIds.BtnSplitRowDate(rowIndex)}
-        >
-          {hasCustomDate ? <IconCalendarStats size={16} /> : <IconCalendar size={16} />}
-        </ActionIcon>
-      </Tooltip>
+        {hasCustomDate ? <IconCalendarStats size={16} /> : <IconCalendar size={16} />}
+      </ActionIcon>
 
       {mode === "percentage" ? (
         <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
