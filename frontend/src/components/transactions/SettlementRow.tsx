@@ -5,6 +5,7 @@ import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
 import { formatCents } from '@/utils/formatCents'
 import { tapHaptic } from '@/utils/haptics'
+import { parseDate } from '@/utils/parseDate'
 import classes from './TransactionRow.module.css'
 import settlementClasses from './SettlementRow.module.css'
 
@@ -35,8 +36,10 @@ export function SettlementRow({
 
   // Prefer the settlement's own date when available (issue #69); fall back to
   // created_at for older rows that haven't been backfilled in-memory.
+  // parseDate avoids the TZ-shift that turns midnight-UTC into the previous
+  // calendar day in negative-offset timezones.
   const dateSource = settlement.date ?? settlement.created_at
-  const date = dateSource ? new Date(dateSource) : null
+  const date = dateSource ? parseDate(dateSource) : null
   const dateLabel = date?.toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
