@@ -62,7 +62,7 @@ async function apiCreateSharedExpense(
   // source transaction with its settlements_from_source preloaded.
   const txsRes = await apiFetchAs(
     setup.userToken,
-    `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}`,
+    `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}&with_settlements=true`,
   );
   const txs = (await txsRes.json()) as Transactions.Transaction[];
   const sourceTx = txs.find((t) => t.description === description);
@@ -81,7 +81,7 @@ async function apiGetSettlementById(
   // on the same field the UI reads.
   const res = await apiFetchAs(
     setup.userToken,
-    `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}`,
+    `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}&with_settlements=true`,
   );
   const txs = (await res.json()) as Transactions.Transaction[];
   for (const t of txs) {
@@ -213,7 +213,7 @@ test.describe("Bulk settlement date change", () => {
     // Verify only the transaction got the new category; settlement is unchanged.
     const txsRes = await apiFetchAs(
       setup.userToken,
-      `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}`,
+      `/api/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}&with_settlements=true`,
     );
     const txs = (await txsRes.json()) as Transactions.Transaction[];
     const updatedTx = txs.find((t) => t.description === description);
