@@ -3,8 +3,7 @@ import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stac
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
-import { useFlattenCategories } from "@/hooks/useCategories";
-import { useAccounts } from "@/hooks/useAccounts";
+import { useCategoryOptions, useAccountOptions, useSharedAccounts } from "@/hooks/import/useImportOptions";
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
@@ -17,6 +16,7 @@ import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
 import { AccountDrawer } from "@/components/accounts/AccountDrawer";
+import { useSelectionStore } from "./selectionStore";
 import { ImportTestIds, type ImportRowAction, type ImportRowTransactionType } from '@/testIds'
 
 const TRANSACTION_TYPE_OPTIONS = [
@@ -40,36 +40,23 @@ const RECURRENCE_TYPE_LABELS: Record<string, string> = {
 
 interface Props {
   rowIndex: number;
-  selected: boolean;
+  fieldId: string;
   disabled: boolean;
   onToggleSelect: (index: number, shiftKey: boolean) => void;
 }
 
 export const ImportReviewRow = memo(
   forwardRef<HTMLTableRowElement, Props>(function ImportReviewRow(
-    { rowIndex, selected, disabled, onToggleSelect },
+    { rowIndex, fieldId, disabled, onToggleSelect },
     ref,
   ) {
     const namePrefix = `rows.${rowIndex}.` as const;
     const form = useFormContext<ImportFormValues>();
 
-    const { query: categoriesQuery } = useFlattenCategories();
-    const { query: accountsQuery } = useAccounts();
-
-    const categories = categoriesQuery.data ?? [];
-    const accounts = accountsQuery.data ?? [];
-
-    const categoryOptions = categories.map((c) => ({
-      value: String(c.id),
-      label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
-    }));
-
-    const accountOptions = accounts.map((a) => ({
-      value: String(a.id),
-      label: a.name,
-    }));
-
-    const sharedAccounts = accounts.filter((a) => a.user_connection?.connection_status === "accepted");
+    const selected = useSelectionStore((s) => s.selected.has(fieldId));
+    const categoryOptions = useCategoryOptions();
+    const accountOptions = useAccountOptions();
+    const sharedAccounts = useSharedAccounts();
 
     const [
       action,
@@ -80,8 +67,6 @@ export const ImportReviewRow = memo(
       importStatus,
       importError,
       parseErrors,
-      date,
-      amount,
     ] = useWatch({
       control: form.control,
       name: [
@@ -93,19 +78,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.import_status`,
         `rows.${rowIndex}.import_error`,
         `rows.${rowIndex}.parse_errors`,
-        `rows.${rowIndex}.date`,
-        `rows.${rowIndex}.amount`,
       ],
-    });
-
-    // ─── Duplicate re-detection ─────────────────────────────────────────────────
-
-    useDuplicateTransactionCheck({
-      date: date as string,
-      amount: amount as number,
-      accountId: form.getValues("accountId"),
-      getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
-      setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
     });
 
     const rowErrors = form.formState.errors.rows?.[rowIndex];
@@ -151,6 +124,7 @@ export const ImportReviewRow = memo(
 
     return (
       <Table.Tr ref={ref} className={rowClass()} data-row-index={rowIndex} data-testid={ImportTestIds.Row(rowIndex)}>
+        <RowDuplicateCheck rowIndex={rowIndex} />
         {/* Checkbox */}
         <Table.Td style={{ cursor: "pointer" }}>
           <Checkbox
@@ -385,7 +359,6 @@ export const ImportReviewRow = memo(
               summary={splitSummary}
               hasSplit={!!splitSettings?.length}
               disabled={disabled || isSkipped}
-              rowAmount={amount as number}
               rowIndex={rowIndex}
             />
           ) : (
@@ -511,4 +484,32 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
       </Popover>
     </FormProvider>
   );
+}
+
+// ─── RowDuplicateCheck ────────────────────────────────────────────────────────
+// Subscribes to date/amount/action for a single row and runs the duplicate
+// check. Returns null so it adds no DOM. Lives as a sibling of the row's
+// table cells so amount/date keystrokes do NOT re-render the row outer.
+
+function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
+  const form = useFormContext<ImportFormValues>();
+  const [date, amount, action] = useWatch({
+    control: form.control,
+    name: [
+      `rows.${rowIndex}.date`,
+      `rows.${rowIndex}.amount`,
+      `rows.${rowIndex}.action`,
+    ],
+  });
+
+  useDuplicateTransactionCheck({
+    date: date as string,
+    amount: amount as number,
+    accountId: form.getValues("accountId"),
+    enabled: action === "import",
+    getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
+    setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
+  });
+
+  return null;
 }

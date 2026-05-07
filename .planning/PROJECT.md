@@ -49,36 +49,41 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ Customizable background color for private account avatars — v1.2
 - ✓ Backend validation restricts linked transaction edits to date, description, category, tags only — v1.3
 - ✓ Date/description propagation for linked transactions is user-scoped (edit my side only) — v1.3
+- ✓ "Divisão" bulk action appears in transactions SelectionActionBar before Excluir — v1.4
+- ✓ BulkDivisionDrawer form is percentage-only (no fixed-amount mode) — v1.4
+- ✓ Single connected account auto-selected when opening drawer — v1.4
+- ✓ Form validates Σ percentage = 100% before submit — v1.4
+- ✓ Frontend converts percentage → cents per-transaction with "last split absorbs rest" — v1.4
+- ✓ Payload contains only `connection_id` + `amount` (never `percentage`) — v1.4
+- ✓ Linked/unsplittable transactions silently skipped in bulk batch — v1.4
+- ✓ BulkProgressDrawer reused for sequential per-transaction updates — v1.4
 
 ### Active
 
-- [ ] "Divisão" bulk action appears in transactions SelectionActionBar before Excluir — v1.4
-- [ ] BulkDivisionDrawer form is percentage-only (no fixed-amount mode) — v1.4
-- [ ] Single connected account auto-selected when opening drawer — v1.4
-- [ ] Form validates Σ percentage = 100% before submit — v1.4
-- [ ] Frontend converts percentage → cents per-transaction with "last split absorbs rest" — v1.4
-- [ ] Payload contains only `connection_id` + `amount` (never `percentage`) — v1.4
-- [ ] Linked/unsplittable transactions silently skipped in bulk batch — v1.4
-- [ ] BulkProgressDrawer reused for sequential per-transaction updates — v1.4
+- [ ] Reproducible CSV fixtures (50/200/500 rows) and a documented React DevTools Profiler baseline — v1.5
+- [ ] Page-level `useWatch({ name: 'rows' })` replaced by `compute`-scoped subscriptions — v1.5
+- [ ] `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
+- [ ] `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
+- [ ] Import review table virtualized via `@tanstack/react-virtual` (CSS-grid layout) — v1.5
+- [ ] Validation-error scroll preserved across virtualization (`scrollToIndex` + ref scroll) — v1.5
+- [ ] Existing import e2e suite + new "edit after scroll" e2e on >100-row CSV pass — v1.5
 
 ### Deferred (from v1.3)
 
 - [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
 - [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
 
-## Current Milestone: v1.4 Bulk Update Split Settings
+## Current Milestone: v1.5 Import Transactions Performance
 
-**Goal:** Add "Divisão" to transactions bulk actions with a percentage-only drawer that converts to cents per-transaction and reuses the existing BulkProgressDrawer.
+**Goal:** Eliminate per-keystroke lag on the transaction import review screen and keep large CSVs (200+ rows) fluid via virtualization, while preserving every existing form behavior, popover, and validation flow.
 
 **Target features:**
-- New "Divisão" menu item in `SelectionActionBar` (before Excluir divider)
-- `BulkDivisionDrawer` component — percentage-only split form (no fixed-amount toggle)
-- Smart account pre-selection (1 connected = auto-pick; 0 = disabled)
-- Percentage → cents conversion per-transaction ("last split absorbs rest" for exact sums)
-- Linked/unsplittable transactions silently skipped (matches SEL-02 pattern from v1.2)
-- Payload contract: send only `connection_id` + `amount`; never `percentage`
-- Full transaction payload in PUT (pattern from `19f2bbb`)
-- E2E coverage for single-account pre-selection + cent-exact sums
+- Baseline profiling: reproducible 50/200/500-row CSV fixtures + React DevTools Profiler measurements (numeric before/after evidence)
+- Granular form subscriptions: replace page-level `useWatch({ name: 'rows' })` with `compute`-scoped watchers; row-side stays unchanged
+- Stable Mantine `Select.data` references via TanStack Query `select` callbacks (`categoryOptions`/`accountOptions`/`sharedAccounts`)
+- Debounced + scoped `useDuplicateTransactionCheck` (no per-keystroke fan-out across hundreds of rows)
+- Virtualized import review table with `@tanstack/react-virtual` (CSS grid layout replacing `<Table>`); validation-error scroll, popovers/portals, and forwardRef behavior preserved
+- E2E coverage: existing import suite still green + new ">100-row edit-after-scroll" test that proves form state survives virtualization unmount/remount
 
 ### Out of Scope
 
@@ -88,6 +93,10 @@ Partners can accurately track shared finances, including in-progress installment
 - `end_date` as recurrence input — removed; fixed-count only
 - Mobile app — web-first approach
 - Offline mode — real-time sync not core to finance tracking
+- Backend changes to the import payload or duplicate-detection API — v1.5 is frontend-only
+- Switching off `<table>` semantics globally — only the import review screen migrates to a CSS-grid virtualized layout
+- Replacing React Hook Form or Mantine — performance fixes work within the existing stack
+- Speculative micro-optimizations (manual `useMemo`/`useCallback` everywhere) — `babel-plugin-react-compiler` is already active; we only intervene where the compiler cannot help (subscriptions, query derivations, scaling)
 
 ## Context
 
@@ -117,6 +126,10 @@ Partners can accurately track shared finances, including in-progress installment
 | Percentage → cents conversion per-transaction; last split absorbs rest | Guarantees Σ amount == tx.amount exactly; avoids 1-cent drift from rounding                 | ✓ Good  |
 | Send only `connection_id` + `amount` in bulk split payload             | Mixing `percentage` and `amount` triggers backend 400; cents-only is the wire contract      | ✓ Good  |
 | Silently skip unsplittable (linked) transactions in bulk batch         | Matches SEL-02 pattern from v1.2 — users shouldn't see errors for ops they can't perform    | ✓ Good  |
+| Profile-then-fix order in v1.5 (baseline before code changes)          | Avoids speculative optimization; gives numeric proof per-phase                              | TBD |
+| Two-phase performance approach (root cause first, then virtualization) | Virtualization without fixing re-render cascade still pays cost on visible rows             | TBD |
+| CSS Grid layout for virtualized import table (not `<table>`)           | TanStack Virtual requires absolute-positioned rows; `<table>` semantics fight that          | TBD |
+| Defer per-row manual memoization in v1.5                               | `babel-plugin-react-compiler` already auto-memoizes; manual useMemo/useCallback adds noise  | TBD |
 
 ## Constraints
 
@@ -130,4 +143,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-04-20 — v1.3 shipped (Phase 11 only); v1.4 started (Bulk Update Split Settings)_
+_Last updated: 2026-05-05 — v1.4 shipped (Phases 13–15); v1.5 started (Import Transactions Performance)_

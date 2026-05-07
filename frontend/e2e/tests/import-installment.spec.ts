@@ -7,6 +7,7 @@ import {
   apiDeleteCategory,
   apiListTransactions,
 } from "../helpers/api";
+import { buildCsvContent } from "../helpers/csv";
 
 /**
  * Import Installment E2E Tests
@@ -21,12 +22,6 @@ import {
  *   4. Fetch the created transaction via the API and assert that
  *      `transaction_recurrence` reflects the configured settings.
  */
-
-const CSV_HEADER = "Data;Descrição;Valor";
-
-function buildCsvContent(rows: string[][]): string {
-  return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
-}
 
 test.describe("Import with installment settings", () => {
   let importPage: ImportPage;

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -28,6 +28,7 @@ import { ImportCSVBulkToolbar } from '@/components/transactions/import/ImportCSV
 import { ImportConfirmButton } from '@/components/transactions/import/ImportConfirmButton'
 import { UploadStep } from '@/components/transactions/import/UploadStep'
 import { buildPayload, parsedRowToFormValues } from '@/components/transactions/import/importPayload'
+import { useSelectionStore } from '@/components/transactions/import/selectionStore'
 import {
   importFormSchema,
   type ImportFormValues,
@@ -37,7 +38,6 @@ import { ImportTestIds } from '@/testIds'
 export function ImportTransactionsPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<'upload' | 'review'>('upload')
-  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [importState, setImportState] = useState({
     importing: false,
     paused: false,
@@ -45,18 +45,28 @@ export function ImportTransactionsPage() {
   const pauseRef = useRef(false)
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
+  const totalSelected = useSelectionStore((s) => s.selected.size)
+  const toggleSelection = useSelectionStore((s) => s.toggle)
+  const selectAllSelection = useSelectionStore((s) => s.selectAll)
+  const clearSelection = useSelectionStore((s) => s.clear)
+
   const form = useForm<ImportFormValues>({
     resolver: zodResolver(importFormSchema),
     defaultValues: { accountId: 0, rows: [] },
   })
 
-  const { totalSuccess, total } = useWatch({
+  const { totalSuccess, total, errorCount, toImportPendingCount } = useWatch({
     control: form.control,
     name: 'rows',
-    compute: (rows) => ({
-      totalSuccess: rows.filter((r) => r.action === 'import' && r.import_status === 'success').length,
-      total: rows.filter((r) => r.action === 'import').length,
-    }),
+    compute: (rows) => {
+      const toImport = rows.filter((r) => r.action === 'import')
+      return {
+        total: toImport.length,
+        totalSuccess: toImport.filter((r) => r.import_status === 'success').length,
+        errorCount: toImport.filter((r) => r.import_status === 'error').length,
+        toImportPendingCount: toImport.filter((r) => r.import_status !== 'success').length,
+      }
+    },
   })
 
   const { fields, remove } = useFieldArray({
@@ -64,10 +74,21 @@ export function ImportTransactionsPage() {
     name: 'rows',
   })
 
+  // Stable per-index ref callbacks so React.memo on ImportReviewRow can bail out
+  // when only one row's selection slot changes; an inline arrow would invalidate
+  // the memo for all 100 rows on every page render.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const rowRefCallbacks = useMemo(
+    () =>
+      fields.map((_, i) => (el: HTMLTableRowElement | null) => {
+        if (el) rowRefs.current.set(i, el)
+        else rowRefs.current.delete(i)
+      }),
+    [fields],
+  )
+
   const queryClient = useQueryClient()
   const invalidateTransactions = () => queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
-
-  const rows = useWatch({ control: form.control, name: 'rows' })
 
   const importing = importState.importing
   const paused = importState.paused
@@ -87,96 +108,65 @@ export function ImportTransactionsPage() {
 
   // ─── Selection helpers ──────────────────────────────────────────────────────
 
-  const handleToggleSelect = useCallback((index: number, shiftKey: boolean) => {
-    const getNewSet = (prev: Set<number>, index: number): Set<number> => {
-      const next = new Set(prev)
-      if (next.has(index)) next.delete(index)
-      else next.add(index)
-      return next
-    }
+  const handleToggleSelect = useCallback(
+    (index: number, shiftKey: boolean) => {
+      toggleSelection(
+        index,
+        shiftKey,
+        fields.map((f) => f.id),
+      )
+    },
+    [toggleSelection, fields],
+  )
 
-    if (!shiftKey) {
-      setSelected((prev) => getNewSet(prev, index))
-      return
-    }
-
-    setSelected((prev) => {
-      const next = getNewSet(prev, index)
-      const selecting = next.has(index)
-
-      let nearestAbove = -1
-      for (let i = index - 1; i >= 0; i--) {
-        if (prev.has(i)) {
-          nearestAbove = i
-          break
-        }
-      }
-
-      const start = nearestAbove + 1
-      for (let i = start; i < index; i++) {
-        if (selecting) {
-          next.add(i)
-        } else {
-          next.delete(i)
-        }
-      }
-
-      return next
-    })
-  }, [])
-
-  const handleSelectAll = () => setSelected(new Set(rows.map((_, i) => i)))
-  const handleClearSelection = () => setSelected(new Set())
+  const handleSelectAll = () => selectAllSelection(fields.map((f) => f.id))
+  const handleClearSelection = () => clearSelection()
 
   // ─── Bulk actions ───────────────────────────────────────────────────────────
 
-  const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
-    selected.forEach((i) => {
-      form.setValue(`rows.${i}.action`, action)
+  const forEachSelectedRow = (fn: (index: number) => void) => {
+    const { selected } = useSelectionStore.getState()
+    fields.forEach((f, i) => {
+      if (selected.has(f.id)) fn(i)
     })
-    setSelected(new Set())
+  }
+
+  const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.action`, action))
+    clearSelection()
   }
 
   const handleBulkSetDate = (date: string) => {
-    selected.forEach((i) => {
-      form.setValue(`rows.${i}.date`, date)
-    })
-    setSelected(new Set())
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.date`, date))
+    clearSelection()
   }
 
   const handleBulkSetCategory = (categoryId: number) => {
-    selected.forEach((i) => {
-      form.setValue(`rows.${i}.category_id`, categoryId)
-    })
-    setSelected(new Set())
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.category_id`, categoryId))
+    clearSelection()
   }
 
   const handleBulkSetTransactionType = (type: Transactions.TransactionType) => {
-    selected.forEach((i) => {
-      form.setValue(`rows.${i}.transaction_type`, type)
-    })
-    setSelected(new Set())
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.transaction_type`, type))
+    clearSelection()
   }
 
   const handleSetDescription = (description: string) => {
-    selected.forEach((i) => {
-      form.setValue(`rows.${i}.description`, description)
-    })
-    setSelected(new Set())
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.description`, description))
+    clearSelection()
   }
 
   const handleRemoveSelected = () => {
-    const sorted = [...selected].sort((a, b) => b - a)
-    sorted.forEach((i) => remove(i))
-    setSelected(new Set())
+    const indices: number[] = []
+    forEachSelectedRow((i) => indices.push(i))
+    indices.sort((a, b) => b - a).forEach((i) => remove(i))
+    clearSelection()
   }
 
   const handleSetSplitSettings = (splitSettings: Transactions.SplitSetting[]) => {
-    selected.forEach((i) => {
+    forEachSelectedRow((i) => {
       const type = form.getValues(`rows.${i}.transaction_type`)
-      if (type === 'transfer') {
-        return
-      }
+      if (type === 'transfer') return
 
       const amount = form.getValues(`rows.${i}.amount`)
       const parsedSplitSettings: Transactions.SplitSetting[] = splitSettings.map((s) => {
@@ -201,8 +191,6 @@ export function ImportTransactionsPage() {
   const pause = () => setImportState((p) => ({ ...p, importing: false, paused: true }))
   const finish = () => setImportState((p) => ({ ...p, importing: false, paused: false }))
 
-  const toImportRows = rows.filter((r) => r.action === 'import')
-  const errorCount = toImportRows.filter((r) => r.import_status === 'error').length
   const isDone = !importing && !paused && totalSuccess + errorCount > 0
   const allImportedSuccess = isDone && total > 0 && totalSuccess === total
 
@@ -276,8 +264,8 @@ export function ImportTransactionsPage() {
     }
   }
 
-  const allSelected = fields.length > 0 && selected.size === fields.length
-  const someSelected = selected.size > 0
+  const allSelected = fields.length > 0 && totalSelected === fields.length
+  const someSelected = totalSelected > 0
 
   return (
     <FormProvider {...form}>
@@ -290,7 +278,7 @@ export function ImportTransactionsPage() {
                 rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
               })
               setStep('review')
-              setSelected(new Set())
+              clearSelection()
               finish()
             }}
             onBack={() => void navigate({ to: '/transactions' })}
@@ -323,12 +311,12 @@ export function ImportTransactionsPage() {
 
               <Group gap="xs">
                 <Text fz="sm" c="dimmed">
-                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {toImportRows.length} para importar
+                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {total} para importar
                 </Text>
                 <ImportConfirmButton
                   importing={importing}
                   paused={paused}
-                  toImportCount={toImportRows.filter((r) => r.import_status !== 'success').length}
+                  toImportCount={toImportPendingCount}
                   onPause={handlePause}
                   onConfirm={() => void handleConfirm()}
                 />
@@ -343,7 +331,7 @@ export function ImportTransactionsPage() {
 
             <Paper p="xs" withBorder style={{ visibility: someSelected && !importing ? 'visible' : 'hidden' }}>
               <ImportCSVBulkToolbar
-                selectedCount={selected.size}
+                selectedCount={totalSelected}
                 onRemove={handleRemoveSelected}
                 onBulkSetAction={handleBulkSetAction}
                 onBulkSetDate={handleBulkSetDate}
@@ -388,12 +376,9 @@ export function ImportTransactionsPage() {
                   {fields.map((field, i) => (
                     <ImportReviewRow
                       key={field.id}
-                      ref={(el) => {
-                        if (el) rowRefs.current.set(i, el)
-                        else rowRefs.current.delete(i)
-                      }}
+                      ref={rowRefCallbacks[i]}
                       rowIndex={i}
-                      selected={selected.has(i)}
+                      fieldId={field.id}
                       disabled={importing && !paused}
                       onToggleSelect={handleToggleSelect}
                     />
