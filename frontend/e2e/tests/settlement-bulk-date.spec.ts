@@ -17,7 +17,6 @@ import { TransactionsPage } from "../pages/TransactionsPage";
 import { TransactionsTestIds } from "@/testIds";
 import { createUserAndPartner, type UserAndPartnerResult } from "../helpers/createUserAndPartner";
 import { apiFetchAs, openAuthedPage } from "../helpers/api";
-import { DateField } from "../helpers/formFields";
 import type { Transactions } from "@/types/transactions";
 
 const now = new Date();
@@ -30,13 +29,6 @@ function ymd(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
-}
-
-// dd/mm/yyyy used by the DateInput component
-function ddmmyyyy(d: Date): string {
-  const day = String(d.getDate()).padStart(2, "0");
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}/${m}/${d.getFullYear()}`;
 }
 
 async function apiCreateSharedExpense(
@@ -113,22 +105,25 @@ test.describe("Bulk settlement date change", () => {
   // ── Test 1: happy path — synthetic settlement bulk-date ────────────────────
   test("changes the date of a selected synthetic settlement row", async ({ browser }) => {
     const description = `synthetic-bulk-${Date.now()}`;
+
+    // Create the source on a day that is guaranteed (a) different from
+    // today, and (b) inside the current calendar month so the listing
+    // surfaces it. The bulk-date drawer's DateInput defaults to "today"
+    // and we click Aplicar without typing — so today is the target.
+    // Avoiding DateInput typing dodges Mantine/dayjs locale-parsing
+    // quirks that make programmatic .fill() unreliable.
+    const todayDay = now.getDate();
+    const sourceDay = todayDay === 15 ? 16 : 15;
+    const sourceDate = `${YEAR}-${String(MONTH).padStart(2, "0")}-${String(sourceDay).padStart(2, "0")}`;
+    const targetYmd = TODAY;
+
     const { sourceTx, settlement } = await apiCreateSharedExpense(
       setup,
       categoryId,
       description,
       10000,
-      TODAY,
+      sourceDate,
     );
-
-    // Pick a target day > 12 so the DD/MM/YYYY input string can't be
-    // misparsed as MM/DD/YYYY by Mantine's DateInput dayjs parser. Stay
-    // inside the current month so the post-update listing (filtered by
-    // current month) still surfaces the settlement.
-    const todayDay = now.getDate();
-    const targetDay = todayDay >= 25 ? 13 : 25;
-    const target = new Date(YEAR, MONTH - 1, targetDay);
-    const targetYmd = ymd(target);
 
     const page = await openAuthedPage(browser, setup.userToken);
     const txPage = new TransactionsPage(page);
@@ -154,20 +149,20 @@ test.describe("Bulk settlement date change", () => {
 
     const dateDrawer = page.getByTestId(TransactionsTestIds.DrawerSelectDate);
     await expect(dateDrawer).toBeVisible();
-    // DateField commits via click+fill+Tab so the DateInput onChange fires
-    // and updates the drawer's local state. A raw .fill() leaves the state
-    // at its useState default (today), so Aplicar would close with today.
-    await new DateField(dateDrawer, TransactionsTestIds.InputBulkDate).fill(ddmmyyyy(target));
+    // The DateInput's useState defaults to `new Date()` (today). We rely on
+    // that default and click Aplicar straight away — which means the source
+    // expense above must NOT have been created on today's date, otherwise
+    // the test wouldn't observe a state change.
     await page.getByTestId(TransactionsTestIds.BtnApplyDate).click();
 
     await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({
       timeout: 15000,
     });
 
-    // Look up the settlement by source tx id rather than by the original
-    // settlement.id — sync deletes and recreates settlements after every
-    // source update, so the id changes even though the date is preserved.
-    void settlement; // intentionally unused; the sync loop replaces it.
+    // Look up the settlement by source tx id — the bulk-date PATCH on a
+    // synthetic row updates the settlement in place (settlement.id is
+    // preserved), but listing by source covers both that path and the
+    // delete-and-recreate path triggered by other flows.
     const updated = await apiGetSettlementBySourceTx(setup, sourceTx.id);
     expect(updated.date?.slice(0, 10)).toBe(targetYmd);
 
@@ -236,7 +231,6 @@ test.describe("Bulk settlement date change", () => {
 
     // Settlement is recreated on every source-tx update, so its id changes
     // even though the snapshot preserves the date. Re-look up by source.
-    void settlement; // intentionally unused after the sync loop.
     const updatedSettlement = await apiGetSettlementBySourceTx(setup, sourceTx.id);
     expect(updatedSettlement.date?.slice(0, 10)).toBe(initialSettlementDate);
 
