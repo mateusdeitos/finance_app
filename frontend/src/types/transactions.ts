@@ -107,6 +107,11 @@ export namespace Transactions {
      * sentinel that does not correspond to any real transaction.
      */
     origin_settlement_id?: number;
+    /**
+     * Set on synthetic rows (origin_settlement_id != null) to point at the
+     * real source transaction so the UI can open its edit drawer.
+     */
+    source_transaction_id?: number;
     created_at?: string;
     updated_at?: string;
   }

@@ -87,6 +87,36 @@ export function TransactionGroup({
     return false;
   }
 
+  function openSyntheticEditDrawer(sourceTxId: number) {
+    // Synthetic settlement rows don't carry their source's full state;
+    // fetch the source by id and open its update drawer focused on the
+    // split-settings amount, mirroring the inline-settlement onEdit.
+    const notifId = notifications.show({
+      loading: true,
+      title: "Carregando transação...",
+      message: "",
+      autoClose: false,
+      withCloseButton: false,
+    });
+    fetchTransaction(sourceTxId)
+      .then((source) => {
+        notifications.hide(notifId);
+        void renderDrawer(() => (
+          <UpdateTransactionDrawer transaction={source} focusField="split_settings.0.amount" />
+        ));
+      })
+      .catch(() => {
+        notifications.update({
+          id: notifId,
+          loading: false,
+          color: "red",
+          title: "Erro",
+          message: "Não foi possível carregar a transação",
+          autoClose: 3000,
+        });
+      });
+  }
+
   function openEditDrawer(
     tx: Transactions.Transaction,
     focusField?: FocusField
@@ -144,17 +174,19 @@ export function TransactionGroup({
               tx.user_id === currentUserId);
 
           if (isSynthetic) {
-            // Render synthetic entries (orphaned settlements surfaced as
-            // transactions by the backend) with the same SettlementRow
-            // styling used for inline settlements.
+            // Render synthetic entries (orphan settlements surfaced by the
+            // backend or inline settlements promoted into their own date
+            // group) with the same SettlementRow styling used for inline
+            // settlements.
             const settlementId = tx.origin_settlement_id!;
+            const sourceTxId = tx.source_transaction_id;
             const syntheticSettlement: Transactions.Settlement = {
               id: settlementId,
               user_id: tx.user_id,
               amount: tx.amount,
               type: tx.operation_type === "credit" ? "credit" : "debit",
               account_id: tx.account_id,
-              source_transaction_id: 0,
+              source_transaction_id: sourceTxId ?? 0,
               parent_transaction_id: 0,
               date: tx.date,
               created_at: tx.created_at,
@@ -169,6 +201,11 @@ export function TransactionGroup({
                 isSelected={selectedSettlementIds?.has(settlementId)}
                 isSelectionMode={isSelectionActive}
                 onSelect={onSelectSettlement}
+                onEdit={
+                  !isSelectionActive && sourceTxId
+                    ? () => openSyntheticEditDrawer(sourceTxId)
+                    : undefined
+                }
               />
             );
           }
