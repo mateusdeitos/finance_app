@@ -1,32 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Import Transactions Performance
-status: in-progress
+milestone: v1.6
+milestone_name: TBD
+status: planning
 last_updated: "2026-05-07T00:00:00.000Z"
 last_activity: 2026-05-07
 progress:
-  total_phases: 6
-  completed_phases: 5
-  skipped_phases: 1
-  total_plans: 7
-  completed_plans: 7
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
 
-Phase: 21 — DONE (pending user gates: e2e suite + manual smoke). P20 SKIPPED.
+Phase: Not started (v1.5 shipped; v1.6 scope TBD)
 Plan: —
-Status: v1.5 milestone ships on user confirmation. Static gates clean (tsc/lint/build). Retrospective written at `.planning/milestones/v1.5-RETROSPECTIVE.md`. Milestone branch: `claude/optimize-import-performance-ouNOx`.
-Last activity: 2026-05-07 — Phase 21 closeout + v1.5 retrospective committed
+Status: Defining requirements for v1.6
+Last activity: 2026-05-07 — v1.5 shipped + archived. Manual smoke ✓ (with issue #116 filed for follow-up).
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** v1.5 Import Transactions Performance — baseline + root-cause + virtualization
+**Current focus:** v1.6 — TBD
 
 ## Performance Metrics
 
@@ -35,7 +34,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - v1.2: 2 phases, 6 plans, 1 day (2026-04-17)
 - v1.3: 1 phase (partial), 2 plans (2026-04-18 → 2026-04-20) — Phase 12 deferred
 - v1.4: 3 phases (13–15), 5 plans (2026-04-20 → 2026-05-05) — shipped
-- v1.5: 6 phases planned (started 2026-05-05)
+- v1.5: 5 phases (16–19, 21), 7 plans (2026-05-05 → 2026-05-07) — shipped (P20 skipped post-gate)
 
 ## Accumulated Context
 
@@ -46,13 +45,14 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
 - v1.3 shipped 2026-04-20 (partial — Phase 11 only). Archived: `.planning/milestones/v1.3-ROADMAP.md`. Phase 12 deferred to backlog.
 - v1.4 shipped 2026-05-05 (Phases 13–15). Archived: `.planning/milestones/v1.4-ROADMAP.md`. Phase dirs moved to `.planning/milestones/v1.4-phases/`.
-- v1.5 scope: import-screen perf. Frontend-only. Two-phase strategy (root cause first, virtualization second). React Compiler is active — we intervene only where it cannot help (subscriptions, query derivations, scaling).
-- v1.5 phase split: P16 baseline+profiling, P17 page-level useWatch, P18 query select for options, P19 debounce duplicate-check, P20 virtualization, P21 verification + e2e. Profile-then-fix order to avoid speculative optimization.
+- v1.5 shipped 2026-05-07 (Phases 16–19, 21; Phase 20 skipped post-gate). Archived: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-RETROSPECTIVE.md`. Phase dirs moved to `.planning/milestones/v1.5-phases/`. Headline: description keystroke 761ms→3.5ms (218×); amount keystroke 929ms→5.6ms (166×). Open follow-up: issue #116 (duplicate-check fires on action flip duplicate→import).
 
 ### Todos
 
 - Run integration tests with Docker when available
-- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit after v1.5
+- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit when planning v1.6+
+- v1.5 follow-up: issue #116 (duplicate-check fires on action flip duplicate→import) — separate PR
+- v1.5 follow-ups parked in `.planning/milestones/v1.5-RETROSPECTIVE.md` → "Open follow-ups" (React Compiler wiring; cenário 3/4 row-internal cost; in-flight request cancellation; perf budget CI gate; bulk-select migration; counted-render e2e test)
 
 ### Blockers
 

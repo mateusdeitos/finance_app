@@ -7,7 +7,7 @@
 - ✅ **v1.2 Transactions Bulk Actions** — Phases 9–10 (shipped 2026-04-17)
 - ✅ **v1.3 Editing Linked Transactions** — Phase 11 (shipped 2026-04-20, Phase 12 deferred)
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
-- 🔄 **v1.5 Import Transactions Performance** — Phases 16–21 (active)
+- ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 
 ## Phases
 
@@ -66,15 +66,17 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 
 </details>
 
-<details open>
-<summary>🔄 v1.5 Import Transactions Performance — ACTIVE</summary>
+<details>
+<summary>✅ v1.5 Import Transactions Performance (Phases 16–21) — SHIPPED 2026-05-07</summary>
 
-- [x] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in dev-server mode (`just profile`)
-- [x] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
-- [x] **Phase 18: Memoize Options + Rearch Selection** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks; move row selection into a Zustand store keyed by `field.id` so single-row toggle re-renders only the toggled row
-- [x] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating + extract `<RowDuplicateCheck>` sub-component so amount/date keystrokes do not re-render the row outer
-- [-] **Phase 20: Virtualize Import Review Table** *(SKIPPED post-P19 gate decision)* — Keystroke axes already below 16ms gate; cenário 3/4 residual cost is intrinsic Mantine internals on the row(s) that legitimately changed state, not row-count waste. Documented in `.planning/phases/19-scope-debounce-duplicate-check/19-PERF-COMPARISON.md` → "P19 → P20 Gate Decision".
-- [x] **Phase 21: Verification & E2E Coverage** — Static gates clean (tsc/lint/build); v1.5 retrospective written; E2E suite + manual smoke pending user.
+- [x] Phase 16: Baseline Profiling & Diagnostics (3/3 plans) — completed 2026-05-06
+- [x] Phase 17: Eliminate Page-Level useWatch Cascade (ad-hoc) — completed 2026-05-07
+- [x] Phase 18: Memoize Options + Rearch Selection (ad-hoc) — completed 2026-05-07
+- [x] Phase 19: Scope & Debounce Duplicate Check (ad-hoc) — completed 2026-05-07
+- [-] Phase 20: Virtualize Import Review Table — **SKIPPED** post-P19 gate decision
+- [x] Phase 21: Verification & E2E Coverage (ad-hoc) — completed 2026-05-07
+
+Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.planning/milestones/v1.5-RETROSPECTIVE.md`
 
 </details>
 
@@ -104,91 +106,6 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 ### Phase 15: E2E Coverage & Rounding Verification
 **Status:** Shipped (v1.4) — see `.planning/milestones/v1.4-ROADMAP.md`
 
-### Phase 16: Baseline Profiling & Diagnostics
-**Goal**: A reproducible 100-row CSV fixture and a documented React DevTools Profiler baseline (production preview build) exist so subsequent phases can be measured against numeric before/after evidence
-**Depends on**: Nothing (first phase of v1.5)
-**Requirements**: PROF-01, PROF-02, PROF-03
-**Success Criteria** (what must be TRUE):
-  1. A TS generator script under `frontend/scripts/` produces a deterministic 100-row CSV (matching the system's hard-limit max) that the import flow accepts end-to-end; `buildCsvContent` is centralized in `frontend/e2e/helpers/csv.ts` (consumed by both the generator and the 4 e2e files that currently inline it)
-  2. `babel-plugin-react-compiler` is empirically checked in the production build (`vite.config.ts` plugin chain + `npm run build` output); the result (active/inactive) is documented in `16-PERF-BASELINE.md`. Wiring is **not** changed in this phase — Phase 17 absorbs it if needed
-  3. A baseline profile (commit duration ms + rendered component count for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 shift-click row select; all on a fixed mid-list row of the 100-row fixture, captured in `npm run preview` mode with React DevTools) is saved to `.planning/phases/16-baseline-profiling/16-PERF-BASELINE.md`
-  4. The page-level `useWatch({ name: 'rows' })` re-render hypothesis is empirically validated against the profile; if contradicted, an additional `16-DIAGNOSIS.md` is produced naming the actual culprit and recommending replan changes (the roadmap is **not** auto-edited)
-**Plans:** 3/3 plans executed
-- [x] 16-01-PLAN.md — Extract CSV helper + write deterministic 100-row fixture generator (PROF-01)
-- [x] 16-02-PLAN.md — Empirical compiler-presence check + baseline doc skeleton (PROF-02)
-- [x] 16-03-PLAN.md — Capture 4-scenario profiler baseline + validate useWatch hypothesis (PROF-03) — verdict CONFIRMED
-**Context:** `.planning/phases/16-baseline-profiling/16-CONTEXT.md`
-**Outcome:** Hypothesis CONFIRMED. Page-level `useWatch({ name: 'rows' })` at `ImportTransactionsPage.tsx:70` is the dominant trigger for keystroke scenarios. Two secondary findings (non-RHF cascade in scenarios 3/4 caused by `useState<Set<number>>` for `selected`; intra-row updater in scenario 2) recorded in `deferred-items.md` as P18/P19 input.
-
-### Phase 17: Eliminate Page-Level useWatch Cascade
-**Goal**: Per-row field edits no longer re-render `ImportTransactionsPage` — the page subscribes only to derived aggregates via `useWatch` `compute` callbacks
-**Depends on**: Phase 16 (baseline + validated hypothesis)
-**Requirements**: RR-01, RR-02
-**Success Criteria** (what must be TRUE):
-  1. `const rows = useWatch({ control: form.control, name: 'rows' })` (the broad subscription at `ImportTransactionsPage.tsx:70`) is removed
-  2. `handleSelectAll` derives count from `useFieldArray.fields.length` instead of a watched array
-  3. `toImportRows`/`errorCount` are derived inside `useWatch({ ..., compute })` returning only scalars (`toImportCount`, `errorCount`) — never the raw row array
-  4. Profiler re-run on the 100-row baseline (`just profile` recipe, same fixture as Phase 16) shows `ImportTransactionsPage` does NOT re-render on a single description keystroke in any row (i.e. it does NOT appear in the React DevTools "updaters" list of the user-action commit). Scenarios 3 & 4 are out of scope — they belong to P18/P19 per `16/deferred-items.md`.
-**Plans:** ad-hoc (single small refactor; no formal plan file)
-**Outcome:** SC1–SC4 all PASSED. Description keystroke 761 ms → 2.9 ms (262×). Amount keystroke 929 ms → 62.5 ms (15×). `ImportTransactionsPage` removed from updaters for keystroke scenarios. Compiler wiring SKIPPED (user-chosen scope reduction). Scenarios 3 & 4 (checkbox/shift-click) still cascade — owned by P18/P19 per `16/deferred-items.md`. Full numbers in `.planning/phases/17-eliminate-page-usewatch-cascade/17-PERF-COMPARISON.md`.
-**Context:** `.planning/phases/17-eliminate-page-usewatch-cascade/17-CONTEXT.md`
-
-### Phase 18: Memoize Options + Rearch Selection
-**Goal**: (a) Mantine `Select` components in `ImportReviewRow` receive stable `data` references across row renders, by deriving option arrays inside TanStack Query `select` callbacks per `frontend/CLAUDE.md` §3; (b) Per-row selection state moves out of `ImportTransactionsPage`'s `useState<Set<number>>` into a Zustand store keyed by `field.id`, so toggling row N re-renders only row N (and the page-level cardinality subscriber) instead of cascading through all 100 rows. Scope expanded from the original "options only" by user-approved decision (2026-05-07) to absorb the deferred selection cascade in one phase.
-**Depends on**: Phase 17 (so per-row optimizations are isolated and measurable)
-**Requirements**: RR-03, RR-04
-**Success Criteria** (what must be TRUE):
-  1. `useFlattenCategories` accepts a generic `select<T>` parameter (matching the convention already exposed by `useAccounts`) — already in place pre-P18, verified
-  2. `ImportReviewRow` consumes `categoryOptions` and `accountOptions` via `select`-derived query data through dedicated hooks (`useCategoryOptions`, `useAccountOptions`), not via inline `categories.map(...)` per render
-  3. `sharedAccounts` derivation also moves to a `select` slice (`useSharedAccounts`) reference-stable across row re-renders
-  4. `ImportTransactionsPage` no longer holds row-selection in `useState<Set<number>>`; selection lives in `frontend/src/components/transactions/import/selectionStore.ts` (Zustand), keyed by stable `field.id`. Bulk handlers iterate `useFieldArray.fields` and check store membership; the page subscribes only to `selected.size` for `someSelected`/`allSelected` derivations.
-  5. Profiler re-run on the 100-row baseline (`just profile`, same recipe as Phases 16/17) shows: (a) cenário 2 commit duration drops further; (b) cenários 3 & 4 no longer cascade through all 100 rows — `ImportReviewRow2` instance count drops dramatically (target: ≤2 in cenário 3, ≤51 in cenário 4 — only the toggled row plus the range expansion in 4)
-**Plans:** ad-hoc (single phase, executed inline 2026-05-07)
-**Context:** `.planning/phases/18-options-and-selection-rearch/18-CONTEXT.md`
-**Outcome:** SC1–SC4 PASSED. SC5 partial — cenário 3 (single toggle): 791ms → 183.9ms (4.3× faster, only toggled row re-renders); cenário 4 (shift-click 0..50): 720ms → 455.3ms (1.6× faster, 49 rows re-render = exactly the range expansion). Cenário 2 unchanged (64ms; intra-row updater is P19 territory). Discovery during execution: P18 v1 measurements showed the cascade still active because of an unrelated unstable ref callback in fields.map; fix in `4fee0ff` + `299f753` (lint cleanup) restored the architecture's intended behavior. Full numbers in `.planning/phases/18-options-and-selection-rearch/18-PERF-COMPARISON.md`.
-
-### Phase 19: Scope & Debounce Duplicate Check
-**Goal**: `useDuplicateTransactionCheck` no longer fires per keystroke across all rows simultaneously — the check is debounced, disabled for skipped rows, and provably no longer the bottleneck for amount/date editing in large imports
-**Depends on**: Phase 18
-**Requirements**: NET-01, NET-02
-**Success Criteria** (what must be TRUE):
-  1. `useDuplicateTransactionCheck` consumers are gated by `enabled: action === 'import'` so skip/duplicate rows do not subscribe
-  2. The hook applies a debounce on the `[date, amount]` dependency before triggering any cache lookup or network call (existing 500ms via Mantine `useDebouncedValue` kept; ROADMAP's "200-300ms" was outdated)
-  3. Editing the amount on a single row in a 500-row CSV does not generate a sustained burst of duplicate-check calls (covered by debounce + new enabled gating; not re-verified at 500 rows because system hard-limit is 100)
-  4. Existing duplicate-detection behavior remains correct end-to-end — needs user smoke test before P21
-**Plans:** ad-hoc (single phase, executed inline 2026-05-07)
-**Context:** `.planning/phases/19-scope-debounce-duplicate-check/19-CONTEXT.md`
-**Outcome:** SC1, SC2, SC3 PASSED; SC4 pending E2E smoke test. Cenário 2 (amount keystroke) **64.4ms → 5.6ms (11.5× faster)** via row-watch narrowing — extracted `<RowDuplicateCheck>` sub-component owns the date/amount subscription, row outer dropped 10 → 8 fields. Cenário 1 unchanged (3.5ms). Cenários 3/4 unchanged within noise. **P19→P20 gate met for keystroke axes; P20 (virtualization) recommended SKIP.** Full numbers in `.planning/phases/19-scope-debounce-duplicate-check/19-PERF-COMPARISON.md`.
-
-### Phase 20: Virtualize Import Review Table — SKIPPED
-**Status:** SKIPPED post-P19 gate decision (2026-05-07).
-**Goal (original):** The 100-row import review renders only rows in (and near) the viewport via `@tanstack/react-virtual`, while preserving the existing form behavior, popovers, and scroll-to-error UX. **Gated post-Phase 19** — if Phase 19 already brings the 100-row fixture to a fluid baseline, this phase is downsized or skipped at the orchestrator's call.
-**Skip rationale:** P19 measurements showed cenários 1 & 2 (keystrokes) at 3.5ms / 5.6ms — well below the 16ms gate. Cenários 3 & 4 (selection actions) at 170ms / 466ms are above the gate, but composition analysis confirmed the cost is intrinsic Mantine internals on the row(s) that legitimately changed state — not row-count waste. With the system 100-row hard limit, virtualization's expected ROI is insufficient. Full analysis in `.planning/phases/19-scope-debounce-duplicate-check/19-PERF-COMPARISON.md` → "P19 → P20 Gate Decision". Remains a follow-up if user feedback shows perceptual lag on cenários 3/4.
-**Depends on**: Phase 19
-**Requirements**: VIRT-01, VIRT-02, VIRT-03 (under review)
-**Success Criteria** (what must be TRUE):
-  1. `@tanstack/react-virtual` is installed and `ImportTransactionsPage` uses `useVirtualizer` over `fields` with `overscan` configured
-  2. Mantine `Table.Tr`/`Table.Td` is replaced by a CSS-grid based row layout (`<div role="row" />` + `<div role="cell" />`) with the column template applied at the row level so headers and rows align without a `<table>` element
-  3. On a 500-row CSV, only ~10–15 row instances are mounted at any given time (verified via React DevTools or a count assertion), and scroll remains smooth (no visible jank)
-  4. Validation-error scroll behavior still works: focusing the first invalid row uses `virtualizer.scrollToIndex(firstErrorIndex)` followed by the existing ref-based `scrollIntoView`
-  5. All popovers/portals (`SplitPopover`, `RecurrencePopover`, `DatePickerInput`) continue to render correctly above virtualized content
-**Plans:** TBD
-**UI hint**: yes
-
-### Phase 21: Verification & E2E Coverage — DONE (pending user gates)
-**Goal**: The performance milestone is validated against the Phase 16 baseline with documented numbers, the existing test suite still passes, and a manual smoke confirms no regression vs v1.4 behavior. (Original SC3 — virtualization stale-state e2e — N/A given P20 skip.)
-**Depends on**: Phase 19 (P20 skipped)
-**Requirements**: TEST-01, TEST-02 (TEST-03 N/A by P20 skip)
-**Success Criteria** (what must be TRUE):
-  1. Profiler results compared to baseline → ✓ four PERF-COMPARISON.md docs across phases 17/18/19; the 100-row fixture is the canonical size (system hard limit)
-  2. `npm run lint`, `npm run build`, `npm run test:e2e -- import` all pass:
-     - lint, build, tsc → ✓ verified clean inline
-     - e2e:import → **pending user** (no backend in agent env)
-  3. ~~A new Playwright e2e test for virtualization stale-state~~ → **N/A** (P20 skipped)
-  4. Manual smoke covers upload/edit/scroll/shift-click/bulk/confirm with no regressions vs v1.4 → **pending user**, checklist in `.planning/phases/21-verification-e2e/21-CONTEXT.md`
-**Plans:** ad-hoc (single phase, executed inline 2026-05-07)
-**Context:** `.planning/phases/21-verification-e2e/21-CONTEXT.md`
-**Outcome:** Static gates clean. v1.5 retrospective at `.planning/milestones/v1.5-RETROSPECTIVE.md`. Milestone ships on user confirmation of e2e + smoke.
 
 ## Progress
 
@@ -209,13 +126,13 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 | 13. BulkDivisionDrawer Form | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 14. Bulk Action Wiring & Cent-Exact Conversion | v1.4 | 1/1 | Complete | 2026-04-20 |
 | 15. E2E Coverage & Rounding Verification | v1.4 | 3/3 | Complete | 2026-05-05 |
-| 16. Baseline Profiling & Diagnostics | v1.5 | 2/3 | In Progress|  |
-| 17. Eliminate Page-Level useWatch Cascade | v1.5 | 0/? | Not started | - |
-| 18. Move Select Options to Query select | v1.5 | 0/? | Not started | - |
-| 19. Scope & Debounce Duplicate Check | v1.5 | 0/? | Not started | - |
-| 20. Virtualize Import Review Table | v1.5 | 0/? | Not started | - |
-| 21. Verification & E2E Coverage | v1.5 | 0/? | Not started | - |
+| 16. Baseline Profiling & Diagnostics | v1.5 | 3/3 | Complete | 2026-05-06 |
+| 17. Eliminate Page-Level useWatch Cascade | v1.5 | ad-hoc | Complete | 2026-05-07 |
+| 18. Memoize Options + Rearch Selection | v1.5 | ad-hoc | Complete | 2026-05-07 |
+| 19. Scope & Debounce Duplicate Check | v1.5 | ad-hoc | Complete | 2026-05-07 |
+| 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
+| 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 started: 2026-05-05_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 shipped: 2026-05-07_
