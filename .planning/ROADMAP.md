@@ -69,7 +69,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 <details open>
 <summary>🔄 v1.5 Import Transactions Performance — ACTIVE</summary>
 
-- [ ] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in `npm run preview` mode
+- [x] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in dev-server mode (`just profile`)
 - [ ] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
 - [ ] **Phase 18: Move Select Options to Query `select`** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks so Mantine `Select.data` receives stable references across row renders
 - [ ] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating so date/amount edits stop firing N requests across hundreds of subscribed rows
@@ -113,11 +113,12 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   2. `babel-plugin-react-compiler` is empirically checked in the production build (`vite.config.ts` plugin chain + `npm run build` output); the result (active/inactive) is documented in `16-PERF-BASELINE.md`. Wiring is **not** changed in this phase — Phase 17 absorbs it if needed
   3. A baseline profile (commit duration ms + rendered component count for: 1 description keystroke, 1 amount keystroke, 1 checkbox toggle, 1 shift-click row select; all on a fixed mid-list row of the 100-row fixture, captured in `npm run preview` mode with React DevTools) is saved to `.planning/phases/16-baseline-profiling/16-PERF-BASELINE.md`
   4. The page-level `useWatch({ name: 'rows' })` re-render hypothesis is empirically validated against the profile; if contradicted, an additional `16-DIAGNOSIS.md` is produced naming the actual culprit and recommending replan changes (the roadmap is **not** auto-edited)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 - [x] 16-01-PLAN.md — Extract CSV helper + write deterministic 100-row fixture generator (PROF-01)
 - [x] 16-02-PLAN.md — Empirical compiler-presence check + baseline doc skeleton (PROF-02)
-- [ ] 16-03-PLAN.md — Capture 4-scenario profiler baseline + validate useWatch hypothesis (PROF-03)
+- [x] 16-03-PLAN.md — Capture 4-scenario profiler baseline + validate useWatch hypothesis (PROF-03) — verdict CONFIRMED
 **Context:** `.planning/phases/16-baseline-profiling/16-CONTEXT.md`
+**Outcome:** Hypothesis CONFIRMED. Page-level `useWatch({ name: 'rows' })` at `ImportTransactionsPage.tsx:70` is the dominant trigger for keystroke scenarios. Two secondary findings (non-RHF cascade in scenarios 3/4 caused by `useState<Set<number>>` for `selected`; intra-row updater in scenario 2) recorded in `deferred-items.md` as P18/P19 input.
 
 ### Phase 17: Eliminate Page-Level useWatch Cascade
 **Goal**: Per-row field edits no longer re-render `ImportTransactionsPage` — the page subscribes only to derived aggregates via `useWatch` `compute` callbacks
