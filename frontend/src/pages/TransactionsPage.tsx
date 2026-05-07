@@ -10,6 +10,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
+import { updateSettlement } from "@/api/settlements";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
 import { TransactionFab } from "@/components/transactions/TransactionFab";
@@ -38,18 +39,46 @@ export function TransactionsPage() {
   const { query: meQuery } = useMe((me) => me.id);
   const currentUserId = meQuery.data ?? 0;
 
-  // Selection state
+  // Selection state — transactions and settlements live in separate sets so
+  // their numeric IDs (which can collide across spaces) don't clobber each
+  // other and so action handlers can dispatch each kind to the right endpoint.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+  const [selectedSettlementIds, setSelectedSettlementIds] = useState<Set<number>>(new Set());
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setSelectedSettlementIds(new Set());
+  }, []);
 
-  // Group map for shift+click range selection (groupKey → ordered tx IDs, excluding synthetics)
-  const groupTxIdsMap = useGroupedTransactions(
-    useMemo(() => (groups) =>
-      new Map(groups.map((g) => [
-        g.key,
-        g.transactions.filter((tx) => tx.origin_settlement_id === undefined).map((tx) => tx.id),
-      ])), []),
-  ).data;
+  // Per-group ordered ID maps for shift+click range selection. Settlements
+  // (inline + synthetic) get their own map keyed by the real settlement.id.
+  const { data: groupRowMaps } = useGroupedTransactions(
+    useMemo(
+      () => (groups) => {
+        const txIds = new Map<string, number[]>();
+        const settlementIds = new Map<string, number[]>();
+        for (const g of groups) {
+          const txList: number[] = [];
+          const settlementList: number[] = [];
+          for (const tx of g.transactions) {
+            if (tx.origin_settlement_id !== undefined) {
+              settlementList.push(tx.origin_settlement_id);
+              continue;
+            }
+            txList.push(tx.id);
+            for (const s of tx.settlements_from_source ?? []) {
+              settlementList.push(s.id);
+            }
+          }
+          txIds.set(g.key, txList);
+          settlementIds.set(g.key, settlementList);
+        }
+        return { txIds, settlementIds };
+      },
+      [],
+    ),
+  );
+  const groupTxIdsMap = groupRowMaps.txIds;
+  const groupSettlementIdsMap = groupRowMaps.settlementIds;
 
   const handleSelectTransaction = useCallback(
     (id: number, shiftKey: boolean, groupKey: string) => {
@@ -85,6 +114,40 @@ export function TransactionsPage() {
       });
     },
     [selectedIds, groupTxIdsMap],
+  );
+
+  const handleSelectSettlement = useCallback(
+    (id: number, shiftKey: boolean, groupKey: string) => {
+      if (shiftKey && selectedSettlementIds.size > 0) {
+        const groupSettlementIds = groupSettlementIdsMap.get(groupKey);
+        if (groupSettlementIds) {
+          const ids = [...selectedSettlementIds];
+          const lastSelected = ids[ids.length - 1];
+          const anchorIdx = groupSettlementIds.indexOf(lastSelected);
+          const targetIdx = groupSettlementIds.indexOf(id);
+
+          if (anchorIdx !== -1 && targetIdx !== -1) {
+            const start = Math.min(anchorIdx, targetIdx);
+            const end = Math.max(anchorIdx, targetIdx);
+            const rangeIds = groupSettlementIds.slice(start, end + 1);
+            setSelectedSettlementIds((prev) => {
+              const next = new Set(prev);
+              for (const rid of rangeIds) next.add(rid);
+              return next;
+            });
+            return;
+          }
+        }
+      }
+
+      setSelectedSettlementIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    },
+    [selectedSettlementIds, groupSettlementIdsMap],
   );
 
   const { query: accountsQuery } = useAccounts();
@@ -267,11 +330,26 @@ export function TransactionsPage() {
         propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer actionLabel="alterar" />);
       }
 
-      const eligibleIds = getEligibleIds();
-      const items: BulkProgressItem[] = eligibleIds.map((id) => {
+      // Build a unified item list: tx items first, then settlement items.
+      // Settlement IDs are tagged with a stable prefix in the BulkProgressItem
+      // label-key so the action callback can dispatch each kind to the right
+      // endpoint while reusing the existing progress drawer.
+      const eligibleTxIds = getEligibleIds();
+      const txItems: BulkProgressItem[] = eligibleTxIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id);
         return { id, label: tx?.description ?? String(id) };
       });
+
+      const settlementIds = [...selectedSettlementIds];
+      const settlementIdSet = new Set(settlementIds);
+      const settlementItems: BulkProgressItem[] = settlementIds.map((id) => {
+        // BulkProgressItem.id must be unique across the list; settlement IDs
+        // can collide with transaction IDs since they live in different tables.
+        // Negate to keep them distinct without inventing a new shape.
+        return { id: -id, label: "Acerto" };
+      });
+
+      const items = [...txItems, ...settlementItems];
       if (items.length === 0) return;
 
       const yyyy = date.getFullYear();
@@ -283,6 +361,12 @@ export function TransactionsPage() {
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
+            if (item.id < 0) {
+              const settlementId = -item.id;
+              if (!settlementIdSet.has(settlementId)) return;
+              await updateSettlement(settlementId, { date: dateStr });
+              return;
+            }
             const tx = allTransactions.find((t) => t.id === item.id);
             if (!tx) return;
             const payload = buildFullPayload(tx, { date: dateStr });
@@ -293,11 +377,11 @@ export function TransactionsPage() {
           }}
           titles={{
             processing: "Alterando data...",
-            success: "Transações atualizadas",
+            success: "Itens atualizados",
             error: "Erro ao atualizar",
           }}
           successMessage={(n) =>
-            n === 1 ? "1 transação atualizada com sucesso" : `${n} transações atualizadas com sucesso`
+            n === 1 ? "1 item atualizado com sucesso" : `${n} itens atualizados com sucesso`
           }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
@@ -363,7 +447,8 @@ export function TransactionsPage() {
     }
   }
 
-  const isSelecting = selectedIds.size > 0;
+  const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
+  const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
   async function handleSwipeDelete(tx: Transactions.Transaction) {
     try {
@@ -408,7 +493,9 @@ export function TransactionsPage() {
         <TransactionList
           currentUserId={currentUserId}
           selectedIds={selectedIds}
+          selectedSettlementIds={selectedSettlementIds}
           onSelectTransaction={handleSelectTransaction}
+          onSelectSettlement={handleSelectSettlement}
           onDeleteTransaction={handleSwipeDelete}
         />
 
@@ -416,7 +503,7 @@ export function TransactionsPage() {
 
         {isSelecting && (
           <SelectionActionBar
-            count={selectedIds.size}
+            count={totalSelected}
             onClearSelection={clearSelection}
             onCategoryChange={handleCategoryChange}
             onDateChange={handleDateChange}
@@ -484,11 +571,17 @@ export function TransactionsPage() {
         </Stack>
       </Box>
 
-      <TransactionList currentUserId={currentUserId} selectedIds={selectedIds} onSelectTransaction={handleSelectTransaction} />
+      <TransactionList
+        currentUserId={currentUserId}
+        selectedIds={selectedIds}
+        selectedSettlementIds={selectedSettlementIds}
+        onSelectTransaction={handleSelectTransaction}
+        onSelectSettlement={handleSelectSettlement}
+      />
 
       {isSelecting && (
         <SelectionActionBar
-          count={selectedIds.size}
+          count={totalSelected}
           onClearSelection={clearSelection}
           onCategoryChange={handleCategoryChange}
           onDateChange={handleDateChange}

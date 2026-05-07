@@ -120,10 +120,9 @@ definitions:
         description: cents
         type: integer
       date:
-        description: YYYY-MM-DD
-        type: string
-      description:
-        type: string
+        allOf:
+        - $ref: '#/definitions/domain.Date'
+        description: accepts YYYY-MM-DD, datetime, or RFC3339
     type: object
   domain.CreateChargeRequest:
     properties:
@@ -143,6 +142,11 @@ definitions:
         type: integer
       role:
         $ref: '#/definitions/domain.ChargeInitiatorRole'
+    type: object
+  domain.Date:
+    properties:
+      time.Time:
+        type: string
     type: object
   domain.DeleteCategoryRequest:
     properties:
@@ -237,6 +241,8 @@ definitions:
         type: array
       recurrence_count:
         type: integer
+      recurrence_current_installment:
+        type: integer
       recurrence_type:
         $ref: '#/definitions/domain.RecurrenceType'
       row_index:
@@ -276,6 +282,8 @@ definitions:
         type: integer
       created_at:
         type: string
+      date:
+        type: string
       id:
         type: integer
       parent_transaction_id:
@@ -297,6 +305,11 @@ definitions:
     x-enum-varnames:
     - SettlementTypeCredit
     - SettlementTypeDebit
+  domain.SettlementUpdateRequest:
+    properties:
+      date:
+        $ref: '#/definitions/domain.Date'
+    type: object
   domain.SplitSettings:
     properties:
       amount:
@@ -396,7 +409,7 @@ definitions:
       charge_id:
         type: integer
       date:
-        type: string
+        $ref: '#/definitions/domain.Date'
       description:
         type: string
       destination_account_id:
@@ -458,7 +471,7 @@ definitions:
       category_id:
         type: integer
       date:
-        type: string
+        $ref: '#/definitions/domain.Date'
       description:
         type: string
       destination_account_id:
@@ -1128,6 +1141,49 @@ paths:
       summary: Get onboarding status
       tags:
       - onboarding
+  /api/settlements/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Updates an existing settlement's date. The settlement must belong
+        to the authenticated user.
+      parameters:
+      - description: Settlement ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SettlementUpdateRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update settlement
+      tags:
+      - settlements
   /api/tags:
     get:
       produces:

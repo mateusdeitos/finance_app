@@ -15,6 +15,7 @@ type Settlement struct {
 	AccountID           int                    `gorm:"not null"`
 	SourceTransactionID int                    `gorm:"not null"`
 	ParentTransactionID int                    `gorm:"not null"`
+	Date                time.Time              `gorm:"type:date;not null"`
 	CreatedAt           *time.Time
 	UpdatedAt           *time.Time
 }
@@ -40,6 +41,7 @@ func (s *Settlement) ToDomain() *domain.Settlement {
 		AccountID:           s.AccountID,
 		SourceTransactionID: s.SourceTransactionID,
 		ParentTransactionID: s.ParentTransactionID,
+		Date:                s.Date,
 		CreatedAt:           s.CreatedAt,
 		UpdatedAt:           s.UpdatedAt,
 	}
@@ -54,6 +56,7 @@ func SettlementFromDomain(d *domain.Settlement) *Settlement {
 		AccountID:           d.AccountID,
 		SourceTransactionID: d.SourceTransactionID,
 		ParentTransactionID: d.ParentTransactionID,
+		Date:                d.Date,
 		CreatedAt:           d.CreatedAt,
 		UpdatedAt:           d.UpdatedAt,
 	}

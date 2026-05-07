@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/pkg/applog"
@@ -761,10 +762,15 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 	if err != nil {
 		return err
 	}
+	// Snapshot existing settlement dates keyed by parent (linked) transaction id so
+	// re-created settlements can preserve a previously customized date instead of
+	// always inheriting the source transaction's current date.
+	existingDateByParentID := make(map[int]time.Time, len(existing))
 	if len(existing) > 0 {
 		ids := make([]int, len(existing))
 		for i, s := range existing {
 			ids[i] = s.ID
+			existingDateByParentID[s.ParentTransactionID] = s.Date
 		}
 		if err := s.services.Settlement.Delete(ctx, ids); err != nil {
 			return err
@@ -807,6 +813,11 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			accountID = connAccount
 		}
 
+		settlementDate := own.Date
+		if d, ok := existingDateByParentID[lt.ID]; ok {
+			settlementDate = d
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
@@ -814,6 +825,7 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			AccountID:           accountID,
 			SourceTransactionID: own.ID,
 			ParentTransactionID: lt.ID,
+			Date:                settlementDate,
 		})
 		if err != nil {
 			return err

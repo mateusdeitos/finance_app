@@ -48,7 +48,9 @@ interface TransactionGroupProps {
   runningBalance?: number;
   isFirst?: boolean;
   selectedIds?: Set<number>;
+  selectedSettlementIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean) => void;
+  onSelectSettlement?: (settlementId: number, shiftKey: boolean) => void;
   onDeleteTransaction?: (tx: Transactions.Transaction) => void;
   hideSettlements?: boolean;
 }
@@ -63,11 +65,14 @@ export function TransactionGroup({
   runningBalance,
   isFirst = false,
   selectedIds,
+  selectedSettlementIds,
   onSelectTransaction,
+  onSelectSettlement,
   onDeleteTransaction,
   hideSettlements,
 }: TransactionGroupProps) {
-  const isSelectionActive = (selectedIds?.size ?? 0) > 0;
+  const isSelectionActive =
+    (selectedIds?.size ?? 0) > 0 || (selectedSettlementIds?.size ?? 0) > 0;
 
   function renderLinkedDrawer(tx: Transactions.Transaction) {
     const mode = getLinkedMode(tx, currentUserId);
@@ -142,14 +147,16 @@ export function TransactionGroup({
             // Render synthetic entries (orphaned settlements surfaced as
             // transactions by the backend) with the same SettlementRow
             // styling used for inline settlements.
+            const settlementId = tx.origin_settlement_id!;
             const syntheticSettlement: Transactions.Settlement = {
-              id: tx.origin_settlement_id!,
+              id: settlementId,
               user_id: tx.user_id,
               amount: tx.amount,
               type: tx.operation_type === "credit" ? "credit" : "debit",
               account_id: tx.account_id,
               source_transaction_id: 0,
               parent_transaction_id: 0,
+              date: tx.date,
               created_at: tx.created_at,
             };
             return (
@@ -159,6 +166,9 @@ export function TransactionGroup({
                 groupBy={groupBy}
                 accounts={accounts}
                 description={tx.description}
+                isSelected={selectedSettlementIds?.has(settlementId)}
+                isSelectionMode={isSelectionActive}
+                onSelect={onSelectSettlement}
               />
             );
           }
@@ -188,6 +198,9 @@ export function TransactionGroup({
                   groupBy={groupBy}
                   accounts={accounts}
                   description={tx.description}
+                  isSelected={selectedSettlementIds?.has(s.id)}
+                  isSelectionMode={isSelectionActive}
+                  onSelect={onSelectSettlement}
                   onEdit={
                     !isSelectionActive && isOwner
                       ? () => openEditDrawer(tx, "split_settings.0.amount")

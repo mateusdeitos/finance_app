@@ -11,7 +11,9 @@ import { TransactionListSkeleton } from "./TransactionListSkeleton";
 interface TransactionListProps {
   currentUserId: number;
   selectedIds?: Set<number>;
+  selectedSettlementIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean, groupKey: string) => void;
+  onSelectSettlement?: (settlementId: number, shiftKey: boolean, groupKey: string) => void;
   onDeleteTransaction?: (tx: Transactions.Transaction) => void;
 }
 
@@ -38,7 +40,14 @@ function groupNetTotal(
   }, 0);
 }
 
-export function TransactionList({ currentUserId, selectedIds, onSelectTransaction, onDeleteTransaction }: TransactionListProps) {
+export function TransactionList({
+  currentUserId,
+  selectedIds,
+  selectedSettlementIds,
+  onSelectTransaction,
+  onSelectSettlement,
+  onDeleteTransaction,
+}: TransactionListProps) {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const filters = useActiveFilters();
 
@@ -91,7 +100,9 @@ export function TransactionList({ currentUserId, selectedIds, onSelectTransactio
           runningBalance={runningBalances[i]}
           isFirst={i === 0}
           selectedIds={selectedIds}
+          selectedSettlementIds={selectedSettlementIds}
           onSelectTransaction={onSelectTransaction && ((id, shiftKey) => onSelectTransaction(id, shiftKey, group.key))}
+          onSelectSettlement={onSelectSettlement && ((id, shiftKey) => onSelectSettlement(id, shiftKey, group.key))}
           onDeleteTransaction={onDeleteTransaction}
           hideSettlements={search.hideSettlements}
         />

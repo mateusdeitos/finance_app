@@ -69,6 +69,7 @@ type SettlementService interface {
 	SearchOne(ctx context.Context, filter domain.SettlementFilter) (*domain.Settlement, error)
 	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
 	Update(ctx context.Context, settlement *domain.Settlement) error
+	UpdateDate(ctx context.Context, callerUserID, id int, date time.Time) error
 	Delete(ctx context.Context, ids []int) error
 }
 

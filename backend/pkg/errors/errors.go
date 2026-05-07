@@ -71,6 +71,9 @@ const (
 	ErrorTagImportInvalidLayout   ErrorTag = "IMPORT.INVALID_LAYOUT"
 	ErrorTagImportMaxRowsExceeded ErrorTag = "IMPORT.MAX_ROWS_EXCEEDED"
 	ErrorTagImportNoRows          ErrorTag = "IMPORT.NO_ROWS"
+
+	ErrorTagSettlementForbidden ErrorTag = "SETTLEMENT.FORBIDDEN"
+	ErrorTagSettlementDateIsRequired ErrorTag = "SETTLEMENT.DATE_IS_REQUIRED"
 )
 
 var (
@@ -128,6 +131,8 @@ var (
 	ErrAccountCannotBeChangedForSharedTransactions  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
 	ErrChildTransactionCannotBeUpdated              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
 	ErrLinkedTransactionDisallowedFieldChanged      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
+	ErrSettlementForbidden                          = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
+	ErrSettlementDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 )
 
 // ServiceError represents a service-level error with a code and message
