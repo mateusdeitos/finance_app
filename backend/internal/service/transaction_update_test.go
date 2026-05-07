@@ -4203,6 +4203,200 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_PropagationAll
 	}
 }
 
+// ─── Issue #117: linked-transaction edits must not create stray settlements ──────
+//
+// Background: when the non-original side of a shared expense edits their linked
+// transaction, only `amount` should touch settlements. Edits restricted to
+// `date`, `description`, or `category_id` must leave every settlement untouched
+// — the partner's tx is not a valid `SourceTransactionID` for settlement keys.
+//
+// Helpers below set up a 100/50/50 shared expense between userA and userB and
+// snapshot the original settlement so each test can assert byte-identical state
+// (or, for the amount case, a controlled delete+recreate on the source).
+
+type linkedTxFixture struct {
+	userA          *domain.User
+	userB          *domain.User
+	conn           *domain.UserConnection
+	authorTx       *domain.Transaction // userA's source tx
+	linkedTx       *domain.Transaction // userB's linked tx
+	categoryA2     *domain.Category    // alternate category for userA
+	categoryB1     *domain.Category    // userB's local category (linked tx has CategoryID=nil at creation)
+	settlementsAt0 []*domain.Settlement
+}
+
+func (suite *TransactionUpdateWithDBTestSuite) setupSharedExpenseForLinkedTxEditTests(ctx context.Context, amount int64) *linkedTxFixture {
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA2, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          amount,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	authorTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+	})
+	suite.Require().NoError(err)
+
+	linkedTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+	})
+	suite.Require().NoError(err)
+
+	settlements := suite.settlementsForSource(ctx, authorTx.ID)
+	suite.Require().Len(settlements, 1, "shared expense must seed one settlement on creation")
+
+	return &linkedTxFixture{
+		userA:          userA,
+		userB:          userB,
+		conn:           conn,
+		authorTx:       authorTx,
+		linkedTx:       linkedTx,
+		categoryA2:     categoryA2,
+		categoryB1:     categoryB,
+		settlementsAt0: settlements,
+	}
+}
+
+// assertSettlementsUnchanged confirms settlements for the source transaction are
+// byte-identical (same IDs, amounts, account_id, type) — i.e. NOT touched by the
+// update path (no delete+recreate).
+func (suite *TransactionUpdateWithDBTestSuite) assertSettlementsUnchanged(ctx context.Context, sourceTxID int, expected []*domain.Settlement) {
+	suite.T().Helper()
+	actual := suite.settlementsForSource(ctx, sourceTxID)
+	suite.Require().Lenf(actual, len(expected), "settlement count must not change for source=%d", sourceTxID)
+	for i := range expected {
+		suite.Assert().Equalf(expected[i].ID, actual[i].ID, "settlement[%d].ID must be preserved (no delete+recreate)", i)
+		suite.Assert().Equalf(expected[i].Amount, actual[i].Amount, "settlement[%d].Amount", i)
+		suite.Assert().Equalf(expected[i].AccountID, actual[i].AccountID, "settlement[%d].AccountID", i)
+		suite.Assert().Equalf(expected[i].Type, actual[i].Type, "settlement[%d].Type", i)
+		suite.Assert().Equalf(expected[i].UserID, actual[i].UserID, "settlement[%d].UserID", i)
+		suite.Assert().Equalf(expected[i].SourceTransactionID, actual[i].SourceTransactionID, "settlement[%d].SourceTransactionID", i)
+	}
+}
+
+// (a) UserB (non-original) edits ONLY the category on their linked tx →
+// settlements must remain untouched. This is the exact reproduction from #117.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxCategoryEditDoesNotTouchSettlements() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	err := suite.Services.Transaction.Update(ctx, fx.linkedTx.ID, fx.userB.ID, &domain.TransactionUpdateRequest{
+		CategoryID: lo.ToPtr(fx.categoryB1.ID),
+	})
+	suite.Require().NoError(err)
+
+	suite.assertSettlementsUnchanged(ctx, fx.authorTx.ID, fx.settlementsAt0)
+	// And the linked tx itself must not have spawned a stray settlement keyed off its own ID.
+	stray := suite.settlementsForSource(ctx, fx.linkedTx.ID)
+	suite.Assert().Empty(stray, "linked tx must never appear as SourceTransactionID — that key belongs to the author's tx")
+}
+
+// (b) UserB edits only description → no settlement change.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxDescriptionEditDoesNotTouchSettlements() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	err := suite.Services.Transaction.Update(ctx, fx.linkedTx.ID, fx.userB.ID, &domain.TransactionUpdateRequest{
+		Description: lo.ToPtr("user B's local description"),
+	})
+	suite.Require().NoError(err)
+
+	suite.assertSettlementsUnchanged(ctx, fx.authorTx.ID, fx.settlementsAt0)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, fx.linkedTx.ID))
+}
+
+// (c) UserB edits only date → no settlement change.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxDateEditDoesNotTouchSettlements() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	newDate := domain.Date{Time: fx.linkedTx.Date.AddDate(0, 0, 5)}
+	err := suite.Services.Transaction.Update(ctx, fx.linkedTx.ID, fx.userB.ID, &domain.TransactionUpdateRequest{
+		Date: &newDate,
+	})
+	suite.Require().NoError(err)
+
+	suite.assertSettlementsUnchanged(ctx, fx.authorTx.ID, fx.settlementsAt0)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, fx.linkedTx.ID))
+}
+
+// (d) UserB edits `amount` → only the partner's own row mutates. The author's
+// source transaction is NOT overwritten (a unilateral edit by the partner must
+// not silently rewrite the author's value). Settlements derived from the source
+// still reflect the partner's new amount.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxAmountEditRecomputesSettlementOnSource() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	const newAmount int64 = 60000
+	originalSourceAmount := fx.authorTx.Amount
+
+	err := suite.Services.Transaction.Update(ctx, fx.linkedTx.ID, fx.userB.ID, &domain.TransactionUpdateRequest{
+		Amount: lo.ToPtr(newAmount),
+	})
+	suite.Require().NoError(err)
+
+	// The author's source transaction must keep the value the author originally chose.
+	authorAfter, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{fx.authorTx.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(originalSourceAmount, authorAfter.Amount, "partner's amount edit must NOT rewrite the author's source amount")
+
+	// The partner's own linked tx adopts the new amount.
+	linkedAfter, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{fx.linkedTx.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, linkedAfter.Amount, "partner's own linked tx must reflect the new amount")
+
+	// Settlement count on the source stays the same (1), and its amount mirrors
+	// the partner's new linked tx amount; account/type/user semantics preserved.
+	after := suite.settlementsForSource(ctx, fx.authorTx.ID)
+	suite.Require().Len(after, 1, "amount edit must keep exactly one settlement on the source")
+	suite.Assert().Equal(newAmount, after[0].Amount, "settlement amount must follow the partner's new linked tx amount")
+	suite.Assert().Equal(fx.settlementsAt0[0].AccountID, after[0].AccountID, "settlement account must be the author's connection account")
+	suite.Assert().Equal(fx.settlementsAt0[0].Type, after[0].Type, "settlement type must remain credit for an expense")
+	suite.Assert().Equal(fx.userA.ID, after[0].UserID, "settlement must remain owned by the original author")
+
+	// And no stray settlement was keyed off the linked tx ID.
+	suite.Assert().Empty(suite.settlementsForSource(ctx, fx.linkedTx.ID))
+}
+
+// (e) UserA (original) edits ONLY the category on their own tx (resending the
+// existing split settings so the API doesn't interpret it as "remove split") →
+// settlements must remain untouched. Same rule, applied to the author side.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_OwnerCategoryEditDoesNotTouchSettlements() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	err := suite.Services.Transaction.Update(ctx, fx.authorTx.ID, fx.userA.ID, &domain.TransactionUpdateRequest{
+		CategoryID:    lo.ToPtr(fx.categoryA2.ID),
+		SplitSettings: []domain.SplitSettings{{ConnectionID: fx.conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	suite.assertSettlementsUnchanged(ctx, fx.authorTx.ID, fx.settlementsAt0)
+}
+
 // TestOffsetInstallments_PropagationAll_PreservesNumbers: update a recurrence created with
 // current_installment=4, total=12 using propagation=all — installment numbers must stay 4-12.
 func (suite *TransactionUpdateWithDBTestSuite) TestOffsetInstallments_PropagationAll_PreservesNumbers() {
