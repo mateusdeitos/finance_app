@@ -7,18 +7,19 @@ last_updated: "2026-05-07T00:00:00.000Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 67
+  completed_phases: 5
+  skipped_phases: 1
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 ## Current Position
 
-Phase: 21 — Verification & E2E Coverage (next; P20 recommended SKIP per P19 gate analysis)
+Phase: 21 — DONE (pending user gates: e2e suite + manual smoke). P20 SKIPPED.
 Plan: —
-Status: Phase 19 complete (SC1-SC3 PASSED; cenário 2 5.6ms below the P19→P20 gate; SC4 pending user smoke test). P20 (virtualization) recommended SKIP — keystroke axes fluid, cenário 3/4 residual cost is intrinsic Mantine internals not row count.
-Last activity: 2026-05-07 — Phase 19 perf-comparison + summary committed
+Status: v1.5 milestone ships on user confirmation. Static gates clean (tsc/lint/build). Retrospective written at `.planning/milestones/v1.5-RETROSPECTIVE.md`. Milestone branch: `claude/optimize-import-performance-ouNOx`.
+Last activity: 2026-05-07 — Phase 21 closeout + v1.5 retrospective committed
 
 ## Project Reference
 
