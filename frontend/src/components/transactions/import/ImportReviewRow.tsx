@@ -508,8 +508,8 @@ function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
     date: date as string,
     amount: amount as number,
     accountId: form.getValues("accountId"),
+    action: action as 'import' | 'skip' | 'duplicate',
     enabled: action === "import",
-    getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
     setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
   });
 

@@ -9,15 +9,16 @@ import { buildCsvContent, formatDateBR } from "../helpers/csv";
 import { ImportTestIds } from "@/testIds";
 
 /**
- * Regression for issue #116: flipping a row's action between `duplicate` and
- * `import` (no field edits) must NOT fire `/api/transactions/check-duplicate`.
- * Editing date/amount must still fire exactly once after the debounce.
+ * Regression for issue #116. Two guarantees the hook must hold:
  *
- * The hook lives at `src/hooks/import/useDuplicateTransactionCheck.ts` and
- * was migrated from a `useEffect`-driven fetch to `useQuery` so:
- *   - `enabled: false → true` no longer re-fires
- *   - same `(date, amount, accountId)` tuple is cached (`staleTime: Infinity`)
- *   - field edits go through TanStack Query's debounced + de-duped path
+ *   A) Toggling the row's action select (no field edit) never re-fires
+ *      `/api/transactions/check-duplicate` — this used to happen because the
+ *      legacy `useEffect` re-ran on the `enabled` flip. Now `useQuery` gates
+ *      execution natively and `staleTime: Infinity` caches by tuple.
+ *
+ *   B) Once the user has manually changed the action, the hook stops
+ *      auto-flipping for that row, even if a later edit surfaces a backend
+ *      collision. The user's explicit choice wins forever.
  */
 
 function formatDateISO(d: Date): string {
@@ -113,17 +114,31 @@ test.describe("Import: duplicate-check flip behavior (#116)", () => {
     await page.waitForTimeout(750);
     expect(checkCount).toBe(0);
 
-    // 3) Edit the amount: this must fire exactly once after debounce.
-    await importPage.setRowAmount(0, 9000); // 90,00
-    // Wait long enough for the 500ms debounce + fetch + state propagation.
+    // 3) Edit the amount to a non-colliding value: query fires (debounced
+    //    fields actually changed), backend returns is_duplicate=false. The
+    //    user already overrode the action, so the row stays at "Importar".
+    await importPage.setRowAmount(0, 9000); // 90,00 — no existing match
     await expect.poll(() => checkCount, { timeout: 5000 }).toBe(1);
+    await expect(actionSelect).toHaveValue("Importar");
 
-    // 4) Flip the action back and forth again on the new tuple — cache hit,
-    //    no extra fetch.
+    // 4) Edit the amount BACK to the colliding value (8000). Backend will
+    //    answer is_duplicate=true again (cache hit on the original tuple,
+    //    so checkCount is still 1). Pre-fix: the row auto-flipped back to
+    //    "Duplicado" and the user couldn't keep it on "Importar". Post-fix:
+    //    user-override is sticky, so the action holds.
+    await importPage.setRowAmount(0, 8000);
+    // Give debounce + cached query + any side-effect a beat to settle.
+    await page.waitForTimeout(750);
+    expect(checkCount).toBe(1);
+    await expect(actionSelect).toHaveValue("Importar");
+
+    // 5) Manual flip back and forth on this tuple — still cache hit, still
+    //    no auto-revert because user-override is locked in.
     await importPage.setRowAction(0, "duplicate");
     await importPage.setRowAction(0, "import");
     await page.waitForTimeout(750);
     expect(checkCount).toBe(1);
+    await expect(actionSelect).toHaveValue("Importar");
 
     await page.close();
   });
