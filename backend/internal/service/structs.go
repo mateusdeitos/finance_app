@@ -15,6 +15,15 @@ type transactionUpdateData struct {
 	scenario               updateChanges
 	isLinkedTxEdit         bool
 
+	// Pre-mutation snapshots. previousTransaction is shared with transactions[0]
+	// and gets mutated mid-flow (Type, Amount, AccountID change in
+	// rebuildTransactions / the per-transaction loop). The settlement-sync gate
+	// (issue #117) needs the original values to know whether a balance-relevant
+	// field actually changed.
+	prevType      domain.TransactionType
+	prevAmount    int64
+	prevAccountID int
+
 	// transferToUserRecurrence caches the recurrence created for the toUser
 	// during rebuildTransferLinkedTransactions so it's reused across installments.
 	transferToUserRecurrence *domain.TransactionRecurrence

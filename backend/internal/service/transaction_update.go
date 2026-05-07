@@ -46,6 +46,12 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
 		isLinkedTxEdit:         isLinkedTxEdit,
+		// Snapshot pre-mutation values before rebuildTransactions /
+		// the per-transaction loop mutates previousTransaction in place.
+		// Used by shouldSyncSettlementsForUpdate (issue #117).
+		prevType:      previousTransaction.Type,
+		prevAmount:    previousTransaction.Amount,
+		prevAccountID: previousTransaction.AccountID,
 	}
 
 	// Linked transaction edits never change split/type/recurrence (those fields are
@@ -169,8 +175,16 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			}
 		}
 
-		if err := s.syncSettlementsForTransaction(ctx, data.userID, own); err != nil {
-			return err
+		// Issue #117: only call syncSettlementsForTransaction when a balance-relevant
+		// field actually changed. Otherwise, an edit that only touches category /
+		// description / date / tags would delete-and-recreate the existing settlement,
+		// mutating its ID and corrupting the audit trail. On the linked-tx edit path,
+		// validation already restricts the request to amount / date / description /
+		// tags / category_id, so amount is the only legal balance-relevant field there.
+		if s.shouldSyncSettlementsForUpdate(data, own) {
+			if err := s.syncSettlementsForTransaction(ctx, data.userID, own); err != nil {
+				return err
+			}
 		}
 
 	}
@@ -728,6 +742,79 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 
 	tx.LinkedTransactions = []domain.Transaction{fromTx, toTx}
 	return nil
+}
+
+// shouldSyncSettlementsForUpdate returns true when the current Update touched a
+// balance-relevant field for `own` and the settlement state therefore needs to
+// be reconciled. Returns false for edits that only touch metadata (category,
+// description, date, tags), so that syncSettlementsForTransaction is NOT called
+// for those edits — preventing unnecessary delete+recreate of existing
+// settlements.
+//
+// Balance-relevant changes are:
+//   - amount changed
+//   - account_id changed
+//   - transaction type changed (flips settlement debit↔credit, was/became transfer)
+//   - split shape changed (added/removed/redirected to a different connection)
+//
+// We compare against pre-mutation snapshots (data.prevType / prevAmount /
+// prevAccountID) because previousTransaction itself is mutated in place during
+// rebuildTransactions and the per-transaction loop in Update.
+//
+// On the linked-tx edit path (`data.isLinkedTxEdit`) the validation layer
+// already forbids account_id / type / split_settings changes, so amount is the
+// only field that can ever return true here. Issue #117.
+func (s *transactionService) shouldSyncSettlementsForUpdate(data *transactionUpdateData, own *domain.Transaction) bool {
+	req := data.req
+
+	// Settlements are an "original side" concept: they live on the original
+	// author's connection account and are sourced from the original
+	// transaction. A linked-tx edit (request issued by the non-original user
+	// against the linked-side row) must NEVER create or mutate settlements
+	// sourced from the linked-side row, because doing so produces phantom
+	// rows with SourceTransactionID = linked_tx.ID. Amount changes on the
+	// linked side propagate to the source-side transaction via the late
+	// propagation block in Update; the original-side settlement is reconciled
+	// the next time the original user updates that transaction.
+	// Issue #117.
+	if data.isLinkedTxEdit {
+		return false
+	}
+
+	// Newly created transactions in this update (e.g. additional installments
+	// produced by normalizeInstallments / new linked txs from AddedSplit) need
+	// their settlements created from scratch.
+	if own.ID == 0 {
+		return true
+	}
+
+	// Type change (expense↔income, expense/income↔transfer, transfer↔expense/income)
+	// always shifts settlement state — debit↔credit flip or wholesale recreation.
+	if req.TransactionType != nil && *req.TransactionType != data.prevType {
+		return true
+	}
+	if data.scenario.TypeChanged() || data.scenario.RemainedTransfer() {
+		return true
+	}
+
+	// Amount change shifts settlement amount on this row's side. (For linked-tx
+	// edits, amount is intentionally the only legal balance-relevant change.)
+	if req.Amount != nil && *req.Amount > 0 && *req.Amount != data.prevAmount {
+		return true
+	}
+
+	// Account change moves settlement to a different account on the original side.
+	// (Disallowed for linked-tx edits, but kept here defensively.)
+	if req.AccountID != nil && *req.AccountID > 0 && *req.AccountID != data.prevAccountID {
+		return true
+	}
+
+	// Split shape changed — added, removed, or pointing at a different connection.
+	if data.scenario.SplitHasChanged {
+		return true
+	}
+
+	return false
 }
 
 func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, own *domain.Transaction) error {
