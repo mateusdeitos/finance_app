@@ -68,6 +68,14 @@ test.describe("Synthetic settlement row — edit", () => {
     await page.waitForLoadState("networkidle");
 
     // Click the row body (not the checkbox) to trigger the edit flow.
+    // First confirm the row was rendered with onEdit wired — when it is,
+    // the row carries the `editable` class (TransactionRow.module.css).
+    // Without that class an `onClick` was not attached and the click
+    // would silently no-op, which is what the previous CI runs hit.
+    const settlementRow = page.getByTestId(TransactionsTestIds.SettlementRow(settlementId));
+    await expect(settlementRow).toBeVisible();
+    await expect(settlementRow).toHaveClass(/editable/);
+
     // The handler shows a loading notification, fetches the source
     // transaction, then mounts UpdateTransactionDrawer in a new portal
     // root. We wait for the source fetch to complete (via a network
@@ -78,7 +86,7 @@ test.describe("Synthetic settlement row — edit", () => {
         r.url().endsWith(`/api/transactions/${sourceTx.id}`) &&
         r.request().method() === "GET",
     );
-    await page.getByTestId(TransactionsTestIds.SettlementRow(settlementId)).click();
+    await settlementRow.click();
     await sourceFetch;
 
     // Drawer opens with the source transaction loaded — its description
