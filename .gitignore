@@ -8,3 +8,6 @@ infra/*.tfstate.backup
 infra/terraform.tfvars
 openspec
 .ai-jail
+
+# Claude Code transient agent worktrees
+.claude/worktrees/

@@ -1,0 +1,26 @@
+# Recipes for the finance-app frontend.
+# Run `just` (or `just --list`) to see available recipes.
+
+set shell := ["bash", "-cu"]
+
+default:
+    @just --list
+
+# Run the full perf-profiling chain in one shot:
+# 1. Regenerate the deterministic 100-row CSV fixture at /tmp/fixture-100.csv
+# 2. Boot the Vite dev server (port 5173) — React DevTools profiler works
+#    out of the box. vite.config.ts is NOT modified.
+#
+# After the dev server is up, open http://localhost:5173/, log in, and
+# import /tmp/fixture-100.csv. Caveats baked into the baseline (see
+# 16-CONTEXT.md addendum):
+#   - <StrictMode> in main.tsx doubles every render in dev React; treat
+#     commit-duration ms as ~2x. Relative ordering across scenarios and
+#     the set of re-rendered components are NOT affected by StrictMode.
+#   - HMR adds runtime overhead vs prod. Phase 21 must re-measure with
+#     the same recipe (just profile) for an apples-to-apples comparison.
+profile:
+    npx tsx scripts/genImportFixture.ts > /tmp/fixture-100.csv
+    @echo "✓ fixture: $(wc -l < /tmp/fixture-100.csv) lines at /tmp/fixture-100.csv"
+    @echo "✓ header: $(head -1 /tmp/fixture-100.csv)"
+    npm run dev

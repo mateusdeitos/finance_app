@@ -8,22 +8,10 @@ import {
   apiCreateCategory,
   apiDeleteCategory,
 } from "../helpers/api";
+import { buildCsvContent, formatDateBR } from "../helpers/csv";
 import { ImportTestIds } from '@/testIds'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const CSV_HEADER = "Data;Descrição;Valor";
-
-function buildCsvContent(rows: string[][]): string {
-  return [CSV_HEADER, ...rows.map((r) => r.join(";"))].join("\n");
-}
-
-/** Format a Date as DD/MM/YYYY for the CSV. */
-function formatDateBR(d: Date): string {
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}/${d.getFullYear()}`;
-}
 
 /** Format a Date as YYYY-MM-DD for the API. */
 function formatDateISO(d: Date): string {
