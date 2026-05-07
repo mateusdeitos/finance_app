@@ -59,6 +59,19 @@ test.describe("Synthetic settlement row — edit", () => {
 
     const page = await openAuthedPage(browser, setup.userToken);
 
+    // Diagnostic: surface browser console + every /api/transactions request
+    // in the test output so a future failure points at the actual cause.
+    page.on("console", (msg) => {
+      // eslint-disable-next-line no-console
+      console.log(`[browser ${msg.type()}]`, msg.text());
+    });
+    page.on("request", (req) => {
+      if (req.url().includes("/api/transactions")) {
+        // eslint-disable-next-line no-console
+        console.log(`[req ${req.method()}]`, req.url());
+      }
+    });
+
     // Filter by the user's connection account so the synthetic row is what
     // gets rendered (the source is on a different account and hidden by
     // the filter).
@@ -78,13 +91,10 @@ test.describe("Synthetic settlement row — edit", () => {
 
     // The handler shows a loading notification, fetches the source
     // transaction, then mounts UpdateTransactionDrawer in a new portal
-    // root. We wait for the source fetch to complete (via a network
-    // listener) so the assertion isn't racing the drawer mount.
+    // root. Match any GET to /api/transactions/* — the previous tighter
+    // matcher could miss subtle URL shape differences between dev and CI.
     const sourceFetch = page.waitForResponse(
-      (r) =>
-        r.url().includes(`/api/transactions/`) &&
-        r.url().endsWith(`/api/transactions/${sourceTx.id}`) &&
-        r.request().method() === "GET",
+      (r) => /\/api\/transactions\/\d+(\?|$)/.test(r.url()) && r.request().method() === "GET",
     );
     await settlementRow.click();
     await sourceFetch;
