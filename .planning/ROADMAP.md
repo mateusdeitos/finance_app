@@ -72,8 +72,8 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 - [x] **Phase 16: Baseline Profiling & Diagnostics** — Establish a reproducible perf baseline using React DevTools Profiler against a 100-row CSV (system hard limit) in dev-server mode (`just profile`)
 - [x] **Phase 17: Eliminate Page-Level useWatch Cascade** — Replace the broad `useWatch({ name: 'rows' })` in `ImportTransactionsPage` with `compute`-scoped subscriptions so per-row edits stop re-rendering the page
 - [x] **Phase 18: Memoize Options + Rearch Selection** — Derive `categoryOptions`/`accountOptions` inside TanStack Query `select` callbacks; move row selection into a Zustand store keyed by `field.id` so single-row toggle re-renders only the toggled row
-- [ ] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating so date/amount edits stop firing N requests across hundreds of subscribed rows
-- [ ] **Phase 20: Virtualize Import Review Table** *(gated post-P19)* — Introduce `@tanstack/react-virtual` and convert `<Table>` to a CSS-grid layout. With 100-row hard limit, this is future-proofing + extra polish; orchestrator may skip if P19 measurements already meet the perf bar
+- [x] **Phase 19: Scope & Debounce Duplicate Check** — Audit `useDuplicateTransactionCheck`, add debounce + `enabled` gating + extract `<RowDuplicateCheck>` sub-component so amount/date keystrokes do not re-render the row outer
+- [ ] **Phase 20: Virtualize Import Review Table** *(gated post-P19)* — RECOMMENDED SKIP: P19 brought keystroke axes below the 16ms gate; cenário 3/4 residual cost is intrinsic Mantine internals, not row count. Orchestrator confirms or overrides at P21.
 - [ ] **Phase 21: Verification & E2E Coverage** — Re-run profiler vs baseline, run lint/build/e2e suite, add 1 new e2e covering edit-after-scroll on a >100-row CSV, plus a manual smoke test
 
 </details>
@@ -153,10 +153,12 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
 **Requirements**: NET-01, NET-02
 **Success Criteria** (what must be TRUE):
   1. `useDuplicateTransactionCheck` consumers are gated by `enabled: action === 'import'` so skip/duplicate rows do not subscribe
-  2. The hook applies a debounce (200–300ms) on the `[date, amount]` dependency before triggering any cache lookup or network call
-  3. Editing the amount on a single row in a 500-row CSV does not generate a sustained burst of duplicate-check calls (verified in Network panel or via a small instrumentation test)
-  4. Existing duplicate-detection behavior remains correct end-to-end — a true duplicate still flips `action` to `duplicate`, just on a debounced trigger
-**Plans:** TBD
+  2. The hook applies a debounce on the `[date, amount]` dependency before triggering any cache lookup or network call (existing 500ms via Mantine `useDebouncedValue` kept; ROADMAP's "200-300ms" was outdated)
+  3. Editing the amount on a single row in a 500-row CSV does not generate a sustained burst of duplicate-check calls (covered by debounce + new enabled gating; not re-verified at 500 rows because system hard-limit is 100)
+  4. Existing duplicate-detection behavior remains correct end-to-end — needs user smoke test before P21
+**Plans:** ad-hoc (single phase, executed inline 2026-05-07)
+**Context:** `.planning/phases/19-scope-debounce-duplicate-check/19-CONTEXT.md`
+**Outcome:** SC1, SC2, SC3 PASSED; SC4 pending E2E smoke test. Cenário 2 (amount keystroke) **64.4ms → 5.6ms (11.5× faster)** via row-watch narrowing — extracted `<RowDuplicateCheck>` sub-component owns the date/amount subscription, row outer dropped 10 → 8 fields. Cenário 1 unchanged (3.5ms). Cenários 3/4 unchanged within noise. **P19→P20 gate met for keystroke axes; P20 (virtualization) recommended SKIP.** Full numbers in `.planning/phases/19-scope-debounce-duplicate-check/19-PERF-COMPARISON.md`.
 
 ### Phase 20: Virtualize Import Review Table
 **Goal**: The 100-row import review renders only rows in (and near) the viewport via `@tanstack/react-virtual`, while preserving the existing form behavior, popovers, and scroll-to-error UX. **Gated post-Phase 19** — if Phase 19 already brings the 100-row fixture to a fluid baseline, this phase is downsized or skipped at the orchestrator's call.

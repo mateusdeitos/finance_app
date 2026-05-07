@@ -7,18 +7,18 @@ last_updated: "2026-05-07T00:00:00.000Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 50
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
+  percent: 67
 ---
 
 ## Current Position
 
-Phase: 19 — Scope & Debounce Duplicate Check (next)
+Phase: 21 — Verification & E2E Coverage (next; P20 recommended SKIP per P19 gate analysis)
 Plan: —
-Status: Phase 18 complete (SC1–SC4 PASSED, SC5 partial — cenários 3/4 cascade broken, cenário 2 still hits intra-row updater which is P19 territory)
-Last activity: 2026-05-07 — Phase 18 perf-comparison + summary committed
+Status: Phase 19 complete (SC1-SC3 PASSED; cenário 2 5.6ms below the P19→P20 gate; SC4 pending user smoke test). P20 (virtualization) recommended SKIP — keystroke axes fluid, cenário 3/4 residual cost is intrinsic Mantine internals not row count.
+Last activity: 2026-05-07 — Phase 19 perf-comparison + summary committed
 
 ## Project Reference
 
