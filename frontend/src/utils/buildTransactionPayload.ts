@@ -29,7 +29,16 @@ export function buildTransactionPayload(
         ? values.split_settings.map((s) => ({
             connection_id: s.connection_id,
             amount: s.amount,
-            date: s.date instanceof Date ? localDateStr(s.date) : undefined,
+            // Default the settlement date to the parent transaction's date
+            // when the user didn't pick a custom one, so the backend always
+            // gets an explicit value (won't fall back to a previously
+            // customized snapshot on update).
+            date:
+              s.date instanceof Date
+                ? localDateStr(s.date)
+                : values.date instanceof Date
+                  ? localDateStr(values.date)
+                  : undefined,
           }))
         : undefined,
     recurrence_settings: values.recurrenceEnabled

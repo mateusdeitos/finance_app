@@ -16,9 +16,16 @@ import {
   Select,
   Anchor,
 } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
-import { useWatch, useFieldArray, useFormContext, type FieldValues } from "react-hook-form";
+import {
+  Controller,
+  useWatch,
+  useFieldArray,
+  useFormContext,
+  type FieldValues,
+} from "react-hook-form";
 import { Transactions } from "@/types/transactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
@@ -39,6 +46,7 @@ interface SplitRowControlsProps {
   currentUserId: number;
   totalAmount: number;
   rowPath: string; // full RHF path to this row's `amount` field
+  rowIndex: number;
   error?: string;
   onlyPercentage: boolean;
 }
@@ -49,12 +57,14 @@ function SplitRowControls({
   totalAmount,
   onlyPercentage,
   rowPath,
+  rowIndex,
   error,
 }: SplitRowControlsProps) {
   const { control, register, setValue } = useFormContext<FieldValues>();
 
   const amountFieldName = `${rowPath}.amount`;
   const percentageFieldName = `${rowPath}.percentage`;
+  const dateFieldName = `${rowPath}.date`;
 
   const { ref: inputRef } = register(amountFieldName);
   const fieldValue = (useWatch({ control, name: amountFieldName }) as number | undefined) ?? 0;
@@ -130,6 +140,23 @@ function SplitRowControls({
           />
         </Box>
       )}
+
+      <Controller
+        control={control}
+        name={dateFieldName}
+        render={({ field }) => (
+          <DateInput
+            value={(field.value as Date | null) ?? null}
+            onChange={(value) => field.onChange(value)}
+            valueFormat="DD/MM/YYYY"
+            placeholder="Data acerto"
+            clearable
+            size="sm"
+            style={{ width: 130, flexShrink: 0 }}
+            data-testid={TransactionsTestIds.InputSplitDate(rowIndex)}
+          />
+        )}
+      />
     </>
   );
 }
@@ -139,6 +166,7 @@ function SplitRowControls({
 interface SplitRowProps {
   /** Full RHF path to this split row, e.g. `"split_settings.0"` or `"rows.2.split_settings.0"`. */
   rowPath: string;
+  rowIndex: number;
   connectedAccounts: Transactions.Account[];
   usedConnectionIds: number[];
   currentUserId: number;
@@ -151,6 +179,7 @@ interface SplitRowProps {
 
 function SplitRow({
   rowPath,
+  rowIndex,
   connectedAccounts,
   usedConnectionIds,
   currentUserId,
@@ -229,6 +258,7 @@ function SplitRow({
             currentUserId={currentUserId}
             totalAmount={totalAmount}
             rowPath={rowPath}
+            rowIndex={rowIndex}
             error={error}
             onlyPercentage={onlyPercentage}
           />
@@ -347,6 +377,7 @@ export function SplitSettingsFields({
             <SplitRow
               key={field.id}
               rowPath={`${namePrefix}split_settings.${index}`}
+              rowIndex={index}
               connectedAccounts={connectedAccounts}
               usedConnectionIds={othersUsed}
               currentUserId={currentUserId}

@@ -11,6 +11,7 @@ export const TransactionsTestIds = {
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,
   CheckboxSettlement: (settlementId: number | string) => `checkbox_settlement_${settlementId}` as const,
   SettlementRow: (settlementId: number | string) => `row_settlement_${settlementId}` as const,
+  InputSplitDate: (rowIndex: number | string) => `input_split_date_${rowIndex}` as const,
 
   // Drawers (create / update / linked)
   DrawerCreate: 'drawer_create_transaction',
