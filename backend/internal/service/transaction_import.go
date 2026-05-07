@@ -316,13 +316,13 @@ func parseAmountSigned(s string, decimalSeparator domain.ImportDecimalSeparatorV
 // isDuplicate verifica se a transação já existe baseado em data, valor e conta.
 // Range: start of previous month → end of transaction's date month.
 func isDuplicate(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, accountID *int) bool {
-	currentMonthStart := time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, time.UTC)
-	currentMonthEnd := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, time.UTC).Add(-time.Nanosecond)
+	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
 
 	filter := domain.TransactionFilter{
 		UserID:    &userID,
-		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &currentMonthStart},
-		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &currentMonthEnd},
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}

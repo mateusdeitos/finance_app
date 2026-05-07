@@ -1,35 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-last_updated: "2026-04-23T13:22:43.619Z"
-last_activity: 2026-04-20
+milestone: v1.6
+milestone_name: TBD
+status: planning
+last_updated: "2026-05-07T00:00:00.000Z"
+last_activity: 2026-05-07
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
 
-Phase: 15 (e2e-coverage-rounding-verification) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
-Last activity: 2026-04-20
-
-```
-[██████░░░░░░░░░░░░░░] 33% (1/3 phases)
-```
+Phase: Not started (v1.5 shipped; v1.6 scope TBD)
+Plan: —
+Status: Defining requirements for v1.6
+Last activity: 2026-05-07 — v1.5 shipped + archived. Manual smoke ✓ (with issue #116 filed for follow-up).
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Phase 15 — e2e-coverage-rounding-verification
+**Current focus:** v1.6 — TBD
 
 ## Performance Metrics
 
@@ -37,7 +33,8 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - v1.1: 4 phases, 9 plans (2026-04-10 → 2026-04-16)
 - v1.2: 2 phases, 6 plans, 1 day (2026-04-17)
 - v1.3: 1 phase (partial), 2 plans (2026-04-18 → 2026-04-20) — Phase 12 deferred
-- v1.4: 3 phases planned (started 2026-04-20)
+- v1.4: 3 phases (13–15), 5 plans (2026-04-20 → 2026-05-05) — shipped
+- v1.5: 5 phases (16–19, 21), 7 plans (2026-05-05 → 2026-05-07) — shipped (P20 skipped post-gate)
 
 ## Accumulated Context
 
@@ -47,14 +44,15 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 - v1.1 shipped 2026-04-16. Archived: `.planning/milestones/v1.1-ROADMAP.md`
 - v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
 - v1.3 shipped 2026-04-20 (partial — Phase 11 only). Archived: `.planning/milestones/v1.3-ROADMAP.md`. Phase 12 deferred to backlog.
-- v1.4 scope: bulk split action (issue #86). Starts at Phase 13. Backend unchanged — frontend-only work. Reuse BulkProgressDrawer + renderDrawer pattern from v1.2.
-- v1.4 phase split: P13 drawer/form, P14 wiring + cent-exact conversion + bulk execution, P15 e2e + rounding verification. Three phases keep the correctness concern (PAY-01 math) isolated in P14 alongside the wiring it guards.
-- Plan 15-01 executor pre-emptively satisfied Plan 15-03 Task 1 (Run unit tests CI step) as a Rule 2 deviation in commit 4d42a45 — no duplicate insertion needed in Plan 15-03
+- v1.4 shipped 2026-05-05 (Phases 13–15). Archived: `.planning/milestones/v1.4-ROADMAP.md`. Phase dirs moved to `.planning/milestones/v1.4-phases/`.
+- v1.5 shipped 2026-05-07 (Phases 16–19, 21; Phase 20 skipped post-gate). Archived: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-RETROSPECTIVE.md`. Phase dirs moved to `.planning/milestones/v1.5-phases/`. Headline: description keystroke 761ms→3.5ms (218×); amount keystroke 929ms→5.6ms (166×). Open follow-up: issue #116 (duplicate-check fires on action flip duplicate→import).
 
 ### Todos
 
 - Run integration tests with Docker when available
-- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit after v1.4
+- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit when planning v1.6+
+- v1.5 follow-up: issue #116 (duplicate-check fires on action flip duplicate→import) — separate PR
+- v1.5 follow-ups parked in `.planning/milestones/v1.5-RETROSPECTIVE.md` → "Open follow-ups" (React Compiler wiring; cenário 3/4 row-internal cost; in-flight request cancellation; perf budget CI gate; bulk-select migration; counted-render e2e test)
 
 ### Blockers
 
@@ -70,6 +68,3 @@ None
 | verification_gap | Phase 08: 08-VERIFICATION.md | human_needed |
 | verification_gap | Phase 09: 09-VERIFICATION.md | human_needed |
 | verification_gap | Phase 10: 10-VERIFICATION.md | human_needed |
-
-**Planned Phase:** 15 (e2e-coverage-rounding-verification) — 3 plans — 2026-04-20T23:30:11.738Z
-| Phase 15 P03 | 82 | 1 tasks | 0 files |
