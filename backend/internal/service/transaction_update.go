@@ -199,25 +199,19 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 	}
 
-	// When a linked transaction's amount is edited, propagate the new amount to its
-	// source transactions (the original author's entry) and all of their linked
-	// transactions so every side of the transfer/split stays in sync. Settlements
-	// derived from the source must be recomputed on the source's behalf — the
-	// partner's `own` is not a valid source for settlement keys (#117).
+	// When the partner side edits `amount` on their linked tx, only their own
+	// row mutates — the original author's source transaction (and the author's
+	// own linked legs, e.g. the from-side of a split) keeps the value the
+	// author chose. Settlements derived from the source still need to reflect
+	// the partner's new amount, so we recompute them on the source's behalf
+	// using the freshly-persisted lt.Amount (#117).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
 		for _, sourceID := range sourceIDs {
 			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
 				IDs: []int{sourceID},
 			})
 			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for amount propagation", err)
-			}
-			sourceTx.Amount = *req.Amount
-			for j := range sourceTx.LinkedTransactions {
-				sourceTx.LinkedTransactions[j].Amount = *req.Amount
-			}
-			if err := s.transactionRepo.Update(ctx, sourceTx); err != nil {
-				return err
+				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
 			}
 			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, sourceTx); err != nil {
 				return err

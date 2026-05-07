@@ -4342,24 +4342,37 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxDateEditDoes
 	suite.Assert().Empty(suite.settlementsForSource(ctx, fx.linkedTx.ID))
 }
 
-// (d) UserB edits `amount` → settlement on the SOURCE is recomputed (regression
-// guard: amount must continue to drive a settlement update — see issue #117
-// "criterion 2: not regressing").
+// (d) UserB edits `amount` → only the partner's own row mutates. The author's
+// source transaction is NOT overwritten (a unilateral edit by the partner must
+// not silently rewrite the author's value). Settlements derived from the source
+// still reflect the partner's new amount.
 func (suite *TransactionUpdateWithDBTestSuite) TestIssue117_LinkedTxAmountEditRecomputesSettlementOnSource() {
 	ctx := context.Background()
 	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
 
 	const newAmount int64 = 60000
+	originalSourceAmount := fx.authorTx.Amount
+
 	err := suite.Services.Transaction.Update(ctx, fx.linkedTx.ID, fx.userB.ID, &domain.TransactionUpdateRequest{
 		Amount: lo.ToPtr(newAmount),
 	})
 	suite.Require().NoError(err)
 
-	// Settlement count on the source stays the same (1), but its amount mirrors
-	// the propagated value and the AccountID/Type/UserID semantics are preserved.
+	// The author's source transaction must keep the value the author originally chose.
+	authorAfter, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{fx.authorTx.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(originalSourceAmount, authorAfter.Amount, "partner's amount edit must NOT rewrite the author's source amount")
+
+	// The partner's own linked tx adopts the new amount.
+	linkedAfter, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{fx.linkedTx.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(newAmount, linkedAfter.Amount, "partner's own linked tx must reflect the new amount")
+
+	// Settlement count on the source stays the same (1), and its amount mirrors
+	// the partner's new linked tx amount; account/type/user semantics preserved.
 	after := suite.settlementsForSource(ctx, fx.authorTx.ID)
 	suite.Require().Len(after, 1, "amount edit must keep exactly one settlement on the source")
-	suite.Assert().Equal(newAmount, after[0].Amount, "settlement amount must follow propagated amount")
+	suite.Assert().Equal(newAmount, after[0].Amount, "settlement amount must follow the partner's new linked tx amount")
 	suite.Assert().Equal(fx.settlementsAt0[0].AccountID, after[0].AccountID, "settlement account must be the author's connection account")
 	suite.Assert().Equal(fx.settlementsAt0[0].Type, after[0].Type, "settlement type must remain credit for an expense")
 	suite.Assert().Equal(fx.userA.ID, after[0].UserID, "settlement must remain owned by the original author")
