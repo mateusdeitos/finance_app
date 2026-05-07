@@ -68,12 +68,23 @@ test.describe("Synthetic settlement row — edit", () => {
     await page.waitForLoadState("networkidle");
 
     // Click the row body (not the checkbox) to trigger the edit flow.
+    // The handler shows a loading notification, fetches the source
+    // transaction, then mounts UpdateTransactionDrawer in a new portal
+    // root. We wait for the source fetch to complete (via a network
+    // listener) so the assertion isn't racing the drawer mount.
+    const sourceFetch = page.waitForResponse(
+      (r) =>
+        r.url().includes(`/api/transactions/`) &&
+        r.url().endsWith(`/api/transactions/${sourceTx.id}`) &&
+        r.request().method() === "GET",
+    );
     await page.getByTestId(TransactionsTestIds.SettlementRow(settlementId)).click();
+    await sourceFetch;
 
     // Drawer opens with the source transaction loaded — its description
     // is rendered in the description input.
     const updateDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdate);
-    await expect(updateDrawer).toBeVisible({ timeout: 10000 });
+    await expect(updateDrawer).toBeVisible({ timeout: 15000 });
     await expect(
       updateDrawer.getByTestId(TransactionsTestIds.InputDescription),
     ).toHaveValue(description);
