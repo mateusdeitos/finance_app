@@ -18,7 +18,7 @@ progress:
 Phase: Not started (v1.5 shipped; v1.6 scope TBD)
 Plan: —
 Status: Defining requirements for v1.6
-Last activity: 2026-05-07 — v1.5 shipped + archived. Manual smoke ✓ (with issue #116 filed for follow-up).
+Last activity: 2026-05-07 — Completed quick task 260507-rv3: fix #117 settlement gating on linked-tx category-only edits.
 
 ## Project Reference
 
@@ -57,6 +57,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ### Blockers
 
 None
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260507-rv3 | fix #117 — settlement criado indevidamente ao editar category de linked_transaction pelo lado não-original | 2026-05-07 | a0e50b1 | [260507-rv3-fix-117-settlement-criado-indevidamente-](./quick/260507-rv3-fix-117-settlement-criado-indevidamente-/) |
 
 ## Deferred Items
 
