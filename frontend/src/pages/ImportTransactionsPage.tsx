@@ -50,13 +50,18 @@ export function ImportTransactionsPage() {
     defaultValues: { accountId: 0, rows: [] },
   })
 
-  const { totalSuccess, total } = useWatch({
+  const { totalSuccess, total, errorCount, toImportPendingCount } = useWatch({
     control: form.control,
     name: 'rows',
-    compute: (rows) => ({
-      totalSuccess: rows.filter((r) => r.action === 'import' && r.import_status === 'success').length,
-      total: rows.filter((r) => r.action === 'import').length,
-    }),
+    compute: (rows) => {
+      const toImport = rows.filter((r) => r.action === 'import')
+      return {
+        total: toImport.length,
+        totalSuccess: toImport.filter((r) => r.import_status === 'success').length,
+        errorCount: toImport.filter((r) => r.import_status === 'error').length,
+        toImportPendingCount: toImport.filter((r) => r.import_status !== 'success').length,
+      }
+    },
   })
 
   const { fields, remove } = useFieldArray({
@@ -66,8 +71,6 @@ export function ImportTransactionsPage() {
 
   const queryClient = useQueryClient()
   const invalidateTransactions = () => queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
-
-  const rows = useWatch({ control: form.control, name: 'rows' })
 
   const importing = importState.importing
   const paused = importState.paused
@@ -125,7 +128,7 @@ export function ImportTransactionsPage() {
     })
   }, [])
 
-  const handleSelectAll = () => setSelected(new Set(rows.map((_, i) => i)))
+  const handleSelectAll = () => setSelected(new Set(fields.map((_, i) => i)))
   const handleClearSelection = () => setSelected(new Set())
 
   // ─── Bulk actions ───────────────────────────────────────────────────────────
@@ -201,8 +204,6 @@ export function ImportTransactionsPage() {
   const pause = () => setImportState((p) => ({ ...p, importing: false, paused: true }))
   const finish = () => setImportState((p) => ({ ...p, importing: false, paused: false }))
 
-  const toImportRows = rows.filter((r) => r.action === 'import')
-  const errorCount = toImportRows.filter((r) => r.import_status === 'error').length
   const isDone = !importing && !paused && totalSuccess + errorCount > 0
   const allImportedSuccess = isDone && total > 0 && totalSuccess === total
 
@@ -323,12 +324,12 @@ export function ImportTransactionsPage() {
 
               <Group gap="xs">
                 <Text fz="sm" c="dimmed">
-                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {toImportRows.length} para importar
+                  {fields.length} linha{fields.length !== 1 ? 's' : ''} · {total} para importar
                 </Text>
                 <ImportConfirmButton
                   importing={importing}
                   paused={paused}
-                  toImportCount={toImportRows.filter((r) => r.import_status !== 'success').length}
+                  toImportCount={toImportPendingCount}
                   onPause={handlePause}
                   onConfirm={() => void handleConfirm()}
                 />

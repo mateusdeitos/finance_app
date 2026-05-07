@@ -128,7 +128,7 @@ Full details: `.planning/milestones/v1.4-ROADMAP.md`
   1. `const rows = useWatch({ control: form.control, name: 'rows' })` (the broad subscription at `ImportTransactionsPage.tsx:70`) is removed
   2. `handleSelectAll` derives count from `useFieldArray.fields.length` instead of a watched array
   3. `toImportRows`/`errorCount` are derived inside `useWatch({ ..., compute })` returning only scalars (`toImportCount`, `errorCount`) — never the raw row array
-  4. Profiler re-run on the 200-row baseline shows `ImportTransactionsPage` does NOT re-render on a single description keystroke in any row
+  4. Profiler re-run on the 100-row baseline (`just profile` recipe, same fixture as Phase 16) shows `ImportTransactionsPage` does NOT re-render on a single description keystroke in any row (i.e. it does NOT appear in the React DevTools "updaters" list of the user-action commit). Scenarios 3 & 4 are out of scope — they belong to P18/P19 per `16/deferred-items.md`.
 **Plans:** TBD
 
 ### Phase 18: Move Select Options to Query `select`
