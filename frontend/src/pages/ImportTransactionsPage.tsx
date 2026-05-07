@@ -45,6 +45,19 @@ export function ImportTransactionsPage() {
   const pauseRef = useRef(false)
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
   const fieldsRef = useRef<{ id: string }[]>([])
+  const rowRefCallbacksRef = useRef<Map<number, (el: HTMLTableRowElement | null) => void>>(new Map())
+
+  const getRowRefCallback = (i: number) => {
+    let cb = rowRefCallbacksRef.current.get(i)
+    if (!cb) {
+      cb = (el: HTMLTableRowElement | null) => {
+        if (el) rowRefs.current.set(i, el)
+        else rowRefs.current.delete(i)
+      }
+      rowRefCallbacksRef.current.set(i, cb)
+    }
+    return cb
+  }
 
   const totalSelected = useSelectionStore((s) => s.selected.size)
   const toggleSelection = useSelectionStore((s) => s.toggle)
@@ -366,10 +379,7 @@ export function ImportTransactionsPage() {
                   {fields.map((field, i) => (
                     <ImportReviewRow
                       key={field.id}
-                      ref={(el) => {
-                        if (el) rowRefs.current.set(i, el)
-                        else rowRefs.current.delete(i)
-                      }}
+                      ref={getRowRefCallback(i)}
                       rowIndex={i}
                       fieldId={field.id}
                       disabled={importing && !paused}
