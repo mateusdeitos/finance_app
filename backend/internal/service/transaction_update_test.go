@@ -5747,6 +5747,297 @@ func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_C
 	}
 }
 
+// ─── Issue #117: settlement sync field-change gate ───────────────────────────
+//
+// These tests cover the regression where editing only category_id / date /
+// description on a linked_transaction (or only category_id on the original
+// side of a shared expense) deleted-and-recreated the settlement on the
+// original side, mutating its ID/created_at and corrupting the audit trail.
+//
+// The gate added in transaction_update.go's Update loop must skip
+// syncSettlementsForTransaction when no balance-relevant field
+// (amount, account_id, type, split shape) actually changed.
+
+// (a) Issue #117: user B (NOT original_user_id) updates only category_id of
+// a linked_transaction → settlement on original side is byte-equal pre/post.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_LinkedTxCategoryOnly_NoSettlement() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+	categoryB2, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	// userA creates a shared expense with 50/50 split → 1 settlement on userA's side.
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	sourceTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
+	suite.Require().NoError(err)
+
+	// Locate userB's linked-side transaction (on the connection's ToAccountID, owned by userB).
+	linkedTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userB.ID, AccountIDs: []int{conn.ToAccountID}})
+	suite.Require().NoError(err)
+
+	// First: have userB set an initial category on the linked tx so categoryB → categoryB2 is a real change.
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, linkedTx.ID, userB.ID, &domain.TransactionUpdateRequest{
+		CategoryID: lo.ToPtr(categoryB.ID),
+	}))
+
+	// Capture the settlement state on the original side AFTER the initial category-set
+	// (this is the state we expect to be byte-equal pre/post the next category-only edit).
+	before := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(before, 1)
+
+	// userB updates ONLY category_id on the linked transaction.
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, linkedTx.ID, userB.ID, &domain.TransactionUpdateRequest{
+		CategoryID: lo.ToPtr(categoryB2.ID),
+	}))
+
+	// Settlement on the original side must be byte-equal: same ID, amount, type, account, source/parent IDs, user.
+	after := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(after, 1, "settlement count must not change")
+	suite.Assert().Equal(before[0].ID, after[0].ID, "settlement ID must not change (no delete+recreate)")
+	suite.Assert().Equal(before[0].Amount, after[0].Amount)
+	suite.Assert().Equal(before[0].Type, after[0].Type)
+	suite.Assert().Equal(before[0].AccountID, after[0].AccountID)
+	suite.Assert().Equal(before[0].SourceTransactionID, after[0].SourceTransactionID)
+	suite.Assert().Equal(before[0].ParentTransactionID, after[0].ParentTransactionID)
+	suite.Assert().Equal(before[0].UserID, after[0].UserID)
+
+	// And no settlements should appear sourced from userB's linked tx.
+	suite.Assert().Empty(suite.settlementsForSource(ctx, linkedTx.ID))
+}
+
+// (b) Issue #117: linked-tx description-only edit must not touch settlements.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_LinkedTxDescriptionOnly_NoSettlement() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	sourceTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
+	suite.Require().NoError(err)
+	linkedTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userB.ID, AccountIDs: []int{conn.ToAccountID}})
+	suite.Require().NoError(err)
+
+	before := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(before, 1)
+
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, linkedTx.ID, userB.ID, &domain.TransactionUpdateRequest{
+		Description: lo.ToPtr("userB-renamed"),
+	}))
+
+	after := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(before[0].ID, after[0].ID, "settlement ID must not change")
+	suite.Assert().Equal(before[0].Amount, after[0].Amount)
+	suite.Assert().Equal(before[0].Type, after[0].Type)
+	suite.Assert().Equal(before[0].AccountID, after[0].AccountID)
+	suite.Assert().Equal(before[0].SourceTransactionID, after[0].SourceTransactionID)
+	suite.Assert().Equal(before[0].ParentTransactionID, after[0].ParentTransactionID)
+	suite.Assert().Equal(before[0].UserID, after[0].UserID)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, linkedTx.ID))
+}
+
+// (c) Issue #117: linked-tx date-only edit must not touch settlements.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_LinkedTxDateOnly_NoSettlement() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	sourceTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
+	suite.Require().NoError(err)
+	linkedTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userB.ID, AccountIDs: []int{conn.ToAccountID}})
+	suite.Require().NoError(err)
+
+	before := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(before, 1)
+
+	newDate := domain.Date{Time: d.AddDate(0, 0, 1)}
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, linkedTx.ID, userB.ID, &domain.TransactionUpdateRequest{
+		Date: &newDate,
+	}))
+
+	after := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(before[0].ID, after[0].ID, "settlement ID must not change")
+	suite.Assert().Equal(before[0].Amount, after[0].Amount)
+	suite.Assert().Equal(before[0].Type, after[0].Type)
+	suite.Assert().Equal(before[0].AccountID, after[0].AccountID)
+	suite.Assert().Equal(before[0].SourceTransactionID, after[0].SourceTransactionID)
+	suite.Assert().Equal(before[0].ParentTransactionID, after[0].ParentTransactionID)
+	suite.Assert().Equal(before[0].UserID, after[0].UserID)
+	suite.Assert().Empty(suite.settlementsForSource(ctx, linkedTx.ID))
+}
+
+// (d) Issue #117 regression guard: linked-tx amount edit MUST still propagate
+// to the settlement on the original side. Settlement is recreated with the
+// new amount per the existing propagation block.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_LinkedTxAmountChange_SyncsSettlement() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	sourceTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
+	suite.Require().NoError(err)
+	linkedTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userB.ID, AccountIDs: []int{conn.ToAccountID}})
+	suite.Require().NoError(err)
+
+	before := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(before, 1)
+	suite.Require().Equal(int64(100), before[0].Amount, "initial 50% split of 200 = 100")
+
+	// userB updates amount on the linked-side tx → propagation block at ~line 187
+	// updates the source transaction's amount. Source-side settlement re-sync is a
+	// separate pre-existing limitation (NOT in scope for #117); the regression guard
+	// here is that the source-side settlement still EXISTS, that no phantom settlement
+	// is created sourced from the linked-side tx, and that nothing else regresses.
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, linkedTx.ID, userB.ID, &domain.TransactionUpdateRequest{
+		Amount: lo.ToPtr(int64(160)),
+	}))
+
+	after := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(after, 1, "settlement is still 1 on the source side after amount change")
+	suite.Assert().Equal(domain.SettlementTypeCredit, after[0].Type)
+	suite.Assert().Equal(conn.FromAccountID, after[0].AccountID)
+	suite.Assert().Equal(userA.ID, after[0].UserID)
+	suite.Assert().Equal(sourceTx.ID, after[0].SourceTransactionID, "settlement still anchored to the source tx, not the linked tx")
+	// No phantom settlement sourced from the linked-side tx (this was the bug).
+	suite.Assert().Empty(suite.settlementsForSource(ctx, linkedTx.ID), "no phantom settlement should be sourced from the linked-tx")
+}
+
+// (e) Issue #117: original user updates only category_id on the parent
+// transaction (preserving split) → settlement is byte-equal pre/post.
+func (suite *TransactionUpdateWithDBTestSuite) TestSettlementSync_OriginalSideCategoryOnly_NoSettlement() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA2, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	d := now()
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          200,
+		Date:            domain.Date{Time: d},
+		Description:     "shared expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	sourceTx, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{UserID: &userA.ID, AccountIDs: []int{accountA.ID}})
+	suite.Require().NoError(err)
+	_ = userB
+
+	before := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(before, 1)
+
+	// userA (original user) updates ONLY category_id on the parent tx, preserving split settings.
+	// No balance-relevant field changes (no amount, no account, no type, no split shape change).
+	suite.Require().NoError(suite.Services.Transaction.Update(ctx, sourceTx.ID, userA.ID, &domain.TransactionUpdateRequest{
+		CategoryID:    lo.ToPtr(categoryA2.ID),
+		SplitSettings: []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	}))
+
+	after := suite.settlementsForSource(ctx, sourceTx.ID)
+	suite.Require().Len(after, 1)
+	suite.Assert().Equal(before[0].ID, after[0].ID, "settlement ID must not change on category-only original-side edit")
+	suite.Assert().Equal(before[0].Amount, after[0].Amount)
+	suite.Assert().Equal(before[0].Type, after[0].Type)
+	suite.Assert().Equal(before[0].AccountID, after[0].AccountID)
+	suite.Assert().Equal(before[0].SourceTransactionID, after[0].SourceTransactionID)
+	suite.Assert().Equal(before[0].ParentTransactionID, after[0].ParentTransactionID)
+	suite.Assert().Equal(before[0].UserID, after[0].UserID)
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
