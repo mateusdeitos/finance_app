@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
 import { checkDuplicateTransaction } from '@/api/transactions'
@@ -14,7 +14,7 @@ interface Args {
    * Current action for the row (watched via the parent form). The hook reads
    * this at data-arrival time to decide whether to auto-flip, and uses
    * changes in this value to detect user-initiated overrides — which lock
-   * the row from any further auto-flips.
+   * the row from any further auto-flips and short-circuit further fetches.
    */
   action: RowAction
   setAction: (action: 'import' | 'duplicate') => void
@@ -34,8 +34,9 @@ interface Args {
  *    select without editing fields never re-fires the backend.
  *
  * 2. Once the user has manually changed the row's action, the hook stops
- *    auto-flipping for that row — even if a later edit surfaces a backend
- *    collision. Their explicit choice wins over our heuristic.
+ *    auto-flipping AND stops issuing duplicate-checks for that row. Their
+ *    explicit choice wins, and we do not waste a request whose answer we
+ *    would discard anyway.
  */
 export function useDuplicateTransactionCheck({
   date,
@@ -50,7 +51,9 @@ export function useDuplicateTransactionCheck({
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
 
   const initialRef = useRef({ date, amount })
-  const userOverrodeRef = useRef(false)
+  // `userOverrode` is state (not just a ref) so flipping it re-evaluates
+  // `enabled` on the useQuery below — that is what stops further fetches.
+  const [userOverrode, setUserOverrode] = useState(false)
   // Track the last `action` we observed so we can tell apart "user changed
   // the select" from "the hook just programmatically flipped". When the hook
   // calls setAction it stashes the target in `hookSetActionToRef`; any other
@@ -63,7 +66,7 @@ export function useDuplicateTransactionCheck({
     if (hookSetActionToRef.current === action) {
       hookSetActionToRef.current = null
     } else {
-      userOverrodeRef.current = true
+      setUserOverrode(true)
     }
     lastActionRef.current = action
   }, [action])
@@ -82,6 +85,7 @@ export function useDuplicateTransactionCheck({
       }),
     enabled:
       enabled &&
+      !userOverrode &&
       !!debouncedDate &&
       debouncedAmount > 0 &&
       fieldsChanged,
@@ -90,7 +94,9 @@ export function useDuplicateTransactionCheck({
 
   useEffect(() => {
     if (!data) return
-    if (userOverrodeRef.current) return
+    // Race guard: a request may have been in flight when the user took
+    // control. Discard the result instead of overwriting their choice.
+    if (userOverrode) return
     if (data.is_duplicate && action === 'import') {
       hookSetActionToRef.current = 'duplicate'
       setAction('duplicate')
@@ -98,7 +104,8 @@ export function useDuplicateTransactionCheck({
       hookSetActionToRef.current = 'import'
       setAction('import')
     }
-    // `action` and `setAction` are tracked via refs/closures; only re-run on data.
+    // `action` and `setAction` are stable in practice; only re-run on data
+    // arrival or when the override flag flips.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
+  }, [data, userOverrode])
 }

@@ -9,16 +9,21 @@ import { buildCsvContent, formatDateBR } from "../helpers/csv";
 import { ImportTestIds } from "@/testIds";
 
 /**
- * Regression for issue #116. Two guarantees the hook must hold:
+ * Regression for issue #116. Three guarantees the hook must hold:
  *
  *   A) Toggling the row's action select (no field edit) never re-fires
- *      `/api/transactions/check-duplicate` — this used to happen because the
- *      legacy `useEffect` re-ran on the `enabled` flip. Now `useQuery` gates
- *      execution natively and `staleTime: Infinity` caches by tuple.
+ *      `/api/transactions/check-duplicate` — the legacy `useEffect` re-ran
+ *      on the `enabled` flip; `useQuery` gates execution natively and
+ *      `staleTime: Infinity` caches by tuple.
  *
  *   B) Once the user has manually changed the action, the hook stops
- *      auto-flipping for that row, even if a later edit surfaces a backend
- *      collision. The user's explicit choice wins forever.
+ *      auto-flipping AND stops fetching for that row. Their explicit
+ *      choice wins and we do not waste a request whose answer we would
+ *      discard anyway.
+ *
+ *   C) When the user has NOT taken control, editing fields into a known
+ *      collision still auto-flips the row to "Duplicado" — the original
+ *      hook responsibility is preserved for non-overridden rows.
  */
 
 function formatDateISO(d: Date): string {
@@ -52,10 +57,10 @@ async function createTestUser(suffix: string) {
 }
 
 test.describe("Import: duplicate-check flip behavior (#116)", () => {
-  test("flipping action duplicate↔import without field edits never re-fires the check", async ({
+  test("user override locks action and stops further check-duplicate requests", async ({
     browser,
   }) => {
-    const { token, accountId, categoryId } = await createTestUser("dup-flip");
+    const { token, accountId, categoryId } = await createTestUser("dup-lock");
 
     // Seed a real transaction so the import-row gets auto-flagged duplicate
     // by the backend during CSV processing.
@@ -91,54 +96,98 @@ test.describe("Import: duplicate-check flip behavior (#116)", () => {
     ]);
     await importPage.uploadCSV(csv, accountId);
 
-    // Row 0 is auto-flagged as a duplicate by the backend (review step shows
-    // "Duplicado"). The auto-flag flow runs synchronously during import-csv,
-    // not via the row hook, so this should NOT have called check-duplicate.
+    // Row 0 is auto-flagged "Duplicado" by the backend during /import-csv —
+    // no client-side check fired for that.
     const actionSelect = importPage.reviewStep.getByTestId(
       ImportTestIds.RowSelectAction(0),
     );
     await expect(actionSelect).toHaveValue("Duplicado", { timeout: 5000 });
     expect(checkCount).toBe(0);
 
-    // 1) duplicate → import (no field edit). Bug being fixed: this used to
-    //    fire because the legacy useEffect re-ran on `enabled: false → true`.
+    // 1) duplicate → import (no field edit). Pre-fix: legacy useEffect
+    //    re-ran on `enabled: false → true` and fired a request. Now: no
+    //    request, AND the user override is recorded.
     await importPage.setRowAction(0, "import");
-    // Give the debounce + any straggling fetch a beat to land before asserting.
     await page.waitForTimeout(750);
     expect(checkCount).toBe(0);
 
-    // 2) Toggle through several action changes — still no re-fire because
-    //    the debounced (date, amount, accountId) tuple has not changed.
+    // 2) Toggle the action a few more times — still no request, still no
+    //    auto-revert (override is locked in).
     await importPage.setRowAction(0, "duplicate");
     await importPage.setRowAction(0, "import");
     await page.waitForTimeout(750);
     expect(checkCount).toBe(0);
+    await expect(actionSelect).toHaveValue("Importar");
 
-    // 3) Edit the amount to a non-colliding value: query fires (debounced
-    //    fields actually changed), backend returns is_duplicate=false. The
-    //    user already overrode the action, so the row stays at "Importar".
+    // 3) Edit the amount to a non-colliding value — after override, the
+    //    hook short-circuits the fetch entirely (it would discard the
+    //    answer regardless).
     await importPage.setRowAmount(0, 9000); // 90,00 — no existing match
-    await expect.poll(() => checkCount, { timeout: 5000 }).toBe(1);
+    await page.waitForTimeout(750);
+    expect(checkCount).toBe(0);
     await expect(actionSelect).toHaveValue("Importar");
 
-    // 4) Edit the amount BACK to the colliding value (8000). Backend will
-    //    answer is_duplicate=true again (cache hit on the original tuple,
-    //    so checkCount is still 1). Pre-fix: the row auto-flipped back to
-    //    "Duplicado" and the user couldn't keep it on "Importar". Post-fix:
-    //    user-override is sticky, so the action holds.
+    // 4) Edit back to the colliding amount: pre-fix the row was auto-
+    //    reverted to "Duplicado" and the user could not keep "Importar".
+    //    Post-fix: still no request, action holds.
     await importPage.setRowAmount(0, 8000);
-    // Give debounce + cached query + any side-effect a beat to settle.
     await page.waitForTimeout(750);
-    expect(checkCount).toBe(1);
+    expect(checkCount).toBe(0);
     await expect(actionSelect).toHaveValue("Importar");
 
-    // 5) Manual flip back and forth on this tuple — still cache hit, still
-    //    no auto-revert because user-override is locked in.
-    await importPage.setRowAction(0, "duplicate");
-    await importPage.setRowAction(0, "import");
-    await page.waitForTimeout(750);
-    expect(checkCount).toBe(1);
-    await expect(actionSelect).toHaveValue("Importar");
+    await page.close();
+  });
+
+  test("without user override, editing fields into a collision still auto-flips to duplicate", async ({
+    browser,
+  }) => {
+    const { token, accountId, categoryId } = await createTestUser("dup-auto");
+
+    // Seed an existing transaction at (date, 80,00). The CSV row starts at
+    // (date, 90,00) — NOT a duplicate — so it lands as "Importar" and the
+    // user does not need to touch the action select.
+    const txDate = new Date(2026, 4, 14); // 14/05/2026
+    const description = `Auto Flip ${Date.now()}`;
+    await apiFetchAs(token, "/api/transactions", {
+      method: "POST",
+      body: JSON.stringify({
+        transaction_type: "expense",
+        account_id: accountId,
+        category_id: categoryId,
+        amount: 8000,
+        date: localMidnightISO(formatDateISO(txDate)),
+        description,
+      }),
+    });
+
+    const page = await openAuthedPage(browser, token);
+
+    let checkCount = 0;
+    await page.route("**/api/transactions/check-duplicate", async (route) => {
+      checkCount += 1;
+      await route.continue();
+    });
+
+    const importPage = new ImportPage(page);
+    await importPage.goto();
+
+    const csv = buildCsvContent([
+      // Different amount → backend marks this row as "import", not duplicate.
+      [formatDateBR(txDate), `Other ${Date.now()}`, "-90,00"],
+    ]);
+    await importPage.uploadCSV(csv, accountId);
+
+    const actionSelect = importPage.reviewStep.getByTestId(
+      ImportTestIds.RowSelectAction(0),
+    );
+    await expect(actionSelect).toHaveValue("Importar", { timeout: 5000 });
+    expect(checkCount).toBe(0);
+
+    // Edit the amount to match the seeded transaction → collision.
+    await importPage.setRowAmount(0, 8000);
+    // Hook fires the check, backend says is_duplicate=true, hook auto-flips.
+    await expect.poll(() => checkCount, { timeout: 5000 }).toBe(1);
+    await expect(actionSelect).toHaveValue("Duplicado");
 
     await page.close();
   });
