@@ -1,7 +1,12 @@
-import { Transactions } from "@/types/transactions";
 import { useAccounts } from "../useAccounts";
 
-export function useSplitSummary(settings?: Transactions.SplitSetting[], omitValues = false) {
+interface SplitSummaryItem {
+  connection_id?: number;
+  percentage?: number;
+  amount?: number;
+}
+
+export function useSplitSummary(settings?: SplitSummaryItem[], omitValues = false) {
   const { query } = useAccounts((accounts) =>
     accounts.filter((a) => a.user_connection?.connection_status === "accepted"),
   );

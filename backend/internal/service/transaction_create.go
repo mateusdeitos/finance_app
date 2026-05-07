@@ -263,13 +263,18 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 		settlementType = domain.SettlementTypeDebit
 	}
 
-	// Map counterpart's connection account ID → author's connection account ID.
+	// Map counterpart's connection account ID → (author's connection account ID, optional custom date).
 	// After SwapIfNeeded, FromAccountID is the author's and ToAccountID is the counterpart's.
 	// The linked transaction's AccountID is set to connection.ToAccountID in injectLinkedTransactions.
 	connAccountByToAccount := make(map[int]int, len(splitSettings))
+	customDateByToAccount := make(map[int]time.Time, len(splitSettings))
 	for _, ss := range splitSettings {
-		if ss.UserConnection != nil {
-			connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
+		if ss.UserConnection == nil {
+			continue
+		}
+		connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
+		if ss.Date != nil {
+			customDateByToAccount[ss.UserConnection.ToAccountID] = ss.Date.Time
 		}
 	}
 
@@ -286,6 +291,11 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 			accountID = connAccount
 		}
 
+		settlementDate := authorTransaction.Date
+		if customDate, ok := customDateByToAccount[lt.AccountID]; ok {
+			settlementDate = customDate
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
@@ -293,7 +303,7 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 			AccountID:           accountID,
 			SourceTransactionID: authorTransaction.ID,
 			ParentTransactionID: lt.ID,
-			Date:                authorTransaction.Date,
+			Date:                settlementDate,
 		})
 		if err != nil {
 			return err

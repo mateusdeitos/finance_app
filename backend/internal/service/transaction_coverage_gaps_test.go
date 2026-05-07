@@ -474,7 +474,11 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 	ownCopy.LinkedTransactions = []domain.Transaction{linkedCopy}
 
 	svc := suite.Services.Transaction.(*transactionService)
-	err = svc.syncSettlementsForTransaction(ctx, userA.ID, &ownCopy)
+	data := &transactionUpdateData{
+		userID: userA.ID,
+		req:    &domain.TransactionUpdateRequest{},
+	}
+	err = svc.syncSettlementsForTransaction(ctx, data, &ownCopy)
 	suite.Require().NoError(err, "syncSettlementsForTransaction must not fail on a connection miss")
 
 	// A settlement should have been created using own.AccountID as the account.

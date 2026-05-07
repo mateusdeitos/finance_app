@@ -4,6 +4,8 @@ export const splitSettingSchema = z.object({
   connection_id: z.number().int(),
   percentage: z.number().int().min(1).max(100).optional(),
   amount: z.number().int().optional(),
+  /** Optional custom date for the settlement produced by this split. */
+  date: z.date().nullable().optional(),
 });
 
 /**

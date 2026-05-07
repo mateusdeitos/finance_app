@@ -170,7 +170,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			}
 		}
 
-		if err := s.syncSettlementsForTransaction(ctx, data.userID, own); err != nil {
+		if err := s.syncSettlementsForTransaction(ctx, data, own); err != nil {
 			return err
 		}
 
@@ -731,7 +731,8 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 	return nil
 }
 
-func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, own *domain.Transaction) error {
+func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, data *transactionUpdateData, own *domain.Transaction) error {
+	userID := data.userID
 	if own.Type.IsTransfer() || len(own.LinkedTransactions) == 0 {
 		existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
 			SourceTransactionIDs: []int{own.ID},
@@ -800,6 +801,19 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 	}
 
+	// Map of ToAccountID → custom settlement date taken from the update request's
+	// split_settings. When the request provides a date for a connection, it wins
+	// over both the existing snapshot and the source transaction's date.
+	requestedDateByToAccount := make(map[int]time.Time, len(data.req.SplitSettings))
+	for _, ss := range data.req.SplitSettings {
+		if ss.UserConnection == nil || ss.Date == nil {
+			continue
+		}
+		conn := *ss.UserConnection
+		conn.SwapIfNeeded(userID)
+		requestedDateByToAccount[conn.ToAccountID] = ss.Date.Time
+	}
+
 	for _, lt := range own.LinkedTransactions {
 		// Skip linked transactions belonging to the same user (e.g. the from-side
 		// of a split on the author's connection account). Settlements only track
@@ -813,8 +827,13 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			accountID = connAccount
 		}
 
+		// Date precedence: explicit request override > previously customized
+		// (snapshot) > source transaction's current date.
 		settlementDate := own.Date
 		if d, ok := existingDateByParentID[lt.ID]; ok {
+			settlementDate = d
+		}
+		if d, ok := requestedDateByToAccount[lt.AccountID]; ok {
 			settlementDate = d
 		}
 

@@ -316,6 +316,13 @@ definitions:
         type: integer
       connection_id:
         type: integer
+      date:
+        allOf:
+        - $ref: '#/definitions/domain.Date'
+        description: |-
+          Date overrides the settlement.date created from this split. When nil
+          the settlement inherits the source transaction's date on create and
+          the previously-saved value on update (preserved by the sync snapshot).
       percentage:
         type: integer
       userConnection:

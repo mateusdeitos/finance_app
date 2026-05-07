@@ -1,5 +1,6 @@
 import { Transactions } from "@/types/transactions";
 import { TransactionFormValues } from "@/components/transactions/form/transactionFormSchema";
+import { localDateStr } from "@/utils/parseDate";
 
 export function buildTransactionPayload(
   values: TransactionFormValues,
@@ -25,7 +26,11 @@ export function buildTransactionPayload(
     tags: resolvedTags.length > 0 ? resolvedTags : undefined,
     split_settings:
       !isTransfer && values.split_settings.length > 0
-        ? values.split_settings.map((s) => ({ connection_id: s.connection_id, amount: s.amount }))
+        ? values.split_settings.map((s) => ({
+            connection_id: s.connection_id,
+            amount: s.amount,
+            date: s.date instanceof Date ? localDateStr(s.date) : undefined,
+          }))
         : undefined,
     recurrence_settings: values.recurrenceEnabled
       ? {

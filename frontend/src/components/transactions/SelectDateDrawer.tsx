@@ -4,16 +4,23 @@ import { useState } from 'react'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { TransactionsTestIds } from '@/testIds'
 
-export function SelectDateDrawer() {
+interface SelectDateDrawerProps {
+  /** Initial value rendered in the picker. Defaults to today. */
+  initialDate?: Date
+  /** Title shown in the drawer header. */
+  title?: string
+}
+
+export function SelectDateDrawer({ initialDate, title = 'Alterar data' }: SelectDateDrawerProps = {}) {
   const { opened, close, reject } = useDrawerContext<Date>()
-  const [date, setDate] = useState<Date | null>(new Date())
+  const [date, setDate] = useState<Date | null>(initialDate ?? new Date())
 
   return (
     <Drawer
       opened={opened}
       onClose={reject}
       position="bottom"
-      title="Alterar data"
+      title={title}
       data-testid={TransactionsTestIds.DrawerSelectDate}
       styles={{
         content: {

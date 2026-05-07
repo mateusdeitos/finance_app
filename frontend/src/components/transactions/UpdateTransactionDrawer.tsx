@@ -18,7 +18,7 @@ import {
 } from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
 import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
-import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { convertUtcToLocalKeepingValues, parseDate } from "@/utils/parseDate";
 import { TransactionsTestIds } from "@/testIds";
 
 interface Props {
@@ -36,6 +36,15 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const { query: tagsQuery } = useTags();
   const existingTags = tagsQuery.data ?? [];
 
+  // Index settlements by parent_transaction_id so each split row can be
+  // hydrated with the existing settlement.date (drives the calendar
+  // override button on the form).
+  const settlementByParentId = new Map<number, Transactions.Settlement>(
+    (transaction.settlements_from_source ?? [])
+      .filter((s) => s.parent_transaction_id != null)
+      .map((s) => [s.parent_transaction_id, s]),
+  );
+
   const initialSplitSettings = (transaction.linked_transactions ?? [])
     .filter((lt) => lt.user_id !== transaction.user_id)
     .flatMap((lt) => {
@@ -44,7 +53,9 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           a.user_connection?.from_account_id === lt.account_id || a.user_connection?.to_account_id === lt.account_id,
       );
       if (!acc?.user_connection) return [];
-      return [{ connection_id: acc.user_connection.id, amount: lt.amount }];
+      const settlement = settlementByParentId.get(lt.id);
+      const date = settlement?.date ? parseDate(settlement.date) : null;
+      return [{ connection_id: acc.user_connection.id, amount: lt.amount, date }];
     });
 
   const {

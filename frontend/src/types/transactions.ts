@@ -173,6 +173,8 @@ export namespace Transactions {
     connection_id: number;
     percentage?: number;
     amount?: number;
+    /** YYYY-MM-DD or RFC3339; overrides the settlement.date created from this split. */
+    date?: string;
   }
 
   export interface CreateTransactionPayload {

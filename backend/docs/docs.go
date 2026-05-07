@@ -2730,6 +2730,14 @@ const docTemplate = `{
                 "connection_id": {
                     "type": "integer"
                 },
+                "date": {
+                    "description": "Date overrides the settlement.date created from this split. When nil\nthe settlement inherits the source transaction's date on create and\nthe previously-saved value on update (preserved by the sync snapshot).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Date"
+                        }
+                    ]
+                },
                 "percentage": {
                     "type": "integer"
                 },

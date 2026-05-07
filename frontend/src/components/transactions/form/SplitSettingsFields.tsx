@@ -16,7 +16,7 @@ import {
   Select,
   Anchor,
 } from "@mantine/core";
-import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
+import { IconX, IconPercentage, IconCurrencyReal, IconCalendar, IconCalendarStats } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
 import { useWatch, useFieldArray, useFormContext, type FieldValues } from "react-hook-form";
 import { Transactions } from "@/types/transactions";
@@ -24,6 +24,8 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 import { getInitials } from "@/utils/getInitials";
 import { TransactionsTestIds } from "@/testIds";
+import { renderDrawer } from "@/utils/renderDrawer";
+import { SelectDateDrawer } from "../SelectDateDrawer";
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -39,8 +41,12 @@ interface SplitRowControlsProps {
   currentUserId: number;
   totalAmount: number;
   rowPath: string; // full RHF path to this row's `amount` field
+  rowIndex: number;
   error?: string;
   onlyPercentage: boolean;
+  /** Path to the parent transaction date field, used as the default for the
+   * settlement date picker when no custom date is set yet. */
+  parentDatePath: string;
 }
 
 function SplitRowControls({
@@ -49,15 +55,33 @@ function SplitRowControls({
   totalAmount,
   onlyPercentage,
   rowPath,
+  rowIndex,
   error,
+  parentDatePath,
 }: SplitRowControlsProps) {
   const { control, register, setValue } = useFormContext<FieldValues>();
 
   const amountFieldName = `${rowPath}.amount`;
   const percentageFieldName = `${rowPath}.percentage`;
+  const dateFieldName = `${rowPath}.date`;
 
   const { ref: inputRef } = register(amountFieldName);
   const fieldValue = (useWatch({ control, name: amountFieldName }) as number | undefined) ?? 0;
+  const dateValue = useWatch({ control, name: dateFieldName }) as Date | null | undefined;
+  const parentDate = useWatch({ control, name: parentDatePath }) as Date | null | undefined;
+  const hasCustomDate = dateValue instanceof Date;
+
+  async function handleOpenDatePicker() {
+    try {
+      const initial = dateValue instanceof Date ? dateValue : (parentDate ?? undefined);
+      const picked = await renderDrawer<Date>(() => (
+        <SelectDateDrawer initialDate={initial} title="Data do acerto" />
+      ));
+      setValue(dateFieldName, picked, { shouldDirty: true });
+    } catch {
+      // user dismissed the drawer — keep current value
+    }
+  }
 
   const conn = account.user_connection!;
   const isFrom = conn.from_user_id === currentUserId;
@@ -101,6 +125,22 @@ function SplitRowControls({
         </Tooltip>
       )}
 
+      <Tooltip
+        label={hasCustomDate ? "Data customizada do acerto" : "Definir data do acerto"}
+        withArrow
+      >
+        <ActionIcon
+          size="lg"
+          radius="xl"
+          variant={hasCustomDate ? "filled" : "default"}
+          color={hasCustomDate ? "violet" : undefined}
+          onClick={handleOpenDatePicker}
+          data-testid={TransactionsTestIds.BtnSplitRowDate(rowIndex)}
+        >
+          {hasCustomDate ? <IconCalendarStats size={16} /> : <IconCalendar size={16} />}
+        </ActionIcon>
+      </Tooltip>
+
       {mode === "percentage" ? (
         <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
           <NumberInput
@@ -139,6 +179,9 @@ function SplitRowControls({
 interface SplitRowProps {
   /** Full RHF path to this split row, e.g. `"split_settings.0"` or `"rows.2.split_settings.0"`. */
   rowPath: string;
+  rowIndex: number;
+  /** RHF path to the parent transaction's date field. */
+  parentDatePath: string;
   connectedAccounts: Transactions.Account[];
   usedConnectionIds: number[];
   currentUserId: number;
@@ -151,6 +194,8 @@ interface SplitRowProps {
 
 function SplitRow({
   rowPath,
+  rowIndex,
+  parentDatePath,
   connectedAccounts,
   usedConnectionIds,
   currentUserId,
@@ -229,6 +274,8 @@ function SplitRow({
             currentUserId={currentUserId}
             totalAmount={totalAmount}
             rowPath={rowPath}
+            rowIndex={rowIndex}
+            parentDatePath={parentDatePath}
             error={error}
             onlyPercentage={onlyPercentage}
           />
@@ -347,6 +394,8 @@ export function SplitSettingsFields({
             <SplitRow
               key={field.id}
               rowPath={`${namePrefix}split_settings.${index}`}
+              rowIndex={index}
+              parentDatePath={`${namePrefix}date`}
               connectedAccounts={connectedAccounts}
               usedConnectionIds={othersUsed}
               currentUserId={currentUserId}
@@ -370,7 +419,7 @@ export function SplitSettingsFields({
                 (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id),
               );
               const connectionId = available.length === 1 ? available[0].user_connection!.id : 0;
-              append({ connection_id: connectionId, amount: 0 });
+              append({ connection_id: connectionId, amount: 0, date: null });
             }}
             style={{ alignSelf: "flex-start" }}
             data-testid={TransactionsTestIds.BtnAddSplitRow}

@@ -1,4 +1,3 @@
-import { Transactions } from "@/types/transactions";
 import { Popover, Button, Stack } from "@mantine/core";
 import { useFormContext, useForm, FormProvider } from "react-hook-form";
 import type { ImportFormValues, ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
@@ -8,7 +7,9 @@ import { ImportTestIds } from "@/testIds";
 // ─── SplitPopover ─────────────────────────────────────────────────────────────
 interface SplitLocalValues {
   amount: number;
-  split_settings: Transactions.SplitSetting[];
+  /** Mirrors the row schema's split_settings shape (Date for `date`, not the
+   * RFC3339 string used at the API boundary). */
+  split_settings: ImportRowFormValues["split_settings"];
 }
 interface SplitPopoverProps {
   namePrefix: string;
