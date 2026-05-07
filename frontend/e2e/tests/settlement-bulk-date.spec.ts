@@ -17,6 +17,7 @@ import { TransactionsPage } from "../pages/TransactionsPage";
 import { TransactionsTestIds } from "@/testIds";
 import { createUserAndPartner, type UserAndPartnerResult } from "../helpers/createUserAndPartner";
 import { apiFetchAs, openAuthedPage } from "../helpers/api";
+import { DateField } from "../helpers/formFields";
 import type { Transactions } from "@/types/transactions";
 
 const now = new Date();
@@ -153,7 +154,10 @@ test.describe("Bulk settlement date change", () => {
 
     const dateDrawer = page.getByTestId(TransactionsTestIds.DrawerSelectDate);
     await expect(dateDrawer).toBeVisible();
-    await dateDrawer.getByTestId(TransactionsTestIds.InputBulkDate).fill(ddmmyyyy(target));
+    // DateField commits via click+fill+Tab so the DateInput onChange fires
+    // and updates the drawer's local state. A raw .fill() leaves the state
+    // at its useState default (today), so Aplicar would close with today.
+    await new DateField(dateDrawer, TransactionsTestIds.InputBulkDate).fill(ddmmyyyy(target));
     await page.getByTestId(TransactionsTestIds.BtnApplyDate).click();
 
     await expect(page.getByTestId(TransactionsTestIds.BulkSuccess)).toBeVisible({
