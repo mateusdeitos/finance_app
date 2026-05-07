@@ -10,6 +10,7 @@ export const TransactionsTestIds = {
   MenuItemImportTransactions: 'menu_item_import_transactions',
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,
   CheckboxSettlement: (settlementId: number | string) => `checkbox_settlement_${settlementId}` as const,
+  SettlementRow: (settlementId: number | string) => `row_settlement_${settlementId}` as const,
 
   // Drawers (create / update / linked)
   DrawerCreate: 'drawer_create_transaction',

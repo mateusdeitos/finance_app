@@ -962,7 +962,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "Fields to update",
-                        "name": "body",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -2806,6 +2806,10 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "original_user_id": {
+                    "type": "integer"
+                },
+                "parent_transaction_id": {
+                    "description": "ParentTransactionID is set only on synthetic Transaction entries. It\npoints to the linked transaction (partner-side row in a shared\nexpense/income) that the settlement matches against, so the frontend\ncan resolve which split_settings row the settlement corresponds to and\nfocus the edit drawer on that specific connection.",
                     "type": "integer"
                 },
                 "settlements_from_source": {

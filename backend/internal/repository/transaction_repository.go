@@ -237,6 +237,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 		Date                time.Time      `gorm:"column:date"`
 		Description         string         `gorm:"column:description"`
 		SourceTransactionID int            `gorm:"column:source_transaction_id"`
+		ParentTransactionID int            `gorm:"column:parent_transaction_id"`
 		CreatedAt           *time.Time     `gorm:"column:created_at"`
 		UpdatedAt           *time.Time     `gorm:"column:updated_at"`
 		_                   gorm.DeletedAt `gorm:"-"`
@@ -256,6 +257,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 			s.date AS date,
 			t.description AS description,
 			s.source_transaction_id AS source_transaction_id,
+			s.parent_transaction_id AS parent_transaction_id,
 			s.created_at AS created_at,
 			s.updated_at AS updated_at`).
 		Joins("JOIN transactions t ON t.id = s.source_transaction_id").
@@ -292,10 +294,12 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 
 		settlementID := r.SettlementID
 		sourceTxID := r.SourceTransactionID
+		parentTxID := r.ParentTransactionID
 		result = append(result, &domain.Transaction{
 			ID:                  -(settlementID + orphanedSettlementSyntheticIDOffset),
 			OriginSettlementID:  &settlementID,
 			SourceTransactionID: &sourceTxID,
+			ParentTransactionID: &parentTxID,
 			UserID:              r.UserID,
 			OriginalUserID:      r.OriginalUserID,
 			Type:                txType,

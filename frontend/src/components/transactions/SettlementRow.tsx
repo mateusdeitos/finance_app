@@ -55,6 +55,7 @@ export function SettlementRow({
 
   return (
     <div
+      data-testid={TransactionsTestIds.SettlementRow(settlement.id)}
       className={`${classes.row} ${settlementClasses.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
       onClick={handleRowClick}
     >

@@ -112,6 +112,13 @@ export namespace Transactions {
      * real source transaction so the UI can open its edit drawer.
      */
     source_transaction_id?: number;
+    /**
+     * Set on synthetic rows (origin_settlement_id != null) to point at the
+     * partner-side linked transaction the settlement matches against, so
+     * the UI can resolve which split_settings row this settlement
+     * corresponds to and focus the edit drawer accordingly.
+     */
+    parent_transaction_id?: number;
     created_at?: string;
     updated_at?: string;
   }

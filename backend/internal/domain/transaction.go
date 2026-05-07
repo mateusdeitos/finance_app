@@ -97,7 +97,13 @@ type Transaction struct {
 	// OriginSettlementID). It points to the real source transaction backing
 	// the surfaced settlement so the frontend can fetch the full transaction
 	// and open it for editing when the synthetic row is clicked.
-	SourceTransactionID *int       `json:"source_transaction_id,omitempty"`
+	SourceTransactionID *int `json:"source_transaction_id,omitempty"`
+	// ParentTransactionID is set only on synthetic Transaction entries. It
+	// points to the linked transaction (partner-side row in a shared
+	// expense/income) that the settlement matches against, so the frontend
+	// can resolve which split_settings row the settlement corresponds to and
+	// focus the edit drawer on that specific connection.
+	ParentTransactionID *int       `json:"parent_transaction_id,omitempty"`
 	CreatedAt           *time.Time `json:"created_at"`
 	UpdatedAt           *time.Time `json:"updated_at"`
 	DeletedAt           *time.Time `json:"deleted_at,omitempty"`

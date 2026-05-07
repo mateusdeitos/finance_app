@@ -87,10 +87,12 @@ export function TransactionGroup({
     return false;
   }
 
-  function openSyntheticEditDrawer(sourceTxId: number) {
+  function openSyntheticEditDrawer(sourceTxId: number, parentTransactionId?: number) {
     // Synthetic settlement rows don't carry their source's full state;
     // fetch the source by id and open its update drawer focused on the
-    // split-settings amount, mirroring the inline-settlement onEdit.
+    // split row that produced this specific settlement (matched by
+    // parent_transaction_id). Falls back to index 0 when the parent
+    // can't be resolved (legacy/empty payload).
     const notifId = notifications.show({
       loading: true,
       title: "Carregando transação...",
@@ -101,8 +103,16 @@ export function TransactionGroup({
     fetchTransaction(sourceTxId)
       .then((source) => {
         notifications.hide(notifId);
+        let splitIndex = 0;
+        if (parentTransactionId != null) {
+          const found = (source.linked_transactions ?? []).findIndex(
+            (lt) => lt.id === parentTransactionId,
+          );
+          if (found >= 0) splitIndex = found;
+        }
+        const focusField = `split_settings.${splitIndex}.amount` as FocusField;
         void renderDrawer(() => (
-          <UpdateTransactionDrawer transaction={source} focusField="split_settings.0.amount" />
+          <UpdateTransactionDrawer transaction={source} focusField={focusField} />
         ));
       })
       .catch(() => {
@@ -203,7 +213,7 @@ export function TransactionGroup({
                 onSelect={onSelectSettlement}
                 onEdit={
                   !isSelectionActive && sourceTxId
-                    ? () => openSyntheticEditDrawer(sourceTxId)
+                    ? () => openSyntheticEditDrawer(sourceTxId, tx.parent_transaction_id)
                     : undefined
                 }
               />
