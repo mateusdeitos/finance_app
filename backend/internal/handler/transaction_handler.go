@@ -180,7 +180,8 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 		Month: 0,
 		Year:  0,
 	}, domain.TransactionFilter{
-		IDs: []int{id},
+		IDs:             []int{id},
+		WithSettlements: true,
 	})
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
