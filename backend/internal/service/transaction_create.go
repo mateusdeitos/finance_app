@@ -279,7 +279,7 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 		}
 		connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
 		if ss.Date != nil {
-			customDateDiffByToAccount[ss.UserConnection.ToAccountID] = ss.Date.Time.Sub(requestDate)
+			customDateDiffByToAccount[ss.UserConnection.ToAccountID] = ss.Date.Sub(requestDate)
 		}
 	}
 
