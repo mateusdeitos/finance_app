@@ -6166,6 +6166,53 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDat
 		expected3, settlements[3].Date)
 }
 
+// TestUpdateRecurringSplitCustomDate_PropagationAll_NegativeDiff covers the
+// case where the user moves the settlement date BEFORE the parent transaction
+// date. The same diff (negative duration) must apply to every installment.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDate_PropagationAll_NegativeDiff() {
+	ctx := context.Background()
+	s := suite.setupRecurringSharedExpense3x()
+
+	// Setup uses baseDate = Apr 1; pick a custom date 5 days BEFORE that.
+	customSplitDate := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
+
+	err := suite.Services.Transaction.Update(ctx, s.installments[0].ID, s.userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: s.conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: customSplitDate}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	updatedInstallments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &s.userA.ID,
+		AccountIDs: []int{s.accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(updatedInstallments, 3)
+
+	settlements := suite.settlementByInstallment(ctx, updatedInstallments)
+
+	// Expected: each settlement = installment.Date - 5 days
+	// installment 1 (Apr 1) → Mar 27, installment 2 (May 1) → Apr 26, installment 3 (Jun 1) → May 27
+	expectedDates := []time.Time{
+		time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 26, 0, 0, 0, 0, time.UTC),
+		time.Date(2026, 5, 27, 0, 0, 0, 0, time.UTC),
+	}
+	for i, expected := range expectedDates {
+		suite.Assert().Equalf(expected, settlements[i+1].Date,
+			"installment %d settlement date should be %v (parent date - 5 days), got %v",
+			i+1, expected, settlements[i+1].Date)
+	}
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
