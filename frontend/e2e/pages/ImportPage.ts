@@ -8,7 +8,7 @@ import {
   type ImportRowAction,
   type RecurrenceType,
 } from '@/testIds'
-import { FileField, NumberField, SelectField, TextField } from '../helpers/formFields'
+import { CurrencyField, FileField, NumberField, SelectField, TextField } from '../helpers/formFields'
 
 export class ImportPage {
   readonly page: Page;
@@ -218,6 +218,11 @@ export class ImportPage {
   /** Return whether a row's checkbox is checked. */
   async isRowSelected(rowIndex: number): Promise<boolean> {
     return this.reviewStep.getByTestId(ImportTestIds.RowCheckbox(rowIndex)).isChecked();
+  }
+
+  /** Replace the amount on a row (cents-encoded, matching CurrencyInput semantics). */
+  async setRowAmount(rowIndex: number, cents: number) {
+    await new CurrencyField(this.reviewStep, ImportTestIds.RowInputAmount(rowIndex)).clearAndFillCents(cents);
   }
 
   /** Change the action for a row via the action select. */

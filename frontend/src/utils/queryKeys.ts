@@ -9,4 +9,5 @@ export const QueryKeys = {
   Charges: 'charges',
   ChargesPendingCount: 'charges-pending-count',
   Onboarding: 'onboarding',
+  CheckDuplicate: 'check-duplicate',
 } as const

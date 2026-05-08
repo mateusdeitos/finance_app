@@ -162,6 +162,7 @@ export const ImportReviewRow = memo(
                 disabled={disabled || isSkipped}
                 error={rowErrors?.date?.message}
                 popoverProps={{ withinPortal: true }}
+                data-testid={ImportTestIds.RowInputDate(rowIndex)}
               />
             )}
           />
@@ -195,6 +196,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 error={rowErrors?.amount?.message}
                 disabled={disabled || isSkipped}
+                data-testid={ImportTestIds.RowInputAmount(rowIndex)}
               />
             )}
           />
@@ -506,8 +508,8 @@ function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
     date: date as string,
     amount: amount as number,
     accountId: form.getValues("accountId"),
+    action: action as 'import' | 'skip' | 'duplicate',
     enabled: action === "import",
-    getCurrentAction: () => form.getValues(`rows.${rowIndex}.action`),
     setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
   });
 
