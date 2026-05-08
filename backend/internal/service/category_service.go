@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -105,7 +106,11 @@ func (s *categoryService) GetTree(ctx context.Context, options domain.CategorySe
 		root[*category.ParentID].Children = append(root[*category.ParentID].Children, *category)
 	}
 
-	return lo.Values(root), nil
+	tree := lo.Values(root)
+	slices.SortFunc(tree, func(a, b *domain.Category) int {
+		return a.ID - b.ID
+	})
+	return tree, nil
 }
 
 func (s *categoryService) Update(ctx context.Context, userID int, category *domain.Category) error {

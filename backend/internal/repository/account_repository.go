@@ -149,6 +149,8 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 		query = query.Where("accounts.is_active = ?", *options.ActiveOnly)
 	}
 
+	query = query.Order("accounts.id ASC")
+
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err
 	}
