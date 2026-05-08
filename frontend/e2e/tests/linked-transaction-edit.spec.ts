@@ -22,9 +22,10 @@ import { TransactionsTestIds } from "@/testIds";
  *   - 'split'    — shows only date, amount, and category
  *   - 'transfer' — shows only date and amount
  *
- * Amount edits on linked transactions propagate back to the source transaction
- * (and all its siblings) so every side of a split or cross-user transfer stays
- * in sync.
+ * Amount edits on a linked transaction stay scoped to that linked tx — they do
+ * NOT propagate back to the source transaction. For splits, the partner-side
+ * settlement is recomputed against the new linked-tx amount; for cross-user
+ * transfers, the source's debit side keeps the value the author chose.
  *
  * Setup strategy: fresh unique users per run so there are no shared-state
  * collisions across CI runs. The partner creates transactions that result in
@@ -153,7 +154,7 @@ test.describe("Linked Transaction Edit", () => {
     await expect(drawer.getByTestId(TransactionsTestIds.SelectCategory)).toBeVisible();
   });
 
-  test("split linked tx: editing amount propagates to the source transaction", async () => {
+  test("split linked tx: editing amount mutates only the linked tx, not the source", async () => {
     const today = new Date().toISOString();
     const desc = `LinkedSplit Amount ${Date.now()}`;
 
@@ -196,9 +197,10 @@ test.describe("Linked Transaction Edit", () => {
     const updatedLinkedTx = await apiGetTransaction(primaryLinkedTxId!, { token: primaryToken });
     expect(updatedLinkedTx.amount).toBe(8000);
 
-    // The source tx (partner's original) must also be updated (amount propagation)
+    // The source tx (partner's original) must keep the value the author chose;
+    // amount edits on a linked-tx side do NOT propagate to the source.
     const updatedSourceTx = await apiGetTransaction(partnerTx.id, { token: partnerToken });
-    expect(updatedSourceTx.amount).toBe(8000);
+    expect(updatedSourceTx.amount).toBe(10000);
   });
 
   // ─── Transfer linked tx — restricted to date + amount only ──────────────────
@@ -250,7 +252,7 @@ test.describe("Linked Transaction Edit", () => {
     await expect(drawer.getByTestId(TransactionsTestIds.InputAmount)).toBeVisible();
   });
 
-  test("transfer linked tx: editing amount propagates to the source transaction", async () => {
+  test("transfer linked tx: editing amount mutates only the credit side, not the source", async () => {
     const today = new Date().toISOString();
     const desc = `LinkedXfer Amount ${Date.now()}`;
 
@@ -290,8 +292,9 @@ test.describe("Linked Transaction Edit", () => {
     const updatedCreditTx = await apiGetTransaction(primaryCreditTxId!, { token: primaryToken });
     expect(updatedCreditTx.amount).toBe(9000);
 
-    // Verify the partner's source (debit) side was also propagated
+    // The partner's source (debit) side keeps the original amount — linked-tx
+    // amount edits do not propagate to the source.
     const updatedPartnerTx = await apiGetTransaction(partnerTx.id, { token: partnerToken });
-    expect(updatedPartnerTx.amount).toBe(9000);
+    expect(updatedPartnerTx.amount).toBe(7500);
   });
 });

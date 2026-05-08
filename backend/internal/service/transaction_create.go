@@ -248,7 +248,7 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 		}
 
 		if req.SharedAccountConnection == nil && req.TransactionType != domain.TransactionTypeTransfer && len(req.SplitSettings) > 0 {
-			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType, req.SplitSettings); err != nil {
+			if err := s.createSettlementsForSplit(ctx, userID, t, req.TransactionType, req.SplitSettings, req.Date.Time); err != nil {
 				return 0, err
 			}
 		}
@@ -257,19 +257,29 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	return firstID, nil
 }
 
-func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType, splitSettings []domain.SplitSettings) error {
+func (s *transactionService) createSettlementsForSplit(ctx context.Context, userID int, authorTransaction *domain.Transaction, transactionType domain.TransactionType, splitSettings []domain.SplitSettings, requestDate time.Time) error {
 	settlementType := domain.SettlementTypeCredit
 	if transactionType == domain.TransactionTypeIncome {
 		settlementType = domain.SettlementTypeDebit
 	}
 
-	// Map counterpart's connection account ID → author's connection account ID.
+	// Map counterpart's connection account ID → (author's connection account ID, optional custom date diff).
 	// After SwapIfNeeded, FromAccountID is the author's and ToAccountID is the counterpart's.
 	// The linked transaction's AccountID is set to connection.ToAccountID in injectLinkedTransactions.
+	//
+	// The custom split date in the request is the user's intended settlement date for the
+	// FIRST/target installment (which has Date == requestDate). For every other installment
+	// in the recurrence we shift its own date by the same diff so the offset between the
+	// installment date and the settlement date stays consistent across the recurrence.
 	connAccountByToAccount := make(map[int]int, len(splitSettings))
+	customDateDiffByToAccount := make(map[int]time.Duration, len(splitSettings))
 	for _, ss := range splitSettings {
-		if ss.UserConnection != nil {
-			connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
+		if ss.UserConnection == nil {
+			continue
+		}
+		connAccountByToAccount[ss.UserConnection.ToAccountID] = ss.UserConnection.FromAccountID
+		if ss.Date != nil {
+			customDateDiffByToAccount[ss.UserConnection.ToAccountID] = ss.Date.Sub(requestDate)
 		}
 	}
 
@@ -286,6 +296,11 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 			accountID = connAccount
 		}
 
+		settlementDate := authorTransaction.Date
+		if diff, ok := customDateDiffByToAccount[lt.AccountID]; ok {
+			settlementDate = authorTransaction.Date.Add(diff)
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
@@ -293,6 +308,7 @@ func (s *transactionService) createSettlementsForSplit(ctx context.Context, user
 			AccountID:           accountID,
 			SourceTransactionID: authorTransaction.ID,
 			ParentTransactionID: lt.ID,
+			Date:                settlementDate,
 		})
 		if err != nil {
 			return err

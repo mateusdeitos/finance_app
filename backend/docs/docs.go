@@ -934,6 +934,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/settlements/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates an existing settlement's date. The settlement must belong to the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "settlements"
+                ],
+                "summary": "Update settlement",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Settlement ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.SettlementUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/tags": {
             "get": {
                 "security": [
@@ -2367,11 +2434,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "date": {
-                    "description": "YYYY-MM-DD",
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
+                    "description": "accepts YYYY-MM-DD, datetime, or RFC3339",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Date"
+                        }
+                    ]
                 }
             }
         },
@@ -2401,6 +2469,14 @@ const docTemplate = `{
                 },
                 "role": {
                     "$ref": "#/definitions/domain.ChargeInitiatorRole"
+                }
+            }
+        },
+        "domain.Date": {
+            "type": "object",
+            "properties": {
+                "time.Time": {
+                    "type": "string"
                 }
             }
         },
@@ -2544,6 +2620,9 @@ const docTemplate = `{
                 "recurrence_count": {
                     "type": "integer"
                 },
+                "recurrence_current_installment": {
+                    "type": "integer"
+                },
                 "recurrence_type": {
                     "$ref": "#/definitions/domain.RecurrenceType"
                 },
@@ -2600,6 +2679,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "date": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -2631,6 +2713,14 @@ const docTemplate = `{
                 "SettlementTypeDebit"
             ]
         },
+        "domain.SettlementUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "$ref": "#/definitions/domain.Date"
+                }
+            }
+        },
         "domain.SplitSettings": {
             "type": "object",
             "properties": {
@@ -2639,6 +2729,14 @@ const docTemplate = `{
                 },
                 "connection_id": {
                     "type": "integer"
+                },
+                "date": {
+                    "description": "Date overrides the settlement.date created from this split. When nil\nthe settlement inherits the source transaction's date on create and\nthe previously-saved value on update (preserved by the sync snapshot).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Date"
+                        }
+                    ]
                 },
                 "percentage": {
                     "type": "integer"
@@ -2767,7 +2865,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "date": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.Date"
                 },
                 "description": {
                     "type": "string"
@@ -2857,7 +2955,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "date": {
-                    "type": "string"
+                    "$ref": "#/definitions/domain.Date"
                 },
                 "description": {
                     "type": "string"

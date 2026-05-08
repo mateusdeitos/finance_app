@@ -203,6 +203,9 @@ func main() {
 	charges.POST("/:id/reject", chargeHandler.Reject)
 	charges.POST("/:id/accept", chargeHandler.Accept)
 
+	// Settlements
+	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
+
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	go func() {

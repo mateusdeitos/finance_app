@@ -956,6 +956,141 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpense() {
 	suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[0].OriginalUserID))
 }
 
+// TestCreateRecurringSharedExpenseWithCustomSplitDate covers the regression where
+// the custom split date set on a recurring shared expense was used verbatim for
+// every installment's settlement instead of being incremented per installment
+// the same way the parent transaction date is. With a monthly recurrence and a
+// custom split date of d+5 days, settlements must land on:
+//
+//	installment 1 -> customDate
+//	installment 2 -> customDate + 1 month
+//	installment 3 -> customDate + 2 months
+func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringSharedExpenseWithCustomSplitDate() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	baseDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	customSplitDate := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "recurring shared expense with custom split date",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: conn.ID,
+				Percentage:   lo.ToPtr(50),
+				Date:         &domain.Date{Time: customSplitDate},
+			},
+		},
+	})
+	suite.Require().NoError(err)
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
+		WithSettlements: true,
+		SortBy:          &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(transactions, 3)
+
+	for i, tx := range transactions {
+		expectedTxDate := clampToEndOfMonth(baseDate, baseDate.Year(), baseDate.Month()+time.Month(i))
+		suite.Assert().Equal(expectedTxDate, tx.Date, "installment %d Date should be %v", i+1, expectedTxDate)
+
+		suite.Require().Len(tx.SettlementsFromSource, 1, "installment %d should have 1 settlement", i+1)
+		expectedSettlementDate := clampToEndOfMonth(customSplitDate, customSplitDate.Year(), customSplitDate.Month()+time.Month(i))
+		suite.Assert().Equal(
+			expectedSettlementDate,
+			tx.SettlementsFromSource[0].Date,
+			"installment %d settlement date should be customSplitDate + %d months (%v), got %v",
+			i+1, i, expectedSettlementDate, tx.SettlementsFromSource[0].Date,
+		)
+	}
+}
+
+// TestCreateRecurringSharedExpenseWithCustomSplitDate_NegativeDiff covers the
+// case where the custom settlement date precedes the parent transaction date
+// (e.g. settlement was paid up-front, before the actual transaction). Each
+// installment's settlement must keep that same negative offset.
+func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringSharedExpenseWithCustomSplitDate_NegativeDiff() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	baseDate := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
+	customSplitDate := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC) // 5 days BEFORE baseDate
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "recurring shared expense, settlement date precedes tx date",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{
+				ConnectionID: conn.ID,
+				Percentage:   lo.ToPtr(50),
+				Date:         &domain.Date{Time: customSplitDate},
+			},
+		},
+	})
+	suite.Require().NoError(err)
+
+	transactions, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
+		WithSettlements: true,
+		SortBy:          &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(transactions, 3)
+
+	// Settlements expected: Apr 10, May 10, Jun 10 (5 days before each installment date)
+	for i, tx := range transactions {
+		suite.Require().Len(tx.SettlementsFromSource, 1)
+		expected := clampToEndOfMonth(customSplitDate, customSplitDate.Year(), customSplitDate.Month()+time.Month(i))
+		suite.Assert().Equalf(expected, tx.SettlementsFromSource[0].Date,
+			"installment %d settlement date should be %v, got %v", i+1, expected, tx.SettlementsFromSource[0].Date)
+	}
+}
+
 func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedIncome() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)

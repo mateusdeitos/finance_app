@@ -189,6 +189,65 @@ func (_c *MockCategoryService_GetByID_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// GetTree provides a mock function with given fields: ctx, options
+func (_m *MockCategoryService) GetTree(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
+	ret := _m.Called(ctx, options)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTree")
+	}
+
+	var r0 []*domain.Category
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)); ok {
+		return rf(ctx, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.CategorySearchOptions) []*domain.Category); ok {
+		r0 = rf(ctx, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.Category)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.CategorySearchOptions) error); ok {
+		r1 = rf(ctx, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCategoryService_GetTree_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTree'
+type MockCategoryService_GetTree_Call struct {
+	*mock.Call
+}
+
+// GetTree is a helper method to define mock.On call
+//   - ctx context.Context
+//   - options domain.CategorySearchOptions
+func (_e *MockCategoryService_Expecter) GetTree(ctx interface{}, options interface{}) *MockCategoryService_GetTree_Call {
+	return &MockCategoryService_GetTree_Call{Call: _e.mock.On("GetTree", ctx, options)}
+}
+
+func (_c *MockCategoryService_GetTree_Call) Run(run func(ctx context.Context, options domain.CategorySearchOptions)) *MockCategoryService_GetTree_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.CategorySearchOptions))
+	})
+	return _c
+}
+
+func (_c *MockCategoryService_GetTree_Call) Return(_a0 []*domain.Category, _a1 error) *MockCategoryService_GetTree_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCategoryService_GetTree_Call) RunAndReturn(run func(context.Context, domain.CategorySearchOptions) ([]*domain.Category, error)) *MockCategoryService_GetTree_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, options
 func (_m *MockCategoryService) Search(ctx context.Context, options domain.CategorySearchOptions) ([]*domain.Category, error) {
 	ret := _m.Called(ctx, options)

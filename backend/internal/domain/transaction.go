@@ -172,6 +172,10 @@ type SplitSettings struct {
 	UserConnection *UserConnection
 	Percentage     *int   `json:"percentage,omitempty"`
 	Amount         *int64 `json:"amount,omitempty"`
+	// Date overrides the settlement.date created from this split. When nil
+	// the settlement inherits the source transaction's date on create and
+	// the previously-saved value on update (preserved by the sync snapshot).
+	Date *Date `json:"date,omitempty"`
 }
 
 type TransactionFilter struct {

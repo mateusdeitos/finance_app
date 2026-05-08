@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
@@ -52,6 +53,19 @@ func (s *settlementService) Update(ctx context.Context, settlement *domain.Settl
 		return pkgErrors.Internal("failed to update settlement", err)
 	}
 	return nil
+}
+
+func (s *settlementService) UpdateDate(ctx context.Context, callerUserID, id int, date time.Time) error {
+	existing, err := s.SearchOne(ctx, domain.SettlementFilter{IDs: []int{id}})
+	if err != nil {
+		return err
+	}
+	if existing.UserID != callerUserID {
+		return pkgErrors.ErrSettlementForbidden
+	}
+
+	existing.Date = date
+	return s.Update(ctx, existing)
 }
 
 func (s *settlementService) Delete(ctx context.Context, ids []int) error {

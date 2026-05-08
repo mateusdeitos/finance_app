@@ -5941,6 +5941,278 @@ func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_C
 	}
 }
 
+// ─── Recurring split + custom settlement date propagation tests ────────────────
+//
+// These cover the regression where a custom split date supplied on update is
+// applied verbatim to every affected installment's settlement, instead of being
+// incremented per installment the same way the parent transaction date is.
+//
+// Setup shared by the three tests below: 2 connected users, 3 monthly
+// installments of a shared expense (50/50, no custom date yet). Each test then
+// updates one installment with a SplitSettings.Date and a different
+// PropagationSettings, asserting the settlements that fall inside the
+// propagation window get correctly-incremented dates.
+
+type recurringSplitSettlementSetup struct {
+	userA        *domain.User
+	userB        *domain.User
+	conn         *domain.UserConnection
+	accountA     *domain.Account
+	installments []*domain.Transaction
+	baseDate     time.Time
+}
+
+func (suite *TransactionUpdateWithDBTestSuite) setupRecurringSharedExpense3x() *recurringSplitSettlementSetup {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	baseDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "shared expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	installments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(installments, 3)
+
+	return &recurringSplitSettlementSetup{
+		userA:        userA,
+		userB:        userB,
+		conn:         conn,
+		accountA:     accountA,
+		installments: installments,
+		baseDate:     baseDate,
+	}
+}
+
+// settlementByInstallment returns the settlement created for each installment,
+// keyed by installment_number.
+func (suite *TransactionUpdateWithDBTestSuite) settlementByInstallment(ctx context.Context, installments []*domain.Transaction) map[int]*domain.Settlement {
+	suite.T().Helper()
+	out := make(map[int]*domain.Settlement, len(installments))
+	for _, inst := range installments {
+		settlements := suite.settlementsForSource(ctx, inst.ID)
+		suite.Require().Lenf(settlements, 1, "installment %d should have exactly 1 settlement", lo.FromPtr(inst.InstallmentNumber))
+		out[lo.FromPtr(inst.InstallmentNumber)] = settlements[0]
+	}
+	return out
+}
+
+// TestUpdateRecurringSplitCustomDate_PropagationAll: setting a custom split date
+// while propagating to ALL installments must increment the date per installment.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDate_PropagationAll() {
+	ctx := context.Background()
+	s := suite.setupRecurringSharedExpense3x()
+
+	customSplitDate := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+
+	// Edit installment 1 with PropagationSettings=all
+	err := suite.Services.Transaction.Update(ctx, s.installments[0].ID, s.userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: s.conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: customSplitDate}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	updatedInstallments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &s.userA.ID,
+		AccountIDs: []int{s.accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(updatedInstallments, 3)
+
+	settlements := suite.settlementByInstallment(ctx, updatedInstallments)
+
+	for i := 1; i <= 3; i++ {
+		expected := clampToEndOfMonth(customSplitDate, customSplitDate.Year(), customSplitDate.Month()+time.Month(i-1))
+		suite.Assert().Equalf(expected, settlements[i].Date,
+			"propagation=all: installment %d settlement date should be customSplitDate + %d months (%v), got %v",
+			i, i-1, expected, settlements[i].Date)
+	}
+}
+
+// TestUpdateRecurringSplitCustomDate_PropagationCurrent: setting a custom split
+// date with PropagationSettings=current must only touch the target
+// installment's settlement; the other two settlements stay anchored to the
+// original transaction dates (no custom date applied).
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDate_PropagationCurrent() {
+	ctx := context.Background()
+	s := suite.setupRecurringSharedExpense3x()
+
+	// Snapshot pre-update settlement dates for installments 1 and 3 (must stay)
+	preInstallments := s.installments
+	preSettlements := suite.settlementByInstallment(ctx, preInstallments)
+	settlement1Date := preSettlements[1].Date
+	settlement3Date := preSettlements[3].Date
+
+	customSplitDate := time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC)
+
+	// Edit installment 2 (May) with PropagationSettings=current
+	err := suite.Services.Transaction.Update(ctx, s.installments[1].ID, s.userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: s.conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: customSplitDate}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	updatedInstallments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &s.userA.ID,
+		AccountIDs: []int{s.accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(updatedInstallments, 3)
+
+	settlements := suite.settlementByInstallment(ctx, updatedInstallments)
+
+	suite.Assert().Equal(settlement1Date, settlements[1].Date,
+		"propagation=current: installment 1 settlement date must be unchanged")
+	suite.Assert().Equal(customSplitDate, settlements[2].Date,
+		"propagation=current: installment 2 settlement date must equal the custom date")
+	suite.Assert().Equal(settlement3Date, settlements[3].Date,
+		"propagation=current: installment 3 settlement date must be unchanged")
+}
+
+// TestUpdateRecurringSplitCustomDate_PropagationCurrentAndFuture: setting a
+// custom split date with PropagationSettings=current_and_future on installment
+// 2 must increment the custom date for installments 2 and 3 while leaving
+// installment 1 untouched.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDate_PropagationCurrentAndFuture() {
+	ctx := context.Background()
+	s := suite.setupRecurringSharedExpense3x()
+
+	preSettlements := suite.settlementByInstallment(ctx, s.installments)
+	settlement1DateBefore := preSettlements[1].Date
+
+	customSplitDate := time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC)
+
+	// Edit installment 2 with PropagationSettings=current_and_future. Keep
+	// type/total unchanged so the recurrence is preserved (per InstallmentScenario10b
+	// rule: pure attribute propagation does not fragment the recurrence).
+	err := suite.Services.Transaction.Update(ctx, s.installments[1].ID, s.userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 2,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: s.conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: customSplitDate}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	updatedInstallments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &s.userA.ID,
+		AccountIDs: []int{s.accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(updatedInstallments, 3)
+
+	settlements := suite.settlementByInstallment(ctx, updatedInstallments)
+
+	suite.Assert().Equal(settlement1DateBefore, settlements[1].Date,
+		"propagation=current_and_future: installment 1 settlement date must be unchanged")
+
+	// installment 2 -> customSplitDate, installment 3 -> customSplitDate + 1 month
+	suite.Assert().Equal(customSplitDate, settlements[2].Date,
+		"propagation=current_and_future: installment 2 settlement date should equal customSplitDate")
+
+	expected3 := clampToEndOfMonth(customSplitDate, customSplitDate.Year(), customSplitDate.Month()+1)
+	suite.Assert().Equalf(expected3, settlements[3].Date,
+		"propagation=current_and_future: installment 3 settlement date should be customSplitDate + 1 month (%v), got %v",
+		expected3, settlements[3].Date)
+}
+
+// TestUpdateRecurringSplitCustomDate_PropagationAll_NegativeDiff covers the
+// case where the user moves the settlement date BEFORE the parent transaction
+// date. The same diff (negative duration) must apply to every installment.
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDate_PropagationAll_NegativeDiff() {
+	ctx := context.Background()
+	s := suite.setupRecurringSharedExpense3x()
+
+	// Setup uses baseDate = Apr 1; pick a custom date 5 days BEFORE that.
+	customSplitDate := time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC)
+
+	err := suite.Services.Transaction.Update(ctx, s.installments[0].ID, s.userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: s.conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: customSplitDate}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	updatedInstallments, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &s.userA.ID,
+		AccountIDs: []int{s.accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(updatedInstallments, 3)
+
+	settlements := suite.settlementByInstallment(ctx, updatedInstallments)
+
+	// Expected: each settlement = installment.Date - 5 days
+	// installment 1 (Apr 1) → Mar 27, installment 2 (May 1) → Apr 26, installment 3 (Jun 1) → May 27
+	expectedDates := []time.Time{
+		time.Date(2026, 3, 27, 0, 0, 0, 0, time.UTC),
+		time.Date(2026, 4, 26, 0, 0, 0, 0, time.UTC),
+		time.Date(2026, 5, 27, 0, 0, 0, 0, time.UTC),
+	}
+	for i, expected := range expectedDates {
+		suite.Assert().Equalf(expected, settlements[i+1].Date,
+			"installment %d settlement date should be %v (parent date - 5 days), got %v",
+			i+1, expected, settlements[i+1].Date)
+	}
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")

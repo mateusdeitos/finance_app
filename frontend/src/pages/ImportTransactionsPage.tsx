@@ -169,11 +169,12 @@ export function ImportTransactionsPage() {
       if (type === 'transfer') return
 
       const amount = form.getValues(`rows.${i}.amount`)
-      const parsedSplitSettings: Transactions.SplitSetting[] = splitSettings.map((s) => {
+      const parsedSplitSettings = splitSettings.map((s) => {
         const calculatedAmount = s.amount ? s.amount : Math.round((amount * (s?.percentage ?? 0)) / 100)
         return {
           connection_id: s.connection_id,
           amount: calculatedAmount,
+          date: null as Date | null,
         }
       })
 

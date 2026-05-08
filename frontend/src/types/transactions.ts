@@ -71,8 +71,15 @@ export namespace Transactions {
     account_id: number;
     source_transaction_id: number;
     parent_transaction_id: number;
+    /** YYYY-MM-DD; serialized as RFC3339 by the API but mirrors transaction.date semantics. */
+    date?: string;
     created_at?: string;
     updated_at?: string;
+  }
+
+  export interface UpdateSettlementPayload {
+    /** YYYY-MM-DD or RFC3339; the API parses both. */
+    date?: string;
   }
 
   export interface Transaction {
@@ -100,6 +107,11 @@ export namespace Transactions {
      * sentinel that does not correspond to any real transaction.
      */
     origin_settlement_id?: number;
+    /**
+     * Set on synthetic rows (origin_settlement_id != null) to point at the
+     * real source transaction so the UI can open its edit drawer.
+     */
+    source_transaction_id?: number;
     created_at?: string;
     updated_at?: string;
   }
@@ -161,6 +173,8 @@ export namespace Transactions {
     connection_id: number;
     percentage?: number;
     amount?: number;
+    /** YYYY-MM-DD or RFC3339; overrides the settlement.date created from this split. */
+    date?: string;
   }
 
   export interface CreateTransactionPayload {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/pkg/applog"
@@ -186,7 +187,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 
 		if wasNewTransaction || s.shouldSyncSettlementsOnUpdate(data) {
-			if err := s.syncSettlementsForTransaction(ctx, data.userID, own); err != nil {
+			if err := s.syncSettlementsForTransaction(ctx, data.userID, data, own); err != nil {
 				return err
 			}
 		}
@@ -213,7 +214,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			if err != nil {
 				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
 			}
-			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, sourceTx); err != nil {
+			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
 				return err
 			}
 		}
@@ -775,10 +776,17 @@ func (s *transactionService) shouldSyncSettlementsOnUpdate(data *transactionUpda
 	if data.scenario.TypeChanged() {
 		return true
 	}
+	// A custom settlement date on any split shifts the affected settlements
+	// even when the split membership itself is unchanged.
+	for _, ss := range req.SplitSettings {
+		if ss.Date != nil {
+			return true
+		}
+	}
 	return false
 }
 
-func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, own *domain.Transaction) error {
+func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, data *transactionUpdateData, own *domain.Transaction) error {
 	if own.Type.IsTransfer() || len(own.LinkedTransactions) == 0 {
 		existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
 			SourceTransactionIDs: []int{own.ID},
@@ -809,14 +817,15 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 	if err != nil {
 		return err
 	}
-	if len(existing) > 0 {
-		ids := make([]int, len(existing))
-		for i, s := range existing {
-			ids[i] = s.ID
-		}
-		if err := s.services.Settlement.Delete(ctx, ids); err != nil {
-			return err
-		}
+	// Existing settlements indexed by parent (linked) transaction id so we can
+	// match each one to a current LinkedTransaction and update it in place.
+	// Tearing down and recreating churns settlement IDs, which breaks concurrent
+	// callers — e.g. a bulk action that targets settlement.ID at the same time
+	// the source transaction is being updated would get a not-found because
+	// the recreated settlement has a fresh ID.
+	existingByParentID := make(map[int]*domain.Settlement, len(existing))
+	for _, s := range existing {
+		existingByParentID[s.ParentTransactionID] = s
 	}
 
 	// Map counterpart's connection account ID → author's connection account ID.
@@ -842,6 +851,23 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 	}
 
+	// Map of ToAccountID → custom settlement date diff taken from the update request's
+	// split_settings. The user's date input is the intended settlement date for the
+	// EDITED installment (data.previousTransaction). For every other affected
+	// installment in the recurrence we shift its own date by the same diff so the
+	// offset between the installment date and the settlement date stays consistent.
+	requestedDateDiffByToAccount := make(map[int]time.Duration, len(data.req.SplitSettings))
+	for _, ss := range data.req.SplitSettings {
+		if ss.UserConnection == nil || ss.Date == nil {
+			continue
+		}
+		conn := *ss.UserConnection
+		conn.SwapIfNeeded(userID)
+		requestedDateDiffByToAccount[conn.ToAccountID] = ss.Date.Time.Sub(data.previousTransaction.Date)
+	}
+
+	keptParentIDs := make(map[int]bool, len(own.LinkedTransactions))
+
 	for _, lt := range own.LinkedTransactions {
 		// Skip linked transactions belonging to the same user (e.g. the from-side
 		// of a split on the author's connection account). Settlements only track
@@ -855,6 +881,36 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			accountID = connAccount
 		}
 
+		if existingSettlement, ok := existingByParentID[lt.ID]; ok {
+			// In-place update: preserve the settlement ID. Date precedence is
+			// explicit request override (own.Date + diff) > existing record's
+			// date — the source transaction's date never overwrites a settlement
+			// that already exists, which keeps any previously customized date
+			// sticky when the request didn't override it.
+			settlementDate := existingSettlement.Date
+			if diff, ok := requestedDateDiffByToAccount[lt.AccountID]; ok {
+				settlementDate = own.Date.Add(diff)
+			}
+
+			existingSettlement.Amount = lt.Amount
+			existingSettlement.Type = settlementType
+			existingSettlement.AccountID = accountID
+			existingSettlement.Date = settlementDate
+
+			if err := s.services.Settlement.Update(ctx, existingSettlement); err != nil {
+				return err
+			}
+			keptParentIDs[lt.ID] = true
+			continue
+		}
+
+		// New settlement (newly added split). Date precedence: explicit request
+		// override (own.Date + diff) > source transaction's current date.
+		settlementDate := own.Date
+		if diff, ok := requestedDateDiffByToAccount[lt.AccountID]; ok {
+			settlementDate = own.Date.Add(diff)
+		}
+
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
 			UserID:              userID,
 			Amount:              lt.Amount,
@@ -862,8 +918,23 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			AccountID:           accountID,
 			SourceTransactionID: own.ID,
 			ParentTransactionID: lt.ID,
+			Date:                settlementDate,
 		})
 		if err != nil {
+			return err
+		}
+	}
+
+	// Delete only orphans — settlements whose parent linked transaction is no
+	// longer present (split removed, connection swapped, etc.).
+	orphanIDs := make([]int, 0)
+	for parentID, st := range existingByParentID {
+		if !keptParentIDs[parentID] {
+			orphanIDs = append(orphanIDs, st.ID)
+		}
+	}
+	if len(orphanIDs) > 0 {
+		if err := s.services.Settlement.Delete(ctx, orphanIDs); err != nil {
 			return err
 		}
 	}
