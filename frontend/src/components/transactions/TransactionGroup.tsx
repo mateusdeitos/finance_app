@@ -126,13 +126,15 @@ export function TransactionGroup({
   ) {
     if (renderLinkedDrawer(tx)) return;
 
-    const debitId = needsFetchToDebitOrigin(tx);
-    if (debitId == null) {
-      void renderDrawer(() => (
-        <UpdateTransactionDrawer transaction={tx} focusField={focusField} />
-      ));
-      return;
-    }
+    // Always refetch the source by id. The listing's `tx` may have been
+    // transformed by groupTransactions — e.g. when a settlement.date differs
+    // from the source's tx.date, the settlement is promoted to its own row
+    // in another date group and stripped from `tx.settlements_from_source`.
+    // The drawer needs the un-stripped source so the per-split date input
+    // can be hydrated from settlement.date. Also handles the cross-tx hop
+    // for the credit side of same-user transfers, mirroring the previous
+    // `needsFetchToDebitOrigin` branch.
+    const targetId = needsFetchToDebitOrigin(tx) ?? tx.id;
 
     const notifId = notifications.show({
       loading: true,
@@ -141,11 +143,11 @@ export function TransactionGroup({
       autoClose: false,
       withCloseButton: false,
     });
-    fetchTransaction(debitId)
-      .then((debit) => {
+    fetchTransaction(targetId)
+      .then((source) => {
         notifications.hide(notifId);
         void renderDrawer(() => (
-          <UpdateTransactionDrawer transaction={debit} focusField={focusField} />
+          <UpdateTransactionDrawer transaction={source} focusField={focusField} />
         ));
       })
       .catch(() => {
