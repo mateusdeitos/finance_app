@@ -776,6 +776,13 @@ func (s *transactionService) shouldSyncSettlementsOnUpdate(data *transactionUpda
 	if data.scenario.TypeChanged() {
 		return true
 	}
+	// A custom settlement date on any split shifts the affected settlements
+	// even when the split membership itself is unchanged.
+	for _, ss := range req.SplitSettings {
+		if ss.Date != nil {
+			return true
+		}
+	}
 	return false
 }
 
@@ -844,17 +851,19 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 	}
 
-	// Map of ToAccountID → custom settlement date taken from the update request's
-	// split_settings. When the request provides a date for a connection, it wins
-	// over both the existing record and the source transaction's date.
-	requestedDateByToAccount := make(map[int]time.Time, len(data.req.SplitSettings))
+	// Map of ToAccountID → custom settlement date diff taken from the update request's
+	// split_settings. The user's date input is the intended settlement date for the
+	// EDITED installment (data.previousTransaction). For every other affected
+	// installment in the recurrence we shift its own date by the same diff so the
+	// offset between the installment date and the settlement date stays consistent.
+	requestedDateDiffByToAccount := make(map[int]time.Duration, len(data.req.SplitSettings))
 	for _, ss := range data.req.SplitSettings {
 		if ss.UserConnection == nil || ss.Date == nil {
 			continue
 		}
 		conn := *ss.UserConnection
 		conn.SwapIfNeeded(userID)
-		requestedDateByToAccount[conn.ToAccountID] = ss.Date.Time
+		requestedDateDiffByToAccount[conn.ToAccountID] = ss.Date.Time.Sub(data.previousTransaction.Date)
 	}
 
 	keptParentIDs := make(map[int]bool, len(own.LinkedTransactions))
@@ -874,12 +883,13 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 
 		if existingSettlement, ok := existingByParentID[lt.ID]; ok {
 			// In-place update: preserve the settlement ID. Date precedence is
-			// explicit request override > existing record's date — the source
-			// transaction's date never overwrites a settlement that already
-			// exists, which keeps any previously customized date sticky.
+			// explicit request override (own.Date + diff) > existing record's
+			// date — the source transaction's date never overwrites a settlement
+			// that already exists, which keeps any previously customized date
+			// sticky when the request didn't override it.
 			settlementDate := existingSettlement.Date
-			if d, ok := requestedDateByToAccount[lt.AccountID]; ok {
-				settlementDate = d
+			if diff, ok := requestedDateDiffByToAccount[lt.AccountID]; ok {
+				settlementDate = own.Date.Add(diff)
 			}
 
 			existingSettlement.Amount = lt.Amount
@@ -895,10 +905,10 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 
 		// New settlement (newly added split). Date precedence: explicit request
-		// override > source transaction's current date.
+		// override (own.Date + diff) > source transaction's current date.
 		settlementDate := own.Date
-		if d, ok := requestedDateByToAccount[lt.AccountID]; ok {
-			settlementDate = d
+		if diff, ok := requestedDateDiffByToAccount[lt.AccountID]; ok {
+			settlementDate = own.Date.Add(diff)
 		}
 
 		_, err := s.services.Settlement.Create(ctx, &domain.Settlement{
