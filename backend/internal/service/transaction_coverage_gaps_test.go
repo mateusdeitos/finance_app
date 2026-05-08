@@ -478,7 +478,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestSyncSettlements_NoConnectionM
 		userID: userA.ID,
 		req:    &domain.TransactionUpdateRequest{},
 	}
-	err = svc.syncSettlementsForTransaction(ctx, data, &ownCopy)
+	err = svc.syncSettlementsForTransaction(ctx, data.userID, data, &ownCopy)
 	suite.Require().NoError(err, "syncSettlementsForTransaction must not fail on a connection miss")
 
 	// A settlement should have been created using own.AccountID as the account.

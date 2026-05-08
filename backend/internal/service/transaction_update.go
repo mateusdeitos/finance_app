@@ -144,7 +144,8 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			}
 		}
 
-		if own.ID == 0 {
+		wasNewTransaction := own.ID == 0
+		if wasNewTransaction {
 			created, err := s.transactionRepo.Create(ctx, own)
 			if err != nil {
 				return err
@@ -153,8 +154,23 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			own.LinkedTransactions = created.LinkedTransactions
 
 		} else {
+			// For a linked-tx edit, `own.LinkedTransactions` holds the SOURCE
+			// transactions (entity.ToDomain merges LinkedTransactions and
+			// SourceTransactions for the consumer). Persisting that back via
+			// `Association("LinkedTransactions").Replace` would write reverse-
+			// direction rows into the linked_transactions join table, which
+			// surfaces as duplicated `linked_transactions` payloads on later
+			// fetches (the secondary symptom flagged in #117). Clear it so the
+			// partner's update only mutates row-level fields.
+			linkedSnapshot := own.LinkedTransactions
+			if data.isLinkedTxEdit {
+				own.LinkedTransactions = nil
+			}
 			if err := s.transactionRepo.Update(ctx, own); err != nil {
 				return err
+			}
+			if data.isLinkedTxEdit {
+				own.LinkedTransactions = linkedSnapshot
 			}
 			// Re-fetch linked transactions if any were newly created (ID=0) during
 			// this update so that syncSettlementsForTransaction gets valid IDs.
@@ -170,8 +186,10 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 			}
 		}
 
-		if err := s.syncSettlementsForTransaction(ctx, data, own); err != nil {
-			return err
+		if wasNewTransaction || s.shouldSyncSettlementsOnUpdate(data) {
+			if err := s.syncSettlementsForTransaction(ctx, data.userID, data, own); err != nil {
+				return err
+			}
 		}
 
 	}
@@ -182,22 +200,21 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 	}
 
-	// When a linked transaction's amount is edited, propagate the new amount to its
-	// source transactions (the original author's entry) and all of their linked
-	// transactions so every side of the transfer/split stays in sync.
+	// When the partner side edits `amount` on their linked tx, only their own
+	// row mutates — the original author's source transaction (and the author's
+	// own linked legs, e.g. the from-side of a split) keeps the value the
+	// author chose. Settlements derived from the source still need to reflect
+	// the partner's new amount, so we recompute them on the source's behalf
+	// using the freshly-persisted lt.Amount (#117).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
 		for _, sourceID := range sourceIDs {
 			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
 				IDs: []int{sourceID},
 			})
 			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for amount propagation", err)
+				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
 			}
-			sourceTx.Amount = *req.Amount
-			for j := range sourceTx.LinkedTransactions {
-				sourceTx.LinkedTransactions[j].Amount = *req.Amount
-			}
-			if err := s.transactionRepo.Update(ctx, sourceTx); err != nil {
+			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
 				return err
 			}
 		}
@@ -731,8 +748,38 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 	return nil
 }
 
-func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, data *transactionUpdateData, own *domain.Transaction) error {
-	userID := data.userID
+// shouldSyncSettlementsOnUpdate reports whether an existing transaction's
+// settlements may have been invalidated by the current update request.
+// Settlements only depend on `amount`, `account_id`, split membership, and
+// transaction type — pure category/date/description edits leave settlements
+// untouched, so we skip the delete+recreate that would otherwise churn IDs and
+// (for non-original linked-tx edits) create stray settlements (#117).
+//
+// Linked-tx edits never recompute settlements via `own`: the partner's tx is
+// not a valid `SourceTransactionID` key. Amount-driven recomputes are handled
+// on the source transaction after propagation in `Update`.
+func (s *transactionService) shouldSyncSettlementsOnUpdate(data *transactionUpdateData) bool {
+	if data.isLinkedTxEdit {
+		return false
+	}
+
+	req := data.req
+	if req.Amount != nil {
+		return true
+	}
+	if lo.FromPtr(req.AccountID) > 0 {
+		return true
+	}
+	if data.scenario.SplitHasChanged {
+		return true
+	}
+	if data.scenario.TypeChanged() {
+		return true
+	}
+	return false
+}
+
+func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, data *transactionUpdateData, own *domain.Transaction) error {
 	if own.Type.IsTransfer() || len(own.LinkedTransactions) == 0 {
 		existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
 			SourceTransactionIDs: []int{own.ID},
