@@ -810,19 +810,15 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 	if err != nil {
 		return err
 	}
-	// Snapshot existing settlement dates keyed by parent (linked) transaction id so
-	// re-created settlements can preserve a previously customized date instead of
-	// always inheriting the source transaction's current date.
-	existingDateByParentID := make(map[int]time.Time, len(existing))
-	if len(existing) > 0 {
-		ids := make([]int, len(existing))
-		for i, s := range existing {
-			ids[i] = s.ID
-			existingDateByParentID[s.ParentTransactionID] = s.Date
-		}
-		if err := s.services.Settlement.Delete(ctx, ids); err != nil {
-			return err
-		}
+	// Existing settlements indexed by parent (linked) transaction id so we can
+	// match each one to a current LinkedTransaction and update it in place.
+	// Tearing down and recreating churns settlement IDs, which breaks concurrent
+	// callers — e.g. a bulk action that targets settlement.ID at the same time
+	// the source transaction is being updated would get a not-found because
+	// the recreated settlement has a fresh ID.
+	existingByParentID := make(map[int]*domain.Settlement, len(existing))
+	for _, s := range existing {
+		existingByParentID[s.ParentTransactionID] = s
 	}
 
 	// Map counterpart's connection account ID → author's connection account ID.
@@ -850,7 +846,7 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 
 	// Map of ToAccountID → custom settlement date taken from the update request's
 	// split_settings. When the request provides a date for a connection, it wins
-	// over both the existing snapshot and the source transaction's date.
+	// over both the existing record and the source transaction's date.
 	requestedDateByToAccount := make(map[int]time.Time, len(data.req.SplitSettings))
 	for _, ss := range data.req.SplitSettings {
 		if ss.UserConnection == nil || ss.Date == nil {
@@ -860,6 +856,8 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		conn.SwapIfNeeded(userID)
 		requestedDateByToAccount[conn.ToAccountID] = ss.Date.Time
 	}
+
+	keptParentIDs := make(map[int]bool, len(own.LinkedTransactions))
 
 	for _, lt := range own.LinkedTransactions {
 		// Skip linked transactions belonging to the same user (e.g. the from-side
@@ -874,12 +872,31 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			accountID = connAccount
 		}
 
-		// Date precedence: explicit request override > previously customized
-		// (snapshot) > source transaction's current date.
-		settlementDate := own.Date
-		if d, ok := existingDateByParentID[lt.ID]; ok {
-			settlementDate = d
+		if existingSettlement, ok := existingByParentID[lt.ID]; ok {
+			// In-place update: preserve the settlement ID. Date precedence is
+			// explicit request override > existing record's date — the source
+			// transaction's date never overwrites a settlement that already
+			// exists, which keeps any previously customized date sticky.
+			settlementDate := existingSettlement.Date
+			if d, ok := requestedDateByToAccount[lt.AccountID]; ok {
+				settlementDate = d
+			}
+
+			existingSettlement.Amount = lt.Amount
+			existingSettlement.Type = settlementType
+			existingSettlement.AccountID = accountID
+			existingSettlement.Date = settlementDate
+
+			if err := s.services.Settlement.Update(ctx, existingSettlement); err != nil {
+				return err
+			}
+			keptParentIDs[lt.ID] = true
+			continue
 		}
+
+		// New settlement (newly added split). Date precedence: explicit request
+		// override > source transaction's current date.
+		settlementDate := own.Date
 		if d, ok := requestedDateByToAccount[lt.AccountID]; ok {
 			settlementDate = d
 		}
@@ -894,6 +911,20 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 			Date:                settlementDate,
 		})
 		if err != nil {
+			return err
+		}
+	}
+
+	// Delete only orphans — settlements whose parent linked transaction is no
+	// longer present (split removed, connection swapped, etc.).
+	orphanIDs := make([]int, 0)
+	for parentID, st := range existingByParentID {
+		if !keptParentIDs[parentID] {
+			orphanIDs = append(orphanIDs, st.ID)
+		}
+	}
+	if len(orphanIDs) > 0 {
+		if err := s.services.Settlement.Delete(ctx, orphanIDs); err != nil {
 			return err
 		}
 	}

@@ -115,21 +115,23 @@ func (suite *SettlementServiceWithDBTestSuite) TestUpdateDatePersistsCustomDateA
 	})
 	suite.Require().NoError(err)
 
+	// In-place update: the original settlement.ID must survive a source
+	// transaction update so concurrent callers (e.g. a bulk action targeting
+	// settlement.ID alongside the source tx update) do not get a not-found.
 	updated, err := suite.Services.Settlement.SearchOne(ctx, domain.SettlementFilter{
 		IDs: []int{settlement.ID},
 	})
-	suite.Require().Error(err, "settlement is recreated by sync, original ID is gone")
-	_ = updated
+	suite.Require().NoError(err, "settlement should be updated in place; original ID survives")
+	suite.Assert().Equal(customDate, updated.Date,
+		"settlement date should be preserved after source transaction update")
 
-	// Re-fetch by source transaction id; the recreated settlement should still
-	// carry the customized date.
 	settlements, err := suite.Services.Settlement.Search(ctx, domain.SettlementFilter{
 		SourceTransactionIDs: []int{source.ID},
 	})
 	suite.Require().NoError(err)
 	suite.Require().Len(settlements, 1)
-	suite.Assert().Equal(customDate, settlements[0].Date,
-		"settlement date should be preserved after source transaction update")
+	suite.Assert().Equal(settlement.ID, settlements[0].ID, "settlement ID must be stable")
+	suite.Assert().Equal(customDate, settlements[0].Date)
 }
 
 // TestUpdateDateForbiddenForOtherUser verifies the ownership check rejects
