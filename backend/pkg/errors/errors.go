@@ -71,6 +71,7 @@ const (
 	ErrorTagImportInvalidLayout   ErrorTag = "IMPORT.INVALID_LAYOUT"
 	ErrorTagImportMaxRowsExceeded ErrorTag = "IMPORT.MAX_ROWS_EXCEEDED"
 	ErrorTagImportNoRows          ErrorTag = "IMPORT.NO_ROWS"
+	ErrorTagImportInvalidFile     ErrorTag = "IMPORT.INVALID_FILE"
 
 	ErrorTagSettlementForbidden ErrorTag = "SETTLEMENT.FORBIDDEN"
 	ErrorTagSettlementDateIsRequired ErrorTag = "SETTLEMENT.DATE_IS_REQUIRED"
@@ -355,6 +356,7 @@ var (
 	ErrImportInvalidLayout   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidLayout)}, "invalid CSV layout: missing required columns")
 	ErrImportMaxRowsExceeded = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportMaxRowsExceeded)}, "CSV file cannot have more than 100 rows")
 	ErrImportNoRows          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportNoRows)}, "CSV file has no data rows")
+	ErrImportInvalidFile     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidFile)}, "could not read the uploaded file")
 )
 
 // IsNotFound checks if an error is a NOT_FOUND error

@@ -49,7 +49,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
   function handleSubmit() {
     setErrorMessage(null)
     if (!file) {
-      setErrorMessage('Selecione um arquivo CSV.')
+      setErrorMessage('Selecione um arquivo CSV ou Excel (.xlsx).')
       return
     }
     if (!accountId) {
@@ -156,10 +156,10 @@ export function UploadStep({ onParsed, onBack }: Props) {
       </Flex>
 
       <FileInput
-        label="Arquivo CSV"
+        label="Arquivo CSV ou Excel (.xlsx)"
         placeholder="Clique para selecionar"
         required
-        accept="text/csv"
+        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}

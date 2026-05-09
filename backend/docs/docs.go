@@ -1532,7 +1532,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Accepts a multipart CSV file and an account_id. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
+                "description": "Accepts a multipart .csv or .xlsx file and an account_id. XLSX files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1542,7 +1542,7 @@ const docTemplate = `{
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Parse and enrich a CSV file for import",
+                "summary": "Parse and enrich a CSV or XLSX file for import",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1553,7 +1553,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "CSV file",
+                        "description": "CSV or XLSX file",
                         "name": "file",
                         "in": "formData",
                         "required": true
