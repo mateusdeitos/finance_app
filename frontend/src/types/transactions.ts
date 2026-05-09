@@ -262,5 +262,7 @@ export namespace Transactions {
       "Layout inválido: verifique se o cabeçalho contém as colunas obrigatórias (Data, Descrição, Tipo, Valor).",
     "IMPORT.MAX_ROWS_EXCEEDED": "O arquivo não pode ter mais de 100 linhas de dados.",
     "IMPORT.NO_ROWS": "O arquivo não contém nenhuma linha de dados.",
+    "IMPORT.INVALID_FILE":
+      "Não foi possível ler o arquivo. Verifique se é um CSV ou XLSX válido.",
   };
 }

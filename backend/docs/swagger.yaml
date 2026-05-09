@@ -1633,7 +1633,8 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Accepts a multipart CSV file and an account_id. Returns parsed
+      description: Accepts a multipart .csv or .xlsx file and an account_id. XLSX
+        files are converted to CSV server-side using the first sheet. Returns parsed
         rows enriched with inferred categories and duplicate flags. No transactions
         are created; use the standard POST /transactions endpoint to create each confirmed
         row.
@@ -1643,7 +1644,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CSV file
+      - description: CSV or XLSX file
         in: formData
         name: file
         required: true
@@ -1666,7 +1667,7 @@ paths:
       security:
       - CookieAuth: []
       - BearerAuth: []
-      summary: Parse and enrich a CSV file for import
+      summary: Parse and enrich a CSV or XLSX file for import
       tags:
       - transactions
   /api/transactions/suggestions:

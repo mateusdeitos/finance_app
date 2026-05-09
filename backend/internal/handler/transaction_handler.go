@@ -348,15 +348,15 @@ func (h *TransactionHandler) CheckDuplicate(c echo.Context) error {
 }
 
 // ImportCSV godoc
-// @Summary      Parse and enrich a CSV file for import
-// @Description  Accepts a multipart CSV file and an account_id. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
+// @Summary      Parse and enrich a CSV or XLSX file for import
+// @Description  Accepts a multipart .csv or .xlsx file and an account_id. XLSX files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
 // @Tags         transactions
 // @Accept       multipart/form-data
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
 // @Param        account_id  formData  int   true  "Destination account ID"
-// @Param        file        formData  file  true  "CSV file"
+// @Param        file        formData  file  true  "CSV or XLSX file"
 // @Success      200  {object}  domain.ImportCSVResponse
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
@@ -385,6 +385,13 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 	data, err := io.ReadAll(io.LimitReader(src, 1<<20))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "failed to read file")
+	}
+
+	if service.IsXLSX(fileHeader.Filename, data) {
+		data, err = service.ConvertXLSXToCSV(data)
+		if err != nil {
+			return pkgErrors.ToHTTPError(err)
+		}
 	}
 
 	decimalSeparator := service.ImportDecimalSeparatorValue(c.FormValue("decimal_separator"))
