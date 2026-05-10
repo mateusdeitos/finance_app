@@ -156,10 +156,10 @@ export function UploadStep({ onParsed, onBack }: Props) {
       </Flex>
 
       <FileInput
-        label="Arquivo CSV ou Excel (.xlsx)"
+        label="Arquivo CSV ou Excel (.xlsx, .xls)"
         placeholder="Clique para selecionar"
         required
-        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xls,application/vnd.ms-excel"
         leftSection={<IconFileTypeCsv size={16} />}
         value={file}
         onChange={setFile}
