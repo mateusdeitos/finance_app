@@ -3,7 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
-	"os"
+	_ "embed"
 	"strings"
 	"testing"
 
@@ -12,6 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+//go:embed testdata/import_sample.xls
+var xlsSampleFixture []byte
+
+//go:embed testdata/import_empty.xls
+var xlsEmptyFixture []byte
 
 // ---------------------------------------------------------------------------
 // Pure unit tests
@@ -44,15 +50,8 @@ func TestIsXLS(t *testing.T) {
 	}
 }
 
-func loadXLSFixture(t *testing.T, name string) []byte {
-	t.Helper()
-	data, err := os.ReadFile("testdata/" + name)
-	require.NoError(t, err)
-	return data
-}
-
 func TestConvertXLSToCSV_HappyPath(t *testing.T) {
-	data := loadXLSFixture(t, "import_sample.xls")
+	data := xlsSampleFixture
 
 	out, err := ConvertXLSToCSV(data)
 	require.NoError(t, err)
@@ -70,7 +69,7 @@ func TestConvertXLSToCSV_HappyPath(t *testing.T) {
 }
 
 func TestConvertXLSToCSV_SkipsBlankRows(t *testing.T) {
-	data := loadXLSFixture(t, "import_sample.xls")
+	data := xlsSampleFixture
 
 	out, err := ConvertXLSToCSV(data)
 	require.NoError(t, err)
@@ -96,15 +95,14 @@ func TestConvertXLSToCSV_InvalidBytes(t *testing.T) {
 }
 
 func TestConvertXLSToCSV_EmptySheet(t *testing.T) {
-	data := loadXLSFixture(t, "import_empty.xls")
-	_, err := ConvertXLSToCSV(data)
+	_, err := ConvertXLSToCSV(xlsEmptyFixture)
 	assert.ErrorIs(t, err, pkgErrors.ErrImportEmptyFile)
 }
 
 // Sanity check that the magic-bytes constant matches the fixture so IsXLS
 // won't silently skip real uploads.
 func TestXLSMagicBytesMatchFixture(t *testing.T) {
-	data := loadXLSFixture(t, "import_sample.xls")
+	data := xlsSampleFixture
 	require.True(t, len(data) >= 8)
 	assert.True(t, bytes.Equal(data[:8], xlsMagicBytes))
 	assert.True(t, IsXLS("file.xls", data))
@@ -126,8 +124,7 @@ func (suite *TransactionImportXLSWithDBTestSuite) TestParseImportCSV_FromXLS() {
 	account, err := suite.createTestAccount(ctx, user)
 	suite.Require().NoError(err)
 
-	xlsBytes := loadXLSFixture(suite.T(), "import_sample.xls")
-	csv, err := ConvertXLSToCSV(xlsBytes)
+	csv, err := ConvertXLSToCSV(xlsSampleFixture)
 	suite.Require().NoError(err)
 
 	resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
