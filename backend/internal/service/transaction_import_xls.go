@@ -87,7 +87,7 @@ func readXLSRow(sheet *xls.WorkSheet, i int, wb *xls.WorkBook, dateXfs map[uint1
 	if !rowVal.IsValid() || rowVal.Kind() != reflect.Map {
 		return readXLSRowFallback(sheet, i)
 	}
-	rowPtr := rowVal.MapIndex(reflect.ValueOf(uint16(i)))
+	rowPtr := rowVal.MapIndex(reflect.ValueOf(uint16(i))) //nolint:gosec // G115: i is bounded by sheet.MaxRow (uint16) in the caller
 	if !rowPtr.IsValid() || rowPtr.IsNil() {
 		return nil
 	}
@@ -105,7 +105,7 @@ func readXLSRow(sheet *xls.WorkSheet, i int, wb *xls.WorkBook, dateXfs map[uint1
 	maxCol := uint16(0)
 	iter := colsVal.MapRange()
 	for iter.Next() {
-		col := uint16(iter.Key().Uint())
+		col := uint16(iter.Key().Uint()) //nolint:gosec // G115: underlying map key type is uint16
 		handler := iter.Value()
 		strs := stringifyCell(handler, wb, dateXfs, date1904)
 		for off, s := range strs {
@@ -168,7 +168,7 @@ func stringifyCell(handler reflect.Value, wb *xls.WorkBook, dateXfs map[uint16]b
 	switch concrete.Type().String() {
 	case "*xls.NumberCol":
 		s := concrete.Elem()
-		xf := uint16(s.FieldByName("Index").Uint())
+		xf := uint16(s.FieldByName("Index").Uint()) //nolint:gosec // G115: Index field is uint16 in the library
 		f := s.FieldByName("Float").Float()
 		return []string{renderNumeric(f, xf, dateXfs, date1904)}
 	case "*xls.RkCol":
@@ -177,7 +177,7 @@ func stringifyCell(handler reflect.Value, wb *xls.WorkBook, dateXfs map[uint16]b
 	case "*xls.MulrkCol":
 		xfrks := concrete.Elem().FieldByName("Xfrks")
 		out := make([]string, xfrks.Len())
-		for i := 0; i < xfrks.Len(); i++ {
+		for i := range xfrks.Len() {
 			out[i] = renderXfRk(xfrks.Index(i), dateXfs, date1904)
 		}
 		return out
@@ -202,8 +202,8 @@ func renderNumeric(f float64, xf uint16, dateXfs map[uint16]bool, date1904 bool)
 // regardless of whether the format is actually a date — which would otherwise
 // rewrite plain amounts as dates.
 func renderXfRk(xfrk reflect.Value, dateXfs map[uint16]bool, date1904 bool) string {
-	xf := uint16(xfrk.FieldByName("Index").Uint())
-	rk := uint32(xfrk.FieldByName("Rk").Uint())
+	xf := uint16(xfrk.FieldByName("Index").Uint()) //nolint:gosec // G115: Index field is uint16 in the library
+	rk := uint32(xfrk.FieldByName("Rk").Uint())    //nolint:gosec // G115: Rk field is uint32 in the library
 	i, f, isFloat := decodeRK(rk)
 	val := float64(i)
 	if isFloat {
@@ -219,22 +219,24 @@ func renderXfRk(xfrk reflect.Value, dateXfs map[uint16]bool, date1904 bool) stri
 }
 
 // decodeRK unpacks Excel's RK number encoding: 30-bit signed integer or
-// 30 high bits of an IEEE-754 double, optionally multiplied by 100.
-func decodeRK(rk uint32) (intNum int64, floatNum float64, isFloat bool) {
+// 30 high bits of an IEEE-754 double, optionally multiplied by 100. The third
+// return is true when the decoded value is a float (i.e. when the int branch
+// was not taken or the multiplied bit forces fractional output).
+func decodeRK(rk uint32) (int64, float64, bool) {
 	multiplied := rk & 1
 	isInt := rk & 2
 	val := rk >> 2
 	if isInt == 0 {
-		floatNum = math.Float64frombits(uint64(val) << 34)
+		f := math.Float64frombits(uint64(val) << 34)
 		if multiplied != 0 {
-			floatNum /= 100
+			f /= 100
 		}
-		return 0, floatNum, true
+		return 0, f, true
 	}
 	// Sign-extend the 30-bit value to int32.
-	signed := int32(val)
+	signed := int32(val) //nolint:gosec // G115: deliberate bit-pattern reinterpretation of the lower 30 bits
 	if val&(1<<29) != 0 {
-		signed = int32(val | 0xC0000000)
+		signed = int32(val | 0xC0000000) //nolint:gosec // G115: deliberate sign extension of a 30-bit value
 	}
 	if multiplied != 0 {
 		return 0, float64(signed) / 100, true
@@ -272,7 +274,7 @@ func buildDateXfSet(wb *xls.WorkBook) map[uint16]bool {
 		return out
 	}
 	formatsVal := reflect.ValueOf(wb).Elem().FieldByName("Formats")
-	for i := 0; i < xfsVal.Len(); i++ {
+	for i := range xfsVal.Len() {
 		xfVal := xfsVal.Index(i)
 		if xfVal.Kind() == reflect.Interface {
 			xfVal = xfVal.Elem()
@@ -287,9 +289,10 @@ func buildDateXfSet(wb *xls.WorkBook) map[uint16]bool {
 		if !fNoField.IsValid() {
 			continue
 		}
-		fNo := uint16(fNoField.Uint())
+		fNo := uint16(fNoField.Uint()) //nolint:gosec // G115: Format field is uint16 in the library
+		xfIdx := uint16(i)             //nolint:gosec // G115: Xf table length always fits in uint16
 		if isBuiltinDateFormat(fNo) {
-			out[uint16(i)] = true
+			out[xfIdx] = true
 			continue
 		}
 		if fNo >= 164 && formatsVal.IsValid() && formatsVal.Kind() == reflect.Map {
@@ -298,7 +301,7 @@ func buildDateXfSet(wb *xls.WorkBook) map[uint16]bool {
 				strField := reflectFieldUnsafe(entry.Elem(), "str")
 				if strField.IsValid() && strField.Kind() == reflect.String {
 					if looksLikeDateFormat(strField.String()) {
-						out[uint16(i)] = true
+						out[xfIdx] = true
 					}
 				}
 			}
