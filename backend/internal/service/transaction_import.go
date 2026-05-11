@@ -28,7 +28,7 @@ type csvColumnIndex struct {
 	category    int // optional column; -1 when absent
 }
 
-func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
+func (s *transactionService) ParseImportCSV(ctx context.Context, userID, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
 	// Valida propriedade da conta
 	if _, err := s.services.Account.GetByID(ctx, userID, accountID); err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 				ParseErrors: []string{errorMessage},
 			}
 		} else {
-			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, decimalSeparator, typeDefinitionRule)
+			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, typeDefinitionRule)
 		}
 
 		if row.Status == domain.ImportRowStatusDuplicate {
@@ -182,7 +182,6 @@ func parseCSVRow(
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
-	decimalSeparator domain.ImportDecimalSeparatorValue,
 	typeDefinitionRule domain.ImportTypeDefinitionRule,
 ) domain.ParsedImportRow {
 	row := domain.ParsedImportRow{
@@ -237,7 +236,7 @@ func parseCSVRow(
 		row.ParseErrors = append(row.ParseErrors, "Valor é obrigatório")
 	} else {
 		// parseAmountSigned retorna o valor em centavos mantendo o sinal
-		signedCents, err := parseAmountSigned(amountStr, decimalSeparator)
+		signedCents, err := parseAmountSigned(amountStr)
 		if err != nil {
 			row.ParseErrors = append(row.ParseErrors, fmt.Sprintf("Valor inválido: %q", amountStr))
 		} else {
@@ -294,19 +293,59 @@ func parseCSVRow(
 	return row
 }
 
-// parseAmountSigned converte uma string numérica para centavos (int64) mantendo o sinal.
-func parseAmountSigned(s string, decimalSeparator domain.ImportDecimalSeparatorValue) (int64, error) {
+// parseAmountSigned converte uma string numérica para centavos (int64) mantendo o sinal,
+// inferindo o formato linha a linha. Aceita inteiros ("150"), floats com ponto ("150.00",
+// "1,234.56") ou strings no formato pt-BR ("150,00", "1.234,56"). Quando há ambos os
+// separadores, o último ocorrente é tratado como decimal; quando há apenas um e ele
+// aparece exatamente uma vez seguido por 3 dígitos, é tratado como separador de milhar.
+func parseAmountSigned(s string) (int64, error) {
 	s = strings.TrimSpace(s)
-	if decimalSeparator == "dot" {
-		// Padrão Internacional: 1,234.56 -> Remove vírgulas de milhar
-		s = strings.ReplaceAll(s, ",", "")
-	} else {
-		// Padrão Brasileiro: 1.234,56 -> Remove pontos de milhar e troca vírgula por ponto
-		s = strings.ReplaceAll(s, ".", "")
-		s = strings.ReplaceAll(s, ",", ".")
+	if s == "" {
+		return 0, fmt.Errorf("empty amount")
 	}
 
-	f, err := strconv.ParseFloat(s, 64)
+	lastDot := strings.LastIndex(s, ".")
+	lastComma := strings.LastIndex(s, ",")
+	countDot := strings.Count(s, ".")
+	countComma := strings.Count(s, ",")
+
+	var normalized string
+	switch {
+	case countDot == 0 && countComma == 0:
+		normalized = s
+	case countDot > 0 && countComma > 0:
+		// Ambos: o último ocorrente é o decimal, o outro é separador de milhar.
+		if lastComma > lastDot {
+			// pt-BR: "." milhar, "," decimal
+			normalized = strings.ReplaceAll(s, ".", "")
+			normalized = strings.Replace(normalized, ",", ".", 1)
+		} else {
+			// US: "," milhar, "." decimal
+			normalized = strings.ReplaceAll(s, ",", "")
+		}
+	case countDot > 0:
+		if countDot > 1 {
+			// Múltiplos pontos só fazem sentido como separadores de milhar (pt-BR).
+			normalized = strings.ReplaceAll(s, ".", "")
+		} else if len(s)-lastDot-1 == 3 {
+			// Caso ambíguo "1.234": tratar como milhar.
+			normalized = strings.ReplaceAll(s, ".", "")
+		} else {
+			normalized = s
+		}
+	default:
+		if countComma > 1 {
+			// Múltiplas vírgulas só fazem sentido como separadores de milhar (US).
+			normalized = strings.ReplaceAll(s, ",", "")
+		} else if len(s)-lastComma-1 == 3 {
+			// Caso ambíguo "1,234": tratar como milhar.
+			normalized = strings.ReplaceAll(s, ",", "")
+		} else {
+			normalized = strings.Replace(s, ",", ".", 1)
+		}
+	}
+
+	f, err := strconv.ParseFloat(normalized, 64)
 	if err != nil {
 		return 0, err
 	}

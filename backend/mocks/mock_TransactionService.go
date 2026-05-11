@@ -252,9 +252,9 @@ func (_c *MockTransactionService_GetBalance_Call) RunAndReturn(run func(context.
 	return _c
 }
 
-// ParseImportCSV provides a mock function with given fields: ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData
-func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
-	ret := _m.Called(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
+// ParseImportCSV provides a mock function with given fields: ctx, userID, accountID, typeDefinitionRule, csvData
+func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error) {
+	ret := _m.Called(ctx, userID, accountID, typeDefinitionRule, csvData)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ParseImportCSV")
@@ -262,19 +262,19 @@ func (_m *MockTransactionService) ParseImportCSV(ctx context.Context, userID int
 
 	var r0 *domain.ImportCSVResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)); ok {
-		return rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)); ok {
+		return rf(ctx, userID, accountID, typeDefinitionRule, csvData)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) *domain.ImportCSVResponse); ok {
-		r0 = rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.ImportTypeDefinitionRule, []byte) *domain.ImportCSVResponse); ok {
+		r0 = rf(ctx, userID, accountID, typeDefinitionRule, csvData)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.ImportCSVResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) error); ok {
-		r1 = rf(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, domain.ImportTypeDefinitionRule, []byte) error); ok {
+		r1 = rf(ctx, userID, accountID, typeDefinitionRule, csvData)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -291,16 +291,15 @@ type MockTransactionService_ParseImportCSV_Call struct {
 //   - ctx context.Context
 //   - userID int
 //   - accountID int
-//   - decimalSeparator domain.ImportDecimalSeparatorValue
 //   - typeDefinitionRule domain.ImportTypeDefinitionRule
 //   - csvData []byte
-func (_e *MockTransactionService_Expecter) ParseImportCSV(ctx interface{}, userID interface{}, accountID interface{}, decimalSeparator interface{}, typeDefinitionRule interface{}, csvData interface{}) *MockTransactionService_ParseImportCSV_Call {
-	return &MockTransactionService_ParseImportCSV_Call{Call: _e.mock.On("ParseImportCSV", ctx, userID, accountID, decimalSeparator, typeDefinitionRule, csvData)}
+func (_e *MockTransactionService_Expecter) ParseImportCSV(ctx interface{}, userID interface{}, accountID interface{}, typeDefinitionRule interface{}, csvData interface{}) *MockTransactionService_ParseImportCSV_Call {
+	return &MockTransactionService_ParseImportCSV_Call{Call: _e.mock.On("ParseImportCSV", ctx, userID, accountID, typeDefinitionRule, csvData)}
 }
 
-func (_c *MockTransactionService_ParseImportCSV_Call) Run(run func(ctx context.Context, userID int, accountID int, decimalSeparator domain.ImportDecimalSeparatorValue, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte)) *MockTransactionService_ParseImportCSV_Call {
+func (_c *MockTransactionService_ParseImportCSV_Call) Run(run func(ctx context.Context, userID int, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte)) *MockTransactionService_ParseImportCSV_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.ImportDecimalSeparatorValue), args[4].(domain.ImportTypeDefinitionRule), args[5].([]byte))
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.ImportTypeDefinitionRule), args[4].([]byte))
 	})
 	return _c
 }
@@ -310,7 +309,7 @@ func (_c *MockTransactionService_ParseImportCSV_Call) Return(_a0 *domain.ImportC
 	return _c
 }
 
-func (_c *MockTransactionService_ParseImportCSV_Call) RunAndReturn(run func(context.Context, int, int, domain.ImportDecimalSeparatorValue, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)) *MockTransactionService_ParseImportCSV_Call {
+func (_c *MockTransactionService_ParseImportCSV_Call) RunAndReturn(run func(context.Context, int, int, domain.ImportTypeDefinitionRule, []byte) (*domain.ImportCSVResponse, error)) *MockTransactionService_ParseImportCSV_Call {
 	_c.Call.Return(run)
 	return _c
 }

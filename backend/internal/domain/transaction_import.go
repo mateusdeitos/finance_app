@@ -2,14 +2,6 @@ package domain
 
 import "time"
 
-// ImportDecimalSeparatorValue controls how decimal numbers are parsed in CSV imports.
-type ImportDecimalSeparatorValue string
-
-const (
-	DecimalSeparatorComma ImportDecimalSeparatorValue = "comma"
-	DecimalSeparatorDot   ImportDecimalSeparatorValue = "dot"
-)
-
 // ImportTypeDefinitionRule controls how transaction type is inferred from CSV amount sign.
 type ImportTypeDefinitionRule string
 

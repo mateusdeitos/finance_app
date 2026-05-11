@@ -23,7 +23,7 @@ import { Transactions } from '@/types/transactions'
 import { parseApiError } from '@/utils/apiErrors'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { CSV_COLUMNS } from './importPayload'
-import { ImportTestIds, type ImportDecimalSeparator, type ImportTypeRule } from '@/testIds'
+import { ImportTestIds, type ImportTypeRule } from '@/testIds'
 
 type Props = {
   onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
@@ -31,7 +31,6 @@ type Props = {
 }
 
 export function UploadStep({ onParsed, onBack }: Props) {
-  const [decimalSeparator, setDecimalSeparator] = useState<Transactions.DecimalSeparatorValue>('comma')
   const [typeDefinitionRule, setTypeDefinitionRule] = useState<Transactions.TypeDefinitionRule>('positive_as_income')
   const [accountId, setAccountId] = useState<number | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -58,7 +57,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
     }
 
     mutation.mutate(
-      { file, accountId, decimalSeparator, typeDefinitionRule },
+      { file, accountId, typeDefinitionRule },
       {
         onSuccess: (result) => onParsed(result.rows, accountId),
         onError: async (err: unknown) => {
@@ -117,24 +116,6 @@ export function UploadStep({ onParsed, onBack }: Props) {
           <IconPlus size={16} />
         </ActionIcon>
 
-        <Select
-          label="Formato da coluna 'Valor'"
-          required
-          data={[
-            { label: '1.234,56', value: 'comma' },
-            { label: '1,243.56', value: 'dot' },
-          ]}
-          value={decimalSeparator}
-          onChange={(val) => setDecimalSeparator((val as Transactions.DecimalSeparatorValue | null) ?? 'comma')}
-          renderOption={({ option }) => (
-            <span
-              data-testid={ImportTestIds.OptionDecimalSeparator(option.value as ImportDecimalSeparator)}
-            >
-              {option.label}
-            </span>
-          )}
-          data-testid={ImportTestIds.SelectDecimalSeparator}
-        />
         <Select
           label="Regra de definição do tipo"
           required

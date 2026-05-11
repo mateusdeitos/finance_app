@@ -151,7 +151,7 @@ func (suite *TransactionImportXLSWithDBTestSuite) TestParseImportCSV_FromXLS() {
 	csv, err := ConvertXLSToCSV(xlsSampleFixture)
 	suite.Require().NoError(err)
 
-	resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, DecimalSeparatorComma, TypeDefinitionPositiveAsIncome, csv)
+	resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, TypeDefinitionPositiveAsIncome, csv)
 	suite.Require().NoError(err)
 	suite.Require().Equal(3, resp.TotalRows)
 

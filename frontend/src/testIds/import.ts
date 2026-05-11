@@ -1,6 +1,5 @@
 export type ImportRowAction = 'import' | 'skip' | 'duplicate'
 export type ImportRowTransactionType = 'expense' | 'income' | 'transfer'
-export type ImportDecimalSeparator = 'comma' | 'dot'
 export type ImportTypeRule = 'positive_as_income' | 'positive_as_expense'
 
 export const ImportTestIds = {
@@ -12,15 +11,12 @@ export const ImportTestIds = {
   // Upload-step controls
   BtnProcessCSV: 'btn_process_csv',
   SelectAccount: 'select_import_account',
-  SelectDecimalSeparator: 'select_decimal_separator',
   SelectTypeRule: 'select_type_rule',
   InputCsvFile: 'input_csv_file',
   BtnCreateAccountHeader: 'btn_create_account_header',
 
   // Upload-step option testids
   OptionAccount: (accountId: number | string) => `option_import_account_${accountId}` as const,
-  OptionDecimalSeparator: (value: ImportDecimalSeparator) =>
-    `option_decimal_separator_${value}` as const,
   OptionTypeRule: (value: ImportTypeRule) => `option_type_rule_${value}` as const,
 
   // Review-step controls

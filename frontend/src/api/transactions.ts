@@ -118,13 +118,11 @@ export async function updateTransaction(id: number, payload: Transactions.Update
 export async function parseImportCSV(
   file: File,
   accountId: number,
-  decimalSeparator: Transactions.DecimalSeparatorValue,
   typeDefinitionRule: Transactions.TypeDefinitionRule,
 ): Promise<Transactions.ImportCSVResponse> {
   const form = new FormData();
   form.append("file", file);
   form.append("account_id", String(accountId));
-  form.append("decimal_separator", decimalSeparator);
   form.append("type_definition_rule", typeDefinitionRule);
   // Do NOT set Content-Type header — browser sets it automatically with the boundary.
   const res = await fetch(`${apiUrl}/api/transactions/import-csv`, {

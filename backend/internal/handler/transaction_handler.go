@@ -399,18 +399,13 @@ func (h *TransactionHandler) ImportCSV(c echo.Context) error {
 		}
 	}
 
-	decimalSeparator := service.ImportDecimalSeparatorValue(c.FormValue("decimal_separator"))
-	if !slices.Contains([]service.ImportDecimalSeparatorValue{service.DecimalSeparatorComma, service.DecimalSeparatorDot}, decimalSeparator) {
-		decimalSeparator = service.DecimalSeparatorComma
-	}
-
 	typeDefinitionRule := service.ImportTypeDefinitionRule(c.FormValue("type_definition_rule"))
 	if !slices.Contains([]service.ImportTypeDefinitionRule{service.TypeDefinitionPositiveAsExpense, service.TypeDefinitionPositiveAsIncome}, typeDefinitionRule) {
 		typeDefinitionRule = service.TypeDefinitionPositiveAsIncome
 	}
 
 	ctx := c.Request().Context()
-	result, err := h.transactionService.ParseImportCSV(ctx, userID, accountID, decimalSeparator, typeDefinitionRule, data)
+	result, err := h.transactionService.ParseImportCSV(ctx, userID, accountID, typeDefinitionRule, data)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}

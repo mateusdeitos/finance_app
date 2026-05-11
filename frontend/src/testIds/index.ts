@@ -29,7 +29,6 @@ export {
   ImportTestIds,
   type ImportRowAction,
   type ImportRowTransactionType,
-  type ImportDecimalSeparator,
   type ImportTypeRule,
 } from "./import";
 export { RecurrenceTestIds, type RecurrenceType } from "./recurrence";
