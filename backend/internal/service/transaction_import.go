@@ -301,7 +301,7 @@ func parseCSVRow(
 func parseAmountSigned(s string) (int64, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return 0, fmt.Errorf("empty amount")
+		return 0, errors.New("empty amount")
 	}
 
 	lastDot := strings.LastIndex(s, ".")
