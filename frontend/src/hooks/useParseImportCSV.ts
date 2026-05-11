@@ -7,14 +7,12 @@ export function useParseImportCSV() {
     mutationFn: ({
       file,
       accountId,
-      decimalSeparator,
       typeDefinitionRule,
     }: {
       file: File;
       accountId: number;
-      decimalSeparator: Transactions.DecimalSeparatorValue;
       typeDefinitionRule: Transactions.TypeDefinitionRule;
-    }) => parseImportCSV(file, accountId, decimalSeparator, typeDefinitionRule),
+    }) => parseImportCSV(file, accountId, typeDefinitionRule),
   });
   return { mutation };
 }

@@ -35,15 +35,9 @@ func UpdateNotChangedType() updateChanges {
 	}
 }
 
-// ImportDecimalSeparatorValue and ImportTypeDefinitionRule are defined in domain package.
-// Re-exported here for backward compatibility.
-type ImportDecimalSeparatorValue = domain.ImportDecimalSeparatorValue
 type ImportTypeDefinitionRule = domain.ImportTypeDefinitionRule
 
 const (
-	DecimalSeparatorComma ImportDecimalSeparatorValue = domain.DecimalSeparatorComma
-	DecimalSeparatorDot   ImportDecimalSeparatorValue = domain.DecimalSeparatorDot
-
 	TypeDefinitionPositiveAsIncome  ImportTypeDefinitionRule = domain.TypeDefinitionPositiveAsIncome
 	TypeDefinitionPositiveAsExpense ImportTypeDefinitionRule = domain.TypeDefinitionPositiveAsExpense
 )
