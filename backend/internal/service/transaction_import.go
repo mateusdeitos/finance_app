@@ -202,7 +202,7 @@ func parseCSVRow(
 	if dateStr == "" {
 		row.ParseErrors = append(row.ParseErrors, "Data é obrigatória")
 	} else {
-		formats := []string{"02/01/2006", time.DateOnly, time.RFC3339}
+		formats := []string{"02/01/2006", "02/01/2006 15:04:05", time.DateOnly, time.DateTime, time.RFC3339}
 		for _, format := range formats {
 			t, err := time.Parse(format, dateStr)
 			if err == nil {

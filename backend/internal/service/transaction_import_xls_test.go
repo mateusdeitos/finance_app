@@ -19,6 +19,9 @@ var xlsSampleFixture []byte
 //go:embed testdata/import_empty.xls
 var xlsEmptyFixture []byte
 
+//go:embed testdata/import_dates.xls
+var xlsDatesFixture []byte
+
 // ---------------------------------------------------------------------------
 // Pure unit tests
 // ---------------------------------------------------------------------------
@@ -97,6 +100,27 @@ func TestConvertXLSToCSV_InvalidBytes(t *testing.T) {
 func TestConvertXLSToCSV_EmptySheet(t *testing.T) {
 	_, err := ConvertXLSToCSV(xlsEmptyFixture)
 	assert.ErrorIs(t, err, pkgErrors.ErrImportEmptyFile)
+}
+
+// Cells stored as raw NUMBER records with a date number-format should be
+// rendered as a dd/mm/yyyy string, not the underlying Excel serial.
+func TestConvertXLSToCSV_RendersDateFormattedCellsAsDates(t *testing.T) {
+	out, err := ConvertXLSToCSV(xlsDatesFixture)
+	require.NoError(t, err)
+
+	got := string(out)
+	expectedLines := []string{
+		"25/03/2026,Supermercado,-250",
+		"20/03/2026,Salario,5000",
+		"26/03/2026 12:00:00,Aluguel,-1500",
+	}
+	for _, line := range expectedLines {
+		assert.Contains(t, got, line, "csv output should contain %q\nfull output:\n%s", line, got)
+	}
+	// And it must NOT contain a bare Excel serial like 46106 / 46101 / 46107.5.
+	for _, serial := range []string{"46106", "46101", "46107.5"} {
+		assert.NotContains(t, got, serial, "csv output should not leak excel serial %q", serial)
+	}
 }
 
 // Sanity check that the magic-bytes constant matches the fixture so IsXLS
