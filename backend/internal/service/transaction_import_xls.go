@@ -234,7 +234,7 @@ func decodeRK(rk uint32) (int64, float64, bool) {
 		return 0, f, true
 	}
 	// Sign-extend the 30-bit value to int32.
-	signed := int32(val) //nolint:gosec // G115: deliberate bit-pattern reinterpretation of the lower 30 bits
+	signed := int32(val)
 	if val&(1<<29) != 0 {
 		signed = int32(val | 0xC0000000) //nolint:gosec // G115: deliberate sign extension of a 30-bit value
 	}
@@ -290,7 +290,7 @@ func buildDateXfSet(wb *xls.WorkBook) map[uint16]bool {
 			continue
 		}
 		fNo := uint16(fNoField.Uint()) //nolint:gosec // G115: Format field is uint16 in the library
-		xfIdx := uint16(i)             //nolint:gosec // G115: Xf table length always fits in uint16
+		xfIdx := uint16(i)
 		if isBuiltinDateFormat(fNo) {
 			out[xfIdx] = true
 			continue
