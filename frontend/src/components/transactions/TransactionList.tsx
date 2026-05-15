@@ -26,6 +26,9 @@ function groupNetTotal(
   const filterSet = hasAccountFilter ? new Set(accountFilter) : null;
 
   return group.transactions.reduce((sum, tx) => {
+    if (hideSettlements && tx.origin_settlement_id !== undefined) {
+      return sum;
+    }
     const txAmount = tx.operation_type === "credit" ? tx.amount : -tx.amount;
     const settlementsAmount = hideSettlements
       ? 0

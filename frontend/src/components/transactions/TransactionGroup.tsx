@@ -179,10 +179,7 @@ export function TransactionGroup({
               tx.user_id === currentUserId);
 
           if (isSynthetic) {
-            // Render synthetic entries (orphan settlements surfaced by the
-            // backend or inline settlements promoted into their own date
-            // group) with the same SettlementRow styling used for inline
-            // settlements.
+            if (hideSettlements) return null;
             const settlementId = tx.origin_settlement_id!;
             const sourceTxId = tx.source_transaction_id;
             const syntheticSettlement: Transactions.Settlement = {
