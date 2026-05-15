@@ -1272,6 +1272,8 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	if lo.FromPtr(req.TransactionType) == domain.TransactionTypeTransfer {
 		if req.DestinationAccountID == nil {
 			errs = append(errs, pkgErrors.ErrMissingDestinationAccount)
+		} else if req.AccountID != nil && *req.DestinationAccountID == *req.AccountID {
+			errs = append(errs, pkgErrors.ErrTransferSourceMustDifferFromDestination)
 		}
 
 		if len(req.SplitSettings) > 0 {

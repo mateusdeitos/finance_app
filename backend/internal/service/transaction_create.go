@@ -102,6 +102,8 @@ func (s *transactionService) validateCreateTransactionRequest(transaction *domai
 	if transaction.TransactionType == domain.TransactionTypeTransfer {
 		if transaction.DestinationAccountID == nil {
 			errs = append(errs, pkgErrors.ErrMissingDestinationAccount)
+		} else if *transaction.DestinationAccountID == transaction.AccountID {
+			errs = append(errs, pkgErrors.ErrTransferSourceMustDifferFromDestination)
 		}
 
 		if len(transaction.SplitSettings) > 0 {

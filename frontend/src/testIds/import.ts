@@ -33,6 +33,8 @@ export const ImportTestIds = {
   RowSelectAction: (rowIndex: number) => `select_import_action_${rowIndex}` as const,
   RowSelectTransactionType: (rowIndex: number) =>
     `select_row_transaction_type_${rowIndex}` as const,
+  RowSelectSourceAccount: (rowIndex: number) =>
+    `select_row_source_account_${rowIndex}` as const,
   RowSelectDestinationAccount: (rowIndex: number) =>
     `select_row_destination_account_${rowIndex}` as const,
   RowCheckbox: (rowIndex: number) => `checkbox_import_row_${rowIndex}` as const,
@@ -46,6 +48,8 @@ export const ImportTestIds = {
     `option_row_action_${rowIndex}_${action}` as const,
   RowOptionTransactionType: (rowIndex: number, type: ImportRowTransactionType) =>
     `option_row_transaction_type_${rowIndex}_${type}` as const,
+  RowOptionSourceAccount: (rowIndex: number, accountId: number | string) =>
+    `option_row_source_account_${rowIndex}_${accountId}` as const,
   RowOptionDestinationAccount: (rowIndex: number, accountId: number | string) =>
     `option_row_destination_account_${rowIndex}_${accountId}` as const,
 

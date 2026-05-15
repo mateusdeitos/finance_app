@@ -35,6 +35,7 @@ type ErrorTag string
 const (
 	ErrorTagIndex                                               ErrorTag = "INDEX_%d"
 	ErrorTagMissingDestinationAccount                           ErrorTag = "TRANSACTION.MISSING_DESTINATION_ACCOUNT"
+	ErrorTagTransferSourceMustDifferFromDestination             ErrorTag = "TRANSACTION.TRANSFER_SOURCE_MUST_DIFFER_FROM_DESTINATION"
 	ErrorTagSplitSettingsNotAllowedForTransfer                  ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_FOR_TRANSFER"
 	ErrorTagAmountMustBeGreaterThanZero                         ErrorTag = "TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"
 	ErrorTagDateIsRequired                                      ErrorTag = "TRANSACTION.DATE_IS_REQUIRED"
@@ -79,6 +80,7 @@ const (
 
 var (
 	ErrMissingDestinationAccount          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagMissingDestinationAccount)}, "missing destination account")
+	ErrTransferSourceMustDifferFromDestination = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTransferSourceMustDifferFromDestination)}, "transfer source and destination accounts must be different")
 	ErrSplitSettingsNotAllowedForTransfer      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedForTransfer)}, "split settings are not allowed for transfer transactions")
 	ErrSplitSettingsNotAllowedOnSharedAccount  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedOnSharedAccount)}, "split settings are not allowed on shared accounts")
 	ErrTransferNotAllowedOnSharedAccount       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTransferNotAllowedOnSharedAccount)}, "transfers are not allowed on shared accounts")

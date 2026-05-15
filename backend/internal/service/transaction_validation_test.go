@@ -158,6 +158,19 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreate_ValidationErrors() {
 		assertTag(err, pkgErrors.ErrorTagMissingDestinationAccount)
 	})
 
+	suite.Run("transfer_with_source_equal_to_destination", func() {
+		sameID := 1
+		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
+			TransactionType:      domain.TransactionTypeTransfer,
+			AccountID:            sameID,
+			Amount:               100,
+			Date:                 domain.Date{Time: d},
+			Description:          "test",
+			DestinationAccountID: &sameID,
+		})
+		assertTag(err, pkgErrors.ErrorTagTransferSourceMustDifferFromDestination)
+	})
+
 	suite.Run("transfer_with_split_settings", func() {
 		destID := 2
 		_, err := suite.Services.Transaction.Create(ctx, 1, &domain.TransactionCreateRequest{
