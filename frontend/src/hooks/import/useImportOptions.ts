@@ -13,6 +13,9 @@ const toCategoryOptions = (categories: Transactions.Category[]): Option[] =>
 const toAccountOptions = (accounts: Transactions.Account[]): Option[] =>
   accounts.map((a) => ({ value: String(a.id), label: a.name }))
 
+const toPersonalAccountOptions = (accounts: Transactions.Account[]): Option[] =>
+  accounts.filter((a) => !a.user_connection).map((a) => ({ value: String(a.id), label: a.name }))
+
 const toSharedAccounts = (accounts: Transactions.Account[]): Transactions.Account[] =>
   accounts.filter((a) => a.user_connection?.connection_status === 'accepted')
 
@@ -26,6 +29,11 @@ export function useCategoryOptions(): Option[] {
 
 export function useAccountOptions(): Option[] {
   const { query } = useAccounts(toAccountOptions)
+  return query.data ?? EMPTY_OPTIONS
+}
+
+export function usePersonalAccountOptions(): Option[] {
+  const { query } = useAccounts(toPersonalAccountOptions)
   return query.data ?? EMPTY_OPTIONS
 }
 

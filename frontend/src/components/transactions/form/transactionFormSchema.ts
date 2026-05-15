@@ -35,6 +35,7 @@ export const baseTransactionFields = {
 type SharedRefinementData = {
   category_id: number | null;
   transaction_type: string;
+  account_id: number | null;
   destination_account_id: number | null;
   recurrenceEnabled: boolean;
   recurrenceType: string | null;
@@ -51,6 +52,19 @@ export function applySharedRefinements(data: SharedRefinementData, ctx: z.Refine
     ctx.addIssue({
       code: "custom",
       message: "Selecione a conta de destino",
+      path: ["destination_account_id"],
+    });
+  }
+
+  if (
+    data.transaction_type === "transfer" &&
+    data.account_id != null &&
+    data.destination_account_id != null &&
+    data.account_id === data.destination_account_id
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Conta de origem e destino devem ser diferentes",
       path: ["destination_account_id"],
     });
   }

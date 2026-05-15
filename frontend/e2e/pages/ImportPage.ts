@@ -129,6 +129,27 @@ export class ImportPage {
     );
   }
 
+  /** Change the transaction type for a row (expense | income | transfer). */
+  async setRowTransactionType(rowIndex: number, type: "expense" | "income" | "transfer") {
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectTransactionType(rowIndex)).pick(
+      ImportTestIds.RowOptionTransactionType(rowIndex, type),
+    );
+  }
+
+  /** Set the source account for a transfer row. */
+  async setRowSourceAccount(rowIndex: number, accountId: number) {
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectSourceAccount(rowIndex)).pick(
+      ImportTestIds.RowOptionSourceAccount(rowIndex, accountId),
+    );
+  }
+
+  /** Set the destination account for a transfer row. */
+  async setRowDestinationAccount(rowIndex: number, accountId: number) {
+    await new SelectField(this.reviewStep, ImportTestIds.RowSelectDestinationAccount(rowIndex)).pick(
+      ImportTestIds.RowOptionDestinationAccount(rowIndex, accountId),
+    );
+  }
+
   /** Click the + button next to the category select to open the category creation drawer. */
   async openCreateCategoryDrawer(rowIndex: number) {
     await this.reviewStep.getByTestId(ImportTestIds.RowBtnCreateCategory(rowIndex)).click();

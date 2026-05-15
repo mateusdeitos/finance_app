@@ -3,7 +3,7 @@ import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stac
 import { DatePickerInput } from "@mantine/dates";
 import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
-import { useCategoryOptions, useAccountOptions, useSharedAccounts } from "@/hooks/import/useImportOptions";
+import { useCategoryOptions, useAccountOptions, usePersonalAccountOptions, useSharedAccounts } from "@/hooks/import/useImportOptions";
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
@@ -56,6 +56,7 @@ export const ImportReviewRow = memo(
     const selected = useSelectionStore((s) => s.selected.has(fieldId));
     const categoryOptions = useCategoryOptions();
     const accountOptions = useAccountOptions();
+    const personalAccountOptions = usePersonalAccountOptions();
     const sharedAccounts = useSharedAccounts();
 
     const [
@@ -67,6 +68,8 @@ export const ImportReviewRow = memo(
       importStatus,
       importError,
       parseErrors,
+      sourceAccountId,
+      destinationAccountId,
     ] = useWatch({
       control: form.control,
       name: [
@@ -78,6 +81,8 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.import_status`,
         `rows.${rowIndex}.import_error`,
         `rows.${rowIndex}.parse_errors`,
+        `rows.${rowIndex}.account_id`,
+        `rows.${rowIndex}.destination_account_id`,
       ],
     });
 
@@ -289,53 +294,84 @@ export const ImportReviewRow = memo(
           )}
         </Table.Td>
 
-        {/* Destination account (only for transfers) */}
-        <Table.Td miw={140}>
+        {/* Source + Destination accounts (only for transfers) */}
+        <Table.Td miw={180}>
           {isTransfer ? (
-            <Group gap={4} wrap="nowrap">
+            <Stack gap={4}>
               <Controller
-                name={`rows.${rowIndex}.destination_account_id`}
+                name={`rows.${rowIndex}.account_id`}
                 render={({ field }) => (
                   <Select
                     ref={field.ref}
                     size="xs"
-                    data={accountOptions}
+                    data={personalAccountOptions.filter(
+                      (o) => !destinationAccountId || o.value !== String(destinationAccountId),
+                    )}
                     value={field.value ? String(field.value) : null}
                     onChange={(val) => field.onChange(val ? Number(val) : null)}
                     disabled={disabled || isSkipped}
                     searchable
-                    placeholder="Selecionar..."
+                    placeholder="Conta de origem..."
                     withCheckIcon={false}
-                    error={rowErrors?.destination_account_id?.message}
+                    error={rowErrors?.account_id?.message}
                     renderOption={({ option }) => (
                       <span
-                        data-testid={ImportTestIds.RowOptionDestinationAccount(rowIndex, option.value)}
+                        data-testid={ImportTestIds.RowOptionSourceAccount(rowIndex, option.value)}
                       >
                         {option.label}
                       </span>
                     )}
-                    data-testid={ImportTestIds.RowSelectDestinationAccount(rowIndex)}
-                    style={{ flex: 1 }}
+                    data-testid={ImportTestIds.RowSelectSourceAccount(rowIndex)}
                   />
                 )}
               />
-              <ActionIcon
-                size="xs"
-                variant="subtle"
-                color="gray"
-                onClick={() => {
-                  renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
-                    .then((created) => {
-                      if (created) form.setValue(`rows.${rowIndex}.destination_account_id`, created.id);
-                    })
-                    .catch(() => {});
-                }}
-                disabled={disabled || isSkipped}
-                aria-label="Criar conta"
-              >
-                <IconPlus size={14} />
-              </ActionIcon>
-            </Group>
+              <Group gap={4} wrap="nowrap">
+                <Controller
+                  name={`rows.${rowIndex}.destination_account_id`}
+                  render={({ field }) => (
+                    <Select
+                      ref={field.ref}
+                      size="xs"
+                      data={accountOptions.filter(
+                        (o) => !sourceAccountId || o.value !== String(sourceAccountId),
+                      )}
+                      value={field.value ? String(field.value) : null}
+                      onChange={(val) => field.onChange(val ? Number(val) : null)}
+                      disabled={disabled || isSkipped}
+                      searchable
+                      placeholder="Conta de destino..."
+                      withCheckIcon={false}
+                      error={rowErrors?.destination_account_id?.message}
+                      renderOption={({ option }) => (
+                        <span
+                          data-testid={ImportTestIds.RowOptionDestinationAccount(rowIndex, option.value)}
+                        >
+                          {option.label}
+                        </span>
+                      )}
+                      data-testid={ImportTestIds.RowSelectDestinationAccount(rowIndex)}
+                      style={{ flex: 1 }}
+                    />
+                  )}
+                />
+                <ActionIcon
+                  size="xs"
+                  variant="subtle"
+                  color="gray"
+                  onClick={() => {
+                    renderDrawer<import("@/types/transactions").Transactions.Account | void>(() => <AccountDrawer />)
+                      .then((created) => {
+                        if (created) form.setValue(`rows.${rowIndex}.destination_account_id`, created.id);
+                      })
+                      .catch(() => {});
+                  }}
+                  disabled={disabled || isSkipped}
+                  aria-label="Criar conta"
+                >
+                  <IconPlus size={14} />
+                </ActionIcon>
+              </Group>
+            </Stack>
           ) : (
             <Text fz="xs" c="dimmed">
               —

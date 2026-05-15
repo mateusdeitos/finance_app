@@ -367,7 +367,7 @@ export function ImportTransactionsPage() {
                     <Table.Th>Valor</Table.Th>
                     <Table.Th>Tipo</Table.Th>
                     <Table.Th>Categoria</Table.Th>
-                    <Table.Th>Conta Destino</Table.Th>
+                    <Table.Th>Contas (Origem / Destino)</Table.Th>
                     <Table.Th>Parcelamento</Table.Th>
                     <Table.Th>Divisão</Table.Th>
                     <Table.Th>Ação</Table.Th>
