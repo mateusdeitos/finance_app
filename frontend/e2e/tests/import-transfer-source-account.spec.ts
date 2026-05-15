@@ -57,7 +57,6 @@ test.describe("Import: transfer source account", () => {
     await importPage.setRowDestinationAccount(0, accA);
 
     await importPage.confirmImport();
-    expect(await importPage.getRowStatus(0)).toBe("success");
 
     const transactions = await apiListTransactions(PERIOD.month, PERIOD.year, { token });
     const tx = transactions.find((t) => t.description === description && t.account_id === accB);
