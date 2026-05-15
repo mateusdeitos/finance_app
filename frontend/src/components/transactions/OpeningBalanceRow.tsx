@@ -12,6 +12,7 @@ export function OpeningBalanceRow() {
     month: search.month,
     year: search.year,
     accumulated: search.accumulated,
+    hideSettlements: search.hideSettlements,
   })
 
   const balance = balanceQuery.data?.balance ?? 0
