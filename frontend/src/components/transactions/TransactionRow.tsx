@@ -97,22 +97,27 @@ export function TransactionRow({
 }: TransactionRowProps) {
   const isMobile = useIsMobile();
   const account = accounts.find((a) => a.id === tx.account_id);
-  const linkedAccount =
-    tx.type === "transfer" && (tx.linked_transactions ?? []).length > 0
-      ? accounts.find((a) => {
-          const ids = [a.id];
-          const lt = tx.linked_transactions![0];
-          if (a.user_connection) {
-            ids.push(a.user_connection?.from_account_id, a.user_connection?.to_account_id);
-          }
+  const linkedAccount = (() => {
+    if (tx.type !== "transfer") return null;
+    const lt = (tx.linked_transactions ?? [])[0];
+    if (!lt) return null;
 
-          return (
-            ids.includes(lt.account_id) ||
-            a.user_connection?.from_user_id == lt.original_user_id ||
-            a.user_connection?.to_user_id == lt.original_user_id
-          );
-        })
-      : null;
+    const direct = accounts.find((a) => a.id === lt.account_id);
+    if (direct) return direct;
+
+    return (
+      accounts.find((a) => {
+        if (!a.user_connection) return false;
+        const conn = a.user_connection;
+        return (
+          conn.from_account_id === lt.account_id ||
+          conn.to_account_id === lt.account_id ||
+          conn.from_user_id === lt.original_user_id ||
+          conn.to_user_id === lt.original_user_id
+        );
+      }) ?? null
+    );
+  })();
 
   // For cross-user transfers: if any linked tx was authored by another user, find the
   // connection account where that user appears to correctly render the originator's avatar
