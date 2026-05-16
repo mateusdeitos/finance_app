@@ -1277,13 +1277,12 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Equal(sourceTxID, *synthetic.SourceTransactionID, "source_transaction_id must point at the real source transaction backing the settlement")
 
 	// Case 2: user1 filters ONLY by the personal account — the real source
-	// transaction is returned, and its settlement MUST be preloaded inline
-	// so the UI can display it as context beneath the source row (the user
-	// sees "I spent 100, of which 50 is coming back to me"). The settlement's
-	// own account is the shared account, NOT the personal one, so the
-	// frontend is expected to exclude it from the group net total; this
-	// backend test only verifies that the data is there for display and
-	// that no synthetic duplicate is appended.
+	// transaction is returned with its settlement preloaded inline. The
+	// settlement's own account is the shared account, NOT the personal one;
+	// the backend always preloads it, and the frontend hides it (and excludes
+	// it from the group total) when the settlement's account is not in the
+	// active filter. This backend test only verifies that the data is there
+	// and that no synthetic duplicate is appended.
 	personalOnly, err := suite.Services.Transaction.Search(ctx, user1.ID, period, domain.TransactionFilter{
 		UserID:          &user1.ID,
 		AccountIDs:      []int{account.ID},
@@ -1307,15 +1306,14 @@ func (suite *TransactionCreateWithDBTestSuite) TestSearchSharedExpenseByFromAcco
 	suite.Assert().Equal(userConnection.FromAccountID, toSettlement.AccountID, "preloaded settlement keeps its own account_id so the frontend can decide to exclude it from the group sum")
 
 	// Case 2b (balance consistency): GetBalance filtered by the personal
-	// account returns the source transaction plus the settlement whose source
-	// tx lives on that account — this matches the frontend's group-total
-	// behavior, which includes nested settlements when the source tx is in
-	// the filter.
+	// account returns ONLY the source transaction — the settlement counts
+	// solely toward its own connection account and does not leak into the
+	// private account balance, so it reconciles with the bank statement.
 	balancePersonal, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{account.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(-amount+amount/2, balancePersonal.Balance, "personal-only balance equals source tx amount plus in-scope settlement credit")
+	suite.Assert().Equal(-amount, balancePersonal.Balance, "personal-only balance equals the full source tx amount; the settlement belongs to the connection account and does not leak in")
 
 	// Case 3: user1 filters by BOTH personal AND shared accounts — the source
 	// transaction is in the filter AND the settlement's account is in the

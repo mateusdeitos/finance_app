@@ -194,10 +194,11 @@ test.describe("Bulk settlement date change", () => {
     const page = await openAuthedPage(browser, setup.userToken);
     const txPage = new TransactionsPage(page);
 
-    // Filter by the private account so the source tx is rendered with its
-    // inline settlement child — both rows side by side, both selectable.
+    // Filter by both the private and the connection account so the source tx
+    // is rendered with its inline settlement child — the inline settlement is
+    // shown only when its own connection account is in the active filter.
     await page.goto(
-      `/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}`,
+      `/transactions?month=${MONTH}&year=${YEAR}&account_id[]=${setup.userAccountId}&account_id[]=${setup.userConnAccountId}`,
     );
     await page.waitForLoadState("networkidle");
 

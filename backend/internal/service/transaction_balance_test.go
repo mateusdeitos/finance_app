@@ -106,6 +106,59 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 	suite.Assert().Equal(int64(-500), result.Balance)
 }
 
+func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SettlementDoesNotLeakIntoPrivateAccount() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	personal1, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
+	date := now()
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+
+	// user1 pays 1000 from the private account, splits 50% with user2
+	// → expense -1000 on personal1, settlement credit +500 on conn.FromAccountID
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       personal1.ID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: date},
+		Description:     "split expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	// private account: full expense -1000 — the settlement does NOT leak in,
+	// so the balance reconciles with the real bank statement
+	resultPrivate, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs: []int{personal1.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(-1000), resultPrivate.Balance)
+
+	// connection account: only the settlement credit +500
+	resultConn, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(500), resultConn.Balance)
+
+	// no filter: the user total still nets to -500
+	resultTotal, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(-500), resultTotal.Balance)
+}
+
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_AccountIDFilter() {
 	ctx := context.Background()
 	user, err := suite.createTestUser(ctx)
@@ -421,12 +474,13 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_UpdateSplitExpens
 	})
 	suite.Require().NoError(err)
 
-	// personal1 filter: expense -6000 + settlement credit +3000 (source tx on personal1) = -3000
+	// personal1 filter: expense -6000 only — the settlement belongs to the
+	// connection account and does not leak into the private account balance
 	resultAccount1, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal1.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-3000), resultAccount1.Balance)
+	suite.Assert().Equal(int64(-6000), resultAccount1.Balance)
 
 	// after update, conn account: fromTx removed by update (splitHasChanged=true) + 3000 (settlement credit) = 3000
 	resultConn, err = suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
@@ -488,12 +542,13 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-500), result1.Balance)
 
-	// user2 personal account: expense -1000 + settlement credit +500 (source tx on personal2 is included in balance) = -500
+	// user2 personal account: expense -1000 only — the settlement belongs to
+	// the connection account and does not leak into the private account balance
 	result2Personal, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal2.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-500), result2Personal.Balance)
+	suite.Assert().Equal(int64(-1000), result2Personal.Balance)
 
 	// user2 connection account (ToAccountID): +500 (settlement, no fromTx for shared expenses)
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
@@ -625,12 +680,13 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SplitExpense_ByTo
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(-2000), result1.Balance)
 
-	// user2 personal: expense -4000 + settlement credit +2000 (source tx on personal2) = -2000
+	// user2 personal: expense -4000 only — the settlement belongs to the
+	// connection account and does not leak into the private account balance
 	result2Personal, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{personal2.ID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(-2000), result2Personal.Balance)
+	suite.Assert().Equal(int64(-4000), result2Personal.Balance)
 
 	// user2 connection account: fromTx removed by update + 2000 (settlement credit) = 2000
 	result2Conn, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{

@@ -33,8 +33,10 @@ function groupNetTotal(
     const settlementsAmount = hideSettlements
       ? 0
       : (tx.settlements_from_source ?? []).reduce((s, settlement) => {
-          // Include settlement if: no account filter, OR source tx account matches, OR settlement account matches
-          if (filterSet && !filterSet.has(tx.account_id) && !filterSet.has(settlement.account_id)) {
+          // A settlement counts only toward its own (connection) account, never
+          // the source transaction's private account — keeps the displayed total
+          // consistent with GetBalance and lets the private account reconcile.
+          if (filterSet && !filterSet.has(settlement.account_id)) {
             return s;
           }
           return s + (settlement.type === "credit" ? settlement.amount : -settlement.amount);
@@ -102,6 +104,7 @@ export function TransactionList({
           groupTotal={groupTotals[i]}
           runningBalance={runningBalances[i]}
           isFirst={i === 0}
+          accountFilter={filters.accountIds}
           selectedIds={selectedIds}
           selectedSettlementIds={selectedSettlementIds}
           onSelectTransaction={onSelectTransaction && ((id, shiftKey) => onSelectTransaction(id, shiftKey, group.key))}
