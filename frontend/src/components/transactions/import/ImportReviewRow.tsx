@@ -7,7 +7,6 @@ import { useCategoryOptions, useAccountOptions, usePersonalAccountOptions, useSh
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
-import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
 import classes from "./ImportReviewRow.module.css";
@@ -166,8 +165,8 @@ export const ImportReviewRow = memo(
                 ref={field.ref}
                 size="xs"
                 valueFormat="DD/MM/YYYY"
-                value={field.value ? parseDate(field.value as string) : null}
-                onChange={(d) => field.onChange(d ? localDateStr(d) : "")}
+                value={(field.value as string) || null}
+                onChange={(d) => field.onChange(d ?? "")}
                 disabled={disabled || isSkipped}
                 error={rowErrors?.date?.message}
                 popoverProps={{ withinPortal: true }}

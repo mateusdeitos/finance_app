@@ -1,6 +1,5 @@
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
-import { localDateStr } from "@/utils/parseDate";
 import { Button, Group, Menu, MenuItem, Popover, Select, Stack, Text, TextInput } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import {
@@ -243,7 +242,7 @@ export function ImportCSVBulkToolbar({
             valueFormat="DD/MM/YYYY"
             onChange={(d) => {
               if (d) {
-                localForm.reset({ action_type: "date", date: localDateStr(d) });
+                localForm.reset({ action_type: "date", date: d });
               }
             }}
           />

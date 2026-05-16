@@ -180,7 +180,7 @@ export function ImportTransactionsPage() {
         return {
           connection_id: s.connection_id,
           amount: calculatedAmount,
-          date: null as Date | null,
+          date: null as string | null,
         }
       })
 

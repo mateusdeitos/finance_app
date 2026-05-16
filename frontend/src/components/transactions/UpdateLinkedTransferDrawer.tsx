@@ -10,12 +10,12 @@ import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { Transactions } from "@/types/transactions";
 import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
-import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "./form/CurrencyInput";
 import { TransactionsTestIds } from "@/testIds";
 
 const schema = z.object({
-  date: z.date({ message: "Data é obrigatória" }),
+  date: z.string().min(1, "Data é obrigatória"),
   amount: z.number().int().positive("Valor deve ser maior que zero"),
 });
 
@@ -36,7 +36,7 @@ export function UpdateLinkedTransferDrawer({ transaction }: Props) {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: convertUtcToLocalKeepingValues(transaction.date),
+      date: localDateStr(parseDate(transaction.date)),
       amount: transaction.amount,
     },
   });
@@ -48,7 +48,7 @@ export function UpdateLinkedTransferDrawer({ transaction }: Props) {
     setSubmitError(undefined);
     const payload: Transactions.UpdateTransactionPayload = {
       amount: values.amount,
-      date: values.date.toISOString(),
+      date: values.date,
     };
 
     mutation.mutate(
@@ -88,8 +88,8 @@ export function UpdateLinkedTransferDrawer({ transaction }: Props) {
                 ref={field.ref}
                 label="Data"
                 required
-                value={new Date(field.value)}
-                onChange={(date) => field.onChange(date)}
+                value={field.value || null}
+                onChange={(date) => field.onChange(date ?? "")}
                 error={errors.date?.message}
                 valueFormat="DD/MM/YYYY"
               />
