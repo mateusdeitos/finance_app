@@ -5,7 +5,9 @@ import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { Transactions } from "@/types/transactions";
+import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { TransactionGroup } from "./TransactionGroup";
+import classes from "./TransactionGroup.module.css";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
@@ -85,9 +87,14 @@ export function TransactionList({
 
   if (groups.length === 0) {
     return (
-      <Text ta="center" c="dimmed" py="xl">
-        Nenhuma transação encontrada
-      </Text>
+      <Stack gap="sm">
+        <div className={classes.rows}>
+          <OpeningBalanceRow />
+        </div>
+        <Text ta="center" c="dimmed" py="xl">
+          Nenhuma transação encontrada
+        </Text>
+      </Stack>
     );
   }
 
