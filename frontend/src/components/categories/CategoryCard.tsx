@@ -177,7 +177,7 @@ export function CategoryCard({
 
       {/* children + inline new child */}
       {showChildren && (
-        <Collapse in={expanded}>
+        <Collapse expanded={expanded}>
           <Stack gap={2}>
             {category.children?.map((child) => (
               <CategoryCard
