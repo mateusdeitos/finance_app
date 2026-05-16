@@ -44,6 +44,7 @@ interface TransactionGroupProps {
   accounts: Transactions.Account[];
   categories: Transactions.Category[];
   currentUserId: number;
+  accountFilter?: number[];
   groupTotal?: number;
   runningBalance?: number;
   isFirst?: boolean;
@@ -61,6 +62,7 @@ export function TransactionGroup({
   accounts,
   categories,
   currentUserId,
+  accountFilter,
   groupTotal,
   runningBalance,
   isFirst = false,
@@ -230,23 +232,34 @@ export function TransactionGroup({
                 }
                 onDelete={!isSelectionActive && isOwner ? onDeleteTransaction : undefined}
               />
-              {!hideSettlements && (tx.settlements_from_source ?? []).map((s) => (
-                <SettlementRow
-                  key={`settlement-${s.id}`}
-                  settlement={s}
-                  groupBy={groupBy}
-                  accounts={accounts}
-                  description={tx.description}
-                  isSelected={selectedSettlementIds?.has(s.id)}
-                  isSelectionMode={isSelectionActive}
-                  onSelect={onSelectSettlement}
-                  onEdit={
-                    !isSelectionActive && isOwner
-                      ? () => openEditDrawer(tx, "split_settings.0.amount")
-                      : undefined
-                  }
-                />
-              ))}
+              {!hideSettlements &&
+                (tx.settlements_from_source ?? [])
+                  // A settlement belongs to its connection account. When an
+                  // account filter is active, only show it under the source
+                  // transaction if that connection account is in the filter;
+                  // otherwise it would appear without counting toward the total.
+                  .filter(
+                    (s) =>
+                      !accountFilter?.length ||
+                      accountFilter.includes(s.account_id)
+                  )
+                  .map((s) => (
+                    <SettlementRow
+                      key={`settlement-${s.id}`}
+                      settlement={s}
+                      groupBy={groupBy}
+                      accounts={accounts}
+                      description={tx.description}
+                      isSelected={selectedSettlementIds?.has(s.id)}
+                      isSelectionMode={isSelectionActive}
+                      onSelect={onSelectSettlement}
+                      onEdit={
+                        !isSelectionActive && isOwner
+                          ? () => openEditDrawer(tx, "split_settings.0.amount")
+                          : undefined
+                      }
+                    />
+                  ))}
             </Fragment>
           );
         })}

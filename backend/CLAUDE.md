@@ -315,6 +315,8 @@ User A create a shared expense with the amount of R$ 100,00, splitting it in 50%
 When User A filter transactions by account_id = 10 it will see only a settlement of R$ 50,00 being credited and the balance for that account in that MM/YYYY will be +R$50,00
 When User B filter transactions by account_id = 20 it will see only an expense of R$ 50,00 being debited and the balance for that account in that MM/YYYY will be -R$50,00
 
+A settlement contributes **only** to the balance of its own account (the connection account it was created on). When User A filters by the **private** account where the R$ 100,00 expense lives, the balance shows the full -R$100,00 — the settlement does NOT leak into it, so the private account reconciles with the real bank statement. `GetBalance`'s settlements leg is filtered by `settlements.account_id` alone, never by the source transaction's `account_id`.
+
 #### Shared incomes
 
 It's the same as expenses but with operation type flipped
