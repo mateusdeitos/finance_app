@@ -146,7 +146,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           isUpdate={isRecurring}
           extraContent={
             isRecurring ? (
-              <Stack gap="md">
+              <Stack gap="md" mt="md">
                 <Divider />
                 <Controller
                   control={methods.control}
