@@ -78,7 +78,9 @@ export function renderDrawer<T>(factory: () => ReactElement): Promise<T> {
           }}
         >
           <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={theme}>{factory()}</MantineProvider>
+            <MantineProvider theme={theme} defaultColorScheme="auto">
+              {factory()}
+            </MantineProvider>
           </QueryClientProvider>
         </DrawerContext.Provider>
       );

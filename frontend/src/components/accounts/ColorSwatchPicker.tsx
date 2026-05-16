@@ -41,7 +41,10 @@ export function ColorSwatchPicker({ value, onChange, label }: ColorSwatchPickerP
             data-selected={value === color ? "true" : undefined}
             style={{
               cursor: "pointer",
-              boxShadow: value === color ? "0 0 0 2px white, 0 0 0 4px var(--mantine-color-dark-4)" : "none",
+              boxShadow:
+                value === color
+                  ? "0 0 0 2px light-dark(var(--mantine-color-white), var(--mantine-color-dark-7)), 0 0 0 4px var(--mantine-color-dark-4)"
+                  : "none",
             }}
           />
         ))}
