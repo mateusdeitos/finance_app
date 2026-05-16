@@ -8,6 +8,8 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
+import { SwitchField } from '../helpers/formFields'
+import { TransactionsTestIds } from '@/testIds'
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
@@ -89,8 +91,8 @@ test.describe('Recurrence current installment disabled state', () => {
     await transactionsPage.clickTransactionRow(tx.id)
     await expect(transactionsPage.updateDrawer).toBeVisible()
 
-    // Enable recurrence toggle
-    await transactionsPage.updateDrawer.locator('label', { hasText: 'Recorrência' }).click()
+    // Enable recurrence toggle (Recorrência panel is the default active panel)
+    await new SwitchField(transactionsPage.updateDrawer, TransactionsTestIds.SwitchRecurrenceEnabled).set(true)
 
     const currentInstallmentInput = transactionsPage.updateDrawer.getByLabel('Parcela atual')
     await expect(currentInstallmentInput).toBeEnabled()

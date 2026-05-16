@@ -8,7 +8,7 @@ import {
   apiCreateTransaction,
   apiDeleteTransaction,
 } from '../helpers/api'
-import { NumberField } from '../helpers/formFields'
+import { NumberField, SwitchField } from '../helpers/formFields'
 import { RecurrenceTestIds, TransactionsTestIds } from '@/testIds'
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
@@ -109,8 +109,8 @@ test.describe('Recurrence', () => {
     // Fill the main expense fields first
     await transactionsPage.fillExpense(1000, `Parcela invalida - e2e ${Date.now()}`, testAccountId, testCategoryId)
 
-    // Enable recurrence toggle — click the visible <label> element, not the hidden input
-    await page.locator('label', { hasText: 'Recorrência' }).click()
+    // Enable recurrence toggle (Recorrência panel is the default active panel)
+    await new SwitchField(transactionsPage.formDrawer, TransactionsTestIds.SwitchRecurrenceEnabled).set(true)
 
     // Fill invalid values: current (5) > total (3)
     await new NumberField(transactionsPage.formDrawer, RecurrenceTestIds.CurrentInstallmentInput).fill(5)

@@ -24,6 +24,7 @@ export {
   type TransactionType,
   type PropagationOption,
   type TransactionFilterKind,
+  type TransactionExtraPanel,
 } from "./transactions";
 export {
   ImportTestIds,

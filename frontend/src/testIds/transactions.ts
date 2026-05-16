@@ -1,6 +1,7 @@
 export type TransactionType = 'expense' | 'income' | 'transfer'
 export type PropagationOption = 'current' | 'current_and_future' | 'all'
 export type TransactionFilterKind = 'accounts' | 'categories' | 'tags'
+export type TransactionExtraPanel = 'tags' | 'recurrence' | 'split'
 
 export const TransactionsTestIds = {
   // Page-level
@@ -40,6 +41,15 @@ export const TransactionsTestIds = {
   SegmentTransactionType: (type: TransactionType) => `segment_transaction_type_${type}` as const,
   SegmentGroupBy: (option: 'date' | 'category' | 'account') =>
     `segment_group_by_${option}` as const,
+
+  // Tags
+  TagsInput: 'input_tags',
+
+  // Extra sections panel switcher (tags / recurrence / split)
+  SegmentedExtraSections: 'segmented_extra_sections',
+  SegmentExtraSection: (panel: TransactionExtraPanel) =>
+    `segment_extra_section_${panel}` as const,
+  SwitchRecurrenceEnabled: 'switch_recurrence_enabled',
 
   // Split
   InputSplitAmount: 'input_split_amount',

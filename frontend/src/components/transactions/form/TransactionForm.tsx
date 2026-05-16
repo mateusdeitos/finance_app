@@ -1,18 +1,16 @@
-import { type FocusEvent, type ReactNode } from "react";
-import { useFormContext, Controller, useWatch, FieldPath } from "react-hook-form";
+import { type FocusEvent, type ReactNode, useState } from "react";
+import { useFormContext, Controller, useWatch, FieldPath, type FieldErrors } from "react-hook-form";
 import { DevTool } from "@hookform/devtools";
 import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
   SegmentedControl,
   Select,
-  TagsInput,
   Button,
   Alert,
   Group,
   SimpleGrid,
   Box,
-  Switch,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
@@ -20,19 +18,24 @@ import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
-import { useTags } from "@/hooks/useTags";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
-import { RecurrenceFields } from "./RecurrenceFields";
-import { SplitSettingsFields } from "./SplitSettingsFields";
+import { TransactionExtraSections } from "./TransactionExtraSections";
 import { TransactionFormValues } from "./transactionFormSchema";
-import { TransactionsTestIds } from "@/testIds";
+import { TransactionsTestIds, type TransactionExtraPanel } from "@/testIds";
 
 export type { TransactionFormValues };
 
 /** Which field to auto-focus after the form mounts. */
 export type FocusField = FieldPath<TransactionFormValues>;
+
+/** Form fields owned by each extra-section panel — used to surface hidden errors. */
+const PANEL_ERROR_FIELDS: Record<TransactionExtraPanel, (keyof TransactionFormValues)[]> = {
+  recurrence: ["recurrenceType", "recurrenceCurrentInstallment", "recurrenceTotalInstallments"],
+  split: ["split_settings"],
+  tags: ["tags"],
+};
 
 interface Props {
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
@@ -58,28 +61,50 @@ export const TransactionForm = ({
 }: Props) => {
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
-  const { query: tagsQuery } = useTags();
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
-  const existingTags = tagsQuery.data ?? [];
 
   const {
     control,
     handleSubmit,
     setValue,
     setFocus,
+    getValues,
     formState: { errors, isSubmitting },
   } = useFormContext<TransactionFormValues>();
 
   useFocusFieldOnMount(setFocus, focusField);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
-  const recurrenceEnabled = useWatch({ control, name: "recurrenceEnabled" });
   const accountId = useWatch({ control, name: "account_id" });
   const isTransfer = transactionType === "transfer";
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const isSharedAccount = !!selectedAccount?.user_connection;
+  const hasConnectedAccounts = accounts.some(
+    (a) => a.user_connection && a.user_connection.connection_status === "accepted",
+  );
+  const splitApplicable = !isTransfer && !isSharedAccount && hasConnectedAccounts;
+
+  const [activePanel, setActivePanel] = useState<TransactionExtraPanel>(() => {
+    const values = getValues();
+    if (values.recurrenceEnabled) return "recurrence";
+    if ((values.split_settings?.length ?? 0) > 0) return "split";
+    if ((values.tags?.length ?? 0) > 0) return "tags";
+    return "recurrence";
+  });
+
+  /** On invalid submit, jump to the first panel holding an error so it isn't hidden. */
+  const onInvalid = (formErrors: FieldErrors<TransactionFormValues>) => {
+    const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
+    for (const panel of order) {
+      if (panel === "split" && !splitApplicable) continue;
+      if (PANEL_ERROR_FIELDS[panel].some((f) => formErrors[f])) {
+        setActivePanel(panel);
+        return;
+      }
+    }
+  };
 
   const generalError = submitError ?? (errors as Record<string, { message?: string }>)["_general"]?.message;
 
@@ -114,8 +139,6 @@ export const TransactionForm = ({
     label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
   }));
 
-  const tagNames = existingTags.map((t) => t.name);
-
   function makeSelectBlurHandler(
     options: ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[],
     onChange: (val: number | null) => void,
@@ -140,7 +163,7 @@ export const TransactionForm = ({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
       <Stack gap="md">
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
@@ -345,41 +368,15 @@ export const TransactionForm = ({
                 )}
               />
             </SimpleGrid>
-
-            {!isSharedAccount && <SplitSettingsFields />}
           </>
         )}
 
-        <Controller
-          control={control}
-          name="tags"
-          render={({ field }) => (
-            <TagsInput
-              label="Tags"
-              placeholder="Adicionar tag"
-              data={tagNames}
-              value={field.value}
-              onChange={field.onChange}
-              error={errors.tags?.message}
-              clearable
-            />
-          )}
+        <TransactionExtraSections
+          activePanel={activePanel}
+          onPanelChange={setActivePanel}
+          splitApplicable={splitApplicable}
+          isUpdate={isUpdate}
         />
-
-        <Stack gap="xs">
-          <Controller
-            control={control}
-            name="recurrenceEnabled"
-            render={({ field }) => (
-              <Switch
-                label="Recorrência"
-                checked={!!field.value}
-                onChange={(e) => field.onChange(e.currentTarget.checked)}
-              />
-            )}
-          />
-          {recurrenceEnabled && <RecurrenceFields disableCurrentInstallment={isUpdate} />}
-        </Stack>
       </Stack>
 
       {extraContent}
@@ -401,7 +398,7 @@ export const TransactionForm = ({
               variant="default"
               type="button"
               loading={isSubmitting || isPending}
-              onClick={handleSubmit(onSaveAndCreateAnother)}
+              onClick={handleSubmit(onSaveAndCreateAnother, onInvalid)}
             >
               Salvar e criar outra
             </Button>
