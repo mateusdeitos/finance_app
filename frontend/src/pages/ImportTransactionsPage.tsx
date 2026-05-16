@@ -20,6 +20,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { createTransaction } from '@/api/transactions'
 import { useRedirectOnImportSuccess } from '@/hooks/import/useRedirectOnImportSuccess'
+import { useSharedAccounts } from '@/hooks/import/useImportOptions'
 import { Transactions } from '@/types/transactions'
 import { parseApiError } from '@/utils/apiErrors'
 import { QueryKeys } from '@/utils/queryKeys'
@@ -73,6 +74,11 @@ export function ImportTransactionsPage() {
     control: form.control,
     name: 'rows',
   })
+
+  // The import targets a single account; splits aren't allowed on shared accounts.
+  const importAccountId = useWatch({ control: form.control, name: 'accountId' })
+  const sharedAccounts = useSharedAccounts()
+  const importingToSharedAccount = sharedAccounts.some((a) => a.id === importAccountId)
 
   // Stable per-index ref callbacks so React.memo on ImportReviewRow can bail out
   // when only one row's selection slot changes; an inline arrow would invalidate
@@ -333,6 +339,7 @@ export function ImportTransactionsPage() {
             <Paper p="xs" withBorder style={{ visibility: someSelected && !importing ? 'visible' : 'hidden' }}>
               <ImportCSVBulkToolbar
                 selectedCount={totalSelected}
+                canSplit={!importingToSharedAccount}
                 onRemove={handleRemoveSelected}
                 onBulkSetAction={handleBulkSetAction}
                 onBulkSetDate={handleBulkSetDate}

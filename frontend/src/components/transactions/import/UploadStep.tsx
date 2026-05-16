@@ -18,12 +18,15 @@ import {
 import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv, IconPlus } from '@tabler/icons-react'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useGroupedAccountOptions } from '@/hooks/useGroupedAccountOptions'
 import { useParseImportCSV } from '@/hooks/useParseImportCSV'
 import { Transactions } from '@/types/transactions'
 import { parseApiError } from '@/utils/apiErrors'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { CSV_COLUMNS } from './importPayload'
 import { ImportTestIds, type ImportTypeRule } from '@/testIds'
+
+const EMPTY_ACCOUNTS: Transactions.Account[] = []
 
 type Props = {
   onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
@@ -36,12 +39,12 @@ export function UploadStep({ onParsed, onBack }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const { query: ownAccountsQuery } = useAccounts((accounts) =>
-    accounts
-      .filter((a) => !a.user_connection && a.is_active)
-      .map((a) => ({ value: String(a.id), label: a.name })),
+  const { query: accountsQuery } = useAccounts((accounts) =>
+    accounts.filter(
+      (a) => a.is_active && (!a.user_connection || a.user_connection.connection_status === 'accepted'),
+    ),
   )
-  const ownAccountOptions = ownAccountsQuery.data ?? []
+  const accountOptions = useGroupedAccountOptions(accountsQuery.data ?? EMPTY_ACCOUNTS)
 
   const { mutation } = useParseImportCSV()
 
@@ -91,7 +94,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
           label="Conta"
           placeholder="Selecione uma conta"
           required
-          data={ownAccountOptions}
+          data={accountOptions}
           value={accountId ? String(accountId) : null}
           onChange={(val) => setAccountId(val ? Number(val) : null)}
           renderOption={({ option }) => (
