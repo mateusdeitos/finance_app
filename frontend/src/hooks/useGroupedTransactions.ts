@@ -36,8 +36,8 @@ export function useGroupedTransactions<T = Transactions.TransactionGroup[]>(
   }, [transactions, search.query]);
 
   const groups = useMemo(
-    () => groupTransactions(filtered, search.groupBy, accounts, categories),
-    [filtered, search.groupBy, accounts, categories],
+    () => groupTransactions(filtered, search.groupBy, accounts, categories, filters.accountIds),
+    [filtered, search.groupBy, accounts, categories, filters.accountIds],
   );
 
   const selected = useMemo(

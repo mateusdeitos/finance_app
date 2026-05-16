@@ -19,18 +19,28 @@ function dateKey(iso: string | undefined | null): string {
  * (mirroring the orphan-settlement shape produced by the backend) for each
  * such settlement and remove it from the source's `settlements_from_source`
  * so it isn't rendered twice.
+ *
+ * A settlement belongs to its connection account. When an account filter is
+ * active, a settlement whose account is outside the filter must NOT be
+ * promoted to a standalone row — that row bypasses the per-account filter in
+ * TransactionGroup / groupNetTotal and would leak the settlement into a
+ * filtered (e.g. private) account view. Such a settlement is left inline,
+ * where those filters already exclude it from render and totals.
  */
 function expandInlineSettlementsForDateGrouping(
   txs: Transactions.Transaction[],
+  accountFilter: number[],
 ): Transactions.Transaction[] {
   const result: Transactions.Transaction[] = []
   for (const tx of txs) {
     const sameDate: Transactions.Settlement[] = []
     const promoted: Transactions.Settlement[] = []
     for (const s of tx.settlements_from_source ?? []) {
+      const inScope =
+        accountFilter.length === 0 || accountFilter.includes(s.account_id)
       const sKey = dateKey(s.date ?? s.created_at)
       const tKey = dateKey(tx.date)
-      if (sKey && tKey && sKey !== tKey) {
+      if (inScope && sKey && tKey && sKey !== tKey) {
         promoted.push(s)
       } else {
         sameDate.push(s)
@@ -70,11 +80,14 @@ export function groupTransactions(
   groupBy: Transactions.GroupBy,
   accounts: Transactions.Account[],
   categories: Transactions.Category[],
+  accountFilter: number[],
 ): Transactions.TransactionGroup[] {
   const groups = new Map<string, Transactions.TransactionGroup>()
 
   const input =
-    groupBy === 'date' ? expandInlineSettlementsForDateGrouping(transactions) : transactions
+    groupBy === 'date'
+      ? expandInlineSettlementsForDateGrouping(transactions, accountFilter)
+      : transactions
 
   for (const tx of input) {
     let label: string
