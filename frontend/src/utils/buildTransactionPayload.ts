@@ -1,6 +1,5 @@
 import { Transactions } from "@/types/transactions";
 import { TransactionFormValues } from "@/components/transactions/form/transactionFormSchema";
-import { localDateStr } from "@/utils/parseDate";
 
 export function buildTransactionPayload(
   values: TransactionFormValues,
@@ -13,11 +12,9 @@ export function buildTransactionPayload(
     return existing ? { id: existing.id, name } : { name };
   });
 
-  const dateStr = values.date instanceof Date ? values.date.toISOString() : (values.date as unknown as string);
-
   return {
     transaction_type: values.transaction_type,
-    date: dateStr,
+    date: values.date,
     description: values.description,
     amount: values.amount,
     account_id: values.account_id!,
@@ -33,12 +30,7 @@ export function buildTransactionPayload(
             // when the user didn't pick a custom one, so the backend always
             // gets an explicit value (won't fall back to a previously
             // customized snapshot on update).
-            date:
-              s.date instanceof Date
-                ? localDateStr(s.date)
-                : values.date instanceof Date
-                  ? localDateStr(values.date)
-                  : undefined,
+            date: s.date ?? values.date ?? undefined,
           }))
         : undefined,
     recurrence_settings: values.recurrenceEnabled

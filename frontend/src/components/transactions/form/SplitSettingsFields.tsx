@@ -146,7 +146,7 @@ function SplitRowControls({
         name={dateFieldName}
         render={({ field }) => (
           <DateInput
-            value={(field.value as Date | null) ?? null}
+            value={(field.value as string | null) ?? null}
             onChange={(value) => field.onChange(value)}
             valueFormat="DD/MM/YYYY"
             placeholder="Data acerto"

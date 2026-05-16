@@ -3,17 +3,18 @@ import { DateInput } from '@mantine/dates'
 import { useState } from 'react'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { TransactionsTestIds } from '@/testIds'
+import { localDateStr } from '@/utils/parseDate'
 
 interface SelectDateDrawerProps {
-  /** Initial value rendered in the picker. Defaults to today. */
-  initialDate?: Date
+  /** Initial value (YYYY-MM-DD) rendered in the picker. Defaults to today. */
+  initialDate?: string
   /** Title shown in the drawer header. */
   title?: string
 }
 
 export function SelectDateDrawer({ initialDate, title = 'Alterar data' }: SelectDateDrawerProps = {}) {
-  const { opened, close, reject } = useDrawerContext<Date>()
-  const [date, setDate] = useState<Date | null>(initialDate ?? new Date())
+  const { opened, close, reject } = useDrawerContext<string>()
+  const [date, setDate] = useState<string | null>(initialDate ?? localDateStr(new Date()))
 
   return (
     <Drawer
