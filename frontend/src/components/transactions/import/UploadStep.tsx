@@ -120,11 +120,11 @@ export function UploadStep({ onParsed, onBack }: Props) {
         </ActionIcon>
 
         <Select
-          label="Regra de definição do tipo"
+          label="Considerar valores positivos como:"
           required
           data={[
-            { label: "Valor positivo considerado 'receita'", value: 'positive_as_income' },
-            { label: "Valor positivo considerado 'despesa'", value: 'positive_as_expense' },
+            { label: 'Receitas', value: 'positive_as_income' },
+            { label: 'Despesas', value: 'positive_as_expense' },
           ]}
           value={typeDefinitionRule}
           onChange={(val) =>
