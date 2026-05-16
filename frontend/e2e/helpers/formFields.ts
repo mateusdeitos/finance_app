@@ -171,7 +171,14 @@ export class CheckboxField extends FieldBase {
 
 export class SwitchField extends FieldBase {
   async set(on: boolean): Promise<void> {
-    await this.locator().setChecked(on)
+    // Mantine renders the Switch <input> as a 0×0 visually-hidden element
+    // (height/width: 0; opacity: 0), so Playwright's setChecked() — which
+    // needs a visible, clickable target — times out. Read state from the
+    // input (a property read, no actionability needed) and toggle through
+    // the ancestor <label>, which forwards the click to the input.
+    const input = this.locator()
+    if ((await input.isChecked()) === on) return
+    await input.locator('xpath=ancestor::label').click()
   }
 }
 
