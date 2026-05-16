@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint src",
-    "test:unit": "node --import tsx --test ./src/utils/splitMath.test.ts",
+    "test:unit": "node --import tsx --test ./src/utils/splitMath.test.ts ./src/utils/groupTransactions.test.ts",
     "test:component": "vitest run",
     "e2e": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test",
     "e2e:debug": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test --debug",
