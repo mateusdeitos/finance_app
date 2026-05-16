@@ -13,6 +13,7 @@ export const CommonTestIds = {
   AvatarUser: 'avatar_user',
   AvatarAccount: 'avatar_account',
   AvatarAccountEmpty: 'avatar_account_empty',
+  ThemeToggle: 'btn_theme_toggle',
   /**
    * NavLink badge, keyed by the route's path without the leading slash
    * (e.g. `nav_badge_charges` for `/charges`).

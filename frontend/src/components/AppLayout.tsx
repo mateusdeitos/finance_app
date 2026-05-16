@@ -9,6 +9,7 @@ import { InviteDrawer } from "@/components/InviteDrawer";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CommonTestIds } from '@/testIds'
 
@@ -57,36 +58,39 @@ export function AppLayout() {
             </Group>
           </Link>
 
-          {user && (
-            <Menu shadow="md" position="bottom-end">
-              <Menu.Target>
-                <Group gap={4} wrap="nowrap" align="center" style={{ cursor: "pointer" }}>
-                  <UserAvatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size="sm" />
-                  <Text size="sm" fw={500} visibleFrom="sm">
-                    {user.name.split(" ")[0]}
-                  </Text>
-                  <IconChevronDown size={14} />
-                </Group>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>{user.email}</Menu.Label>
-                {!isMobile && (
-                  <>
-                    <Menu.Item
-                      leftSection={<IconUsers size={16} />}
-                      onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
-                    >
-                      Criar Conexão
-                    </Menu.Item>
-                    <Menu.Divider />
-                  </>
-                )}
-                <Menu.Item onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
-                  Sair
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          )}
+          <Group gap="xs" wrap="nowrap">
+            <ThemeToggle />
+            {user && (
+              <Menu shadow="md" position="bottom-end">
+                <Menu.Target>
+                  <Group gap={4} wrap="nowrap" align="center" style={{ cursor: "pointer" }}>
+                    <UserAvatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size="sm" />
+                    <Text size="sm" fw={500} visibleFrom="sm">
+                      {user.name.split(" ")[0]}
+                    </Text>
+                    <IconChevronDown size={14} />
+                  </Group>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Label>{user.email}</Menu.Label>
+                  {!isMobile && (
+                    <>
+                      <Menu.Item
+                        leftSection={<IconUsers size={16} />}
+                        onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
+                      >
+                        Criar Conexão
+                      </Menu.Item>
+                      <Menu.Divider />
+                    </>
+                  )}
+                  <Menu.Item onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+                    Sair
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+          </Group>
         </Group>
       </AppShell.Header>
 
