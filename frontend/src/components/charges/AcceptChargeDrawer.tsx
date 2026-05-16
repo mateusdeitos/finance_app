@@ -16,12 +16,13 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { formatBalance } from "@/utils/formatCents";
+import { localDateStr } from "@/utils/parseDate";
 import { Charges } from "@/types/charges";
 import { ChargesTestIds } from '@/testIds'
 
 const acceptChargeSchema = z.object({
   account_id: z.number("Selecione uma conta"),
-  date: z.date({ error: "Selecione uma data" }),
+  date: z.string().min(1, "Selecione uma data"),
   amount: z.number().positive().optional(),
 });
 
@@ -64,7 +65,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
     resolver: zodResolver(acceptChargeSchema),
     defaultValues: {
       account_id: accountsQuery?.data?.[0].id ?? 0,
-      date: new Date(),
+      date: localDateStr(new Date()),
       amount: charge.amount / 100,
     },
   });
@@ -77,7 +78,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
     setSubmitError(undefined);
     const payload: Charges.AcceptChargePayload = {
       account_id: values.account_id,
-      date: values.date.toISOString(),
+      date: new Date(values.date).toISOString(),
       amount: values.amount ? Math.round(values.amount * 100) : undefined,
     };
     mutation.mutate(
@@ -182,8 +183,8 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 label="Data da transferência"
                 description="Data utilizada na transferência entre contas para quitação da cobrança"
                 placeholder="Selecione uma data"
-                value={field.value}
-                onChange={(date) => field.onChange(date)}
+                value={field.value || null}
+                onChange={(date) => field.onChange(date ?? "")}
                 error={fieldState.error?.message}
                 required
               />

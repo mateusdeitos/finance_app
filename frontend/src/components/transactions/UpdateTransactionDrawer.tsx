@@ -18,7 +18,7 @@ import {
 } from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
 import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
-import { convertUtcToLocalKeepingValues, parseDate } from "@/utils/parseDate";
+import { parseDate, localDateStr } from "@/utils/parseDate";
 import { TransactionsTestIds } from "@/testIds";
 
 interface Props {
@@ -54,7 +54,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       );
       if (!acc?.user_connection) return [];
       const settlement = settlementByParentId.get(lt.id);
-      const date = settlement?.date ? parseDate(settlement.date) : null;
+      const date = settlement?.date ? localDateStr(parseDate(settlement.date)) : null;
       return [{ connection_id: acc.user_connection.id, amount: lt.amount, date }];
     });
 
@@ -78,7 +78,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
     resolver: zodResolver(updateTransactionFormSchema),
     defaultValues: {
       transaction_type: transaction.type,
-      date: convertUtcToLocalKeepingValues(transaction.date),
+      date: localDateStr(parseDate(transaction.date)),
       description: transaction.description,
       amount: transaction.amount,
       account_id: transaction.account_id,

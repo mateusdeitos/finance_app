@@ -29,6 +29,7 @@ import { useMe } from "@/hooks/useMe";
 import { useBalanceForConnection } from "@/hooks/useBalanceForConnection";
 import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { formatBalance } from "@/utils/formatCents";
+import { localDateStr } from "@/utils/parseDate";
 import { Charges } from "@/types/charges";
 import { ChargesTestIds } from '@/testIds'
 
@@ -40,7 +41,7 @@ const createChargeSchema = z.object({
   description: z.string().optional(),
   role: z.enum(["charger", "payer"], { error: "Selecione seu papel" }),
   amount: z.number().positive("Informe um valor maior que zero").optional(),
-  date: z.date({ error: "Selecione uma data" }),
+  date: z.string().min(1, "Selecione uma data"),
 });
 
 type CreateChargeFormValues = z.infer<typeof createChargeSchema>;
@@ -91,8 +92,6 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
     .filter((a) => a.user_id === currentUserId && a.is_active && !a.user_connection)
     .map((a) => ({ label: a.name, value: String(a.id) }));
 
-  const defaultPeriod = new Date(periodYear, periodMonth - 1, 1);
-
   const form = useForm<CreateChargeFormValues>({
     resolver: zodResolver(createChargeSchema),
     defaultValues: {
@@ -103,7 +102,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       description: "",
       role: undefined,
       amount: undefined,
-      date: new Date(),
+      date: localDateStr(new Date()),
     },
   });
 
@@ -137,7 +136,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       description: values.description || undefined,
       role: values.role,
       amount: values.amount != null ? Math.round(values.amount * 100) : undefined,
-      date: values.date.toISOString(),
+      date: new Date(values.date).toISOString(),
     };
     mutation.mutate(payload, {
       onSuccess: () => {
@@ -245,15 +244,15 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               <MonthPickerInput
                 label="Periodo"
                 placeholder="Selecione o mes"
-                value={new Date(watchedYear, field.value - 1, 1)}
+                value={`${watchedYear}-${String(field.value).padStart(2, "0")}-01`}
                 onChange={(date) => {
                   if (date) {
-                    form.setValue("period_month", date.getMonth() + 1);
-                    form.setValue("period_year", date.getFullYear());
+                    const [year, month] = date.split("-").map(Number);
+                    form.setValue("period_month", month);
+                    form.setValue("period_year", year);
                   }
                 }}
                 error={fieldState.error?.message}
-                defaultValue={defaultPeriod}
               />
             )}
           />
@@ -265,8 +264,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               <DateInput
                 label="Data"
                 placeholder="Selecione uma data"
-                value={field.value}
-                onChange={(date) => field.onChange(date)}
+                value={field.value || null}
+                onChange={(date) => field.onChange(date ?? "")}
                 error={fieldState.error?.message}
                 required
               />

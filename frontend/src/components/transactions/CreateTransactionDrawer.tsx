@@ -16,7 +16,7 @@ import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
-import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { parseDate, localDateStr } from "@/utils/parseDate";
 import { TransactionsTestIds } from '@/testIds'
 
 const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
@@ -48,7 +48,7 @@ export function CreateTransactionDrawer() {
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
       transaction_type: "expense",
-      date: convertUtcToLocalKeepingValues(prefill.date ? prefill.date : new Date()),
+      date: prefill.date ? localDateStr(parseDate(prefill.date)) : localDateStr(new Date()),
       description: "",
       amount: 0,
       account_id: prefill.accountId ?? undefined,

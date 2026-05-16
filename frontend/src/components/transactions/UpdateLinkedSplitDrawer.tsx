@@ -11,12 +11,12 @@ import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
 import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
-import { convertUtcToLocalKeepingValues } from "@/utils/parseDate";
+import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "./form/CurrencyInput";
 import { TransactionsTestIds } from "@/testIds";
 
 const schema = z.object({
-  date: z.date({ message: "Data é obrigatória" }),
+  date: z.string().min(1, "Data é obrigatória"),
   amount: z.number().int().positive("Valor deve ser maior que zero"),
   category_id: z.number().int("Selecione uma categoria"),
 });
@@ -46,7 +46,7 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: convertUtcToLocalKeepingValues(transaction.date),
+      date: localDateStr(parseDate(transaction.date)),
       amount: transaction.amount,
       category_id: transaction.category_id ?? undefined,
     },
@@ -59,7 +59,7 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
     setSubmitError(undefined);
     const payload: Transactions.UpdateTransactionPayload = {
       amount: values.amount,
-      date: values.date.toISOString(),
+      date: values.date,
       category_id: values.category_id,
     };
 
@@ -101,8 +101,8 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
                   ref={field.ref}
                   label="Data"
                   required
-                  value={new Date(field.value)}
-                  onChange={(date) => field.onChange(date)}
+                  value={field.value || null}
+                  onChange={(date) => field.onChange(date ?? "")}
                   error={errors.date?.message}
                   valueFormat="DD/MM/YYYY"
                 />

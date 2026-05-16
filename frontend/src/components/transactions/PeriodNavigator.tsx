@@ -1,5 +1,5 @@
 import { ActionIcon, Group } from '@mantine/core'
-import { DateValue, MonthPickerInput } from '@mantine/dates'
+import { MonthPickerInput } from '@mantine/dates'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import classes from './PeriodNavigator.module.css'
 
@@ -12,7 +12,7 @@ interface PeriodNavigatorProps {
 }
 
 export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigatorProps) {
-  const value = new Date(year, month - 1)
+  const value = `${year}-${String(month).padStart(2, '0')}-01`
 
   function goToPrev() {
     let m = month - 1
@@ -28,11 +28,10 @@ export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigator
     onPeriodChange(m, y)
   }
 
-  function handleChange(date: DateValue) {
+  function handleChange(date: string | null) {
     if (!date) return
-    // date is an ISO string like "2011-02-01T00:00:00.000Z"
-    // Parse year/month directly to avoid UTC→local timezone shift
-    const [year, month] = date.toISOString().split('-').map(Number)
+    // date is a YYYY-MM-DD string emitted by MonthPickerInput
+    const [year, month] = date.split('-').map(Number)
     onPeriodChange(month, year)
   }
 

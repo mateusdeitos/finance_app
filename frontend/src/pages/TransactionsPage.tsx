@@ -323,7 +323,7 @@ export function TransactionsPage() {
 
   async function handleDateChange() {
     try {
-      const date = await renderDrawer<Date>(() => <SelectDateDrawer />);
+      const dateStr = await renderDrawer<string>(() => <SelectDateDrawer />);
 
       let propagation: PropagationSetting | undefined;
       if (hasRecurring) {
@@ -351,11 +351,6 @@ export function TransactionsPage() {
 
       const items = [...txItems, ...settlementItems];
       if (items.length === 0) return;
-
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const dd = String(date.getDate()).padStart(2, "0");
-      const dateStr = `${yyyy}-${mm}-${dd}`;
 
       void renderDrawer(() => (
         <BulkProgressDrawer

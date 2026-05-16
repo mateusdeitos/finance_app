@@ -7,7 +7,6 @@ import { useCategoryOptions, useAccountOptions, usePersonalAccountOptions, useSh
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
 import { Transactions } from "@/types/transactions";
 import { type ImportFormValues, type ImportRowFormValues } from "@/components/transactions/form/importFormSchema";
-import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { RecurrenceFields } from "@/components/transactions/form/RecurrenceFields";
 import classes from "./ImportReviewRow.module.css";
@@ -92,6 +91,10 @@ export const ImportReviewRow = memo(
 
     const isSkipped = action !== "import";
     const isTransfer = transactionType === "transfer";
+    // Splits create a settlement on a connection account, so the main
+    // transaction must live on a private account. When the row already
+    // targets a shared account, the split option is not applicable.
+    const isSharedAccount = sharedAccounts.some((a) => a.id === sourceAccountId);
 
     function rowClass() {
       if (action === "duplicate") return classes.rowDuplicate;
@@ -162,8 +165,8 @@ export const ImportReviewRow = memo(
                 ref={field.ref}
                 size="xs"
                 valueFormat="DD/MM/YYYY"
-                value={field.value ? parseDate(field.value as string) : null}
-                onChange={(d) => field.onChange(d ? localDateStr(d) : "")}
+                value={(field.value as string) || null}
+                onChange={(d) => field.onChange(d ?? "")}
                 disabled={disabled || isSkipped}
                 error={rowErrors?.date?.message}
                 popoverProps={{ withinPortal: true }}
@@ -391,7 +394,7 @@ export const ImportReviewRow = memo(
 
         {/* Split */}
         <Table.Td miw={140}>
-          {!isTransfer && sharedAccounts.length > 0 ? (
+          {!isTransfer && !isSharedAccount && sharedAccounts.length > 0 ? (
             <SplitPopover
               namePrefix={namePrefix}
               summary={splitSummary}

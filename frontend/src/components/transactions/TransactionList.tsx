@@ -5,7 +5,9 @@ import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { Transactions } from "@/types/transactions";
+import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { TransactionGroup } from "./TransactionGroup";
+import classes from "./TransactionGroup.module.css";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
@@ -33,8 +35,10 @@ function groupNetTotal(
     const settlementsAmount = hideSettlements
       ? 0
       : (tx.settlements_from_source ?? []).reduce((s, settlement) => {
-          // Include settlement if: no account filter, OR source tx account matches, OR settlement account matches
-          if (filterSet && !filterSet.has(tx.account_id) && !filterSet.has(settlement.account_id)) {
+          // A settlement counts only toward its own (connection) account, never
+          // the source transaction's private account — keeps the displayed total
+          // consistent with GetBalance and lets the private account reconcile.
+          if (filterSet && !filterSet.has(settlement.account_id)) {
             return s;
           }
           return s + (settlement.type === "credit" ? settlement.amount : -settlement.amount);
@@ -83,9 +87,14 @@ export function TransactionList({
 
   if (groups.length === 0) {
     return (
-      <Text ta="center" c="dimmed" py="xl">
-        Nenhuma transação encontrada
-      </Text>
+      <Stack gap="sm">
+        <div className={classes.rows}>
+          <OpeningBalanceRow />
+        </div>
+        <Text ta="center" c="dimmed" py="xl">
+          Nenhuma transação encontrada
+        </Text>
+      </Stack>
     );
   }
 
@@ -102,6 +111,7 @@ export function TransactionList({
           groupTotal={groupTotals[i]}
           runningBalance={runningBalances[i]}
           isFirst={i === 0}
+          accountFilter={filters.accountIds}
           selectedIds={selectedIds}
           selectedSettlementIds={selectedSettlementIds}
           onSelectTransaction={onSelectTransaction && ((id, shiftKey) => onSelectTransaction(id, shiftKey, group.key))}

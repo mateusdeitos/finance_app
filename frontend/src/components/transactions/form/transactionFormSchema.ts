@@ -4,8 +4,8 @@ export const splitSettingSchema = z.object({
   connection_id: z.number().int(),
   percentage: z.number().int().min(1).max(100).optional(),
   amount: z.number().int().optional(),
-  /** Optional custom date for the settlement produced by this split. */
-  date: z.date().nullable().optional(),
+  /** Optional custom date (YYYY-MM-DD) for the settlement produced by this split. */
+  date: z.string().nullable().optional(),
 });
 
 /**
@@ -116,8 +116,8 @@ export function applySharedRefinements(data: SharedRefinementData, ctx: z.Refine
 export const transactionFormSchema = z
   .object({
     ...baseTransactionFields,
-    // Sobrescreve para non-nullable: o form sempre inicializa com "monthly"
-    date: z.date({ error: "Data é obrigatória" }),
+    // Data no formato YYYY-MM-DD (formato emitido pelos componentes @mantine/dates)
+    date: z.string().min(1, "Data é obrigatória"),
     tags: z.array(z.string()),
   })
   .superRefine((data, ctx) => {
@@ -134,7 +134,7 @@ export const propagationSettingsEnum = z.enum(["current", "current_and_future", 
 export const updateTransactionFormSchema = z
   .object({
     ...baseTransactionFields,
-    date: z.date({ error: "Data é obrigatória" }),
+    date: z.string().min(1, "Data é obrigatória"),
     tags: z.array(z.string()),
     propagation_settings: propagationSettingsEnum,
   })

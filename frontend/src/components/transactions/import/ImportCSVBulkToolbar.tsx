@@ -1,6 +1,5 @@
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
-import { localDateStr } from "@/utils/parseDate";
 import { Button, Group, Menu, MenuItem, Popover, Select, Stack, Text, TextInput } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import {
@@ -44,6 +43,8 @@ type LocalFormType = {
 
 interface Props {
   selectedCount: number;
+  /** Splits aren't allowed on shared accounts — hide the bulk split action. */
+  canSplit: boolean;
   onRemove: () => void;
   onBulkSetAction: (action: Transactions.ImportRowAction) => void;
   onBulkSetDate: (date: string) => void;
@@ -66,6 +67,7 @@ const propsByType: Record<AvailableAction, { icon: React.ReactNode; label: strin
 
 export function ImportCSVBulkToolbar({
   selectedCount,
+  canSplit,
   onRemove,
   onBulkSetAction,
   onBulkSetDate,
@@ -198,7 +200,9 @@ export function ImportCSVBulkToolbar({
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            {Object.entries(propsByType).map(([k, v]) => {
+            {Object.entries(propsByType)
+              .filter(([k]) => k !== "split" || canSplit)
+              .map(([k, v]) => {
               return (
                 <MenuItem
                   key={k}
@@ -238,7 +242,7 @@ export function ImportCSVBulkToolbar({
             valueFormat="DD/MM/YYYY"
             onChange={(d) => {
               if (d) {
-                localForm.reset({ action_type: "date", date: localDateStr(d) });
+                localForm.reset({ action_type: "date", date: d });
               }
             }}
           />

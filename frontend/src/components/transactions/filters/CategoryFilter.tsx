@@ -44,7 +44,7 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
         />
       </Group>
       {hasChildren && (
-        <Collapse in={expanded}>
+        <Collapse expanded={expanded}>
           <Stack gap={4} ml={42}>
             {category.children!.map((child) => (
               <Checkbox
