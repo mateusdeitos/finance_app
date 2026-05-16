@@ -92,6 +92,10 @@ export const ImportReviewRow = memo(
 
     const isSkipped = action !== "import";
     const isTransfer = transactionType === "transfer";
+    // Splits create a settlement on a connection account, so the main
+    // transaction must live on a private account. When the row already
+    // targets a shared account, the split option is not applicable.
+    const isSharedAccount = sharedAccounts.some((a) => a.id === sourceAccountId);
 
     function rowClass() {
       if (action === "duplicate") return classes.rowDuplicate;
@@ -391,7 +395,7 @@ export const ImportReviewRow = memo(
 
         {/* Split */}
         <Table.Td miw={140}>
-          {!isTransfer && sharedAccounts.length > 0 ? (
+          {!isTransfer && !isSharedAccount && sharedAccounts.length > 0 ? (
             <SplitPopover
               namePrefix={namePrefix}
               summary={splitSummary}
