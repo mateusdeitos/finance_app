@@ -60,13 +60,12 @@ function SplitRowControls({
   rowIndex,
   error,
 }: SplitRowControlsProps) {
-  const { control, register, setValue } = useFormContext<FieldValues>();
+  const { control, setValue } = useFormContext<FieldValues>();
 
   const amountFieldName = `${rowPath}.amount`;
   const percentageFieldName = `${rowPath}.percentage`;
   const dateFieldName = `${rowPath}.date`;
 
-  const { ref: inputRef } = register(amountFieldName);
   const fieldValue = (useWatch({ control, name: amountFieldName }) as number | undefined) ?? 0;
 
   const conn = account.user_connection!;
@@ -131,12 +130,18 @@ function SplitRowControls({
         </Group>
       ) : (
         <Box style={{ flex: 1 }}>
-          <CurrencyInput
-            ref={inputRef}
-            value={fieldValue}
-            onChange={(v) => setValue(amountFieldName, v)}
-            error={error}
-            data-testid={TransactionsTestIds.InputSplitAmount}
+          <Controller
+            control={control}
+            name={amountFieldName}
+            render={({ field }) => (
+              <CurrencyInput
+                ref={field.ref}
+                value={(field.value as number | undefined) ?? 0}
+                onChange={field.onChange}
+                error={error}
+                data-testid={TransactionsTestIds.InputSplitAmount}
+              />
+            )}
           />
         </Box>
       )}

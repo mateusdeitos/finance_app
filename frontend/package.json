@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint src",
     "test:unit": "node --import tsx --test ./src/utils/splitMath.test.ts",
+    "test:component": "vitest run",
     "e2e": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test",
     "e2e:debug": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test --debug",
     "e2e:ui": "PLAYWRIGHT_BASE_URL=http://localhost:3100 PLAYWRIGHT_BACKEND_URL=http://localhost:8090 playwright test --ui",
@@ -40,6 +41,8 @@
     "@tanstack/react-query-devtools": "^5.91.3",
     "@tanstack/router-devtools": "^1.166.9",
     "@tanstack/router-plugin": "^1.166.13",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -49,10 +52,12 @@
     "eslint": "^10.0.3",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "jsdom": "^29.1.1",
     "tsx": "^4.21.0",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.57.1",
     "vite": "^6.2.5",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.6"
   }
 }
