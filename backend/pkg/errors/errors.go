@@ -33,34 +33,34 @@ const (
 type ErrorTag string
 
 const (
-	ErrorTagIndex                                               ErrorTag = "INDEX_%d"
-	ErrorTagMissingDestinationAccount                           ErrorTag = "TRANSACTION.MISSING_DESTINATION_ACCOUNT"
-	ErrorTagTransferSourceMustDifferFromDestination             ErrorTag = "TRANSACTION.TRANSFER_SOURCE_MUST_DIFFER_FROM_DESTINATION"
-	ErrorTagSplitSettingsNotAllowedForTransfer                  ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_FOR_TRANSFER"
-	ErrorTagAmountMustBeGreaterThanZero                         ErrorTag = "TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"
-	ErrorTagDateIsRequired                                      ErrorTag = "TRANSACTION.DATE_IS_REQUIRED"
-	ErrorTagDescriptionIsRequired                               ErrorTag = "TRANSACTION.DESCRIPTION_IS_REQUIRED"
-	ErrorTagInvalidTransactionType                              ErrorTag = "TRANSACTION.INVALID_TRANSACTION_TYPE"
-	ErrorTagInvalidAccountID                                    ErrorTag = "TRANSACTION.INVALID_ACCOUNT_ID"
-	ErrorTagInvalidCategoryID                                   ErrorTag = "TRANSACTION.INVALID_CATEGORY_ID"
-	ErrorTagInvalidRecurrenceType                               ErrorTag = "TRANSACTION.INVALID_RECURRENCE_TYPE"
-	ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne            ErrorTag = "TRANSACTION.RECURRENCE_CURRENT_INSTALLMENT_MUST_BE_AT_LEAST_ONE"
+	ErrorTagIndex                                                    ErrorTag = "INDEX_%d"
+	ErrorTagMissingDestinationAccount                                ErrorTag = "TRANSACTION.MISSING_DESTINATION_ACCOUNT"
+	ErrorTagTransferSourceMustDifferFromDestination                  ErrorTag = "TRANSACTION.TRANSFER_SOURCE_MUST_DIFFER_FROM_DESTINATION"
+	ErrorTagSplitSettingsNotAllowedForTransfer                       ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_FOR_TRANSFER"
+	ErrorTagAmountMustBeGreaterThanZero                              ErrorTag = "TRANSACTION.AMOUNT_MUST_BE_GREATER_THAN_ZERO"
+	ErrorTagDateIsRequired                                           ErrorTag = "TRANSACTION.DATE_IS_REQUIRED"
+	ErrorTagDescriptionIsRequired                                    ErrorTag = "TRANSACTION.DESCRIPTION_IS_REQUIRED"
+	ErrorTagInvalidTransactionType                                   ErrorTag = "TRANSACTION.INVALID_TRANSACTION_TYPE"
+	ErrorTagInvalidAccountID                                         ErrorTag = "TRANSACTION.INVALID_ACCOUNT_ID"
+	ErrorTagInvalidCategoryID                                        ErrorTag = "TRANSACTION.INVALID_CATEGORY_ID"
+	ErrorTagInvalidRecurrenceType                                    ErrorTag = "TRANSACTION.INVALID_RECURRENCE_TYPE"
+	ErrorTagRecurrenceCurrentInstallmentMustBeAtLeastOne             ErrorTag = "TRANSACTION.RECURRENCE_CURRENT_INSTALLMENT_MUST_BE_AT_LEAST_ONE"
 	ErrorTagRecurrenceTotalInstallmentsMustBeGreaterOrEqualToCurrent ErrorTag = "TRANSACTION.RECURRENCE_TOTAL_INSTALLMENTS_MUST_BE_GREATER_OR_EQUAL_TO_CURRENT"
-	ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo      ErrorTag = "TRANSACTION.RECURRENCE_TOTAL_INSTALLMENTS_MUST_BE_LESS_THAN_OR_EQUAL_TO"
-	ErrorTagSplitSettingInvalidConnectionID                     ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_CONNECTION_ID"
-	ErrorTagSplitSettingPercentageOrAmountIsRequired            ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_OR_AMOUNT_IS_REQUIRED"
-	ErrorTagSplitSettingPercentageAndAmountCannotBeUsedTogether ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_AND_AMOUNT_CANNOT_BE_USED_TOGETHER"
-	ErrorTagSplitSettingPercentageMustBeBetween1And100          ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_MUST_BE_BETWEEN_1_AND_100"
-	ErrorTagSplitSettingAmountMustBeGreaterThanZero             ErrorTag = "TRANSACTION.SPLIT_SETTING_AMOUNT_MUST_BE_GREATER_THAN_ZERO"
-	ErrorTagSplitSettingInvalidDestinationAccountID             ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_DESTINATION_ACCOUNT_ID"
-	ErrorTagSplitSettingsNotAllowedOnSharedAccount              ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_ON_SHARED_ACCOUNT"
-	ErrorTagTransferNotAllowedOnSharedAccount                   ErrorTag = "TRANSACTION.TRANSFER_NOT_ALLOWED_ON_SHARED_ACCOUNT"
-	ErrorTagInvalidPeriod                                       ErrorTag = "TRANSACTION.INVALID_PERIOD"
-	ErrorTagInvalidPropagationSettings                          ErrorTag = "TRANSACTION.INVALID_PROPAGATION_SETTINGS"
-	ErrorTagParentTransactionBelongsToAnotherUser               ErrorTag = "TRANSACTION.PARENT_TRANSACTION_BELONGS_TO_ANOTHER_USER"
-	ErrorTagAccountCannotBeChangedForSharedTransactions         ErrorTag = "TRANSACTION.ACCOUNT_CANNOT_BE_CHANGED_FOR_SHARED_TRANSACTIONS"
-	ErrorTagChildTransactionCannotBeUpdated                     ErrorTag = "TRANSACTION.CHILD_TRANSACTION_CANNOT_BE_UPDATED"
-	ErrorTagLinkedTransactionDisallowedFieldChanged             ErrorTag = "TRANSACTION.LINKED_TRANSACTION_DISALLOWED_FIELD_CHANGED"
+	ErrorTagRecurrenceTotalInstallmentsMustBeLessThanOrEqualTo       ErrorTag = "TRANSACTION.RECURRENCE_TOTAL_INSTALLMENTS_MUST_BE_LESS_THAN_OR_EQUAL_TO"
+	ErrorTagSplitSettingInvalidConnectionID                          ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_CONNECTION_ID"
+	ErrorTagSplitSettingPercentageOrAmountIsRequired                 ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_OR_AMOUNT_IS_REQUIRED"
+	ErrorTagSplitSettingPercentageAndAmountCannotBeUsedTogether      ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_AND_AMOUNT_CANNOT_BE_USED_TOGETHER"
+	ErrorTagSplitSettingPercentageMustBeBetween1And100               ErrorTag = "TRANSACTION.SPLIT_SETTING_PERCENTAGE_MUST_BE_BETWEEN_1_AND_100"
+	ErrorTagSplitSettingAmountMustBeGreaterThanZero                  ErrorTag = "TRANSACTION.SPLIT_SETTING_AMOUNT_MUST_BE_GREATER_THAN_ZERO"
+	ErrorTagSplitSettingInvalidDestinationAccountID                  ErrorTag = "TRANSACTION.SPLIT_SETTING_INVALID_DESTINATION_ACCOUNT_ID"
+	ErrorTagSplitSettingsNotAllowedOnSharedAccount                   ErrorTag = "TRANSACTION.SPLIT_SETTINGS_NOT_ALLOWED_ON_SHARED_ACCOUNT"
+	ErrorTagTransferNotAllowedOnSharedAccount                        ErrorTag = "TRANSACTION.TRANSFER_NOT_ALLOWED_ON_SHARED_ACCOUNT"
+	ErrorTagInvalidPeriod                                            ErrorTag = "TRANSACTION.INVALID_PERIOD"
+	ErrorTagInvalidPropagationSettings                               ErrorTag = "TRANSACTION.INVALID_PROPAGATION_SETTINGS"
+	ErrorTagParentTransactionBelongsToAnotherUser                    ErrorTag = "TRANSACTION.PARENT_TRANSACTION_BELONGS_TO_ANOTHER_USER"
+	ErrorTagAccountCannotBeChangedForSharedTransactions              ErrorTag = "TRANSACTION.ACCOUNT_CANNOT_BE_CHANGED_FOR_SHARED_TRANSACTIONS"
+	ErrorTagChildTransactionCannotBeUpdated                          ErrorTag = "TRANSACTION.CHILD_TRANSACTION_CANNOT_BE_UPDATED"
+	ErrorTagLinkedTransactionDisallowedFieldChanged                  ErrorTag = "TRANSACTION.LINKED_TRANSACTION_DISALLOWED_FIELD_CHANGED"
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
@@ -74,20 +74,20 @@ const (
 	ErrorTagImportNoRows          ErrorTag = "IMPORT.NO_ROWS"
 	ErrorTagImportInvalidFile     ErrorTag = "IMPORT.INVALID_FILE"
 
-	ErrorTagSettlementForbidden ErrorTag = "SETTLEMENT.FORBIDDEN"
+	ErrorTagSettlementForbidden      ErrorTag = "SETTLEMENT.FORBIDDEN"
 	ErrorTagSettlementDateIsRequired ErrorTag = "SETTLEMENT.DATE_IS_REQUIRED"
 )
 
 var (
-	ErrMissingDestinationAccount          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagMissingDestinationAccount)}, "missing destination account")
+	ErrMissingDestinationAccount               = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagMissingDestinationAccount)}, "missing destination account")
 	ErrTransferSourceMustDifferFromDestination = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTransferSourceMustDifferFromDestination)}, "transfer source and destination accounts must be different")
 	ErrSplitSettingsNotAllowedForTransfer      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedForTransfer)}, "split settings are not allowed for transfer transactions")
 	ErrSplitSettingsNotAllowedOnSharedAccount  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSplitSettingsNotAllowedOnSharedAccount)}, "split settings are not allowed on shared accounts")
 	ErrTransferNotAllowedOnSharedAccount       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTransferNotAllowedOnSharedAccount)}, "transfers are not allowed on shared accounts")
-	ErrAmountMustBeGreaterThanZero        = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAmountMustBeGreaterThanZero)}, "amount must be greater than zero")
-	ErrDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDateIsRequired)}, "date is required")
-	ErrDescriptionIsRequired              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDescriptionIsRequired)}, "description is required")
-	ErrTagNameCannotBeEmpty               = func(index int) *ServiceError {
+	ErrAmountMustBeGreaterThanZero             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAmountMustBeGreaterThanZero)}, "amount must be greater than zero")
+	ErrDateIsRequired                          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDateIsRequired)}, "date is required")
+	ErrDescriptionIsRequired                   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagDescriptionIsRequired)}, "description is required")
+	ErrTagNameCannotBeEmpty                    = func(index int) *ServiceError {
 		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTagNameCannotBeEmpty), fmt.Sprintf(string(ErrorTagIndex), index)}, fmt.Sprintf("tag name cannot be empty at index %d", index))
 	}
 	ErrInvalidTransactionType = func(transactionType domain.TransactionType) *ServiceError {
@@ -131,11 +131,11 @@ var (
 		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagInvalidPropagationSettings)}, fmt.Sprintf("invalid propagation settings: %s", propagationSettings))
 	}
 	ErrParentTransactionBelongsToAnotherUser       = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagParentTransactionBelongsToAnotherUser)}, "parent transaction belongs to another user")
-	ErrAccountCannotBeChangedForSharedTransactions  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
-	ErrChildTransactionCannotBeUpdated              = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
-	ErrLinkedTransactionDisallowedFieldChanged      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
-	ErrSettlementForbidden                          = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
-	ErrSettlementDateIsRequired                     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
+	ErrAccountCannotBeChangedForSharedTransactions = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
+	ErrChildTransactionCannotBeUpdated             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
+	ErrLinkedTransactionDisallowedFieldChanged     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
+	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
+	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 )
 
 // ServiceError represents a service-level error with a code and message
@@ -356,9 +356,11 @@ func BadRequest(message string) *ServiceError {
 var (
 	ErrImportEmptyFile       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportEmptyFile)}, "the file is empty")
 	ErrImportInvalidLayout   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidLayout)}, "invalid CSV layout: missing required columns")
-	ErrImportMaxRowsExceeded = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportMaxRowsExceeded)}, "CSV file cannot have more than 100 rows")
-	ErrImportNoRows          = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportNoRows)}, "CSV file has no data rows")
-	ErrImportInvalidFile     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidFile)}, "could not read the uploaded file")
+	ErrImportMaxRowsExceeded = func(maxRows int) *ServiceError {
+		return NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportMaxRowsExceeded)}, fmt.Sprintf("CSV file cannot have more than %d rows", maxRows))
+	}
+	ErrImportNoRows      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportNoRows)}, "CSV file has no data rows")
+	ErrImportInvalidFile = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImportInvalidFile)}, "could not read the uploaded file")
 )
 
 // IsNotFound checks if an error is a NOT_FOUND error

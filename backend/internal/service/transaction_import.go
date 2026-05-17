@@ -18,7 +18,7 @@ import (
 	"github.com/samber/lo"
 )
 
-const importMaxRows = 100
+const IMPORT_MAX_ROWS = 200
 
 // csvColumnIndex guarda a posição de cada coluna esperada no cabeçalho simplificado.
 type csvColumnIndex struct {
@@ -81,8 +81,8 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 
 		dataRowIndex++
 
-		if dataRowIndex > importMaxRows {
-			return nil, pkgErrors.ErrImportMaxRowsExceeded
+		if dataRowIndex > IMPORT_MAX_ROWS {
+			return nil, pkgErrors.ErrImportMaxRowsExceeded(IMPORT_MAX_ROWS)
 		}
 
 		var row domain.ParsedImportRow

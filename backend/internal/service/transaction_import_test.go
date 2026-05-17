@@ -207,7 +207,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 			rows[i] = []string{"01/01/2026", "Test", "100,00"}
 		}
 		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, TypeDefinitionPositiveAsIncome, buildCSV(rows))
-		suite.ErrorIs(err, pkgErrors.ErrImportMaxRowsExceeded)
+		suite.ErrorIs(err, pkgErrors.ErrImportMaxRowsExceeded(IMPORT_MAX_ROWS))
 	})
 
 	suite.Run("UTF-8 BOM stripped", func() {
