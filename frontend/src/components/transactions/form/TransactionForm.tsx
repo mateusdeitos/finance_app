@@ -238,6 +238,7 @@ export const TransactionForm = ({
                 ref={field.ref}
                 label="Valor (R$)"
                 required
+                withCalculator
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.amount?.message}
