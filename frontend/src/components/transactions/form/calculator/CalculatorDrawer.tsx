@@ -1,4 +1,4 @@
-import { Button, Stack, Text } from "@mantine/core";
+import { Button, Group, Stack, Text } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { TransactionsTestIds } from "@/testIds";
 import { formatBalance } from "@/utils/formatCents";
@@ -43,13 +43,23 @@ export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
 
         <CalculatorKeypad calc={calc} />
 
-        <Button
-          size="md"
-          onClick={() => close(calc.getResult())}
-          data-testid={TransactionsTestIds.BtnCalcApply}
-        >
-          Aplicar
-        </Button>
+        <Group grow>
+          <Button
+            size="md"
+            variant="default"
+            onClick={() => reject()}
+            data-testid={TransactionsTestIds.BtnCalcCancel}
+          >
+            Cancelar
+          </Button>
+          <Button
+            size="md"
+            onClick={() => close(calc.getResult())}
+            data-testid={TransactionsTestIds.BtnCalcApply}
+          >
+            Aplicar
+          </Button>
+        </Group>
       </Stack>
     </ResponsiveDrawer>
   );

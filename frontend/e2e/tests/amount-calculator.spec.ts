@@ -84,7 +84,7 @@ test.describe('Amount calculator', () => {
     await transactionsPage.pressCalculatorKeys(['9', '9', '9'])
     await transactionsPage.dismissCalculator()
 
-    // ESC discards — the amount input keeps its original value.
+    // Dismissing discards the result — the amount input keeps its original value.
     expect(await transactionsPage.getAmountValue()).toBe('25,00')
   })
 })

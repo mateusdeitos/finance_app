@@ -131,5 +131,6 @@ export const TransactionsTestIds = {
   CalcDisplay: 'calculator_display',
   CalcExpression: 'calculator_expression',
   BtnCalcApply: 'btn_calculator_apply',
+  BtnCalcCancel: 'btn_calculator_cancel',
   CalcKey: (key: string) => `calc_key_${key}` as const,
 } as const

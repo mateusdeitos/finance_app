@@ -179,9 +179,13 @@ export class TransactionsPage {
     await expect(this.calculatorDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
-  /** Dismiss the calculator via Escape — the result is discarded. */
+  /**
+   * Dismiss the calculator via its Cancel button — the result is discarded.
+   * (Escape is avoided: it would also close the underlying create drawer,
+   * since each drawer registers its own window-level Escape listener.)
+   */
   async dismissCalculator() {
-    await this.page.keyboard.press("Escape");
+    await this.calculatorDrawer.getByTestId(TransactionsTestIds.BtnCalcCancel).click();
     await expect(this.calculatorDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
