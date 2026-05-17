@@ -385,6 +385,7 @@ export const TransactionForm = ({
         style={{
           position: "sticky",
           bottom: 0,
+          zIndex: 3,
           background: "var(--mantine-color-body)",
           borderTop: "1px solid var(--mantine-color-default-border)",
           paddingTop: "var(--mantine-spacing-md)",
