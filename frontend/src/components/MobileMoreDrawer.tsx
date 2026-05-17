@@ -59,7 +59,7 @@ export function MobileMoreDrawer() {
     <ResponsiveDrawer
       opened={opened}
       onClose={() => close()}
-      size="auto"
+      styles={{ content: { height: 'auto', maxHeight: '85dvh' } }}
       title=""
       closeButtonProps={
         {
