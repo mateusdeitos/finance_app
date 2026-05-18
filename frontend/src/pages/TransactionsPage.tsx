@@ -180,7 +180,7 @@ export function TransactionsPage() {
   }
 
   // Division-specific eligibility: also excludes transfers (D-10).
-  // Transfers cannot carry split_settings (buildFullPayload sets it to undefined for transfers).
+  // Transfers cannot carry split_settings (buildUpdatePayload sets it to undefined for transfers).
   function getDivisionEligibleIds(): number[] {
     return getEligibleIds().filter((id) => {
       const tx = allTransactions.find((t) => t.id === id);
@@ -188,11 +188,35 @@ export function TransactionsPage() {
     });
   }
 
-  function buildFullPayload(
+  // A linked (secondary) transaction is the credit side of a transfer or a
+  // partner's side of a shared expense/income. The backend rejects edits to
+  // structural fields (account, type, destination, split, recurrence) on these.
+  function isLinkedTransaction(tx: Transactions.Transaction): boolean {
+    if (tx.original_user_id != null && tx.original_user_id !== currentUserId) return true;
+    return tx.type === "transfer" && tx.operation_type === "credit";
+  }
+
+  function buildUpdatePayload(
     tx: Transactions.Transaction,
     overrides: Partial<Transactions.UpdateTransactionPayload>,
   ): Transactions.UpdateTransactionPayload {
     const isTransfer = tx.type === "transfer";
+
+    const resolvedTags = (tx.tags ?? []).map((t) => {
+      const existing = existingTags.find((et) => et.name === t.name);
+      return existing ? { id: existing.id, name: t.name } : { name: t.name };
+    });
+    const tags = resolvedTags.length > 0 ? resolvedTags : undefined;
+
+    // Bulk updates only change an allowed field (date/category). For a linked
+    // transaction, echoing the structural fields would be rejected by the
+    // backend (issue #145), so send only the override plus the tags — which an
+    // update would otherwise clear. Structural fields are still echoed for main
+    // transactions, where the backend needs them to rebuild transfers/splits.
+    if (isLinkedTransaction(tx)) {
+      return { tags, ...overrides };
+    }
+
     const destinationAccountId = isTransfer ? tx.linked_transactions?.[0]?.account_id : undefined;
 
     const splitSettings = isTransfer
@@ -209,11 +233,6 @@ export function TransactionsPage() {
             return [{ connection_id: acc.user_connection.id, amount: lt.amount }];
           });
 
-    const resolvedTags = (tx.tags ?? []).map((t) => {
-      const existing = existingTags.find((et) => et.name === t.name);
-      return existing ? { id: existing.id, name: t.name } : { name: t.name };
-    });
-
     return {
       transaction_type: tx.type,
       account_id: tx.account_id,
@@ -222,7 +241,7 @@ export function TransactionsPage() {
       date: tx.date,
       description: tx.description,
       destination_account_id: destinationAccountId,
-      tags: resolvedTags.length > 0 ? resolvedTags : undefined,
+      tags,
       split_settings: splitSettings && splitSettings.length > 0 ? splitSettings : undefined,
       recurrence_settings: tx.transaction_recurrence
         ? {
@@ -297,7 +316,7 @@ export function TransactionsPage() {
           action={async (item) => {
             const tx = allTransactions.find((t) => t.id === item.id);
             if (!tx) return;
-            const payload = buildFullPayload(tx, { category_id: category.id });
+            const payload = buildUpdatePayload(tx, { category_id: category.id });
             if (tx.transaction_recurrence_id != null && propagation) {
               payload.propagation_settings = propagation;
             }
@@ -364,7 +383,7 @@ export function TransactionsPage() {
             }
             const tx = allTransactions.find((t) => t.id === item.id);
             if (!tx) return;
-            const payload = buildFullPayload(tx, { date: dateStr });
+            const payload = buildUpdatePayload(tx, { date: dateStr });
             if (tx.transaction_recurrence_id != null && propagation) {
               payload.propagation_settings = propagation;
             }
@@ -418,7 +437,7 @@ export function TransactionsPage() {
             // Convert percentages -> cents per-tx (PAY-01); last split absorbs remainder.
             // splitPercentagesToCents strips `percentage` from the output (PAY-02).
             const perTxSplits = splitPercentagesToCents(tx.amount, rawSplits);
-            const payload = buildFullPayload(tx, { split_settings: perTxSplits });
+            const payload = buildUpdatePayload(tx, { split_settings: perTxSplits });
             if (tx.transaction_recurrence_id != null && propagation) {
               payload.propagation_settings = propagation;
             }

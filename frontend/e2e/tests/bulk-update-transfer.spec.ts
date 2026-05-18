@@ -362,6 +362,44 @@ test.describe('Bulk Update — data preservation', () => {
     expect(updated.category_id).toBeFalsy()
   })
 
+  // Issue #145: the linked (credit) side of a transfer is a backend "linked
+  // transaction". Echoing structural fields (transaction_type, account_id,
+  // destination_account_id) on a bulk update used to be rejected. The bulk
+  // update now sends only the changed field for linked transactions.
+  test('transfer: bulk date change on the linked (credit) side succeeds', async ({ page }) => {
+    const today = new Date().toISOString().slice(0, 10)
+    const desc = `Bulk Xfer Linked Date ${Date.now()}`
+
+    const tx = await apiCreateTransaction({
+      transaction_type: 'transfer',
+      account_id: accountId,
+      destination_account_id: connAccountId,
+      amount: 7000,
+      date: today,
+      description: desc,
+    })
+    createdTransactionIds.push(tx.id)
+
+    // The credit side of the transfer that lives on the author's connection
+    // account — a linked transaction, the equivalent of issue #145's tx 1113.
+    const full = await apiGetTransaction(tx.id)
+    const linked = full.linked_transactions?.find(
+      (lt) => lt.operation_type === 'credit' && lt.account_id === connAccountId,
+    )
+    expect(linked).toBeTruthy()
+
+    await transactionsPage.goto()
+    await expect(page.getByText(desc).first()).toBeVisible({ timeout: 8000 })
+
+    await bulkChangeDate(page, linked!.id)
+
+    const updated = await apiGetTransaction(linked!.id)
+    expect(updated.type).toBe('transfer')
+    expect(updated.amount).toBe(7000)
+    expect(updated.description).toBe(desc)
+    expect(updated.account_id).toBe(connAccountId)
+  })
+
   test('transfer between different users: bulk category change does not assign category', async ({ page }) => {
     const today = new Date().toISOString().slice(0, 10)
     const desc = `Bulk Xfer NoCat ${Date.now()}`

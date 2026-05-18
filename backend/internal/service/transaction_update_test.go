@@ -4812,17 +4812,11 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionValidation_R
 		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 	})
 
-	// split_settings has no effect on the linked-tx edit path (the split rebuild
-	// is skipped), so an echoed value from the bulk-update flow is a harmless
-	// no-op rather than a rejected edit (issue #145).
-	suite.Run("split_settings", func() {
-		err := suite.Services.Transaction.Update(ctx, linkedTxID, userB.ID, &domain.TransactionUpdateRequest{
-			SplitSettings: []domain.SplitSettings{
-				{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
-			},
-			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-		})
-		suite.Assert().NoError(err, "echoed split_settings should be a no-op for linked transaction edits")
+	assertDisallowedFieldError("split_settings", &domain.TransactionUpdateRequest{
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+		PropagationSettings: domain.TransactionPropagationSettingsCurrent,
 	})
 
 	assertDisallowedFieldError("destination_account_id", &domain.TransactionUpdateRequest{
@@ -6217,86 +6211,6 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDat
 			"installment %d settlement date should be %v (parent date - 5 days), got %v",
 			i+1, expected, settlements[i+1].Date)
 	}
-}
-
-// TestUpdateLinkedTransferTransaction_DateChange_WithEchoedPayload_Succeeds
-// reproduces issue #145: changing only the date of the linked (credit) side of a
-// transfer must succeed even when the client echoes the transaction's unchanged
-// transaction_type, account_id and destination_account_id back in the payload —
-// as the bulk-date-change flow and the edit form do.
-func (suite *TransactionUpdateWithDBTestSuite) TestUpdateLinkedTransferTransaction_DateChange_WithEchoedPayload_Succeeds() {
-	ctx := context.Background()
-
-	user, err := suite.createTestUser(ctx)
-	suite.Require().NoError(err)
-
-	sourceAccount, err := suite.createTestAccount(ctx, user)
-	suite.Require().NoError(err)
-	destAccount, err := suite.createTestAccount(ctx, user)
-	suite.Require().NoError(err)
-
-	d := now()
-
-	// Same-user transfer → main debit tx on sourceAccount + linked credit tx on destAccount.
-	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
-		AccountID:            sourceAccount.ID,
-		DestinationAccountID: lo.ToPtr(destAccount.ID),
-		TransactionType:      domain.TransactionTypeTransfer,
-		Amount:               44790,
-		Date:                 domain.Date{Time: d},
-		Description:          "Kiwify *M6d",
-	})
-	suite.Require().NoError(err)
-
-	allTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
-		UserID: &user.ID,
-		SortBy: &domain.SortBy{Field: "id", Order: domain.SortOrderAsc},
-	})
-	suite.Require().NoError(err)
-	suite.Require().Len(allTxs, 2)
-
-	linkedTx, ok := lo.Find(allTxs, func(t *domain.Transaction) bool {
-		return t.AccountID == destAccount.ID
-	})
-	suite.Require().True(ok, "linked credit transaction on destination account should exist")
-	suite.Require().Equal(domain.OperationTypeCredit, linkedTx.OperationType)
-
-	// Confirm it is the linked side (referenced as a linked_transaction_id).
-	srcIDs, err := suite.Repos.Transaction.GetSourceTransactionIDs(ctx, linkedTx.ID)
-	suite.Require().NoError(err)
-	suite.Require().NotEmpty(srcIDs, "transaction must be a linked transaction for this scenario")
-
-	// Bulk-date-change echoes the full transaction payload: transaction_type,
-	// account_id and destination_account_id are sent unchanged alongside the new date.
-	newDate := d.AddDate(0, 0, 2)
-	err = suite.Services.Transaction.Update(ctx, linkedTx.ID, user.ID, &domain.TransactionUpdateRequest{
-		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
-		AccountID:            lo.ToPtr(linkedTx.AccountID),
-		Amount:               lo.ToPtr(linkedTx.Amount),
-		Date:                 &domain.Date{Time: newDate},
-		Description:          lo.ToPtr(linkedTx.Description),
-		DestinationAccountID: lo.ToPtr(sourceAccount.ID),
-	})
-	suite.Require().NoError(err, "echoing unchanged structural fields must not block a linked-tx date edit")
-
-	updated, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{linkedTx.ID}})
-	suite.Require().NoError(err)
-	suite.Assert().True(newDate.Equal(updated.Date), "linked transaction date should be updated")
-	suite.Assert().Equal(destAccount.ID, updated.AccountID, "account must remain unchanged")
-
-	// A genuine account change on a linked transaction is still rejected.
-	err = suite.Services.Transaction.Update(ctx, linkedTx.ID, user.ID, &domain.TransactionUpdateRequest{
-		AccountID: lo.ToPtr(sourceAccount.ID),
-	})
-	suite.Require().Error(err)
-	var serviceErrs pkgErrors.ServiceErrors
-	suite.Require().True(errors.As(err, &serviceErrs), "error should be ServiceErrors type")
-	suite.Assert().True(lo.SomeBy(serviceErrs, func(e *pkgErrors.ServiceError) bool {
-		return lo.Contains(e.Tags, string(pkgErrors.ErrorTagLinkedTransactionDisallowedFieldChanged))
-	}), "expected ErrorTagLinkedTransactionDisallowedFieldChanged when the account genuinely changes")
-	suite.Assert().True(lo.SomeBy(serviceErrs, func(e *pkgErrors.ServiceError) bool {
-		return lo.Contains(e.Tags, string(pkgErrors.ErrorTagAccountCannotBeChangedForSharedTransactions))
-	}), "expected ErrorTagAccountCannotBeChangedForSharedTransactions when the account genuinely changes")
 }
 
 func TestTransactionUpdateWithDB(t *testing.T) {
