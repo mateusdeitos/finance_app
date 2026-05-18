@@ -54,7 +54,7 @@ function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCe
         <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
         <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
           <span>
-            <AccountAvatar account={toAccount} direction="to" size={28} />
+            <AccountAvatar account={toAccount} size={28} />
           </span>
         </Tooltip>
       </Group>
