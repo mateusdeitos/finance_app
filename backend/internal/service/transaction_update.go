@@ -1213,21 +1213,36 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 
 	sourceIDs, _ := s.transactionRepo.GetSourceTransactionIDs(ctx, transaction.ID)
 	isLinkedTransaction := len(sourceIDs) > 0
+
+	// Clients (e.g. the bulk-date-change flow and the edit form) echo the
+	// transaction's current account/type/recurrence/destination back in the
+	// update payload alongside the field they actually changed. For a linked
+	// transaction those structural fields are still rejected, but only when the
+	// request would genuinely change them — an unchanged echo must not block an
+	// otherwise-allowed date/description/category/tag/amount edit (issue #145).
+	accountChanged := lo.FromPtr(req.AccountID) > 0 && *req.AccountID != transaction.AccountID
+	typeChanged := req.TransactionType != nil && *req.TransactionType != transaction.Type
+
 	if isLinkedTransaction {
-		// amount, date, description, tags and category_id are allowed for linked tx edits.
-		disallowedFieldSet := lo.FromPtr(req.AccountID) > 0 ||
-			req.TransactionType != nil ||
-			req.RecurrenceSettings != nil ||
-			len(req.SplitSettings) > 0 ||
-			req.DestinationAccountID != nil
-		if disallowedFieldSet {
+		// recurrence_settings is echoed for recurring transactions, so only
+		// adding a recurrence to a non-recurring linked tx is a real change;
+		// destination_account_id is echoed for transfers, so it is only a real
+		// change on a non-transfer. split_settings has no effect on the
+		// linked-tx edit path (the split rebuild is skipped), so an echoed
+		// value is a harmless no-op.
+		recurrenceAdded := req.RecurrenceSettings != nil && transaction.TransactionRecurrenceID == nil
+		destinationOnNonTransfer := req.DestinationAccountID != nil && !transaction.Type.IsTransfer()
+
+		if accountChanged || typeChanged || recurrenceAdded || destinationOnNonTransfer {
 			errs = append(errs, pkgErrors.ErrLinkedTransactionDisallowedFieldChanged)
 		}
 	}
 
 	if lo.FromPtr(req.AccountID) > 0 {
 		if isLinkedTransaction {
-			errs = append(errs, pkgErrors.ErrAccountCannotBeChangedForSharedTransactions)
+			if accountChanged {
+				errs = append(errs, pkgErrors.ErrAccountCannotBeChangedForSharedTransactions)
+			}
 		} else {
 			_, err := s.services.Account.GetByID(ctx, userID, *req.AccountID)
 			if err != nil {
