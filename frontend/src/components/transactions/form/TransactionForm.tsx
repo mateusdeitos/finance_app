@@ -1,6 +1,12 @@
-import { type FocusEvent, type ReactNode, useState } from "react";
-import { useFormContext, Controller, useWatch, FieldPath, type FieldErrors } from "react-hook-form";
-import { DevTool } from "@hookform/devtools";
+import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useState } from "react";
+import {
+  useFormContext,
+  Controller,
+  useWatch,
+  FieldPath,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
 import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
@@ -24,6 +30,18 @@ import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionExtraSections } from "./TransactionExtraSections";
 import { TransactionFormValues } from "./transactionFormSchema";
 import { TransactionsTestIds, type TransactionExtraPanel } from "@/testIds";
+
+// React Hook Form DevTool — dev-only; lazy-loaded so it is excluded from the
+// production bundle. The cast restores the generic prop type that `lazy` erases.
+type DevToolComponent = ComponentType<{ control: Control<TransactionFormValues> }>;
+
+const DevTool: DevToolComponent = import.meta.env.PROD
+  ? () => null
+  : lazy(() =>
+      import("@hookform/devtools").then((m) => ({
+        default: m.DevTool as unknown as DevToolComponent,
+      })),
+    );
 
 export type { TransactionFormValues };
 
@@ -409,7 +427,9 @@ export const TransactionForm = ({
           </Button>
         </Group>
       </Box>
-      <DevTool control={control} />
+      <Suspense>
+        <DevTool control={control} />
+      </Suspense>
     </form>
   );
 };
