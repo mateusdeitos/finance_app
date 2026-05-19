@@ -45,19 +45,6 @@ type ImportCSVResponse struct {
 	ErrorCount     int               `json:"error_count"`
 }
 
-// CheckDuplicateRequest is the request body for the check-duplicate endpoint.
-type CheckDuplicateRequest struct {
-	Date        Date   `json:"date"`        // accepts YYYY-MM-DD, datetime, or RFC3339
-	Amount      int64  `json:"amount"`      // cents
-	Description string `json:"description"` // optional; used for fuzzy similarity matching
-	AccountID   *int   `json:"account_id"`  // optional; when set, only checks within that account
-}
-
-// CheckDuplicateResponse is the response of the check-duplicate endpoint.
-type CheckDuplicateResponse struct {
-	Matches []Transaction `json:"matches"`
-}
-
 // CheckDuplicateRowInput is a single row submitted to the bulk duplicate check.
 type CheckDuplicateRowInput struct {
 	RowIndex    int    `json:"row_index"`

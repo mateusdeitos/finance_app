@@ -175,20 +175,7 @@ func main() {
 	tags.DELETE("/:id", tagHandler.Delete)
 
 	// Transactions
-	transactions := api.Group("/transactions")
-	transactions.GET("", transactionHandler.Search)
-	transactions.POST("", transactionHandler.Create)
-	transactions.GET("/balance", transactionHandler.GetBalance)
-	transactions.GET("/suggestions", transactionHandler.Suggestions)
-	transactions.DELETE("/:id", transactionHandler.Delete)
-	transactions.GET("/:id", transactionHandler.GetByID)
-	transactions.PUT("/:id", transactionHandler.Update)
-	// transactions.POST("/bulk-update", transactionHandler.BulkUpdate)
-	transactions.POST("/import-csv", transactionHandler.ImportCSV)
-	transactions.POST("/check-duplicate", transactionHandler.CheckDuplicate)
-	transactions.POST("/check-duplicates-bulk", transactionHandler.CheckDuplicatesBulk)
-	// transactions.GET("/suggest-category", transactionHandler.SuggestCategory)
-	// transactions.POST("/recurring", transactionHandler.CreateRecurring)
+	registerTransactionRoutes(api, transactionHandler)
 
 	// Onboarding
 	onboarding := api.Group("/onboarding")
@@ -232,6 +219,19 @@ func main() {
 	}
 
 	log.Println("Server exited")
+}
+
+func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {
+	transactions := api.Group("/transactions")
+	transactions.GET("", h.Search)
+	transactions.POST("", h.Create)
+	transactions.GET("/balance", h.GetBalance)
+	transactions.GET("/suggestions", h.Suggestions)
+	transactions.DELETE("/:id", h.Delete)
+	transactions.GET("/:id", h.GetByID)
+	transactions.PUT("/:id", h.Update)
+	transactions.POST("/import-csv", h.ImportCSV)
+	transactions.POST("/check-duplicates-bulk", h.CheckDuplicatesBulk)
 }
 
 func initLogger(cfg *config.Config) zerolog.Logger {

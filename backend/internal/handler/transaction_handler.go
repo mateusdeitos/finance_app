@@ -318,38 +318,9 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// CheckDuplicate godoc
-// @Summary      Check if a transaction is a possible duplicate
-// @Description  Returns existing transactions that are possible duplicates of the given date, amount and description for the authenticated user. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
-// @Tags         transactions
-// @Accept       json
-// @Produce      json
-// @Security     CookieAuth
-// @Security     BearerAuth
-// @Param        request  body  domain.CheckDuplicateRequest  true  "Duplicate check params"
-// @Success      200  {object}  domain.CheckDuplicateResponse
-// @Failure      400  {object}  middleware.ErrorResponse
-// @Failure      401  {object}  middleware.ErrorResponse
-// @Router       /api/transactions/check-duplicate [post]
-func (h *TransactionHandler) CheckDuplicate(c echo.Context) error {
-	userID := appcontext.GetUserIDFromContext(c.Request().Context())
-
-	var req domain.CheckDuplicateRequest
-	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
-	}
-
-	matches, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date.Time, req.Amount, req.Description, req.AccountID)
-	if err != nil {
-		return pkgErrors.ToHTTPError(err)
-	}
-
-	return c.JSON(http.StatusOK, domain.CheckDuplicateResponse{Matches: matches})
-}
-
 // CheckDuplicatesBulk godoc
-// @Summary      Check many rows for possible duplicates at once
-// @Description  Runs the duplicate check for several rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
+// @Summary      Check rows for possible duplicates
+// @Description  Runs the duplicate check for one or more rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
 // @Tags         transactions
 // @Accept       json
 // @Produce      json

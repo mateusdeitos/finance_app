@@ -122,9 +122,7 @@ test.describe("Import transactions", () => {
     // The drawer's skip action flips the row to "Não importar".
     await importPage.markNotImportFromDrawer();
     await expect(
-      importPage.reviewStep
-        .getByTestId(ImportTestIds.RowSelectAction(0))
-        .locator("input"),
+      importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0)),
     ).toHaveValue("Não importar", { timeout: 5000 });
   });
 

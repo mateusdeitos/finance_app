@@ -1465,60 +1465,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transactions/check-duplicate": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns existing transactions that are possible duplicates of the given date, amount and description for the authenticated user. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "transactions"
-                ],
-                "summary": "Check if a transaction is a possible duplicate",
-                "parameters": [
-                    {
-                        "description": "Duplicate check params",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.CheckDuplicateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.CheckDuplicateResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/transactions/check-duplicates-bulk": {
             "post": {
                 "security": [
@@ -1529,7 +1475,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Runs the duplicate check for several rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
+                "description": "Runs the duplicate check for one or more rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1539,7 +1485,7 @@ const docTemplate = `{
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Check many rows for possible duplicates at once",
+                "summary": "Check rows for possible duplicates",
                 "parameters": [
                     {
                         "description": "Bulk duplicate check params",
@@ -2472,42 +2418,6 @@ const docTemplate = `{
                 "ChargeStatusRejected",
                 "ChargeStatusCancelled"
             ]
-        },
-        "domain.CheckDuplicateRequest": {
-            "type": "object",
-            "properties": {
-                "account_id": {
-                    "description": "optional; when set, only checks within that account",
-                    "type": "integer"
-                },
-                "amount": {
-                    "description": "cents",
-                    "type": "integer"
-                },
-                "date": {
-                    "description": "accepts YYYY-MM-DD, datetime, or RFC3339",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.Date"
-                        }
-                    ]
-                },
-                "description": {
-                    "description": "optional; used for fuzzy similarity matching",
-                    "type": "string"
-                }
-            }
-        },
-        "domain.CheckDuplicateResponse": {
-            "type": "object",
-            "properties": {
-                "matches": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Transaction"
-                    }
-                }
-            }
         },
         "domain.CheckDuplicateRowInput": {
             "type": "object",

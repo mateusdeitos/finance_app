@@ -69,7 +69,6 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 	}
 
 	rows := make([]domain.ParsedImportRow, 0)
-	duplicateCount := 0
 	errorCount := 0
 	dataRowIndex := 0
 
@@ -101,12 +100,9 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 				ParseErrors: []string{errorMessage},
 			}
 		} else {
-			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, typeDefinitionRule)
+			row = parseCSVRow(ctx, s, userID, dataRowIndex, record, colIdx, typeDefinitionRule)
 		}
 
-		if len(row.DuplicateMatches) > 0 {
-			duplicateCount++
-		}
 		if len(row.ParseErrors) > 0 {
 			errorCount++
 		}
@@ -116,6 +112,8 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 	if len(rows) == 0 {
 		return nil, pkgErrors.ErrImportNoRows
 	}
+
+	duplicateCount := detectDuplicateRows(ctx, s, userID, accountID, rows)
 
 	return &domain.ImportCSVResponse{
 		Rows:           rows,
@@ -178,7 +176,6 @@ func parseCSVRow(
 	ctx context.Context,
 	s *transactionService,
 	userID int,
-	accountID int,
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
@@ -283,12 +280,8 @@ func parseCSVRow(
 		}
 	}
 
-	// 5. Detecção de duplicados
-	if row.Date != nil && row.Amount > 0 {
-		if matches, err := findDuplicateMatches(ctx, s, userID, *row.Date, row.Amount, row.Description, &accountID); err == nil {
-			row.DuplicateMatches = matches
-		}
-	}
+	// Duplicate detection runs in bulk after all rows are parsed (see
+	// ParseImportCSV) so the database is queried once per month, not per row.
 
 	return row
 }
@@ -356,19 +349,6 @@ func parseAmountSigned(s string) (int64, error) {
 // transaction amounts to be considered a possible duplicate.
 const duplicateAmountThreshold = int64(2)
 
-// findDuplicateMatches returns existing transactions that are possible
-// duplicates of a row being imported. A transaction matches when it falls in
-// the same calendar month as date, its amount is within ±2 cents of amount,
-// and (when description is non-empty) its description has trigram similarity
-// >= descriptionSimilarityThreshold.
-func findDuplicateMatches(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, description string, accountID *int) ([]domain.Transaction, error) {
-	txs, err := searchMonthWindow(ctx, s, userID, date, accountID)
-	if err != nil {
-		return nil, err
-	}
-	return filterDuplicateMatches(txs, amount, description), nil
-}
-
 // searchMonthWindow fetches every transaction for the user in the calendar
 // month of date, optionally scoped to a single account.
 func searchMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Transaction, error) {
@@ -405,6 +385,40 @@ func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, desc
 		matches = append(matches, *tx)
 	}
 	return matches
+}
+
+// detectDuplicateRows fills DuplicateMatches on every parsed row that has a
+// valid date and amount, querying the database once per (account, month)
+// window rather than once per row. It returns the count of flagged rows.
+func detectDuplicateRows(ctx context.Context, s *transactionService, userID, accountID int, rows []domain.ParsedImportRow) int {
+	inputs := make([]domain.CheckDuplicateRowInput, 0, len(rows))
+	for i, row := range rows {
+		if row.Date != nil && row.Amount > 0 {
+			inputs = append(inputs, domain.CheckDuplicateRowInput{
+				RowIndex:    i,
+				Date:        domain.Date{Time: *row.Date},
+				Amount:      row.Amount,
+				Description: row.Description,
+			})
+		}
+	}
+	if len(inputs) == 0 {
+		return 0
+	}
+
+	matches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
+	if err != nil {
+		return 0
+	}
+
+	count := 0
+	for i := range rows {
+		if m := matches[i]; len(m) > 0 {
+			rows[i].DuplicateMatches = m
+			count++
+		}
+	}
+	return count
 }
 
 var (

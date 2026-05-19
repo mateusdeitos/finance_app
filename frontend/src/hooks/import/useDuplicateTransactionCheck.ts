@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
-import { checkDuplicateTransaction } from '@/api/transactions'
+import { checkDuplicatesBulk } from '@/api/transactions'
 import { Transactions } from '@/types/transactions'
 import { QueryKeys } from '@/utils/queryKeys'
 
@@ -59,13 +59,20 @@ export function useDuplicateTransactionCheck({
       debouncedDescription,
       accountId,
     ],
-    queryFn: () =>
-      checkDuplicateTransaction({
-        date: debouncedDate,
-        amount: debouncedAmount,
-        description: debouncedDescription,
+    queryFn: async () => {
+      const res = await checkDuplicatesBulk({
         account_id: accountId,
-      }),
+        rows: [
+          {
+            row_index: 0,
+            date: debouncedDate,
+            amount: debouncedAmount,
+            description: debouncedDescription,
+          },
+        ],
+      })
+      return res.rows[0]?.matches ?? []
+    },
     enabled: enabled && !!debouncedDate && debouncedAmount > 0 && fieldsChanged,
     staleTime: Infinity,
   })
@@ -76,6 +83,6 @@ export function useDuplicateTransactionCheck({
   })
 
   useEffect(() => {
-    if (data) onResultRef.current(data.matches)
+    if (data) onResultRef.current(data)
   }, [data])
 }
