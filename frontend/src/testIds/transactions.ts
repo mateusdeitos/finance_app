@@ -36,6 +36,8 @@ export const TransactionsTestIds = {
   OptionDestinationAccount: (accountId: number | string) =>
     `option_destination_account_${accountId}` as const,
   OptionCategory: (categoryId: number | string) => `option_category_${categoryId}` as const,
+  OptionDescriptionSuggestion: (description: string) =>
+    `option_description_suggestion_${description}` as const,
 
   // SegmentedControl items
   SegmentTransactionType: (type: TransactionType) => `segment_transaction_type_${type}` as const,
@@ -124,4 +126,13 @@ export const TransactionsTestIds = {
   PropagationOption: (opt: PropagationOption) => `propagation_option_${opt}` as const,
   PropagationUpdateOption: (opt: PropagationOption) =>
     `propagation_update_option_${opt}` as const,
+
+  // Amount calculator
+  BtnOpenCalculator: 'btn_open_calculator',
+  DrawerCalculator: 'drawer_calculator',
+  CalcDisplay: 'calculator_display',
+  CalcExpression: 'calculator_expression',
+  BtnCalcApply: 'btn_calculator_apply',
+  BtnCalcCancel: 'btn_calculator_cancel',
+  CalcKey: (key: string) => `calc_key_${key}` as const,
 } as const

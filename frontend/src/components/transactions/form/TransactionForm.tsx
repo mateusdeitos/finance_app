@@ -1,6 +1,12 @@
-import { type FocusEvent, type ReactNode, useState } from "react";
-import { useFormContext, Controller, useWatch, FieldPath, type FieldErrors } from "react-hook-form";
-import { DevTool } from "@hookform/devtools";
+import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useState } from "react";
+import {
+  useFormContext,
+  Controller,
+  useWatch,
+  FieldPath,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
 import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
@@ -24,6 +30,18 @@ import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionExtraSections } from "./TransactionExtraSections";
 import { TransactionFormValues } from "./transactionFormSchema";
 import { TransactionsTestIds, type TransactionExtraPanel } from "@/testIds";
+
+// React Hook Form DevTool — dev-only; lazy-loaded so it is excluded from the
+// production bundle. The cast restores the generic prop type that `lazy` erases.
+type DevToolComponent = ComponentType<{ control: Control<TransactionFormValues> }>;
+
+const DevTool: DevToolComponent = import.meta.env.PROD
+  ? () => null
+  : lazy(() =>
+      import("@hookform/devtools").then((m) => ({
+        default: m.DevTool as unknown as DevToolComponent,
+      })),
+    );
 
 export type { TransactionFormValues };
 
@@ -71,7 +89,7 @@ export const TransactionForm = ({
     setValue,
     setFocus,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
   useFocusFieldOnMount(setFocus, focusField);
@@ -113,11 +131,13 @@ export const TransactionForm = ({
   };
 
   function handleSuggestionSelect(suggestion: Transactions.TransactionSuggestion) {
-    setValue("transaction_type", suggestion.type);
-    setValue("amount", suggestion.amount);
-    if (suggestion.account_id) setValue("account_id", suggestion.account_id);
-    if (suggestion.category_id) setValue("category_id", suggestion.category_id);
-    if (suggestion.tags)
+    // Only fill fields the user hasn't manually edited, so a suggestion never
+    // overwrites a value the user already set on purpose.
+    if (!dirtyFields.transaction_type) setValue("transaction_type", suggestion.type);
+    if (!dirtyFields.amount) setValue("amount", suggestion.amount);
+    if (!dirtyFields.account_id && suggestion.account_id) setValue("account_id", suggestion.account_id);
+    if (!dirtyFields.category_id && suggestion.category_id) setValue("category_id", suggestion.category_id);
+    if (!dirtyFields.tags && suggestion.tags)
       setValue(
         "tags",
         suggestion.tags.map((t) => t.name),
@@ -238,6 +258,7 @@ export const TransactionForm = ({
                 ref={field.ref}
                 label="Valor (R$)"
                 required
+                withCalculator
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.amount?.message}
@@ -409,7 +430,9 @@ export const TransactionForm = ({
           </Button>
         </Group>
       </Box>
-      <DevTool control={control} />
+      <Suspense>
+        <DevTool control={control} />
+      </Suspense>
     </form>
   );
 };

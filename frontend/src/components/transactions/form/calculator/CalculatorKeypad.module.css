@@ -1,0 +1,14 @@
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--mantine-spacing-xs);
+}
+
+.key {
+  height: 3.25rem;
+  font-size: var(--mantine-font-size-lg);
+}
+
+.wide {
+  grid-column: span 2;
+}

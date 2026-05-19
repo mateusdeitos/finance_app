@@ -232,8 +232,8 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		}
 		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, TypeDefinitionPositiveAsIncome, buildCSV(rows))
 		svcErr, ok := pkgErrors.AsServiceError(err)
-		suite.Require().True(ok)
-		suite.Contains(svcErr.Tags, string(pkgErrors.ErrorTagImportMaxRowsExceeded))
+		suite.Require().True(ok, "expected *ServiceError, got %T", err)
+		suite.Assert().Contains(svcErr.Tags, string(pkgErrors.ErrorTagImportMaxRowsExceeded))
 	})
 
 	suite.Run("UTF-8 BOM stripped", func() {

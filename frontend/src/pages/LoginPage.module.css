@@ -4,7 +4,11 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: linear-gradient(160deg, var(--mantine-color-blue-0) 0%, var(--mantine-color-white) 60%);
+  background: linear-gradient(
+    160deg,
+    light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-8)) 0%,
+    light-dark(var(--mantine-color-white), var(--mantine-color-dark-7)) 60%
+  );
 }
 
 .content {
@@ -20,12 +24,12 @@
 .title {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--mantine-color-blue-8);
+  color: light-dark(var(--mantine-color-blue-8), var(--mantine-color-blue-2));
   text-align: center;
 }
 
 .subtitle {
-  color: var(--mantine-color-grey-6);
+  color: var(--mantine-color-dimmed);
   text-align: center;
   font-size: 1rem;
   line-height: 1.5;
@@ -36,18 +40,18 @@
   gap: 0.5rem;
   width: 100%;
   padding: 1.25rem 1.5rem;
-  background: var(--mantine-color-white);
+  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-6));
   border-radius: var(--mantine-radius-md);
-  border: 1px solid var(--mantine-color-grey-1);
+  border: 1px solid light-dark(var(--mantine-color-grey-1), var(--mantine-color-dark-4));
 }
 
 .googleButton {
   min-height: 3rem;
   font-size: 1rem;
   font-weight: 500;
-  border-color: var(--mantine-color-grey-2);
+  border-color: light-dark(var(--mantine-color-grey-2), var(--mantine-color-dark-4));
 }
 
 .googleButton:hover {
-  background-color: var(--mantine-color-grey-0);
+  background-color: light-dark(var(--mantine-color-grey-0), var(--mantine-color-dark-5));
 }

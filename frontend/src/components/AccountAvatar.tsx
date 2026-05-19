@@ -6,12 +6,11 @@ import { CommonTestIds } from "@/testIds";
 import { useMe } from "@/hooks/useMe";
 
 interface AccountAvatarProps {
-  direction?: "from" | "to";
   account: Transactions.Account | null | undefined;
   size: MantineSize | number;
 }
 
-export function AccountAvatar({ account, size, direction = "from" }: AccountAvatarProps) {
+export function AccountAvatar({ account, size }: AccountAvatarProps) {
   const {
     query: { data: currentUserId },
   } = useMe((me) => me.id);
@@ -23,15 +22,8 @@ export function AccountAvatar({ account, size, direction = "from" }: AccountAvat
   if (isShared) {
     const conn = account.user_connection!;
     const isFromUser = conn.from_user_id === currentUserId;
-    const avatars: [string | undefined, string | undefined] = [conn.to_user_avatar_url, conn.from_user_avatar_url];
-    const names: [string | undefined, string | undefined] = [conn.to_user_name, conn.from_user_name];
-    if (direction === "to") {
-      avatars.reverse();
-      names.reverse();
-    }
-
-    const partnerAvatarUrl = isFromUser ? avatars[0] : avatars[1];
-    const partnerName = (isFromUser ? names[0] : names[1]) ?? account.name;
+    const partnerAvatarUrl = isFromUser ? conn.to_user_avatar_url : conn.from_user_avatar_url;
+    const partnerName = (isFromUser ? conn.to_user_name : conn.from_user_name) ?? account.name;
     return (
       <Avatar
         src={partnerAvatarUrl}
