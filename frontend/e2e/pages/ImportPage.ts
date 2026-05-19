@@ -17,6 +17,7 @@ export class ImportPage {
   readonly finishedStep: Locator;
   readonly processButton: Locator;
   readonly confirmButton: Locator;
+  readonly duplicatesDrawer: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -25,6 +26,7 @@ export class ImportPage {
     this.finishedStep = page.getByTestId(ImportTestIds.FinishedStep);
     this.processButton = page.getByTestId(ImportTestIds.BtnProcessCSV);
     this.confirmButton = page.getByTestId(ImportTestIds.BtnConfirm);
+    this.duplicatesDrawer = page.getByTestId(ImportTestIds.DrawerDuplicates);
   }
 
   /** Navigate to /transactions and click "Importar transações" in the overflow menu. */
@@ -113,7 +115,7 @@ export class ImportPage {
     const statusCell = this.reviewStep.getByTestId(ImportTestIds.RowStatus(rowIndex));
     const status = await statusCell.getAttribute("data-status");
     if (status && status !== "idle") return status;
-    // idle → fall back to the row's action (e.g. "duplicate", "skip")
+    // idle → fall back to the row's action (e.g. "skip")
     const actionSelect = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     const value = await actionSelect
       .locator("input")
@@ -257,6 +259,23 @@ export class ImportPage {
   async getRowActionLabel(rowIndex: number): Promise<string> {
     const select = this.reviewStep.getByTestId(ImportTestIds.RowSelectAction(rowIndex));
     return select.locator("input").inputValue();
+  }
+
+  /** The duplicate-warning icon shown in a row's status cell. */
+  duplicateWarning(rowIndex: number): Locator {
+    return this.reviewStep.getByTestId(ImportTestIds.RowDuplicateWarning(rowIndex));
+  }
+
+  /** Click a row's duplicate-warning icon and wait for the inspection drawer. */
+  async openDuplicatesDrawer(rowIndex = 0) {
+    await this.duplicateWarning(rowIndex).click();
+    await expect(this.duplicatesDrawer).toBeVisible({ timeout: 5000 });
+  }
+
+  /** Click "Marcar como não importar" in the duplicates drawer and wait for it to close. */
+  async markNotImportFromDrawer() {
+    await this.duplicatesDrawer.getByTestId(ImportTestIds.DrawerDuplicatesSkipBtn).click();
+    await expect(this.duplicatesDrawer).not.toBeVisible({ timeout: 5000 });
   }
 
   /**

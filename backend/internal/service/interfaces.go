@@ -26,7 +26,8 @@ type TransactionService interface {
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	ParseImportCSV(ctx context.Context, userID, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
-	CheckDuplicateTransaction(ctx context.Context, userID int, date time.Time, amount int64, accountID *int) (bool, error)
+	CheckDuplicateTransaction(ctx context.Context, userID int, date time.Time, amount int64, description string, accountID *int) ([]domain.Transaction, error)
+	CheckDuplicatesBulk(ctx context.Context, userID int, accountID *int, rows []domain.CheckDuplicateRowInput) ([]domain.CheckDuplicateRowResult, error)
 }
 
 type AccountService interface {

@@ -1469,7 +1469,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns whether a transaction with the given date, description and amount already exists for the authenticated user.",
+                "description": "Returns existing transactions that are possible duplicates of the given date, amount and description for the authenticated user. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1479,7 +1479,7 @@
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Check if a transaction is a duplicate",
+                "summary": "Check if a transaction is a possible duplicate",
                 "parameters": [
                     {
                         "description": "Duplicate check params",
@@ -1495,10 +1495,61 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "boolean"
-                            }
+                            "$ref": "#/definitions/domain.CheckDuplicateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/check-duplicates-bulk": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Runs the duplicate check for several rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Check many rows for possible duplicates at once",
+                "parameters": [
+                    {
+                        "description": "Bulk duplicate check params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CheckDuplicatesBulkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CheckDuplicatesBulkResponse"
                         }
                     },
                     "400": {
@@ -1526,7 +1577,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
+                "description": "Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and possible duplicate matches. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -2434,6 +2485,79 @@
                             "$ref": "#/definitions/domain.Date"
                         }
                     ]
+                },
+                "description": {
+                    "description": "optional; used for fuzzy similarity matching",
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CheckDuplicateResponse": {
+            "type": "object",
+            "properties": {
+                "matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                }
+            }
+        },
+        "domain.CheckDuplicateRowInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "date": {
+                    "$ref": "#/definitions/domain.Date"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "row_index": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CheckDuplicateRowResult": {
+            "type": "object",
+            "properties": {
+                "matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                },
+                "row_index": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CheckDuplicatesBulkRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "description": "optional; when set, only checks within that account",
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CheckDuplicateRowInput"
+                    }
+                }
+            }
+        },
+        "domain.CheckDuplicatesBulkResponse": {
+            "type": "object",
+            "properties": {
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CheckDuplicateRowResult"
+                    }
                 }
             }
         },
@@ -2505,12 +2629,10 @@
         "domain.ImportRowStatus": {
             "type": "string",
             "enum": [
-                "pending",
-                "duplicate"
+                "pending"
             ],
             "x-enum-varnames": [
-                "ImportRowStatusPending",
-                "ImportRowStatusDuplicate"
+                "ImportRowStatusPending"
             ]
         },
         "domain.OnboardingAccountInput": {
@@ -2604,6 +2726,12 @@
                 },
                 "destination_account_id": {
                     "type": "integer"
+                },
+                "duplicate_matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
                 },
                 "parse_errors": {
                     "type": "array",

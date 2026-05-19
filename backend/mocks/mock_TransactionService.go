@@ -24,27 +24,29 @@ func (_m *MockTransactionService) EXPECT() *MockTransactionService_Expecter {
 	return &MockTransactionService_Expecter{mock: &_m.Mock}
 }
 
-// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, amount, accountID
-func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date time.Time, amount int64, accountID *int) (bool, error) {
-	ret := _m.Called(ctx, userID, date, amount, accountID)
+// CheckDuplicateTransaction provides a mock function with given fields: ctx, userID, date, amount, description, accountID
+func (_m *MockTransactionService) CheckDuplicateTransaction(ctx context.Context, userID int, date time.Time, amount int64, description string, accountID *int) ([]domain.Transaction, error) {
+	ret := _m.Called(ctx, userID, date, amount, description, accountID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CheckDuplicateTransaction")
 	}
 
-	var r0 bool
+	var r0 []domain.Transaction
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, time.Time, int64, *int) (bool, error)); ok {
-		return rf(ctx, userID, date, amount, accountID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, time.Time, int64, string, *int) ([]domain.Transaction, error)); ok {
+		return rf(ctx, userID, date, amount, description, accountID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, time.Time, int64, *int) bool); ok {
-		r0 = rf(ctx, userID, date, amount, accountID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, time.Time, int64, string, *int) []domain.Transaction); ok {
+		r0 = rf(ctx, userID, date, amount, description, accountID)
 	} else {
-		r0 = ret.Get(0).(bool)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Transaction)
+		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, time.Time, int64, *int) error); ok {
-		r1 = rf(ctx, userID, date, amount, accountID)
+	if rf, ok := ret.Get(1).(func(context.Context, int, time.Time, int64, string, *int) error); ok {
+		r1 = rf(ctx, userID, date, amount, description, accountID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -62,24 +64,86 @@ type MockTransactionService_CheckDuplicateTransaction_Call struct {
 //   - userID int
 //   - date time.Time
 //   - amount int64
+//   - description string
 //   - accountID *int
-func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, amount interface{}, accountID interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
-	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, amount, accountID)}
+func (_e *MockTransactionService_Expecter) CheckDuplicateTransaction(ctx interface{}, userID interface{}, date interface{}, amount interface{}, description interface{}, accountID interface{}) *MockTransactionService_CheckDuplicateTransaction_Call {
+	return &MockTransactionService_CheckDuplicateTransaction_Call{Call: _e.mock.On("CheckDuplicateTransaction", ctx, userID, date, amount, description, accountID)}
 }
 
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date time.Time, amount int64, accountID *int)) *MockTransactionService_CheckDuplicateTransaction_Call {
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Run(run func(ctx context.Context, userID int, date time.Time, amount int64, description string, accountID *int)) *MockTransactionService_CheckDuplicateTransaction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(time.Time), args[3].(int64), args[4].(*int))
+		run(args[0].(context.Context), args[1].(int), args[2].(time.Time), args[3].(int64), args[4].(string), args[5].(*int))
 	})
 	return _c
 }
 
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 bool, _a1 error) *MockTransactionService_CheckDuplicateTransaction_Call {
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) Return(_a0 []domain.Transaction, _a1 error) *MockTransactionService_CheckDuplicateTransaction_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, time.Time, int64, *int) (bool, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
+func (_c *MockTransactionService_CheckDuplicateTransaction_Call) RunAndReturn(run func(context.Context, int, time.Time, int64, string, *int) ([]domain.Transaction, error)) *MockTransactionService_CheckDuplicateTransaction_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckDuplicatesBulk provides a mock function with given fields: ctx, userID, accountID, rows
+func (_m *MockTransactionService) CheckDuplicatesBulk(ctx context.Context, userID int, accountID *int, rows []domain.CheckDuplicateRowInput) ([]domain.CheckDuplicateRowResult, error) {
+	ret := _m.Called(ctx, userID, accountID, rows)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckDuplicatesBulk")
+	}
+
+	var r0 []domain.CheckDuplicateRowResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int, []domain.CheckDuplicateRowInput) ([]domain.CheckDuplicateRowResult, error)); ok {
+		return rf(ctx, userID, accountID, rows)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, *int, []domain.CheckDuplicateRowInput) []domain.CheckDuplicateRowResult); ok {
+		r0 = rf(ctx, userID, accountID, rows)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.CheckDuplicateRowResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, *int, []domain.CheckDuplicateRowInput) error); ok {
+		r1 = rf(ctx, userID, accountID, rows)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionService_CheckDuplicatesBulk_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckDuplicatesBulk'
+type MockTransactionService_CheckDuplicatesBulk_Call struct {
+	*mock.Call
+}
+
+// CheckDuplicatesBulk is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - accountID *int
+//   - rows []domain.CheckDuplicateRowInput
+func (_e *MockTransactionService_Expecter) CheckDuplicatesBulk(ctx interface{}, userID interface{}, accountID interface{}, rows interface{}) *MockTransactionService_CheckDuplicatesBulk_Call {
+	return &MockTransactionService_CheckDuplicatesBulk_Call{Call: _e.mock.On("CheckDuplicatesBulk", ctx, userID, accountID, rows)}
+}
+
+func (_c *MockTransactionService_CheckDuplicatesBulk_Call) Run(run func(ctx context.Context, userID int, accountID *int, rows []domain.CheckDuplicateRowInput)) *MockTransactionService_CheckDuplicatesBulk_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(*int), args[3].([]domain.CheckDuplicateRowInput))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicatesBulk_Call) Return(_a0 []domain.CheckDuplicateRowResult, _a1 error) *MockTransactionService_CheckDuplicatesBulk_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionService_CheckDuplicatesBulk_Call) RunAndReturn(run func(context.Context, int, *int, []domain.CheckDuplicateRowInput) ([]domain.CheckDuplicateRowResult, error)) *MockTransactionService_CheckDuplicatesBulk_Call {
 	_c.Call.Return(run)
 	return _c
 }

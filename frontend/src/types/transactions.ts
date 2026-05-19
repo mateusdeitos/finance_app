@@ -208,8 +208,8 @@ export namespace Transactions {
 
   // --- CSV Import ---
 
-  export type ImportRowStatus = "pending" | "duplicate";
-  export type ImportRowAction = "import" | "skip" | "duplicate";
+  export type ImportRowStatus = "pending";
+  export type ImportRowAction = "import" | "skip";
 
   export interface ParsedImportRow {
     row_index: number;
@@ -225,6 +225,8 @@ export namespace Transactions {
     recurrence_count?: number;
     recurrence_current_installment?: number;
     parse_errors?: string[];
+    /** Existing transactions detected as possible duplicates of this row. */
+    duplicate_matches?: Transaction[];
   }
 
   export type TypeDefinitionRule = "positive_as_income" | "positive_as_expense";
@@ -234,6 +236,12 @@ export namespace Transactions {
     total_rows: number;
     duplicate_count: number;
     error_count: number;
+  }
+
+  /** Result of the bulk duplicate check, keyed back to the submitted row_index. */
+  export interface CheckDuplicateRowResult {
+    row_index: number;
+    matches: Transaction[];
   }
 
   export interface ImportRowState {

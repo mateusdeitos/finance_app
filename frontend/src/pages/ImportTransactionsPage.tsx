@@ -18,7 +18,7 @@ import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useForm, useFieldArray, FormProvider, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { createTransaction } from '@/api/transactions'
+import { checkDuplicatesBulk, createTransaction } from '@/api/transactions'
 import { useRedirectOnImportSuccess } from '@/hooks/import/useRedirectOnImportSuccess'
 import { useSharedAccounts } from '@/hooks/import/useImportOptions'
 import { Transactions } from '@/types/transactions'
@@ -137,14 +137,43 @@ export function ImportTransactionsPage() {
     })
   }
 
+  // Re-run the duplicate check for a set of rows after a bulk edit and write
+  // the fresh matches back. Best-effort: a failed call leaves the prior hint.
+  const recheckDuplicates = async (indices: number[]) => {
+    const accountId = form.getValues('accountId')
+    const rows = indices
+      .map((i) => ({ i, r: form.getValues(`rows.${i}`) }))
+      .filter(({ r }) => r.action === 'import' && !!r.date && r.amount > 0)
+      .map(({ i, r }) => ({
+        row_index: i,
+        date: r.date,
+        amount: r.amount,
+        description: r.description,
+      }))
+    if (rows.length === 0) return
+    try {
+      const res = await checkDuplicatesBulk({ account_id: accountId, rows })
+      for (const result of res.rows) {
+        form.setValue(`rows.${result.row_index}.duplicate_matches`, result.matches)
+      }
+    } catch {
+      // best-effort; the duplicate hint is non-blocking
+    }
+  }
+
   const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
     forEachSelectedRow((i) => form.setValue(`rows.${i}.action`, action))
     clearSelection()
   }
 
   const handleBulkSetDate = (date: string) => {
-    forEachSelectedRow((i) => form.setValue(`rows.${i}.date`, date))
+    const indices: number[] = []
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.date`, date)
+      indices.push(i)
+    })
     clearSelection()
+    void recheckDuplicates(indices)
   }
 
   const handleBulkSetCategory = (categoryId: number) => {
@@ -158,8 +187,13 @@ export function ImportTransactionsPage() {
   }
 
   const handleSetDescription = (description: string) => {
-    forEachSelectedRow((i) => form.setValue(`rows.${i}.description`, description))
+    const indices: number[] = []
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.description`, description)
+      indices.push(i)
+    })
     clearSelection()
+    void recheckDuplicates(indices)
   }
 
   const handleRemoveSelected = () => {

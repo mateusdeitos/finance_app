@@ -3,11 +3,6 @@
   opacity: 0.7;
 }
 
-.rowDuplicate {
-  background: var(--mantine-color-yellow-0);
-  opacity: 0.8;
-}
-
 .cellError input,
 .cellError button,
 .cellError .mantine-Select-input {

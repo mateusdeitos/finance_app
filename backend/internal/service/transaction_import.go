@@ -104,7 +104,7 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, typeDefinitionRule)
 		}
 
-		if row.Status == domain.ImportRowStatusDuplicate {
+		if len(row.DuplicateMatches) > 0 {
 			duplicateCount++
 		}
 		if len(row.ParseErrors) > 0 {
@@ -285,8 +285,8 @@ func parseCSVRow(
 
 	// 5. Detecção de duplicados
 	if row.Date != nil && row.Amount > 0 {
-		if isDuplicate(ctx, s, userID, *row.Date, row.Amount, &accountID) {
-			row.Status = domain.ImportRowStatusDuplicate
+		if matches, err := findDuplicateMatches(ctx, s, userID, *row.Date, row.Amount, row.Description, &accountID); err == nil {
+			row.DuplicateMatches = matches
 		}
 	}
 
@@ -352,31 +352,59 @@ func parseAmountSigned(s string) (int64, error) {
 	return int64(math.Round(f * 100)), nil
 }
 
-// isDuplicate verifica se a transação já existe baseado em data, valor e conta.
-// Range: start of previous month → end of transaction's date month.
-func isDuplicate(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, accountID *int) bool {
-	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
-	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
+// duplicateAmountThreshold is the maximum absolute difference in cents for two
+// transaction amounts to be considered a possible duplicate.
+const duplicateAmountThreshold = int64(2)
+
+// findDuplicateMatches returns existing transactions that are possible
+// duplicates of a row being imported. A transaction matches when it falls in
+// the same calendar month as date, its amount is within ±2 cents of amount,
+// and (when description is non-empty) its description has trigram similarity
+// >= descriptionSimilarityThreshold.
+func findDuplicateMatches(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, description string, accountID *int) ([]domain.Transaction, error) {
+	txs, err := searchMonthWindow(ctx, s, userID, date, accountID)
+	if err != nil {
+		return nil, err
+	}
+	return filterDuplicateMatches(txs, amount, description), nil
+}
+
+// searchMonthWindow fetches every transaction for the user in the calendar
+// month of date, optionally scoped to a single account.
+func searchMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Transaction, error) {
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+	start := period.StartDate()
+	end := period.EndDate()
 
 	filter := domain.TransactionFilter{
 		UserID:    &userID,
-		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
-		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
 	}
-	txs, err := s.transactionRepo.Search(ctx, filter)
-	if err != nil {
-		return false
-	}
+	return s.transactionRepo.Search(ctx, filter)
+}
 
-	for _, tx := range txs {
-		if tx.Amount == amount {
-			return true
+// filterDuplicateMatches keeps only the candidates that are possible
+// duplicates of (amount, description): amount within ±2 cents and, when a
+// description is supplied, trigram similarity >= descriptionSimilarityThreshold.
+func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, description string) []domain.Transaction {
+	matches := make([]domain.Transaction, 0)
+	for _, tx := range candidates {
+		if tx == nil {
+			continue
 		}
+		if diff := tx.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
+			continue
+		}
+		if description != "" && trigramSimilarity(tx.Description, description) < descriptionSimilarityThreshold {
+			continue
+		}
+		matches = append(matches, *tx)
 	}
-	return false
+	return matches
 }
 
 var (

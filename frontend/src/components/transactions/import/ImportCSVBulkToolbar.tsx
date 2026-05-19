@@ -22,7 +22,6 @@ import { ImportTestIds } from "@/testIds";
 const ACTION_OPTIONS = [
   { value: "import", label: "Importar" },
   { value: "skip", label: "Não importar" },
-  { value: "duplicate", label: "Duplicado" },
 ];
 
 const TYPE_OPTIONS: Array<{ value: Transactions.TransactionType; label: string }> = [

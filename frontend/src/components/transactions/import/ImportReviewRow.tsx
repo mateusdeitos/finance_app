@@ -1,7 +1,7 @@
 import { forwardRef, memo } from "react";
 import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
-import { IconAlertCircle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
+import { IconAlertCircle, IconAlertTriangle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useCategoryOptions, useAccountOptions, usePersonalAccountOptions, useSharedAccounts } from "@/hooks/import/useImportOptions";
 import { useDuplicateTransactionCheck } from "@/hooks/import/useDuplicateTransactionCheck";
@@ -14,6 +14,7 @@ import { SplitPopover } from "./SplitPopover";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateCategoryDrawer } from "./CreateCategoryDrawer";
+import { DuplicateTransactionsDrawer } from "./DuplicateTransactionsDrawer";
 import { AccountDrawer } from "@/components/accounts/AccountDrawer";
 import { useSelectionStore } from "./selectionStore";
 import { ImportTestIds, type ImportRowAction, type ImportRowTransactionType } from '@/testIds'
@@ -27,7 +28,6 @@ const TRANSACTION_TYPE_OPTIONS = [
 const ACTION_OPTIONS = [
   { value: "import", label: "Importar" },
   { value: "skip", label: "Não importar" },
-  { value: "duplicate", label: "Duplicado" },
 ];
 
 const RECURRENCE_TYPE_LABELS: Record<string, string> = {
@@ -69,6 +69,7 @@ export const ImportReviewRow = memo(
       parseErrors,
       sourceAccountId,
       destinationAccountId,
+      duplicateMatches,
     ] = useWatch({
       control: form.control,
       name: [
@@ -82,6 +83,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.parse_errors`,
         `rows.${rowIndex}.account_id`,
         `rows.${rowIndex}.destination_account_id`,
+        `rows.${rowIndex}.duplicate_matches`,
       ],
     });
 
@@ -97,9 +99,22 @@ export const ImportReviewRow = memo(
     const isSharedAccount = sharedAccounts.some((a) => a.id === sourceAccountId);
 
     function rowClass() {
-      if (action === "duplicate") return classes.rowDuplicate;
       if (isSkipped) return classes.rowSkipped;
       return undefined;
+    }
+
+    function openDuplicatesDrawer() {
+      const row = form.getValues(`rows.${rowIndex}`);
+      void renderDrawer<"skip" | void>(() => (
+        <DuplicateTransactionsDrawer
+          row={{ date: row.date, description: row.description, amount: row.amount }}
+          matches={row.duplicate_matches ?? []}
+        />
+      ))
+        .then((result) => {
+          if (result === "skip") form.setValue(`rows.${rowIndex}.action`, "skip");
+        })
+        .catch(() => {});
     }
 
     function recurrenceSummary() {
@@ -124,6 +139,22 @@ export const ImportReviewRow = memo(
         return (
           <Tooltip label={parseErrors.join("; ")} withArrow multiline maw={300}>
             <IconAlertCircle size={16} color="var(--mantine-color-orange-6)" />
+          </Tooltip>
+        );
+      }
+      if (duplicateMatches?.length) {
+        return (
+          <Tooltip label="Possível duplicidade detectada" withArrow>
+            <ActionIcon
+              size="xs"
+              variant="subtle"
+              color="orange"
+              onClick={openDuplicatesDrawer}
+              aria-label="Possível duplicidade detectada"
+              data-testid={ImportTestIds.RowDuplicateWarning(rowIndex)}
+            >
+              <IconAlertTriangle size={16} color="var(--mantine-color-orange-6)" />
+            </ActionIcon>
           </Tooltip>
         );
       }
@@ -528,17 +559,19 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
 }
 
 // ─── RowDuplicateCheck ────────────────────────────────────────────────────────
-// Subscribes to date/amount/action for a single row and runs the duplicate
-// check. Returns null so it adds no DOM. Lives as a sibling of the row's
-// table cells so amount/date keystrokes do NOT re-render the row outer.
+// Subscribes to date/amount/description for a single row and re-runs the
+// duplicate check, writing the result into the row's `duplicate_matches`.
+// Returns null so it adds no DOM. Lives as a sibling of the row's table cells
+// so field keystrokes do NOT re-render the row outer.
 
 function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
   const form = useFormContext<ImportFormValues>();
-  const [date, amount, action] = useWatch({
+  const [date, amount, description, action] = useWatch({
     control: form.control,
     name: [
       `rows.${rowIndex}.date`,
       `rows.${rowIndex}.amount`,
+      `rows.${rowIndex}.description`,
       `rows.${rowIndex}.action`,
     ],
   });
@@ -546,10 +579,10 @@ function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
   useDuplicateTransactionCheck({
     date: date as string,
     amount: amount as number,
+    description: description as string,
     accountId: form.getValues("accountId"),
-    action: action as 'import' | 'skip' | 'duplicate',
     enabled: action === "import",
-    setAction: (next) => form.setValue(`rows.${rowIndex}.action`, next),
+    onResult: (matches) => form.setValue(`rows.${rowIndex}.duplicate_matches`, matches),
   });
 
   return null;

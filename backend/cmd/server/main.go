@@ -186,6 +186,7 @@ func main() {
 	// transactions.POST("/bulk-update", transactionHandler.BulkUpdate)
 	transactions.POST("/import-csv", transactionHandler.ImportCSV)
 	transactions.POST("/check-duplicate", transactionHandler.CheckDuplicate)
+	transactions.POST("/check-duplicates-bulk", transactionHandler.CheckDuplicatesBulk)
 	// transactions.GET("/suggest-category", transactionHandler.SuggestCategory)
 	// transactions.POST("/recurring", transactionHandler.CreateRecurring)
 

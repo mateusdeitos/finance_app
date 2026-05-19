@@ -123,6 +123,54 @@ definitions:
         allOf:
         - $ref: '#/definitions/domain.Date'
         description: accepts YYYY-MM-DD, datetime, or RFC3339
+      description:
+        description: optional; used for fuzzy similarity matching
+        type: string
+    type: object
+  domain.CheckDuplicateResponse:
+    properties:
+      matches:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
+    type: object
+  domain.CheckDuplicateRowInput:
+    properties:
+      amount:
+        description: cents
+        type: integer
+      date:
+        $ref: '#/definitions/domain.Date'
+      description:
+        type: string
+      row_index:
+        type: integer
+    type: object
+  domain.CheckDuplicateRowResult:
+    properties:
+      matches:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
+      row_index:
+        type: integer
+    type: object
+  domain.CheckDuplicatesBulkRequest:
+    properties:
+      account_id:
+        description: optional; when set, only checks within that account
+        type: integer
+      rows:
+        items:
+          $ref: '#/definitions/domain.CheckDuplicateRowInput'
+        type: array
+    type: object
+  domain.CheckDuplicatesBulkResponse:
+    properties:
+      rows:
+        items:
+          $ref: '#/definitions/domain.CheckDuplicateRowResult'
+        type: array
     type: object
   domain.CreateChargeRequest:
     properties:
@@ -169,11 +217,9 @@ definitions:
   domain.ImportRowStatus:
     enum:
     - pending
-    - duplicate
     type: string
     x-enum-varnames:
     - ImportRowStatusPending
-    - ImportRowStatusDuplicate
   domain.OnboardingAccountInput:
     properties:
       avatar_background_color:
@@ -235,6 +281,10 @@ definitions:
         type: string
       destination_account_id:
         type: integer
+      duplicate_matches:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
       parse_errors:
         items:
           type: string
@@ -1597,8 +1647,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Returns whether a transaction with the given date, description
-        and amount already exists for the authenticated user.
+      description: Returns existing transactions that are possible duplicates of the
+        given date, amount and description for the authenticated user. Matching considers
+        the whole calendar month, an amount range of ±2 cents, and fuzzy description
+        similarity.
       parameters:
       - description: Duplicate check params
         in: body
@@ -1612,9 +1664,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: boolean
-            type: object
+            $ref: '#/definitions/domain.CheckDuplicateResponse'
         "400":
           description: Bad Request
           schema:
@@ -1626,7 +1676,42 @@ paths:
       security:
       - CookieAuth: []
       - BearerAuth: []
-      summary: Check if a transaction is a duplicate
+      summary: Check if a transaction is a possible duplicate
+      tags:
+      - transactions
+  /api/transactions/check-duplicates-bulk:
+    post:
+      consumes:
+      - application/json
+      description: Runs the duplicate check for several rows in a single request and
+        returns the matches per row_index. Matching considers the whole calendar month,
+        an amount range of ±2 cents, and fuzzy description similarity.
+      parameters:
+      - description: Bulk duplicate check params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CheckDuplicatesBulkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.CheckDuplicatesBulkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Check many rows for possible duplicates at once
       tags:
       - transactions
   /api/transactions/import-csv:
@@ -1635,9 +1720,9 @@ paths:
       - multipart/form-data
       description: Accepts a multipart .csv, .xlsx or .xls file and an account_id.
         XLSX and legacy XLS files are converted to CSV server-side using the first
-        sheet. Returns parsed rows enriched with inferred categories and duplicate
-        flags. No transactions are created; use the standard POST /transactions endpoint
-        to create each confirmed row.
+        sheet. Returns parsed rows enriched with inferred categories and possible
+        duplicate matches. No transactions are created; use the standard POST /transactions
+        endpoint to create each confirmed row.
       parameters:
       - description: Destination account ID
         in: formData

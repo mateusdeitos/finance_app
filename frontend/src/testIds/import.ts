@@ -1,4 +1,4 @@
-export type ImportRowAction = 'import' | 'skip' | 'duplicate'
+export type ImportRowAction = 'import' | 'skip'
 export type ImportRowTransactionType = 'expense' | 'income' | 'transfer'
 export type ImportTypeRule = 'positive_as_income' | 'positive_as_expense'
 
@@ -40,6 +40,8 @@ export const ImportTestIds = {
   RowCheckbox: (rowIndex: number) => `checkbox_import_row_${rowIndex}` as const,
   RowBtnCreateCategory: (rowIndex: number) =>
     `btn_create_category_row_${rowIndex}` as const,
+  RowDuplicateWarning: (rowIndex: number) =>
+    `import_duplicate_warning_${rowIndex}` as const,
 
   // Row-scoped option testids
   RowOptionCategory: (rowIndex: number, categoryId: number | string) =>
@@ -69,6 +71,10 @@ export const ImportTestIds = {
     `btn_split_popover_${rowIndex}` as const,
   SplitPopoverDropdown: (rowIndex: number) =>
     `split_popover_dropdown_${rowIndex}` as const,
+
+  // Duplicate-transactions drawer
+  DrawerDuplicates: 'drawer_duplicate_transactions',
+  DrawerDuplicatesSkipBtn: 'btn_drawer_duplicates_skip',
 
   // Category-creation drawer (mounted from the import flow)
   DrawerCreateCategory: 'drawer_create_category',

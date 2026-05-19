@@ -319,15 +319,15 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 }
 
 // CheckDuplicate godoc
-// @Summary      Check if a transaction is a duplicate
-// @Description  Returns whether a transaction with the given date, description and amount already exists for the authenticated user.
+// @Summary      Check if a transaction is a possible duplicate
+// @Description  Returns existing transactions that are possible duplicates of the given date, amount and description for the authenticated user. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
 // @Tags         transactions
 // @Accept       json
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
 // @Param        request  body  domain.CheckDuplicateRequest  true  "Duplicate check params"
-// @Success      200  {object}  map[string]bool
+// @Success      200  {object}  domain.CheckDuplicateResponse
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
 // @Router       /api/transactions/check-duplicate [post]
@@ -339,17 +339,46 @@ func (h *TransactionHandler) CheckDuplicate(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	isDup, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date.Time, req.Amount, req.AccountID)
+	matches, err := h.transactionService.CheckDuplicateTransaction(c.Request().Context(), userID, req.Date.Time, req.Amount, req.Description, req.AccountID)
 	if err != nil {
 		return pkgErrors.ToHTTPError(err)
 	}
 
-	return c.JSON(http.StatusOK, map[string]bool{"is_duplicate": isDup})
+	return c.JSON(http.StatusOK, domain.CheckDuplicateResponse{Matches: matches})
+}
+
+// CheckDuplicatesBulk godoc
+// @Summary      Check many rows for possible duplicates at once
+// @Description  Runs the duplicate check for several rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        request  body  domain.CheckDuplicatesBulkRequest  true  "Bulk duplicate check params"
+// @Success      200  {object}  domain.CheckDuplicatesBulkResponse
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/check-duplicates-bulk [post]
+func (h *TransactionHandler) CheckDuplicatesBulk(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	var req domain.CheckDuplicatesBulkRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	rows, err := h.transactionService.CheckDuplicatesBulk(c.Request().Context(), userID, req.AccountID, req.Rows)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, domain.CheckDuplicatesBulkResponse{Rows: rows})
 }
 
 // ImportCSV godoc
 // @Summary      Parse and enrich a CSV, XLSX or XLS file for import
-// @Description  Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
+// @Description  Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and possible duplicate matches. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.
 // @Tags         transactions
 // @Accept       multipart/form-data
 // @Produce      json
