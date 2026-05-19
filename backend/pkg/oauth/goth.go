@@ -16,14 +16,14 @@ func SetupProviders(cfg *config.Config) {
 	gothic.Store = sessions.NewCookieStore([]byte(cfg.OAuth.SessionSecret))
 	// Google OAuth
 	if cfg.OAuth.Google.ClientID != "" && cfg.OAuth.Google.ClientSecret != "" {
-		goth.UseProviders(
-			google.New(
-				cfg.OAuth.Google.ClientID,
-				cfg.OAuth.Google.ClientSecret,
-				cfg.OAuth.Google.CallbackURL,
-				"email", "profile",
-			),
+		googleProvider := google.New(
+			cfg.OAuth.Google.ClientID,
+			cfg.OAuth.Google.ClientSecret,
+			cfg.OAuth.Google.CallbackURL,
+			"email", "profile",
 		)
+		googleProvider.SetPrompt("select_account")
+		goth.UseProviders(googleProvider)
 	}
 
 	// Microsoft OAuth
