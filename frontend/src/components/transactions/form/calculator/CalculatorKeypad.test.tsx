@@ -6,9 +6,15 @@ import { CalculatorKeypad } from "./CalculatorKeypad";
 import { useCalculator } from "./useCalculator";
 import { useCalculatorKeyboard } from "./useCalculatorKeyboard";
 
-function Harness({ initialCents }: { initialCents: number }) {
+function Harness({
+  initialCents,
+  onResult,
+}: {
+  initialCents: number;
+  onResult: (cents: number) => void;
+}) {
   const calc = useCalculator(initialCents);
-  useCalculatorKeyboard(calc);
+  useCalculatorKeyboard(calc, () => onResult(calc.getResult()));
   return (
     <MantineProvider>
       <span data-testid="display">{calc.display}</span>
@@ -22,14 +28,23 @@ function Harness({ initialCents }: { initialCents: number }) {
 afterEach(cleanup);
 
 function setup(initialCents = 0) {
-  const screen = render(<Harness initialCents={initialCents} />);
+  let submitted: number | null = null;
+  const screen = render(
+    <Harness
+      initialCents={initialCents}
+      onResult={(cents) => {
+        submitted = cents;
+      }}
+    />,
+  );
   const press = (key: string) =>
     fireEvent.click(screen.getByTestId(TransactionsTestIds.CalcKey(key)));
   const type = (key: string) => fireEvent.keyDown(document, { key });
   const display = () => screen.getByTestId("display").textContent;
   const result = () => screen.getByTestId("result").textContent;
   const mode = () => screen.getByTestId("mode").textContent;
-  return { press, type, display, result, mode };
+  const getSubmitted = () => submitted;
+  return { press, type, display, result, mode, getSubmitted };
 }
 
 test("digits fill right-to-left, overwriting the preloaded value", () => {
@@ -88,13 +103,23 @@ test("clear resets the calculator", () => {
   expect(display()).toBe("0");
 });
 
-test("keyboard digits, operators and Enter drive the calculator", () => {
+test("keyboard digits and operators compute with the '=' key", () => {
   const { type, display } = setup();
   type("7");
   type("+");
   type("3");
-  type("Enter");
+  type("=");
   expect(display()).toBe("10");
+});
+
+test("Enter submits the current result", () => {
+  const { type, getSubmitted } = setup();
+  type("7");
+  type("+");
+  type("3");
+  type("Enter");
+  // Enter applies even a pending operation that was not equalsed.
+  expect(getSubmitted()).toBe(10);
 });
 
 test("keyboard multiplication switches to integer entry", () => {
@@ -105,6 +130,7 @@ test("keyboard multiplication switches to integer entry", () => {
   type("*");
   expect(mode()).toBe("integer");
   type("3");
-  type("Enter");
+  type("=");
   expect(display()).toBe("1500");
+  expect(mode()).toBe("cents");
 });

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { Operator } from "./calculatorMath";
 import type { CalculatorApi } from "./useCalculator";
 
@@ -11,10 +11,16 @@ const OPERATOR_KEYS: Record<string, Operator> = {
 
 /**
  * Routes physical keyboard input to the calculator while the drawer is mounted:
- * digits 0-9, the operators + - * /, Enter/"=" (equals) and Backspace.
+ * digits 0-9, the operators + - * /, "=" (equals) and Backspace. Enter calls
+ * `onSubmit`, which applies the result and closes the drawer.
  */
-export function useCalculatorKeyboard(calc: CalculatorApi) {
+export function useCalculatorKeyboard(calc: CalculatorApi, onSubmit: () => void) {
   const { inputDigit, setOperator, equals, backspace } = calc;
+  // Keep the latest onSubmit without re-subscribing the listener every render.
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -33,7 +39,13 @@ export function useCalculatorKeyboard(calc: CalculatorApi) {
         return;
       }
 
-      if (e.key === "Enter" || e.key === "=") {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onSubmitRef.current();
+        return;
+      }
+
+      if (e.key === "=") {
         e.preventDefault();
         equals();
         return;

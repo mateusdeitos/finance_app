@@ -22,7 +22,8 @@ const OPERATOR_SYMBOL: Record<Operator, string> = {
 export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
   const { opened, close, reject } = useDrawerContext<number>();
   const calc = useCalculator(initialCents);
-  useCalculatorKeyboard(calc);
+  const handleApply = () => close(calc.getResult());
+  useCalculatorKeyboard(calc, handleApply);
 
   return (
     <ResponsiveDrawer
@@ -56,7 +57,7 @@ export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
           </Button>
           <Button
             size="md"
-            onClick={() => close(calc.getResult())}
+            onClick={handleApply}
             data-testid={TransactionsTestIds.BtnCalcApply}
           >
             Aplicar

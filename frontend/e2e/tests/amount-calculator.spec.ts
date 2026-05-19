@@ -93,9 +93,10 @@ test.describe('Amount calculator', () => {
     await transactionsPage.selectType('expense')
 
     await transactionsPage.openAmountCalculator()
-    // 12,00 + 3,00 = 15,00 — digits, operator and Enter typed on the keyboard.
+    // 12,00 + 3,00 — digits and operator typed on the keyboard; Enter applies
+    // the result and closes the calculator.
     await transactionsPage.typeOnCalculator(['1', '2', '0', '0', '+', '3', '0', '0', 'Enter'])
-    await transactionsPage.applyCalculator()
+    await expect(transactionsPage.calculatorDrawer).not.toBeVisible({ timeout: 8000 })
 
     expect(await transactionsPage.getAmountValue()).toBe('15,00')
   })
