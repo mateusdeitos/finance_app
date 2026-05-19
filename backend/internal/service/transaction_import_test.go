@@ -201,13 +201,15 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		suite.ErrorIs(err, pkgErrors.ErrImportInvalidLayout)
 	})
 
-	suite.Run("more than 100 rows", func() {
-		rows := make([][]string, 101)
+	suite.Run("more than max rows", func() {
+		rows := make([][]string, IMPORT_MAX_ROWS+1)
 		for i := range rows {
 			rows[i] = []string{"01/01/2026", "Test", "100,00"}
 		}
 		_, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, TypeDefinitionPositiveAsIncome, buildCSV(rows))
-		suite.ErrorIs(err, pkgErrors.ErrImportMaxRowsExceeded(IMPORT_MAX_ROWS))
+		svcErr, ok := pkgErrors.AsServiceError(err)
+		suite.Require().True(ok, "expected *ServiceError, got %T", err)
+		suite.Assert().Contains(svcErr.Tags, string(pkgErrors.ErrorTagImportMaxRowsExceeded))
 	})
 
 	suite.Run("UTF-8 BOM stripped", func() {
