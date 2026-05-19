@@ -56,6 +56,8 @@ export const ImportTestIds = {
     `option_row_destination_account_${rowIndex}_${accountId}` as const,
 
   // Bulk toolbar
+  BtnBulkClearSelection: 'btn_bulk_clear_selection',
+  BtnBulkRemoveMenu: 'btn_bulk_remove_menu',
   BtnBulkRemove: 'btn_bulk_remove',
   BtnBulkClearInstallments: 'btn_bulk_clear_installments',
   BtnBulkClearSplit: 'btn_bulk_clear_split',

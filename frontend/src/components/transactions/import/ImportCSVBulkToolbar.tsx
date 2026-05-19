@@ -6,6 +6,7 @@ import {
   IconArrowsUpDown,
   IconCalendar,
   IconCategory,
+  IconChevronDown,
   IconHammer,
   IconQuestionMark,
   IconReceipt,
@@ -13,6 +14,7 @@ import {
   IconShare,
   IconShareOff,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { useMemo } from "react";
 import { useSplitSummary } from "@/hooks/import/useSplitSummary";
@@ -47,6 +49,7 @@ interface Props {
   selectedCount: number;
   /** Splits aren't allowed on shared accounts — hide the bulk split action. */
   canSplit: boolean;
+  onClearSelection: () => void;
   onRemove: () => void;
   onBulkClearInstallments: () => void;
   onBulkClearSplit: () => void;
@@ -72,6 +75,7 @@ const propsByType: Record<AvailableAction, { icon: React.ReactNode; label: strin
 export function ImportCSVBulkToolbar({
   selectedCount,
   canSplit,
+  onClearSelection,
   onRemove,
   onBulkClearInstallments,
   onBulkClearSplit,
@@ -133,7 +137,7 @@ export function ImportCSVBulkToolbar({
       case "split":
         return "Divisão";
       default:
-        return "Escolha uma ação";
+        return "Alterar";
     }
   }, [selectedActionType]);
 
@@ -177,81 +181,91 @@ export function ImportCSVBulkToolbar({
     <FormProvider {...localForm}>
       <div className={classes.bar}>
         <Stack gap="xs">
-          {/* Row 1: selection count + bulk removal actions */}
+          {/* Row 1: selection info + removal actions */}
           <Group gap="xs">
-            <Text fz="sm" fw={500}>
-              {selectedCount} selecionadas
+            <Text fz="sm" fw={700}>
+              {selectedCount} {selectedCount === 1 ? "selecionada" : "selecionadas"}
             </Text>
 
             <Button
               size="compact-xs"
-              variant="light"
-              color="red"
-              leftSection={<IconTrash size={14} />}
-              onClick={onRemove}
-              data-testid={ImportTestIds.BtnBulkRemove}
+              variant="subtle"
+              color="gray"
+              leftSection={<IconX size={14} />}
+              onClick={onClearSelection}
+              data-testid={ImportTestIds.BtnBulkClearSelection}
             >
-              Remover
+              Limpar seleção
             </Button>
-
-            <Button
-              size="compact-xs"
-              variant="default"
-              leftSection={<IconRepeatOff size={14} />}
-              onClick={onBulkClearInstallments}
-              data-testid={ImportTestIds.BtnBulkClearInstallments}
-            >
-              Remover parcelamento
-            </Button>
-
-            <Button
-              size="compact-xs"
-              variant="default"
-              leftSection={<IconShareOff size={14} />}
-              onClick={onBulkClearSplit}
-              data-testid={ImportTestIds.BtnBulkClearSplit}
-            >
-              Remover divisão
-            </Button>
-          </Group>
-
-          {/* Row 2: define-and-apply flow */}
-          <Group gap="xs" align="end">
-            <Text fz="sm" fw={500}>
-              Definir
-            </Text>
 
             <Menu>
-          <Menu.Target>
-            <Button
-              variant="subtle"
-              size="compact-xs"
-              leftSection={selectedActionType ? propsByType[selectedActionType]?.icon : undefined}
-            >
-              {menuLabel}
-            </Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            {Object.entries(propsByType)
-              .filter(([k]) => k !== "split" || canSplit)
-              .map(([k, v]) => {
-              return (
-                <MenuItem
-                  key={k}
-                  component="button"
-                  leftSection={v.icon}
-                  onClick={() => updateSelectedAction(k as AvailableAction)}
+              <Menu.Target>
+                <Button
+                  size="compact-xs"
+                  variant="default"
+                  leftSection={<IconTrash size={14} />}
+                  rightSection={<IconChevronDown size={14} />}
+                  data-testid={ImportTestIds.BtnBulkRemoveMenu}
                 >
-                  {v.label}
+                  Remover
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <MenuItem
+                  leftSection={<IconRepeatOff size={14} />}
+                  onClick={onBulkClearInstallments}
+                  data-testid={ImportTestIds.BtnBulkClearInstallments}
+                >
+                  Remover parcelamento
                 </MenuItem>
-              );
-            })}
-          </Menu.Dropdown>
-        </Menu>
+                <MenuItem
+                  leftSection={<IconShareOff size={14} />}
+                  onClick={onBulkClearSplit}
+                  data-testid={ImportTestIds.BtnBulkClearSplit}
+                >
+                  Remover divisão
+                </MenuItem>
+                <Menu.Divider />
+                <MenuItem
+                  color="red"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={onRemove}
+                  data-testid={ImportTestIds.BtnBulkRemove}
+                >
+                  Remover linhas selecionadas
+                </MenuItem>
+              </Menu.Dropdown>
+            </Menu>
+          </Group>
 
-        <Text fz="sm" fw={500}>
-          Para
-        </Text>
+          {/* Row 2: alter-and-apply flow */}
+          <Group gap="xs" align="end">
+            <Menu>
+              <Menu.Target>
+                <Button
+                  variant="default"
+                  size="compact-xs"
+                  leftSection={selectedActionType ? propsByType[selectedActionType]?.icon : undefined}
+                  rightSection={<IconChevronDown size={14} />}
+                >
+                  {menuLabel}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {Object.entries(propsByType)
+                  .filter(([k]) => k !== "split" || canSplit)
+                  .map(([k, v]) => (
+                    <MenuItem
+                      key={k}
+                      component="button"
+                      leftSection={v.icon}
+                      onClick={() => updateSelectedAction(k as AvailableAction)}
+                    >
+                      {v.label}
+                    </MenuItem>
+                  ))}
+              </Menu.Dropdown>
+            </Menu>
 
         {selectedActionType === "import_action" && (
           <Select
@@ -338,17 +352,19 @@ export function ImportCSVBulkToolbar({
           </Popover>
         )}
 
-        <Button
-          size="compact-xs"
-          variant="filled"
-          color="blue"
-          leftSection={<IconHammer size={14} />}
-          onClick={applySelectedAction}
-          disabled={applyDisabled}
-          data-testid={ImportTestIds.BtnBulkApply}
-        >
-          Aplicar
-        </Button>
+        {selectedActionType && (
+          <Button
+            size="compact-xs"
+            variant="filled"
+            color="blue"
+            leftSection={<IconHammer size={14} />}
+            onClick={applySelectedAction}
+            disabled={applyDisabled}
+            data-testid={ImportTestIds.BtnBulkApply}
+          >
+            Aplicar
+          </Button>
+        )}
           </Group>
         </Stack>
       </div>

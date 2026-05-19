@@ -438,6 +438,7 @@ export function ImportTransactionsPage() {
               <ImportCSVBulkToolbar
                 selectedCount={totalSelected}
                 canSplit={!importingToSharedAccount}
+                onClearSelection={handleClearSelection}
                 onRemove={handleRemoveSelected}
                 onBulkClearInstallments={handleBulkClearInstallments}
                 onBulkClearSplit={handleBulkClearSplit}
