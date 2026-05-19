@@ -1,5 +1,9 @@
 import { useRef, forwardRef, useImperativeHandle } from "react";
-import { TextInput } from "@mantine/core";
+import { ActionIcon, TextInput } from "@mantine/core";
+import { IconCalculator } from "@tabler/icons-react";
+import { TransactionsTestIds } from "@/testIds";
+import { renderDrawer } from "@/utils/renderDrawer";
+import { CalculatorDrawer } from "./calculator/CalculatorDrawer";
 
 interface Props {
   value: number; // in cents
@@ -9,6 +13,8 @@ interface Props {
   required?: boolean;
   disabled?: boolean;
   allowNegative?: boolean;
+  /** Shows a calculator icon button that opens a drawer to compute the amount. */
+  withCalculator?: boolean;
   "data-testid"?: string;
 }
 
@@ -26,7 +32,17 @@ function formatCents(cents: number): string {
 }
 
 export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function CurrencyInput(
-  { value, onChange, error, label, required, disabled, allowNegative, "data-testid": dataTestId }: Props,
+  {
+    value,
+    onChange,
+    error,
+    label,
+    required,
+    disabled,
+    allowNegative,
+    withCalculator,
+    "data-testid": dataTestId,
+  }: Props,
   ref,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +50,16 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
   }));
+
+  async function openCalculator() {
+    try {
+      const result = await renderDrawer<number>(() => <CalculatorDrawer initialCents={value} />);
+      onChange(result);
+      inputRef.current?.focus();
+    } catch {
+      // Drawer dismissed via ESC/backdrop — keep the current value.
+    }
+  }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     // Let browser handle shortcuts and navigation
@@ -83,6 +109,21 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
       error={error}
       inputMode="numeric"
       data-testid={dataTestId}
+      rightSectionPointerEvents={withCalculator ? "all" : undefined}
+      rightSection={
+        withCalculator ? (
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            disabled={disabled}
+            onClick={openCalculator}
+            aria-label="Abrir calculadora"
+            data-testid={TransactionsTestIds.BtnOpenCalculator}
+          >
+            <IconCalculator size={18} />
+          </ActionIcon>
+        ) : undefined
+      }
     />
   );
 });

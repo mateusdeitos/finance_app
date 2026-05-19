@@ -13,6 +13,7 @@ export class TransactionsPage {
   readonly updateDrawer: Locator;
   readonly linkedSplitDrawer: Locator;
   readonly linkedTransferDrawer: Locator;
+  readonly calculatorDrawer: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -20,6 +21,7 @@ export class TransactionsPage {
     this.updateDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdate);
     this.linkedSplitDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedSplit);
     this.linkedTransferDrawer = page.getByTestId(TransactionsTestIds.DrawerUpdateLinkedTransfer);
+    this.calculatorDrawer = page.getByTestId(TransactionsTestIds.DrawerCalculator);
   }
 
   async goto() {
@@ -140,6 +142,62 @@ export class TransactionsPage {
   async submitForm() {
     await this.page.getByTestId(TransactionsTestIds.BtnSave).click();
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
+  }
+
+  /** Current displayed value of the create-form amount input (e.g. "15,00"). */
+  async getAmountValue(): Promise<string> {
+    return this.formDrawer.getByTestId(TransactionsTestIds.InputAmount).inputValue();
+  }
+
+  /** Open the amount calculator drawer from the create-form amount input. */
+  async openAmountCalculator() {
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnOpenCalculator).click();
+    await expect(this.calculatorDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Current value shown on the calculator display (e.g. "R$ 20,00"). */
+  async getCalculatorDisplay(): Promise<string> {
+    return (
+      (await this.calculatorDrawer.getByTestId(TransactionsTestIds.CalcDisplay).textContent()) ?? ""
+    );
+  }
+
+  /**
+   * Click a sequence of calculator keys. Each entry is a key id as declared by
+   * `TransactionsTestIds.CalcKey` — digits ("0".."9", "00"), operators
+   * ("add", "sub", "mul", "div"), "equals", "clear", "backspace", "negate".
+   */
+  async pressCalculatorKeys(keys: string[]) {
+    for (const key of keys) {
+      await this.calculatorDrawer.getByTestId(TransactionsTestIds.CalcKey(key)).click();
+    }
+  }
+
+  /**
+   * Type a sequence of physical keys while the calculator drawer is open.
+   * Each entry is a Playwright key name — digits ("0".."9"), operators
+   * ("+", "-", "*", "/"), "Enter", "Backspace".
+   */
+  async typeOnCalculator(keys: string[]) {
+    for (const key of keys) {
+      await this.page.keyboard.press(key);
+    }
+  }
+
+  /** Apply the calculator result back to the amount input and wait for it to close. */
+  async applyCalculator() {
+    await this.calculatorDrawer.getByTestId(TransactionsTestIds.BtnCalcApply).click();
+    await expect(this.calculatorDrawer).not.toBeVisible({ timeout: 8000 });
+  }
+
+  /**
+   * Dismiss the calculator via its Cancel button — the result is discarded.
+   * (Escape is avoided: it would also close the underlying create drawer,
+   * since each drawer registers its own window-level Escape listener.)
+   */
+  async dismissCalculator() {
+    await this.calculatorDrawer.getByTestId(TransactionsTestIds.BtnCalcCancel).click();
+    await expect(this.calculatorDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
   async fillExpense(

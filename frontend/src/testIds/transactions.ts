@@ -124,4 +124,13 @@ export const TransactionsTestIds = {
   PropagationOption: (opt: PropagationOption) => `propagation_option_${opt}` as const,
   PropagationUpdateOption: (opt: PropagationOption) =>
     `propagation_update_option_${opt}` as const,
+
+  // Amount calculator
+  BtnOpenCalculator: 'btn_open_calculator',
+  DrawerCalculator: 'drawer_calculator',
+  CalcDisplay: 'calculator_display',
+  CalcExpression: 'calculator_expression',
+  BtnCalcApply: 'btn_calculator_apply',
+  BtnCalcCancel: 'btn_calculator_cancel',
+  CalcKey: (key: string) => `calc_key_${key}` as const,
 } as const
