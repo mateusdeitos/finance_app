@@ -63,6 +63,7 @@ export const ImportReviewRow = memo(
       transactionType,
       recurrenceType,
       recurrenceTotalInstallments,
+      recurrenceCurrentInstallment,
       splitSettings,
       importStatus,
       importError,
@@ -77,6 +78,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.transaction_type`,
         `rows.${rowIndex}.recurrenceType`,
         `rows.${rowIndex}.recurrenceTotalInstallments`,
+        `rows.${rowIndex}.recurrenceCurrentInstallment`,
         `rows.${rowIndex}.split_settings`,
         `rows.${rowIndex}.import_status`,
         `rows.${rowIndex}.import_error`,
@@ -122,7 +124,10 @@ export const ImportReviewRow = memo(
     function recurrenceSummary() {
       if (!recurrenceType) return "Parcelamento";
       const label = RECURRENCE_TYPE_LABELS[recurrenceType] ?? recurrenceType;
-      return recurrenceTotalInstallments ? `${recurrenceTotalInstallments}x (${label})` : label;
+      if (recurrenceCurrentInstallment && recurrenceTotalInstallments) {
+        return `${recurrenceCurrentInstallment} de ${recurrenceTotalInstallments} (${label})`;
+      }
+      return recurrenceTotalInstallments ? `${recurrenceTotalInstallments} (${label})` : label;
     }
 
     const splitSummary = useSplitSummary(splitSettings);
@@ -221,6 +226,7 @@ export const ImportReviewRow = memo(
                 onChange={field.onChange}
                 disabled={disabled || isSkipped}
                 error={rowErrors?.description?.message}
+                title={(field.value as string) || undefined}
               />
             )}
           />
@@ -294,6 +300,7 @@ export const ImportReviewRow = memo(
                     searchable
                     clearable
                     placeholder="Selecionar..."
+                    title={categoryOptions.find((o) => o.value === String(field.value))?.label}
                     withCheckIcon={false}
                     renderOption={({ option }) => (
                       <span data-testid={ImportTestIds.RowOptionCategory(rowIndex, option.value)}>
@@ -348,6 +355,7 @@ export const ImportReviewRow = memo(
                     disabled={disabled || isSkipped}
                     searchable
                     placeholder="Conta de origem..."
+                    title={personalAccountOptions.find((o) => o.value === String(field.value))?.label}
                     withCheckIcon={false}
                     error={rowErrors?.account_id?.message}
                     renderOption={({ option }) => (
@@ -376,6 +384,7 @@ export const ImportReviewRow = memo(
                       disabled={disabled || isSkipped}
                       searchable
                       placeholder="Conta de destino..."
+                      title={accountOptions.find((o) => o.value === String(field.value))?.label}
                       withCheckIcon={false}
                       error={rowErrors?.destination_account_id?.message}
                       renderOption={({ option }) => (
@@ -506,7 +515,9 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
     // caller (the component owning namePrefix) guarantees it.
     const rowValues = parentForm.getValues(rowPath as `rows.${number}`) as ImportRowFormValues;
     localForm.reset({
-      recurrenceType: rowValues.recurrenceType ?? null,
+      // Default the type to monthly when the row has no recurrence yet, so the
+      // user only needs to fill in the installment counts.
+      recurrenceType: rowValues.recurrenceType ?? "monthly",
       recurrenceCurrentInstallment: rowValues.recurrenceCurrentInstallment ?? null,
       recurrenceTotalInstallments: rowValues.recurrenceTotalInstallments ?? null,
     });
