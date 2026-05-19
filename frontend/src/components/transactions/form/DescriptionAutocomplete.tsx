@@ -48,6 +48,11 @@ export const DescriptionAutocomplete = forwardRef<HTMLInputElement, Props>(funct
       error={error}
       data-testid={TransactionsTestIds.InputDescription}
       defaultDropdownOpened={false}
+      renderOption={({ option }) => (
+        <span data-testid={TransactionsTestIds.OptionDescriptionSuggestion(option.value)}>
+          {option.value}
+        </span>
+      )}
     />
   );
 });

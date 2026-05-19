@@ -36,6 +36,8 @@ export const TransactionsTestIds = {
   OptionDestinationAccount: (accountId: number | string) =>
     `option_destination_account_${accountId}` as const,
   OptionCategory: (categoryId: number | string) => `option_category_${categoryId}` as const,
+  OptionDescriptionSuggestion: (description: string) =>
+    `option_description_suggestion_${description}` as const,
 
   // SegmentedControl items
   SegmentTransactionType: (type: TransactionType) => `segment_transaction_type_${type}` as const,
