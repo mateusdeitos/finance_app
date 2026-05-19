@@ -1,111 +1,88 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDebouncedValue } from '@mantine/hooks'
 import { useQuery } from '@tanstack/react-query'
-import { checkDuplicateTransaction } from '@/api/transactions'
+import { checkDuplicatesBulk } from '@/api/transactions'
+import { Transactions } from '@/types/transactions'
 import { QueryKeys } from '@/utils/queryKeys'
-
-type RowAction = 'import' | 'skip' | 'duplicate'
 
 interface Args {
   date: string
   amount: number
+  description: string
   accountId: number
-  /**
-   * Current action for the row (watched via the parent form). The hook reads
-   * this at data-arrival time to decide whether to auto-flip, and uses
-   * changes in this value to detect user-initiated overrides — which lock
-   * the row from any further auto-flips and short-circuit further fetches.
-   */
-  action: RowAction
-  setAction: (action: 'import' | 'duplicate') => void
+  /** Receives the latest duplicate matches whenever a re-check resolves. */
+  onResult: (matches: Transactions.Transaction[]) => void
   debounceMs?: number
   /** When false, the hook never calls the backend. Default `true`. */
   enabled?: boolean
 }
 
 /**
- * Re-checks the import row against the backend for duplicates whenever the
- * date / amount change (debounced).
+ * Re-checks an import row against the backend for possible duplicates whenever
+ * its date, amount or description change (debounced).
  *
- * Two important guarantees:
+ * The duplicate warning is a recalculated signal, never sticky: the row keeps
+ * the matches the CSV parse returned until a field edit triggers a fresh
+ * check, at which point `onResult` overwrites them with the new result (which
+ * may be empty, clearing the warning).
  *
- * 1. The same `(date, amount, accountId)` tuple is fetched at most once
- *    (TanStack Query cache + `staleTime: Infinity`). Toggling the action
- *    select without editing fields never re-fires the backend.
- *
- * 2. Once the user has manually changed the row's action, the hook stops
- *    auto-flipping AND stops issuing duplicate-checks for that row. Their
- *    explicit choice wins, and we do not waste a request whose answer we
- *    would discard anyway.
+ * The initial values are never re-fetched — the CSV parse already provides
+ * matches for them. A check only fires once a field actually differs from
+ * what was imported.
  */
 export function useDuplicateTransactionCheck({
   date,
   amount,
+  description,
   accountId,
-  action,
-  setAction,
+  onResult,
   debounceMs = 500,
   enabled = true,
 }: Args) {
   const [debouncedDate] = useDebouncedValue(date, debounceMs)
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
+  const [debouncedDescription] = useDebouncedValue(description, debounceMs)
 
-  const initialRef = useRef({ date, amount })
-  // `userOverrode` is state (not just a ref) so flipping it re-evaluates
-  // `enabled` on the useQuery below — that is what stops further fetches.
-  const [userOverrode, setUserOverrode] = useState(false)
-  // Track the last `action` we observed so we can tell apart "user changed
-  // the select" from "the hook just programmatically flipped". When the hook
-  // calls setAction it stashes the target in `hookSetActionToRef`; any other
-  // transition is treated as a user override.
-  const lastActionRef = useRef(action)
-  const hookSetActionToRef = useRef<RowAction | null>(null)
-
-  useEffect(() => {
-    if (action === lastActionRef.current) return
-    if (hookSetActionToRef.current === action) {
-      hookSetActionToRef.current = null
-    } else {
-      setUserOverrode(true)
-    }
-    lastActionRef.current = action
-  }, [action])
-
+  // Captured once on mount: the CSV parse already returned matches for these
+  // values, so a check only fires once a field differs from what was imported.
+  const [initial] = useState({ date, amount, description })
   const fieldsChanged =
-    debouncedDate !== initialRef.current.date ||
-    debouncedAmount !== initialRef.current.amount
+    debouncedDate !== initial.date ||
+    debouncedAmount !== initial.amount ||
+    debouncedDescription !== initial.description
 
   const { data } = useQuery({
-    queryKey: [QueryKeys.CheckDuplicate, debouncedDate, debouncedAmount, accountId],
-    queryFn: () =>
-      checkDuplicateTransaction({
-        date: debouncedDate,
-        amount: debouncedAmount,
+    queryKey: [
+      QueryKeys.CheckDuplicate,
+      debouncedDate,
+      debouncedAmount,
+      debouncedDescription,
+      accountId,
+    ],
+    queryFn: async () => {
+      const res = await checkDuplicatesBulk({
         account_id: accountId,
-      }),
-    enabled:
-      enabled &&
-      !userOverrode &&
-      !!debouncedDate &&
-      debouncedAmount > 0 &&
-      fieldsChanged,
+        rows: [
+          {
+            row_index: 0,
+            date: debouncedDate,
+            amount: debouncedAmount,
+            description: debouncedDescription,
+          },
+        ],
+      })
+      return res.rows[0]?.matches ?? []
+    },
+    enabled: enabled && !!debouncedDate && debouncedAmount > 0 && fieldsChanged,
     staleTime: Infinity,
   })
 
+  const onResultRef = useRef(onResult)
   useEffect(() => {
-    if (!data) return
-    // Race guard: a request may have been in flight when the user took
-    // control. Discard the result instead of overwriting their choice.
-    if (userOverrode) return
-    if (data.is_duplicate && action === 'import') {
-      hookSetActionToRef.current = 'duplicate'
-      setAction('duplicate')
-    } else if (!data.is_duplicate && action === 'duplicate') {
-      hookSetActionToRef.current = 'import'
-      setAction('import')
-    }
-    // `action` and `setAction` are stable in practice; only re-run on data
-    // arrival or when the override flag flips.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, userOverrode])
+    onResultRef.current = onResult
+  })
+
+  useEffect(() => {
+    if (data) onResultRef.current(data)
+  }, [data])
 }

@@ -111,18 +111,43 @@ definitions:
     - ChargeStatusPaid
     - ChargeStatusRejected
     - ChargeStatusCancelled
-  domain.CheckDuplicateRequest:
+  domain.CheckDuplicateRowInput:
     properties:
-      account_id:
-        description: optional; when set, only checks within that account
-        type: integer
       amount:
         description: cents
         type: integer
       date:
-        allOf:
-        - $ref: '#/definitions/domain.Date'
-        description: accepts YYYY-MM-DD, datetime, or RFC3339
+        $ref: '#/definitions/domain.Date'
+      description:
+        type: string
+      row_index:
+        type: integer
+    type: object
+  domain.CheckDuplicateRowResult:
+    properties:
+      matches:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
+      row_index:
+        type: integer
+    type: object
+  domain.CheckDuplicatesBulkRequest:
+    properties:
+      account_id:
+        description: optional; when set, only checks within that account
+        type: integer
+      rows:
+        items:
+          $ref: '#/definitions/domain.CheckDuplicateRowInput'
+        type: array
+    type: object
+  domain.CheckDuplicatesBulkResponse:
+    properties:
+      rows:
+        items:
+          $ref: '#/definitions/domain.CheckDuplicateRowResult'
+        type: array
     type: object
   domain.CreateChargeRequest:
     properties:
@@ -153,10 +178,19 @@ definitions:
       replace_with_id:
         type: integer
     type: object
+  domain.DuplicateCriteria:
+    properties:
+      amount_tolerance_cents:
+        type: integer
+      description_similarity_threshold:
+        type: number
+    type: object
   domain.ImportCSVResponse:
     properties:
       duplicate_count:
         type: integer
+      duplicate_criteria:
+        $ref: '#/definitions/domain.DuplicateCriteria'
       error_count:
         type: integer
       rows:
@@ -169,11 +203,9 @@ definitions:
   domain.ImportRowStatus:
     enum:
     - pending
-    - duplicate
     type: string
     x-enum-varnames:
     - ImportRowStatusPending
-    - ImportRowStatusDuplicate
   domain.OnboardingAccountInput:
     properties:
       avatar_background_color:
@@ -235,6 +267,10 @@ definitions:
         type: string
       destination_account_id:
         type: integer
+      duplicate_matches:
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
       parse_errors:
         items:
           type: string
@@ -1593,28 +1629,27 @@ paths:
       summary: Get balance for a period
       tags:
       - transactions
-  /api/transactions/check-duplicate:
+  /api/transactions/check-duplicates-bulk:
     post:
       consumes:
       - application/json
-      description: Returns whether a transaction with the given date, description
-        and amount already exists for the authenticated user.
+      description: Runs the duplicate check for one or more rows in a single request
+        and returns the matches per row_index. Matching considers the whole calendar
+        month, an amount range of ±2 cents, and fuzzy description similarity.
       parameters:
-      - description: Duplicate check params
+      - description: Bulk duplicate check params
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/domain.CheckDuplicateRequest'
+          $ref: '#/definitions/domain.CheckDuplicatesBulkRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: boolean
-            type: object
+            $ref: '#/definitions/domain.CheckDuplicatesBulkResponse'
         "400":
           description: Bad Request
           schema:
@@ -1626,7 +1661,7 @@ paths:
       security:
       - CookieAuth: []
       - BearerAuth: []
-      summary: Check if a transaction is a duplicate
+      summary: Check rows for possible duplicates
       tags:
       - transactions
   /api/transactions/import-csv:
@@ -1635,9 +1670,9 @@ paths:
       - multipart/form-data
       description: Accepts a multipart .csv, .xlsx or .xls file and an account_id.
         XLSX and legacy XLS files are converted to CSV server-side using the first
-        sheet. Returns parsed rows enriched with inferred categories and duplicate
-        flags. No transactions are created; use the standard POST /transactions endpoint
-        to create each confirmed row.
+        sheet. Returns parsed rows enriched with inferred categories and possible
+        duplicate matches. No transactions are created; use the standard POST /transactions
+        endpoint to create each confirmed row.
       parameters:
       - description: Destination account ID
         in: formData

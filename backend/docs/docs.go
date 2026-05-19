@@ -1465,7 +1465,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/transactions/check-duplicate": {
+        "/api/transactions/check-duplicates-bulk": {
             "post": {
                 "security": [
                     {
@@ -1475,7 +1475,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns whether a transaction with the given date, description and amount already exists for the authenticated user.",
+                "description": "Runs the duplicate check for one or more rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1485,15 +1485,15 @@ const docTemplate = `{
                 "tags": [
                     "transactions"
                 ],
-                "summary": "Check if a transaction is a duplicate",
+                "summary": "Check rows for possible duplicates",
                 "parameters": [
                     {
-                        "description": "Duplicate check params",
+                        "description": "Bulk duplicate check params",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.CheckDuplicateRequest"
+                            "$ref": "#/definitions/domain.CheckDuplicatesBulkRequest"
                         }
                     }
                 ],
@@ -1501,10 +1501,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "boolean"
-                            }
+                            "$ref": "#/definitions/domain.CheckDuplicatesBulkResponse"
                         }
                     },
                     "400": {
@@ -1532,7 +1529,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and duplicate flags. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
+                "description": "Accepts a multipart .csv, .xlsx or .xls file and an account_id. XLSX and legacy XLS files are converted to CSV server-side using the first sheet. Returns parsed rows enriched with inferred categories and possible duplicate matches. No transactions are created; use the standard POST /transactions endpoint to create each confirmed row.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -2422,24 +2419,61 @@ const docTemplate = `{
                 "ChargeStatusCancelled"
             ]
         },
-        "domain.CheckDuplicateRequest": {
+        "domain.CheckDuplicateRowInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "date": {
+                    "$ref": "#/definitions/domain.Date"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "row_index": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CheckDuplicateRowResult": {
+            "type": "object",
+            "properties": {
+                "matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                },
+                "row_index": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CheckDuplicatesBulkRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
                     "description": "optional; when set, only checks within that account",
                     "type": "integer"
                 },
-                "amount": {
-                    "description": "cents",
-                    "type": "integer"
-                },
-                "date": {
-                    "description": "accepts YYYY-MM-DD, datetime, or RFC3339",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.Date"
-                        }
-                    ]
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CheckDuplicateRowInput"
+                    }
+                }
+            }
+        },
+        "domain.CheckDuplicatesBulkResponse": {
+            "type": "object",
+            "properties": {
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CheckDuplicateRowResult"
+                    }
                 }
             }
         },
@@ -2488,11 +2522,25 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.DuplicateCriteria": {
+            "type": "object",
+            "properties": {
+                "amount_tolerance_cents": {
+                    "type": "integer"
+                },
+                "description_similarity_threshold": {
+                    "type": "number"
+                }
+            }
+        },
         "domain.ImportCSVResponse": {
             "type": "object",
             "properties": {
                 "duplicate_count": {
                     "type": "integer"
+                },
+                "duplicate_criteria": {
+                    "$ref": "#/definitions/domain.DuplicateCriteria"
                 },
                 "error_count": {
                     "type": "integer"
@@ -2511,12 +2559,10 @@ const docTemplate = `{
         "domain.ImportRowStatus": {
             "type": "string",
             "enum": [
-                "pending",
-                "duplicate"
+                "pending"
             ],
             "x-enum-varnames": [
-                "ImportRowStatusPending",
-                "ImportRowStatusDuplicate"
+                "ImportRowStatusPending"
             ]
         },
         "domain.OnboardingAccountInput": {
@@ -2610,6 +2656,12 @@ const docTemplate = `{
                 },
                 "destination_account_id": {
                     "type": "integer"
+                },
+                "duplicate_matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
                 },
                 "parse_errors": {
                     "type": "array",

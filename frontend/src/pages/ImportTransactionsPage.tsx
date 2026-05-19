@@ -5,7 +5,6 @@ import {
   Checkbox,
   Group,
   Modal,
-  Paper,
   ScrollArea,
   Stack,
   Table,
@@ -18,7 +17,7 @@ import { useBlocker, useNavigate } from '@tanstack/react-router'
 import { useForm, useFieldArray, FormProvider, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { createTransaction } from '@/api/transactions'
+import { checkDuplicatesBulk, createTransaction } from '@/api/transactions'
 import { useRedirectOnImportSuccess } from '@/hooks/import/useRedirectOnImportSuccess'
 import { useSharedAccounts } from '@/hooks/import/useImportOptions'
 import { Transactions } from '@/types/transactions'
@@ -53,7 +52,7 @@ export function ImportTransactionsPage() {
 
   const form = useForm<ImportFormValues>({
     resolver: zodResolver(importFormSchema),
-    defaultValues: { accountId: 0, rows: [] },
+    defaultValues: { accountId: 0, rows: [], duplicate_criteria: null },
   })
 
   const { totalSuccess, total, errorCount, toImportPendingCount } = useWatch({
@@ -137,14 +136,43 @@ export function ImportTransactionsPage() {
     })
   }
 
+  // Re-run the duplicate check for a set of rows after a bulk edit and write
+  // the fresh matches back. Best-effort: a failed call leaves the prior hint.
+  const recheckDuplicates = async (indices: number[]) => {
+    const accountId = form.getValues('accountId')
+    const rows = indices
+      .map((i) => ({ i, r: form.getValues(`rows.${i}`) }))
+      .filter(({ r }) => r.action === 'import' && !!r.date && r.amount > 0)
+      .map(({ i, r }) => ({
+        row_index: i,
+        date: r.date,
+        amount: r.amount,
+        description: r.description,
+      }))
+    if (rows.length === 0) return
+    try {
+      const res = await checkDuplicatesBulk({ account_id: accountId, rows })
+      for (const result of res.rows) {
+        form.setValue(`rows.${result.row_index}.duplicate_matches`, result.matches)
+      }
+    } catch {
+      // best-effort; the duplicate hint is non-blocking
+    }
+  }
+
   const handleBulkSetAction = (action: Transactions.ImportRowAction) => {
     forEachSelectedRow((i) => form.setValue(`rows.${i}.action`, action))
     clearSelection()
   }
 
   const handleBulkSetDate = (date: string) => {
-    forEachSelectedRow((i) => form.setValue(`rows.${i}.date`, date))
+    const indices: number[] = []
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.date`, date)
+      indices.push(i)
+    })
     clearSelection()
+    void recheckDuplicates(indices)
   }
 
   const handleBulkSetCategory = (categoryId: number) => {
@@ -158,14 +186,34 @@ export function ImportTransactionsPage() {
   }
 
   const handleSetDescription = (description: string) => {
-    forEachSelectedRow((i) => form.setValue(`rows.${i}.description`, description))
+    const indices: number[] = []
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.description`, description)
+      indices.push(i)
+    })
     clearSelection()
+    void recheckDuplicates(indices)
   }
 
   const handleRemoveSelected = () => {
     const indices: number[] = []
     forEachSelectedRow((i) => indices.push(i))
     indices.sort((a, b) => b - a).forEach((i) => remove(i))
+    clearSelection()
+  }
+
+  const handleBulkClearInstallments = () => {
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.recurrenceEnabled`, false)
+      form.setValue(`rows.${i}.recurrenceType`, null)
+      form.setValue(`rows.${i}.recurrenceCurrentInstallment`, null)
+      form.setValue(`rows.${i}.recurrenceTotalInstallments`, null)
+    })
+    clearSelection()
+  }
+
+  const handleBulkClearSplit = () => {
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.split_settings`, []))
     clearSelection()
   }
 
@@ -279,10 +327,11 @@ export function ImportTransactionsPage() {
       <Stack gap="md" pb="2rem">
         {step === 'upload' ? (
           <UploadStep
-            onParsed={(parsedRows, accountId) => {
+            onParsed={(parsedRows, accountId, duplicateCriteria) => {
               form.reset({
                 accountId,
                 rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
+                duplicate_criteria: duplicateCriteria,
               })
               setStep('review')
               clearSelection()
@@ -301,7 +350,11 @@ export function ImportTransactionsPage() {
             </Text>
           </Stack>
         ) : (
-          <Stack gap="md" data-testid={ImportTestIds.ReviewStep}>
+          <Stack
+            gap="md"
+            data-testid={ImportTestIds.ReviewStep}
+            pb={someSelected && !importing ? '5rem' : undefined}
+          >
             <Group justify="space-between" align="center" wrap="nowrap">
               <Group gap="xs">
                 <Button
@@ -335,20 +388,6 @@ export function ImportTransactionsPage() {
                 {errorCount} transaç{errorCount !== 1 ? 'ões' : 'ão'} com erro. Corrija e tente importar novamente.
               </Alert>
             )}
-
-            <Paper p="xs" withBorder style={{ visibility: someSelected && !importing ? 'visible' : 'hidden' }}>
-              <ImportCSVBulkToolbar
-                selectedCount={totalSelected}
-                canSplit={!importingToSharedAccount}
-                onRemove={handleRemoveSelected}
-                onBulkSetAction={handleBulkSetAction}
-                onBulkSetDate={handleBulkSetDate}
-                onBulkSetCategory={handleBulkSetCategory}
-                onBulkSetTransactionType={handleBulkSetTransactionType}
-                onBulkSetDescription={handleSetDescription}
-                onBulkSetSplitSettings={handleSetSplitSettings}
-              />
-            </Paper>
 
             <ScrollArea>
               <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
@@ -394,6 +433,23 @@ export function ImportTransactionsPage() {
                 </Table.Tbody>
               </Table>
             </ScrollArea>
+
+            {someSelected && !importing && (
+              <ImportCSVBulkToolbar
+                selectedCount={totalSelected}
+                canSplit={!importingToSharedAccount}
+                onClearSelection={handleClearSelection}
+                onRemove={handleRemoveSelected}
+                onBulkClearInstallments={handleBulkClearInstallments}
+                onBulkClearSplit={handleBulkClearSplit}
+                onBulkSetAction={handleBulkSetAction}
+                onBulkSetDate={handleBulkSetDate}
+                onBulkSetCategory={handleBulkSetCategory}
+                onBulkSetTransactionType={handleBulkSetTransactionType}
+                onBulkSetDescription={handleSetDescription}
+                onBulkSetSplitSettings={handleSetSplitSettings}
+              />
+            )}
 
             <Modal
               opened={blockerStatus === 'blocked'}

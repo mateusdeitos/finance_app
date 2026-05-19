@@ -168,7 +168,7 @@ test.describe("Import: installment inference from description", () => {
     const recurrenceBtn = importPage.reviewStep.getByTestId(
       ImportTestIds.RowBtnRecurrencePopover(0),
     );
-    await expect(recurrenceBtn).toContainText("6x", { timeout: 5000 });
+    await expect(recurrenceBtn).toContainText("2 de 6", { timeout: 5000 });
 
     await importPage.confirmImport();
 
@@ -197,7 +197,7 @@ test.describe("Import: installment inference from description", () => {
     const recurrenceBtn = importPage.reviewStep.getByTestId(
       ImportTestIds.RowBtnRecurrencePopover(0),
     );
-    await expect(recurrenceBtn).toContainText("12x", { timeout: 5000 });
+    await expect(recurrenceBtn).toContainText("3 de 12", { timeout: 5000 });
 
     await importPage.confirmImport();
 
@@ -230,10 +230,10 @@ test.describe("Import: installment inference from description", () => {
   });
 });
 
-// ─── Duplicate detection without description ────────────────────────────────
+// ─── Duplicate detection criteria ───────────────────────────────────────────
 
-test.describe("Import: duplicate detection ignores description", () => {
-  test("same date+amount but different description is detected as duplicate", async ({ browser }) => {
+test.describe("Import: duplicate detection criteria", () => {
+  test("same date+amount but unrelated description is NOT flagged", async ({ browser }) => {
     const user = await createTestUser("dup-desc");
     const txDate = new Date(2026, 8, 10);
 
@@ -255,22 +255,25 @@ test.describe("Import: duplicate detection ignores description", () => {
 
     await importPage.uploadCSV(csv, user.accountId);
 
-    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
-    await expect(actionSelect).toHaveValue("Duplicado", { timeout: 5000 });
+    // Description similarity is now part of the match — an unrelated
+    // description means no duplicate warning even with same date + amount.
+    await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
+    await expect(importPage.duplicateWarning(0)).not.toBeVisible();
 
     await page.close();
   });
 
-  test("same date but different amount is NOT a duplicate", async ({ browser }) => {
+  test("same description+date but different amount is NOT flagged", async ({ browser }) => {
     const user = await createTestUser("dup-amt");
     const txDate = new Date(2026, 8, 11);
+    const description = `Amt Diff ${Date.now()}`;
 
     await createTransactionAs(user.token, {
       account_id: user.accountId,
       category_id: user.categoryId,
       amount: 20000,
       date: formatDateISO(txDate),
-      description: `Amt Diff ${Date.now()}`,
+      description,
     });
 
     const page = await openAuthedPage(browser, user.token);
@@ -278,13 +281,14 @@ test.describe("Import: duplicate detection ignores description", () => {
     await importPage.goto();
 
     const csv = buildCsvContent([
-      [formatDateBR(txDate), `Amt Diff Other ${Date.now()}`, "-99,00"],
+      [formatDateBR(txDate), description, "-99,00"],
     ]);
 
     await importPage.uploadCSV(csv, user.accountId);
 
-    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
-    await expect(actionSelect).toHaveValue("Importar", { timeout: 5000 });
+    // The amount is far outside the ±2 cent range → no duplicate warning.
+    await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
+    await expect(importPage.duplicateWarning(0)).not.toBeVisible();
 
     await page.close();
   });

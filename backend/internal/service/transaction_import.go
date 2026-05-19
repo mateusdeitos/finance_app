@@ -69,7 +69,6 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 	}
 
 	rows := make([]domain.ParsedImportRow, 0)
-	duplicateCount := 0
 	errorCount := 0
 	dataRowIndex := 0
 
@@ -101,12 +100,9 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 				ParseErrors: []string{errorMessage},
 			}
 		} else {
-			row = parseCSVRow(ctx, s, userID, accountID, dataRowIndex, record, colIdx, typeDefinitionRule)
+			row = parseCSVRow(ctx, s, userID, dataRowIndex, record, colIdx, typeDefinitionRule)
 		}
 
-		if row.Status == domain.ImportRowStatusDuplicate {
-			duplicateCount++
-		}
 		if len(row.ParseErrors) > 0 {
 			errorCount++
 		}
@@ -117,12 +113,24 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 		return nil, pkgErrors.ErrImportNoRows
 	}
 
+	duplicateCount := detectDuplicateRows(ctx, s, userID, accountID, rows)
+
 	return &domain.ImportCSVResponse{
-		Rows:           rows,
-		TotalRows:      len(rows),
-		DuplicateCount: duplicateCount,
-		ErrorCount:     errorCount,
+		Rows:              rows,
+		TotalRows:         len(rows),
+		DuplicateCount:    duplicateCount,
+		ErrorCount:        errorCount,
+		DuplicateCriteria: duplicateCriteria(),
 	}, nil
+}
+
+// duplicateCriteria returns the current duplicate-detection thresholds so
+// clients can display them instead of hard-coding the values.
+func duplicateCriteria() domain.DuplicateCriteria {
+	return domain.DuplicateCriteria{
+		DescriptionSimilarityThreshold: descriptionSimilarityThreshold,
+		AmountToleranceCents:           duplicateAmountThreshold,
+	}
 }
 
 // detectSeparator identifica se o CSV usa vírgula ou ponto e vírgula.
@@ -178,7 +186,6 @@ func parseCSVRow(
 	ctx context.Context,
 	s *transactionService,
 	userID int,
-	accountID int,
 	rowIndex int,
 	record []string,
 	colIdx csvColumnIndex,
@@ -283,12 +290,8 @@ func parseCSVRow(
 		}
 	}
 
-	// 5. Detecção de duplicados
-	if row.Date != nil && row.Amount > 0 {
-		if isDuplicate(ctx, s, userID, *row.Date, row.Amount, &accountID) {
-			row.Status = domain.ImportRowStatusDuplicate
-		}
-	}
+	// Duplicate detection runs in bulk after all rows are parsed (see
+	// ParseImportCSV) so the database is queried once per month, not per row.
 
 	return row
 }
@@ -352,31 +355,80 @@ func parseAmountSigned(s string) (int64, error) {
 	return int64(math.Round(f * 100)), nil
 }
 
-// isDuplicate verifica se a transação já existe baseado em data, valor e conta.
-// Range: start of previous month → end of transaction's date month.
-func isDuplicate(ctx context.Context, s *transactionService, userID int, date time.Time, amount int64, accountID *int) bool {
-	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
-	dayEnd := dayStart.Add(24*time.Hour - time.Nanosecond)
+// duplicateAmountThreshold is the maximum absolute difference in cents for two
+// transaction amounts to be considered a possible duplicate.
+const duplicateAmountThreshold = int64(2)
+
+// searchMonthWindow fetches every transaction for the user in the calendar
+// month of date, optionally scoped to a single account.
+func searchMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Transaction, error) {
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+	start := period.StartDate()
+	end := period.EndDate()
 
 	filter := domain.TransactionFilter{
 		UserID:    &userID,
-		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &dayStart},
-		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &dayEnd},
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
 	}
-	txs, err := s.transactionRepo.Search(ctx, filter)
-	if err != nil {
-		return false
-	}
+	return s.transactionRepo.Search(ctx, filter)
+}
 
-	for _, tx := range txs {
-		if tx.Amount == amount {
-			return true
+// filterDuplicateMatches keeps only the candidates that are possible
+// duplicates of (amount, description): amount within ±2 cents and, when a
+// description is supplied, trigram similarity >= descriptionSimilarityThreshold.
+func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, description string) []domain.Transaction {
+	matches := make([]domain.Transaction, 0)
+	for _, tx := range candidates {
+		if tx == nil {
+			continue
+		}
+		if diff := tx.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
+			continue
+		}
+		if description != "" && trigramSimilarity(tx.Description, description) < descriptionSimilarityThreshold {
+			continue
+		}
+		matches = append(matches, *tx)
+	}
+	return matches
+}
+
+// detectDuplicateRows fills DuplicateMatches on every parsed row that has a
+// valid date and amount, querying the database once per (account, month)
+// window rather than once per row. It returns the count of flagged rows.
+func detectDuplicateRows(ctx context.Context, s *transactionService, userID, accountID int, rows []domain.ParsedImportRow) int {
+	inputs := make([]domain.CheckDuplicateRowInput, 0, len(rows))
+	for i, row := range rows {
+		if row.Date != nil && row.Amount > 0 {
+			inputs = append(inputs, domain.CheckDuplicateRowInput{
+				RowIndex:    i,
+				Date:        domain.Date{Time: *row.Date},
+				Amount:      row.Amount,
+				Description: row.Description,
+			})
 		}
 	}
-	return false
+	if len(inputs) == 0 {
+		return 0
+	}
+
+	matches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
+	if err != nil {
+		return 0
+	}
+
+	count := 0
+	for i := range rows {
+		if m := matches[i]; len(m) > 0 {
+			rows[i].DuplicateMatches = m
+			count++
+		}
+	}
+	return count
 }
 
 var (

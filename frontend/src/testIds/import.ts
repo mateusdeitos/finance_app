@@ -1,4 +1,4 @@
-export type ImportRowAction = 'import' | 'skip' | 'duplicate'
+export type ImportRowAction = 'import' | 'skip'
 export type ImportRowTransactionType = 'expense' | 'income' | 'transfer'
 export type ImportTypeRule = 'positive_as_income' | 'positive_as_expense'
 
@@ -40,6 +40,8 @@ export const ImportTestIds = {
   RowCheckbox: (rowIndex: number) => `checkbox_import_row_${rowIndex}` as const,
   RowBtnCreateCategory: (rowIndex: number) =>
     `btn_create_category_row_${rowIndex}` as const,
+  RowDuplicateWarning: (rowIndex: number) =>
+    `import_duplicate_warning_${rowIndex}` as const,
 
   // Row-scoped option testids
   RowOptionCategory: (rowIndex: number, categoryId: number | string) =>
@@ -54,9 +56,19 @@ export const ImportTestIds = {
     `option_row_destination_account_${rowIndex}_${accountId}` as const,
 
   // Bulk toolbar
+  BtnBulkClearSelection: 'btn_bulk_clear_selection',
+  BtnBulkRemoveMenu: 'btn_bulk_remove_menu',
   BtnBulkRemove: 'btn_bulk_remove',
+  BtnBulkClearInstallments: 'btn_bulk_clear_installments',
+  BtnBulkClearSplit: 'btn_bulk_clear_split',
+  BtnBulkAlterMenu: 'btn_bulk_alter_menu',
   BtnBulkApply: 'btn_bulk_apply',
+  DrawerBulkEdit: 'drawer_bulk_edit',
   SelectBulkAction: 'select_bulk_action',
+  SelectBulkCategory: 'select_bulk_category',
+  SelectBulkType: 'select_bulk_type',
+  InputBulkDate: 'input_bulk_date',
+  InputBulkDescription: 'input_bulk_description',
 
   // Recurrence popover (per-row)
   RowBtnRecurrencePopover: (rowIndex: number) =>
@@ -69,6 +81,10 @@ export const ImportTestIds = {
     `btn_split_popover_${rowIndex}` as const,
   SplitPopoverDropdown: (rowIndex: number) =>
     `split_popover_dropdown_${rowIndex}` as const,
+
+  // Duplicate-transactions drawer
+  DrawerDuplicates: 'drawer_duplicate_transactions',
+  DrawerDuplicatesSkipBtn: 'btn_drawer_duplicates_skip',
 
   // Category-creation drawer (mounted from the import flow)
   DrawerCreateCategory: 'drawer_create_category',

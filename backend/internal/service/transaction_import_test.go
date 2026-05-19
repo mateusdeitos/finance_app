@@ -61,6 +61,30 @@ func TestParseAmountSigned(t *testing.T) {
 	}
 }
 
+func TestTrigramSimilarity(t *testing.T) {
+	t.Run("identical strings are fully similar", func(t *testing.T) {
+		assert.Equal(t, 1.0, trigramSimilarity("Petz", "Petz"))
+	})
+
+	t.Run("case insensitive", func(t *testing.T) {
+		assert.Equal(t, 1.0, trigramSimilarity("PETZ", "petz"))
+	})
+
+	t.Run("partial description match is above the threshold", func(t *testing.T) {
+		// Issue #150 example: importing "PETZ 22" against an existing "Petz".
+		assert.GreaterOrEqual(t, trigramSimilarity("PETZ 22", "Petz"), descriptionSimilarityThreshold)
+	})
+
+	t.Run("unrelated description is below the threshold", func(t *testing.T) {
+		// Issue #150 example: "Imec" must not match "PETZ 22".
+		assert.Less(t, trigramSimilarity("Imec", "PETZ 22"), descriptionSimilarityThreshold)
+	})
+
+	t.Run("empty string has zero similarity", func(t *testing.T) {
+		assert.Equal(t, 0.0, trigramSimilarity("", "Petz"))
+	})
+}
+
 func TestParseCSVHeader(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -268,7 +292,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		})
 		resp, err := suite.Services.Transaction.ParseImportCSV(ctx, user.ID, account.ID, TypeDefinitionPositiveAsIncome, csv)
 		suite.Require().NoError(err)
-		suite.Equal(domain.ImportRowStatusDuplicate, resp.Rows[0].Status)
+		suite.NotEmpty(resp.Rows[0].DuplicateMatches)
 		suite.Equal(1, resp.DuplicateCount)
 	})
 
@@ -286,7 +310,7 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 	})
 }
 
-func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
+func (suite *TransactionImportWithDBTestSuite) TestDuplicateMatchCriteria() {
 	ctx := context.Background()
 
 	user, err := suite.createTestUser(ctx)
@@ -299,52 +323,112 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicateTransaction() {
 	category, err := suite.createTestCategory(ctx, user)
 	suite.Require().NoError(err)
 
+	// checkOne runs the bulk duplicate check for a single row and returns its matches.
+	checkOne := func(date time.Time, amount int64, description string) []domain.Transaction {
+		results, err := suite.Services.Transaction.CheckDuplicatesBulk(ctx, user.ID, &account.ID, []domain.CheckDuplicateRowInput{
+			{RowIndex: 0, Date: domain.Date{Time: date}, Amount: amount, Description: description},
+		})
+		suite.Require().NoError(err)
+		suite.Require().Len(results, 1)
+		return results[0].Matches
+	}
+
+	createTx := func(amount int64, date time.Time, description string) {
+		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+			AccountID:       account.ID,
+			TransactionType: domain.TransactionTypeExpense,
+			CategoryID:      category.ID,
+			Amount:          amount,
+			Date:            domain.Date{Time: date},
+			Description:     description,
+		})
+		suite.Require().NoError(err)
+	}
+
 	txDate := time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
 
-	suite.Run("existing transaction is duplicate", func() {
-		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
-			AccountID:       account.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			CategoryID:      category.ID,
-			Amount:          7500,
-			Date:            domain.Date{Time: txDate},
-			Description:     "Spotify Check",
-		})
-		suite.Require().NoError(err)
-
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 7500, &account.ID)
-		suite.Require().NoError(err)
-		suite.True(isDup)
+	suite.Run("matching date, amount and description is a duplicate", func() {
+		createTx(7500, txDate, "Spotify Check")
+		suite.NotEmpty(checkOne(txDate, 7500, "Spotify Check"))
 	})
 
-	suite.Run("duplicate detected regardless of description", func() {
-		_, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
-			AccountID:       account.ID,
-			TransactionType: domain.TransactionTypeExpense,
-			CategoryID:      category.ID,
-			Amount:          8800,
-			Date:            domain.Date{Time: txDate},
-			Description:     "Original Description",
-		})
-		suite.Require().NoError(err)
-
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 8800, &account.ID)
-		suite.Require().NoError(err)
-		suite.True(isDup)
+	suite.Run("empty description skips the similarity check", func() {
+		createTx(8800, txDate, "Original Description")
+		suite.NotEmpty(checkOne(txDate, 8800, ""))
 	})
 
-	suite.Run("no matching amount returns false", func() {
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, txDate, 9999, &account.ID)
-		suite.Require().NoError(err)
-		suite.False(isDup)
+	suite.Run("amount within 2 cents is a duplicate", func() {
+		suite.NotEmpty(checkOne(txDate, 7502, "Spotify Check"))
 	})
 
-	suite.Run("different date returns false", func() {
-		differentDate := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
-		isDup, err := suite.Services.Transaction.CheckDuplicateTransaction(ctx, user.ID, differentDate, 7500, &account.ID)
-		suite.Require().NoError(err)
-		suite.False(isDup)
+	suite.Run("amount more than 2 cents away is not a duplicate", func() {
+		suite.Empty(checkOne(txDate, 7503, "Spotify Check"))
 	})
+
+	suite.Run("fuzzy description match within the same month", func() {
+		createTx(52132, time.Date(2026, 6, 10, 0, 0, 0, 0, time.UTC), "Petz")
+		// Different day of the same month, amount within 2 cents, partial description.
+		suite.NotEmpty(checkOne(time.Date(2026, 6, 8, 0, 0, 0, 0, time.UTC), 52134, "PETZ 22"))
+	})
+
+	suite.Run("description mismatch is not a duplicate", func() {
+		mismatchDate := time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC)
+		createTx(52132, mismatchDate, "Imec")
+		suite.Empty(checkOne(mismatchDate, 52134, "PETZ 22"))
+	})
+
+	suite.Run("no matching amount returns no matches", func() {
+		suite.Empty(checkOne(txDate, 9999, "Spotify Check"))
+	})
+
+	suite.Run("different month returns no matches", func() {
+		suite.Empty(checkOne(time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC), 7500, "Spotify Check"))
+	})
+}
+
+func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulk() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	existingDate := time.Date(2026, 9, 12, 0, 0, 0, 0, time.UTC)
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      category.ID,
+		Amount:          12345,
+		Date:            domain.Date{Time: existingDate},
+		Description:     "Mercado Livre",
+	})
+	suite.Require().NoError(err)
+
+	rows := []domain.CheckDuplicateRowInput{
+		// Matches: same month, amount within 2 cents, similar description.
+		{RowIndex: 0, Date: domain.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, Amount: 12346, Description: "Mercado Livre BR"},
+		// No match: different month.
+		{RowIndex: 1, Date: domain.Date{Time: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}, Amount: 12345, Description: "Mercado Livre"},
+		// No match: amount too far.
+		{RowIndex: 2, Date: domain.Date{Time: time.Date(2026, 9, 5, 0, 0, 0, 0, time.UTC)}, Amount: 99999, Description: "Mercado Livre"},
+	}
+
+	results, err := suite.Services.Transaction.CheckDuplicatesBulk(ctx, user.ID, &account.ID, rows)
+	suite.Require().NoError(err)
+	suite.Require().Len(results, 3)
+
+	byIndex := make(map[int]domain.CheckDuplicateRowResult, len(results))
+	for _, r := range results {
+		byIndex[r.RowIndex] = r
+	}
+	suite.NotEmpty(byIndex[0].Matches)
+	suite.Empty(byIndex[1].Matches)
+	suite.Empty(byIndex[2].Matches)
 }
 
 func TestInferInstallment(t *testing.T) {

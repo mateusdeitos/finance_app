@@ -90,33 +90,67 @@ test.describe("Import transactions", () => {
   });
 
   // ── Duplicate detection ────────────────────────────────────────────────────
-  test("duplicate detection: row is marked as duplicate", async () => {
-    const description = `Duplicado Import ${Date.now()}`;
-    const txDate = new Date(2026, 1, 20); // 20/02/2026
-
-    // Create the transaction via API first (category_id required for expenses)
-    const created = await apiCreateTransaction({
+  test("duplicate detection: warning icon, inspect drawer and skip", async () => {
+    const baseDescription = `Petz ${Date.now()}`;
+    // Seed a near-duplicate: same calendar month, amount within 2 cents,
+    // partial (fuzzy) description match — not an exact match.
+    const seeded = await apiCreateTransaction({
       account_id: testAccountId,
       transaction_type: "expense",
       category_id: testCategoryId,
-      amount: 8000,
+      amount: 52132,
+      date: formatDateISO(new Date(2026, 1, 10)), // 10/02/2026
+      description: baseDescription,
+    });
+    createdTransactionIds.push(seeded.id);
+
+    // Import a row on a different day of the same month, +2 cents, similar text.
+    const csv = buildCsvContent([
+      [formatDateBR(new Date(2026, 1, 8)), `${baseDescription} 22`, "-521,34"],
+    ]);
+    await importPage.uploadCSV(csv, testAccountId);
+
+    // Warning icon shows in the status column.
+    await expect(importPage.duplicateWarning(0)).toBeVisible({ timeout: 8000 });
+
+    // Clicking it opens the inspection drawer listing the matched transaction.
+    await importPage.openDuplicatesDrawer(0);
+    await expect(
+      importPage.duplicatesDrawer.getByText(baseDescription).first(),
+    ).toBeVisible();
+
+    // The drawer's skip action flips the row to "Não importar".
+    await importPage.markNotImportFromDrawer();
+    await expect(
+      importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0)),
+    ).toHaveValue("Não importar", { timeout: 5000 });
+  });
+
+  // ── Duplicate detection: recalculated, never sticky ────────────────────────
+  test("duplicate detection: editing the amount away clears the warning", async () => {
+    const description = `Imec ${Date.now()}`;
+    const txDate = new Date(2026, 6, 12); // 12/07/2026
+
+    const seeded = await apiCreateTransaction({
+      account_id: testAccountId,
+      transaction_type: "expense",
+      category_id: testCategoryId,
+      amount: 30000,
       date: formatDateISO(txDate),
       description,
     });
-    createdTransactionIds.push(created.id);
+    createdTransactionIds.push(seeded.id);
 
-    // Now try to import the same transaction
     const csv = buildCsvContent([
-      [formatDateBR(txDate), description, "-80,00"],
+      [formatDateBR(txDate), description, "-300,00"],
     ]);
-
     await importPage.uploadCSV(csv, testAccountId);
+    await expect(importPage.duplicateWarning(0)).toBeVisible({ timeout: 8000 });
 
-    // Row 0 should have action "duplicate" (detected server-side)
-    const actionSelect = importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0));
-    await expect(actionSelect).toHaveValue("Duplicado", {
-      timeout: 5000,
-    });
+    // Editing the amount far from the match triggers a fresh check that finds
+    // nothing — the warning disappears (the flag is recalculated, not sticky).
+    await importPage.setRowAmount(0, 9999900);
+    await expect(importPage.duplicateWarning(0)).not.toBeVisible({ timeout: 8000 });
   });
 
   // ── Skip a row ─────────────────────────────────────────────────────────────
