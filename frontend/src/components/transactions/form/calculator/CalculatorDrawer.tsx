@@ -1,4 +1,4 @@
-import { Button, Group, Stack, Text } from "@mantine/core";
+import { Button, Group, Kbd, Stack, Text } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { TransactionsTestIds } from "@/testIds";
 import { formatBalance } from "@/utils/formatCents";
@@ -58,6 +58,7 @@ export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
           <Button
             size="md"
             onClick={handleApply}
+            rightSection={<Kbd>Enter</Kbd>}
             data-testid={TransactionsTestIds.BtnCalcApply}
           >
             Aplicar
