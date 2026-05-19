@@ -201,8 +201,8 @@ func (suite *TransactionImportWithDBTestSuite) TestParseImportCSV() {
 		suite.ErrorIs(err, pkgErrors.ErrImportInvalidLayout)
 	})
 
-	suite.Run("more than 100 rows", func() {
-		rows := make([][]string, 101)
+	suite.Run("more than max rows", func() {
+		rows := make([][]string, IMPORT_MAX_ROWS+1)
 		for i := range rows {
 			rows[i] = []string{"01/01/2026", "Test", "100,00"}
 		}
