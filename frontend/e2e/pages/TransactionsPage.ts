@@ -173,6 +173,17 @@ export class TransactionsPage {
     }
   }
 
+  /**
+   * Type a sequence of physical keys while the calculator drawer is open.
+   * Each entry is a Playwright key name — digits ("0".."9"), operators
+   * ("+", "-", "*", "/"), "Enter", "Backspace".
+   */
+  async typeOnCalculator(keys: string[]) {
+    for (const key of keys) {
+      await this.page.keyboard.press(key);
+    }
+  }
+
   /** Apply the calculator result back to the amount input and wait for it to close. */
   async applyCalculator() {
     await this.calculatorDrawer.getByTestId(TransactionsTestIds.BtnCalcApply).click();

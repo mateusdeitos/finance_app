@@ -16,21 +16,21 @@ test("applyOperator — subtraction allows negative results", () => {
   assert.equal(applyOperator(500, "sub", 1000), -500);
 });
 
-test("applyOperator — multiplication treats operands as money (10.00 x 3.00 = 30.00)", () => {
-  assert.equal(applyOperator(1000, "mul", 300), 3000);
+test("applyOperator — multiplication scales a cents amount by a whole number (10.00 x 3 = 30.00)", () => {
+  assert.equal(applyOperator(1000, "mul", 3), 3000);
 });
 
-test("applyOperator — multiplication with cents (1.23 x 2.00 = 2.46)", () => {
-  assert.equal(applyOperator(123, "mul", 200), 246);
+test("applyOperator — multiplication keeps cent precision (1.23 x 2 = 2.46)", () => {
+  assert.equal(applyOperator(123, "mul", 2), 246);
 });
 
-test("applyOperator — division treats operands as money (6.00 / 3.00 = 2.00)", () => {
-  assert.equal(applyOperator(600, "div", 300), 200);
+test("applyOperator — division splits a cents amount by a whole number (6.00 / 3 = 2.00)", () => {
+  assert.equal(applyOperator(600, "div", 3), 200);
 });
 
-test("applyOperator — division rounds to nearest cent (10.00 / 3.00)", () => {
-  // round(1000 * 100 / 300) = round(333.33) = 333
-  assert.equal(applyOperator(1000, "div", 300), 333);
+test("applyOperator — division rounds to nearest cent (10.00 / 3)", () => {
+  // round(1000 / 3) = round(333.33) = 333
+  assert.equal(applyOperator(1000, "div", 3), 333);
 });
 
 test("applyOperator — division by zero returns the accumulator unchanged", () => {

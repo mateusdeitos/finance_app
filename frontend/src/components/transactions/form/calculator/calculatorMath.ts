@@ -9,9 +9,12 @@ export function clampCents(n: number): number {
 }
 
 /**
- * Applies an operator to two cent amounts. Both operands are money values
- * (2-decimal cents), so multiplication and division divide/multiply by 100 to
- * keep the result in cents. Division by zero returns `a` unchanged (no NaN).
+ * Applies an operator to two operands, returning a cent amount.
+ *
+ * `a` is always a cent amount. For add/sub, `b` is also cents. For mul/div,
+ * `b` is a whole-number factor (the input switches to integer entry after
+ * those operators), so the result keeps cent precision without dividing by
+ * 100. Division by zero returns `a` unchanged (no NaN).
  */
 export function applyOperator(a: number, op: Operator, b: number): number {
   switch (op) {
@@ -20,9 +23,9 @@ export function applyOperator(a: number, op: Operator, b: number): number {
     case "sub":
       return clampCents(a - b);
     case "mul":
-      return clampCents(Math.round((a * b) / 100));
+      return clampCents(a * b);
     case "div":
-      return b === 0 ? a : clampCents(Math.round((a * 100) / b));
+      return b === 0 ? a : clampCents(Math.round(a / b));
   }
 }
 

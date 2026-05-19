@@ -68,11 +68,11 @@ test.describe('Amount calculator', () => {
     // The calculator opens preloaded with the input's current value.
     expect(await transactionsPage.getCalculatorDisplay()).toContain('20,00')
 
-    // 20,00 x 2,00 = 40,00
-    await transactionsPage.pressCalculatorKeys(['mul', '2', '0', '0', 'equals'])
+    // 20,00 x 3 = 60,00 — after "x" the operand is a whole number.
+    await transactionsPage.pressCalculatorKeys(['mul', '3', 'equals'])
     await transactionsPage.applyCalculator()
 
-    expect(await transactionsPage.getAmountValue()).toBe('40,00')
+    expect(await transactionsPage.getAmountValue()).toBe('60,00')
   })
 
   test('discards the result when the calculator is dismissed', async () => {
@@ -86,5 +86,17 @@ test.describe('Amount calculator', () => {
 
     // Dismissing discards the result — the amount input keeps its original value.
     expect(await transactionsPage.getAmountValue()).toBe('25,00')
+  })
+
+  test('drives the calculator from the physical keyboard', async () => {
+    await transactionsPage.openCreateForm()
+    await transactionsPage.selectType('expense')
+
+    await transactionsPage.openAmountCalculator()
+    // 12,00 + 3,00 = 15,00 — digits, operator and Enter typed on the keyboard.
+    await transactionsPage.typeOnCalculator(['1', '2', '0', '0', '+', '3', '0', '0', 'Enter'])
+    await transactionsPage.applyCalculator()
+
+    expect(await transactionsPage.getAmountValue()).toBe('15,00')
   })
 })

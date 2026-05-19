@@ -1,14 +1,22 @@
-import { useReducer } from "react";
+import { useMemo, useReducer } from "react";
 import { applyOperator, popDigit, pushDigit, type Operator } from "./calculatorMath";
 
+/**
+ * How keypad digits are interpreted: `cents` builds a 2-decimal money value
+ * (right-to-left, like CurrencyInput); `integer` builds a whole number — used
+ * for the factor of a multiplication or division.
+ */
+export type EntryMode = "cents" | "integer";
+
 interface State {
-  /** Current value shown on the display, in signed cents. */
+  /** Current operand. Cents when `mode` is "cents", a whole number otherwise. */
   display: number;
-  /** Stored left operand of a pending operation, in cents. */
+  /** Stored left operand of a pending operation, always in cents. */
   accumulator: number | null;
   pendingOp: Operator | null;
   /** When true, the next digit starts a fresh number instead of appending. */
   overwrite: boolean;
+  mode: EntryMode;
 }
 
 type Action =
@@ -18,6 +26,11 @@ type Action =
   | { type: "operator"; op: Operator }
   | { type: "equals" }
   | { type: "negate" };
+
+/** Multiply/divide take a whole-number factor, so they switch to integer entry. */
+function modeForOperator(op: Operator): EntryMode {
+  return op === "mul" || op === "div" ? "integer" : "cents";
+}
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -38,22 +51,40 @@ function reducer(state: State, action: Action): State {
       };
     }
     case "clear":
-      return { display: 0, accumulator: null, pendingOp: null, overwrite: true };
+      return {
+        display: 0,
+        accumulator: null,
+        pendingOp: null,
+        overwrite: true,
+        mode: "cents",
+      };
     case "operator": {
       let acc: number;
       if (state.pendingOp != null && state.accumulator != null && !state.overwrite) {
         acc = applyOperator(state.accumulator, state.pendingOp, state.display);
-      } else if (state.accumulator != null && state.overwrite) {
-        acc = state.accumulator;
       } else {
-        acc = state.display;
+        acc = state.accumulator ?? state.display;
       }
-      return { display: acc, accumulator: acc, pendingOp: action.op, overwrite: true };
+      return {
+        display: 0,
+        accumulator: acc,
+        pendingOp: action.op,
+        overwrite: true,
+        mode: modeForOperator(action.op),
+      };
     }
     case "equals": {
       if (state.pendingOp == null || state.accumulator == null) return state;
-      const result = applyOperator(state.accumulator, state.pendingOp, state.display);
-      return { display: result, accumulator: null, pendingOp: null, overwrite: true };
+      const result = state.overwrite
+        ? state.accumulator
+        : applyOperator(state.accumulator, state.pendingOp, state.display);
+      return {
+        display: result,
+        accumulator: null,
+        pendingOp: null,
+        overwrite: true,
+        mode: "cents",
+      };
     }
     case "negate":
       return { ...state, display: -state.display };
@@ -65,6 +96,7 @@ function computeResult(state: State): number {
   if (state.pendingOp != null && state.accumulator != null && !state.overwrite) {
     return applyOperator(state.accumulator, state.pendingOp, state.display);
   }
+  if (state.accumulator != null) return state.accumulator;
   return state.display;
 }
 
@@ -72,6 +104,7 @@ export interface CalculatorApi {
   display: number;
   accumulator: number | null;
   pendingOp: Operator | null;
+  mode: EntryMode;
   inputDigit: (digit: number) => void;
   backspace: () => void;
   clear: () => void;
@@ -87,18 +120,28 @@ export function useCalculator(initialCents: number): CalculatorApi {
     accumulator: null,
     pendingOp: null,
     overwrite: true,
+    mode: "cents",
   });
+
+  // Stable action identities so the keyboard listener subscribes only once.
+  const actions = useMemo(
+    () => ({
+      inputDigit: (digit: number) => dispatch({ type: "digit", digit }),
+      backspace: () => dispatch({ type: "backspace" }),
+      clear: () => dispatch({ type: "clear" }),
+      setOperator: (op: Operator) => dispatch({ type: "operator", op }),
+      equals: () => dispatch({ type: "equals" }),
+      negate: () => dispatch({ type: "negate" }),
+    }),
+    [],
+  );
 
   return {
     display: state.display,
     accumulator: state.accumulator,
     pendingOp: state.pendingOp,
-    inputDigit: (digit) => dispatch({ type: "digit", digit }),
-    backspace: () => dispatch({ type: "backspace" }),
-    clear: () => dispatch({ type: "clear" }),
-    setOperator: (op) => dispatch({ type: "operator", op }),
-    equals: () => dispatch({ type: "equals" }),
-    negate: () => dispatch({ type: "negate" }),
+    mode: state.mode,
+    ...actions,
     getResult: () => computeResult(state),
   };
 }

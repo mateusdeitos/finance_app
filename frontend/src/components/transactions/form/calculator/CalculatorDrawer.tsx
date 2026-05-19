@@ -6,6 +6,7 @@ import { useDrawerContext } from "@/utils/renderDrawer";
 import type { Operator } from "./calculatorMath";
 import { CalculatorKeypad } from "./CalculatorKeypad";
 import { useCalculator } from "./useCalculator";
+import { useCalculatorKeyboard } from "./useCalculatorKeyboard";
 
 const OPERATOR_SYMBOL: Record<Operator, string> = {
   add: "+",
@@ -21,6 +22,7 @@ const OPERATOR_SYMBOL: Record<Operator, string> = {
 export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
   const { opened, close, reject } = useDrawerContext<number>();
   const calc = useCalculator(initialCents);
+  useCalculatorKeyboard(calc);
 
   return (
     <ResponsiveDrawer
@@ -37,7 +39,7 @@ export function CalculatorDrawer({ initialCents }: { initialCents: number }) {
               : " "}
           </Text>
           <Text size="xl" fw={700} ta="right" data-testid={TransactionsTestIds.CalcDisplay}>
-            {formatBalance(calc.display)}
+            {calc.mode === "integer" ? String(calc.display) : formatBalance(calc.display)}
           </Text>
         </Stack>
 
