@@ -5,7 +5,6 @@ import {
   Checkbox,
   Group,
   Modal,
-  Paper,
   ScrollArea,
   Stack,
   Table,
@@ -203,6 +202,21 @@ export function ImportTransactionsPage() {
     clearSelection()
   }
 
+  const handleBulkClearInstallments = () => {
+    forEachSelectedRow((i) => {
+      form.setValue(`rows.${i}.recurrenceEnabled`, false)
+      form.setValue(`rows.${i}.recurrenceType`, null)
+      form.setValue(`rows.${i}.recurrenceCurrentInstallment`, null)
+      form.setValue(`rows.${i}.recurrenceTotalInstallments`, null)
+    })
+    clearSelection()
+  }
+
+  const handleBulkClearSplit = () => {
+    forEachSelectedRow((i) => form.setValue(`rows.${i}.split_settings`, []))
+    clearSelection()
+  }
+
   const handleSetSplitSettings = (splitSettings: Transactions.SplitSetting[]) => {
     forEachSelectedRow((i) => {
       const type = form.getValues(`rows.${i}.transaction_type`)
@@ -336,7 +350,11 @@ export function ImportTransactionsPage() {
             </Text>
           </Stack>
         ) : (
-          <Stack gap="md" data-testid={ImportTestIds.ReviewStep}>
+          <Stack
+            gap="md"
+            data-testid={ImportTestIds.ReviewStep}
+            pb={someSelected && !importing ? '7rem' : undefined}
+          >
             <Group justify="space-between" align="center" wrap="nowrap">
               <Group gap="xs">
                 <Button
@@ -370,20 +388,6 @@ export function ImportTransactionsPage() {
                 {errorCount} transaç{errorCount !== 1 ? 'ões' : 'ão'} com erro. Corrija e tente importar novamente.
               </Alert>
             )}
-
-            <Paper p="xs" withBorder style={{ visibility: someSelected && !importing ? 'visible' : 'hidden' }}>
-              <ImportCSVBulkToolbar
-                selectedCount={totalSelected}
-                canSplit={!importingToSharedAccount}
-                onRemove={handleRemoveSelected}
-                onBulkSetAction={handleBulkSetAction}
-                onBulkSetDate={handleBulkSetDate}
-                onBulkSetCategory={handleBulkSetCategory}
-                onBulkSetTransactionType={handleBulkSetTransactionType}
-                onBulkSetDescription={handleSetDescription}
-                onBulkSetSplitSettings={handleSetSplitSettings}
-              />
-            </Paper>
 
             <ScrollArea>
               <Table withTableBorder withColumnBorders verticalSpacing="xs" fz="sm">
@@ -429,6 +433,22 @@ export function ImportTransactionsPage() {
                 </Table.Tbody>
               </Table>
             </ScrollArea>
+
+            {someSelected && !importing && (
+              <ImportCSVBulkToolbar
+                selectedCount={totalSelected}
+                canSplit={!importingToSharedAccount}
+                onRemove={handleRemoveSelected}
+                onBulkClearInstallments={handleBulkClearInstallments}
+                onBulkClearSplit={handleBulkClearSplit}
+                onBulkSetAction={handleBulkSetAction}
+                onBulkSetDate={handleBulkSetDate}
+                onBulkSetCategory={handleBulkSetCategory}
+                onBulkSetTransactionType={handleBulkSetTransactionType}
+                onBulkSetDescription={handleSetDescription}
+                onBulkSetSplitSettings={handleSetSplitSettings}
+              />
+            )}
 
             <Modal
               opened={blockerStatus === 'blocked'}

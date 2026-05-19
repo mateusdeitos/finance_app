@@ -9,7 +9,9 @@ import {
   IconHammer,
   IconQuestionMark,
   IconReceipt,
+  IconRepeatOff,
   IconShare,
+  IconShareOff,
   IconTrash,
 } from "@tabler/icons-react";
 import { useMemo } from "react";
@@ -18,6 +20,7 @@ import { SplitSettingsFields } from "../form/SplitSettingsFields";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useDisclosure } from "@mantine/hooks";
 import { ImportTestIds } from "@/testIds";
+import classes from "./ImportCSVBulkToolbar.module.css";
 
 const ACTION_OPTIONS = [
   { value: "import", label: "Importar" },
@@ -45,6 +48,8 @@ interface Props {
   /** Splits aren't allowed on shared accounts — hide the bulk split action. */
   canSplit: boolean;
   onRemove: () => void;
+  onBulkClearInstallments: () => void;
+  onBulkClearSplit: () => void;
   onBulkSetAction: (action: Transactions.ImportRowAction) => void;
   onBulkSetDate: (date: string) => void;
   onBulkSetCategory: (categoryId: number) => void;
@@ -68,6 +73,8 @@ export function ImportCSVBulkToolbar({
   selectedCount,
   canSplit,
   onRemove,
+  onBulkClearInstallments,
+  onBulkClearSplit,
   onBulkSetAction,
   onBulkSetDate,
   onBulkSetCategory,
@@ -168,27 +175,53 @@ export function ImportCSVBulkToolbar({
 
   return (
     <FormProvider {...localForm}>
-      <Group gap="xs" align="end">
-        <Text fz="sm" fw={500}>
-          {selectedCount} selecionadas
-        </Text>
+      <div className={classes.bar}>
+        <Stack gap="xs">
+          {/* Row 1: selection count + bulk removal actions */}
+          <Group gap="xs">
+            <Text fz="sm" fw={500}>
+              {selectedCount} selecionadas
+            </Text>
 
-        <Button
-          size="compact-xs"
-          variant="light"
-          color="red"
-          leftSection={<IconTrash size={14} />}
-          onClick={onRemove}
-          data-testid={ImportTestIds.BtnBulkRemove}
-        >
-          Remover
-        </Button>
+            <Button
+              size="compact-xs"
+              variant="light"
+              color="red"
+              leftSection={<IconTrash size={14} />}
+              onClick={onRemove}
+              data-testid={ImportTestIds.BtnBulkRemove}
+            >
+              Remover
+            </Button>
 
-        <Text fz="sm" fw={500}>
-          Definir
-        </Text>
+            <Button
+              size="compact-xs"
+              variant="default"
+              leftSection={<IconRepeatOff size={14} />}
+              onClick={onBulkClearInstallments}
+              data-testid={ImportTestIds.BtnBulkClearInstallments}
+            >
+              Remover parcelamento
+            </Button>
 
-        <Menu>
+            <Button
+              size="compact-xs"
+              variant="default"
+              leftSection={<IconShareOff size={14} />}
+              onClick={onBulkClearSplit}
+              data-testid={ImportTestIds.BtnBulkClearSplit}
+            >
+              Remover divisão
+            </Button>
+          </Group>
+
+          {/* Row 2: define-and-apply flow */}
+          <Group gap="xs" align="end">
+            <Text fz="sm" fw={500}>
+              Definir
+            </Text>
+
+            <Menu>
           <Menu.Target>
             <Button
               variant="subtle"
@@ -316,7 +349,9 @@ export function ImportCSVBulkToolbar({
         >
           Aplicar
         </Button>
-      </Group>
+          </Group>
+        </Stack>
+      </div>
     </FormProvider>
   );
 }

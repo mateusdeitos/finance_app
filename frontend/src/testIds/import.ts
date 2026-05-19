@@ -57,6 +57,8 @@ export const ImportTestIds = {
 
   // Bulk toolbar
   BtnBulkRemove: 'btn_bulk_remove',
+  BtnBulkClearInstallments: 'btn_bulk_clear_installments',
+  BtnBulkClearSplit: 'btn_bulk_clear_split',
   BtnBulkApply: 'btn_bulk_apply',
   SelectBulkAction: 'select_bulk_action',
 
