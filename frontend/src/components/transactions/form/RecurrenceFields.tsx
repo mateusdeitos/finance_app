@@ -56,6 +56,7 @@ export function RecurrenceFields({
             error={fieldError("recurrenceType")}
             comboboxProps={{ withinPortal: comboboxWithinPortal }}
             clearable
+            allowDeselect={false}
             renderOption={({ option }) => (
               <span data-testid={RecurrenceTestIds.OptionType(option.value as RecurrenceType)}>
                 {option.label}

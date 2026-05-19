@@ -168,7 +168,7 @@ test.describe("Import: installment inference from description", () => {
     const recurrenceBtn = importPage.reviewStep.getByTestId(
       ImportTestIds.RowBtnRecurrencePopover(0),
     );
-    await expect(recurrenceBtn).toContainText("6x", { timeout: 5000 });
+    await expect(recurrenceBtn).toContainText("2 de 6", { timeout: 5000 });
 
     await importPage.confirmImport();
 
@@ -197,7 +197,7 @@ test.describe("Import: installment inference from description", () => {
     const recurrenceBtn = importPage.reviewStep.getByTestId(
       ImportTestIds.RowBtnRecurrencePopover(0),
     );
-    await expect(recurrenceBtn).toContainText("12x", { timeout: 5000 });
+    await expect(recurrenceBtn).toContainText("3 de 12", { timeout: 5000 });
 
     await importPage.confirmImport();
 
