@@ -61,8 +61,14 @@ export const ImportTestIds = {
   BtnBulkRemove: 'btn_bulk_remove',
   BtnBulkClearInstallments: 'btn_bulk_clear_installments',
   BtnBulkClearSplit: 'btn_bulk_clear_split',
+  BtnBulkAlterMenu: 'btn_bulk_alter_menu',
   BtnBulkApply: 'btn_bulk_apply',
+  DrawerBulkEdit: 'drawer_bulk_edit',
   SelectBulkAction: 'select_bulk_action',
+  SelectBulkCategory: 'select_bulk_category',
+  SelectBulkType: 'select_bulk_type',
+  InputBulkDate: 'input_bulk_date',
+  InputBulkDescription: 'input_bulk_description',
 
   // Recurrence popover (per-row)
   RowBtnRecurrencePopover: (rowIndex: number) =>

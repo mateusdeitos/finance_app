@@ -353,7 +353,7 @@ export function ImportTransactionsPage() {
           <Stack
             gap="md"
             data-testid={ImportTestIds.ReviewStep}
-            pb={someSelected && !importing ? '7rem' : undefined}
+            pb={someSelected && !importing ? '5rem' : undefined}
           >
             <Group justify="space-between" align="center" wrap="nowrap">
               <Group gap="xs">
