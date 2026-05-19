@@ -137,6 +137,24 @@ export class SelectField extends FieldBase {
   }
 }
 
+// ─── Autocomplete (Mantine combobox with free text) ──────────────────────────
+
+/**
+ * Wraps a Mantine `Autocomplete`. The component must instrument its options
+ * via `renderOption` with a matching `data-testid`. Like `SelectField`, this
+ * class does not fall back to `getByRole('option')`.
+ */
+export class AutocompleteField extends FieldBase {
+  /** Type `query`, then click the suggestion option whose testid matches. */
+  async pickSuggestion(query: string, optionTestId: string): Promise<void> {
+    const input = this.locator()
+    await input.click()
+    await input.fill(query)
+    // Mantine renders Autocomplete options in a portal attached to <body>.
+    await this.page().getByTestId(optionTestId).click()
+  }
+}
+
 // ─── TagsInput (multi) ────────────────────────────────────────────────────────
 
 /**

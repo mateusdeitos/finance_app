@@ -1,6 +1,7 @@
 import { type Page, type Locator, expect } from "@playwright/test";
 import { TransactionsTestIds, type PropagationOption, type TransactionType } from '@/testIds'
 import {
+  AutocompleteField,
   CurrencyField,
   SegmentedField,
   SelectField,
@@ -123,6 +124,18 @@ export class TransactionsPage {
 
   async fillDescription(description: string) {
     await new TextField(this.formDrawer, TransactionsTestIds.InputDescription).fill(description);
+  }
+
+  /**
+   * Type a description and pick the autocomplete suggestion whose text equals
+   * it, triggering the suggestion-fill behaviour. Defaults to the create drawer.
+   */
+  async pickDescriptionSuggestion(description: string, drawer?: Locator) {
+    const container = drawer ?? this.formDrawer;
+    await new AutocompleteField(container, TransactionsTestIds.InputDescription).pickSuggestion(
+      description,
+      TransactionsTestIds.OptionDescriptionSuggestion(description),
+    );
   }
 
   async selectAccount(accountId: number) {

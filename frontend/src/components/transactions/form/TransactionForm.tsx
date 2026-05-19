@@ -89,7 +89,7 @@ export const TransactionForm = ({
     setValue,
     setFocus,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
   useFocusFieldOnMount(setFocus, focusField);
@@ -131,11 +131,13 @@ export const TransactionForm = ({
   };
 
   function handleSuggestionSelect(suggestion: Transactions.TransactionSuggestion) {
-    setValue("transaction_type", suggestion.type);
-    setValue("amount", suggestion.amount);
-    if (suggestion.account_id) setValue("account_id", suggestion.account_id);
-    if (suggestion.category_id) setValue("category_id", suggestion.category_id);
-    if (suggestion.tags)
+    // Only fill fields the user hasn't manually edited, so a suggestion never
+    // overwrites a value the user already set on purpose.
+    if (!dirtyFields.transaction_type) setValue("transaction_type", suggestion.type);
+    if (!dirtyFields.amount) setValue("amount", suggestion.amount);
+    if (!dirtyFields.account_id && suggestion.account_id) setValue("account_id", suggestion.account_id);
+    if (!dirtyFields.category_id && suggestion.category_id) setValue("category_id", suggestion.category_id);
+    if (!dirtyFields.tags && suggestion.tags)
       setValue(
         "tags",
         suggestion.tags.map((t) => t.name),
