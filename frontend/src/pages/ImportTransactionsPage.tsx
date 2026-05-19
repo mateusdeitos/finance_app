@@ -53,7 +53,7 @@ export function ImportTransactionsPage() {
 
   const form = useForm<ImportFormValues>({
     resolver: zodResolver(importFormSchema),
-    defaultValues: { accountId: 0, rows: [] },
+    defaultValues: { accountId: 0, rows: [], duplicate_criteria: null },
   })
 
   const { totalSuccess, total, errorCount, toImportPendingCount } = useWatch({
@@ -313,10 +313,11 @@ export function ImportTransactionsPage() {
       <Stack gap="md" pb="2rem">
         {step === 'upload' ? (
           <UploadStep
-            onParsed={(parsedRows, accountId) => {
+            onParsed={(parsedRows, accountId, duplicateCriteria) => {
               form.reset({
                 accountId,
                 rows: parsedRows.map((r) => parsedRowToFormValues(r, accountId)),
+                duplicate_criteria: duplicateCriteria,
               })
               setStep('review')
               clearSelection()

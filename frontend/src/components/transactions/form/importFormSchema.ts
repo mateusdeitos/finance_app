@@ -29,6 +29,14 @@ export const importRowFormSchema = z
 export const importFormSchema = z.object({
   accountId: z.number().int(),
   rows: z.array(importRowFormSchema),
+  // Detection thresholds returned by the parse endpoint; surfaced in the
+  // duplicate drawer so displayed values track the backend.
+  duplicate_criteria: z
+    .object({
+      description_similarity_threshold: z.number(),
+      amount_tolerance_cents: z.number().int(),
+    })
+    .nullable(),
 });
 
 export type ImportRowFormValues = z.infer<typeof importRowFormSchema>;

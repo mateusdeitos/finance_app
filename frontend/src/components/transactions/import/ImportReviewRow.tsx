@@ -105,10 +105,12 @@ export const ImportReviewRow = memo(
 
     function openDuplicatesDrawer() {
       const row = form.getValues(`rows.${rowIndex}`);
+      const criteria = form.getValues("duplicate_criteria");
       void renderDrawer<"skip" | void>(() => (
         <DuplicateTransactionsDrawer
           row={{ date: row.date, description: row.description, amount: row.amount }}
           matches={row.duplicate_matches ?? []}
+          criteria={criteria ?? undefined}
         />
       ))
         .then((result) => {

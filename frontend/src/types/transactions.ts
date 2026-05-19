@@ -231,11 +231,18 @@ export namespace Transactions {
 
   export type TypeDefinitionRule = "positive_as_income" | "positive_as_expense";
 
+  /** Thresholds used to flag a row as a possible duplicate. */
+  export interface DuplicateCriteria {
+    description_similarity_threshold: number; // 0..1 trigram similarity
+    amount_tolerance_cents: number;
+  }
+
   export interface ImportCSVResponse {
     rows: ParsedImportRow[];
     total_rows: number;
     duplicate_count: number;
     error_count: number;
+    duplicate_criteria: DuplicateCriteria;
   }
 
   /** Result of the bulk duplicate check, keyed back to the submitted row_index. */

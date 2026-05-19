@@ -29,7 +29,11 @@ import { ImportTestIds, type ImportTypeRule } from '@/testIds'
 const EMPTY_ACCOUNTS: Transactions.Account[] = []
 
 type Props = {
-  onParsed: (rows: Transactions.ParsedImportRow[], accountId: number) => void
+  onParsed: (
+    rows: Transactions.ParsedImportRow[],
+    accountId: number,
+    duplicateCriteria: Transactions.DuplicateCriteria,
+  ) => void
   onBack: () => void
 }
 
@@ -62,7 +66,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
     mutation.mutate(
       { file, accountId, typeDefinitionRule },
       {
-        onSuccess: (result) => onParsed(result.rows, accountId),
+        onSuccess: (result) => onParsed(result.rows, accountId, result.duplicate_criteria),
         onError: async (err: unknown) => {
           if (err instanceof Response) {
             const apiError = await parseApiError(err)

@@ -37,12 +37,21 @@ type ParsedImportRow struct {
 	DuplicateMatches             []Transaction   `json:"duplicate_matches,omitempty"`
 }
 
+// DuplicateCriteria describes the thresholds used to flag a row as a possible
+// duplicate. It is returned alongside detection results so clients always
+// display the current, authoritative values instead of hard-coding them.
+type DuplicateCriteria struct {
+	DescriptionSimilarityThreshold float64 `json:"description_similarity_threshold"`
+	AmountToleranceCents           int64   `json:"amount_tolerance_cents"`
+}
+
 // ImportCSVResponse is the response returned by the CSV parse endpoint.
 type ImportCSVResponse struct {
-	Rows           []ParsedImportRow `json:"rows"`
-	TotalRows      int               `json:"total_rows"`
-	DuplicateCount int               `json:"duplicate_count"`
-	ErrorCount     int               `json:"error_count"`
+	Rows              []ParsedImportRow `json:"rows"`
+	TotalRows         int               `json:"total_rows"`
+	DuplicateCount    int               `json:"duplicate_count"`
+	ErrorCount        int               `json:"error_count"`
+	DuplicateCriteria DuplicateCriteria `json:"duplicate_criteria"`
 }
 
 // CheckDuplicateRowInput is a single row submitted to the bulk duplicate check.

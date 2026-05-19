@@ -2516,11 +2516,25 @@
                 }
             }
         },
+        "domain.DuplicateCriteria": {
+            "type": "object",
+            "properties": {
+                "amount_tolerance_cents": {
+                    "type": "integer"
+                },
+                "description_similarity_threshold": {
+                    "type": "number"
+                }
+            }
+        },
         "domain.ImportCSVResponse": {
             "type": "object",
             "properties": {
                 "duplicate_count": {
                     "type": "integer"
+                },
+                "duplicate_criteria": {
+                    "$ref": "#/definitions/domain.DuplicateCriteria"
                 },
                 "error_count": {
                     "type": "integer"

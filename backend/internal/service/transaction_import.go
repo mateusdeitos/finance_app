@@ -116,11 +116,21 @@ func (s *transactionService) ParseImportCSV(ctx context.Context, userID, account
 	duplicateCount := detectDuplicateRows(ctx, s, userID, accountID, rows)
 
 	return &domain.ImportCSVResponse{
-		Rows:           rows,
-		TotalRows:      len(rows),
-		DuplicateCount: duplicateCount,
-		ErrorCount:     errorCount,
+		Rows:              rows,
+		TotalRows:         len(rows),
+		DuplicateCount:    duplicateCount,
+		ErrorCount:        errorCount,
+		DuplicateCriteria: duplicateCriteria(),
 	}, nil
+}
+
+// duplicateCriteria returns the current duplicate-detection thresholds so
+// clients can display them instead of hard-coding the values.
+func duplicateCriteria() domain.DuplicateCriteria {
+	return domain.DuplicateCriteria{
+		DescriptionSimilarityThreshold: descriptionSimilarityThreshold,
+		AmountToleranceCents:           duplicateAmountThreshold,
+	}
 }
 
 // detectSeparator identifica se o CSV usa vírgula ou ponto e vírgula.

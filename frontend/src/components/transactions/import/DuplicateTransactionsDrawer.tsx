@@ -1,5 +1,5 @@
-import { Badge, Button, Card, Group, Stack, Text } from '@mantine/core'
-import { IconAlertTriangle } from '@tabler/icons-react'
+import { Alert, Badge, Button, Card, Group, List, Stack, Text } from '@mantine/core'
+import { IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useAccountOptions } from '@/hooks/import/useImportOptions'
@@ -16,6 +16,8 @@ interface ImportingRow {
 interface Props {
   row: ImportingRow
   matches: Transactions.Transaction[]
+  /** Detection thresholds from the parse endpoint; drives the criteria text. */
+  criteria?: Transactions.DuplicateCriteria
 }
 
 function formatDate(iso: string): string {
@@ -30,12 +32,19 @@ function formatDate(iso: string): string {
  * existing transactions that matched and lets the user mark the row as "not
  * imported" — resolved via `close('skip')` so the caller flips the row action.
  */
-export function DuplicateTransactionsDrawer({ row, matches }: Props) {
+export function DuplicateTransactionsDrawer({ row, matches, criteria }: Props) {
   const { opened, close, reject } = useDrawerContext<'skip' | void>()
   const accountOptions = useAccountOptions()
 
   const accountName = (id: number) =>
     accountOptions.find((o) => o.value === String(id))?.label ?? `Conta ${id}`
+
+  const similarityLabel = criteria
+    ? `Descrição parecida (similaridade ≥ ${Math.round(criteria.description_similarity_threshold * 100)}%)`
+    : 'Descrição parecida'
+  const amountLabel = criteria
+    ? `Valor a até ${criteria.amount_tolerance_cents} ${criteria.amount_tolerance_cents === 1 ? 'centavo' : 'centavos'} de diferença`
+    : 'Valor próximo'
 
   return (
     <ResponsiveDrawer
@@ -65,6 +74,22 @@ export function DuplicateTransactionsDrawer({ row, matches }: Props) {
             </Group>
           </Card>
         </Stack>
+
+        <Alert
+          variant="light"
+          color="orange"
+          icon={<IconInfoCircle size={16} />}
+          title="Como detectamos duplicidades"
+        >
+          <Text fz="xs" mb={4}>
+            Uma linha é sinalizada quando existe uma transação que atende aos 3 critérios:
+          </Text>
+          <List size="xs" spacing={2}>
+            <List.Item>{similarityLabel}</List.Item>
+            <List.Item>{amountLabel}</List.Item>
+            <List.Item>No mesmo mês da data da transação</List.Item>
+          </List>
+        </Alert>
 
         <Stack gap={4}>
           <Group gap={6}>
