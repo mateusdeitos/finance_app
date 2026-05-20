@@ -786,24 +786,39 @@ func (s *transactionService) shouldSyncSettlementsOnUpdate(data *transactionUpda
 	return false
 }
 
+func (s *transactionService) deleteSettlementsForSource(ctx context.Context, sourceTransactionID int) error {
+	existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{sourceTransactionID},
+	})
+	if err != nil {
+		return err
+	}
+	if len(existing) == 0 {
+		return nil
+	}
+	ids := make([]int, len(existing))
+	for i, st := range existing {
+		ids[i] = st.ID
+	}
+	return s.services.Settlement.Delete(ctx, ids)
+}
+
 func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, userID int, data *transactionUpdateData, own *domain.Transaction) error {
 	if own.Type.IsTransfer() || len(own.LinkedTransactions) == 0 {
-		existing, err := s.services.Settlement.Search(ctx, domain.SettlementFilter{
-			SourceTransactionIDs: []int{own.ID},
-		})
-		if err != nil {
-			return err
-		}
-		if len(existing) > 0 {
-			ids := make([]int, len(existing))
-			for i, s := range existing {
-				ids[i] = s.ID
-			}
-			if err := s.services.Settlement.Delete(ctx, ids); err != nil {
-				return err
-			}
-		}
-		return nil
+		return s.deleteSettlementsForSource(ctx, own.ID)
+	}
+
+	// Shared (connection) account expenses/incomes mirror to the partner via a
+	// linked transaction but never produce a settlement — the same guard exists
+	// in Create at transaction_create.go:252. Without this check, editing a
+	// shared-account transaction would treat the partner's mirrored row as a
+	// split partner and create a stray settlement.
+	account, err := s.services.Account.GetByID(ctx, userID, own.AccountID)
+	if err != nil {
+		return err
+	}
+	if account.UserConnection != nil {
+		return s.deleteSettlementsForSource(ctx, own.ID)
 	}
 
 	settlementType := domain.SettlementTypeCredit

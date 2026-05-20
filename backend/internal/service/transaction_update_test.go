@@ -6213,6 +6213,79 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDat
 	}
 }
 
+// TestUpdate_ExpenseOnSharedAccount_DoesNotCreateSettlement is a regression test
+// for the bug where editing an expense created directly on a shared (connection)
+// account would wrongly create a Settlement. Shared-account transactions mirror
+// to the partner via a linked transaction only — they never produce settlements
+// (same invariant enforced at Create-time in transaction_create.go:252).
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount_DoesNotCreateSettlement() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	d := now()
+	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: d},
+		Description:     "shared account expense",
+	})
+	suite.Require().NoError(err)
+
+	// Sanity: create flow leaves no settlements behind.
+	pre, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{txID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Empty(pre, "shared account expense should not create settlements at create time")
+
+	// Edit amount — this triggers shouldSyncSettlementsOnUpdate == true.
+	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		Amount:              lo.ToPtr(int64(1500)),
+	})
+	suite.Require().NoError(err)
+
+	after, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{txID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(after, "editing a shared-account expense must not create a settlement")
+
+	// Linked transaction on partner's account should have the new amount.
+	partnerTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(partnerTxs, 1)
+	suite.Assert().Equal(int64(1500), partnerTxs[0].Amount)
+	suite.Assert().Equal(conn.ToAccountID, partnerTxs[0].AccountID)
+
+	// Edit a second time to ensure no settlement gets accumulated across edits.
+	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		Amount:              lo.ToPtr(int64(2000)),
+	})
+	suite.Require().NoError(err)
+
+	after2, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		SourceTransactionIDs: []int{txID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Empty(after2, "second edit of a shared-account expense must still not create a settlement")
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
