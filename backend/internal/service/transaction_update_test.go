@@ -6218,6 +6218,14 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateRecurringSplitCustomDat
 // account would wrongly create a Settlement. Shared-account transactions mirror
 // to the partner via a linked transaction only — they never produce settlements
 // (same invariant enforced at Create-time in transaction_create.go:252).
+//
+// The update payload mirrors what UpdateTransactionDrawer.tsx ships: it derives
+// `split_settings` from the existing linked transactions so the backend keeps
+// the shared-account mirror intact (otherwise the "split removed" scenario
+// would tear the partner's linked tx down on every edit — that's a separate
+// bug outside this PR's scope, but the user-facing repro path goes through the
+// "split kept" branch where syncSettlementsForTransaction runs with a non-empty
+// LinkedTransactions slice and previously created a stray settlement).
 func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount_DoesNotCreateSettlement() {
 	ctx := context.Background()
 
@@ -6250,10 +6258,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount
 	suite.Require().NoError(err)
 	suite.Require().Empty(pre, "shared account expense should not create settlements at create time")
 
-	// Edit amount — this triggers shouldSyncSettlementsOnUpdate == true.
+	// Edit amount — this triggers shouldSyncSettlementsOnUpdate == true. The
+	// split_settings entry mirrors the frontend, which always re-sends the
+	// existing partner connection to signal "split unchanged".
 	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		Amount:              lo.ToPtr(int64(1500)),
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Amount: lo.ToPtr(int64(1000))},
+		},
 	})
 	suite.Require().NoError(err)
 
@@ -6263,10 +6276,8 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount
 	suite.Require().NoError(err)
 	suite.Assert().Empty(after, "editing a shared-account expense must not create a settlement")
 
-	// Linked transaction on partner's account should still exist on the partner's
-	// connection account. (Amount propagation from author → partner on edit is a
-	// separate concern handled elsewhere — this test only locks down the
-	// settlement-creation invariant.)
+	// Partner's linked tx must survive the edit (still on the connection's
+	// to-side account).
 	partnerTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &userB.ID,
 	})
@@ -6278,6 +6289,9 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount
 	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsAll,
 		Amount:              lo.ToPtr(int64(2000)),
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Amount: lo.ToPtr(int64(1000))},
+		},
 	})
 	suite.Require().NoError(err)
 
