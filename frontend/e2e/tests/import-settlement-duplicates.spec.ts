@@ -110,7 +110,9 @@ test.describe("Import: settlement-aware duplicate detection", () => {
 
     // 5. "Marcar como não importar" must still work for settlement-only matches.
     await importPage.markNotImportFromDrawer();
-    await expect(await importPage.getRowActionLabel(0)).toBe("Não importar");
+    await expect(
+      importPage.reviewStep.getByTestId(ImportTestIds.RowSelectAction(0)),
+    ).toHaveValue("Não importar", { timeout: 5000 });
 
     await page.close();
   });
