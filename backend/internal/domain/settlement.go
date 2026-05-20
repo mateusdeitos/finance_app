@@ -31,11 +31,14 @@ type SettlementUpdateRequest struct {
 }
 
 type SettlementFilter struct {
-	IDs                   []int `query:"id[]"`
-	UserIDs               []int `query:"user_id[]"`
-	AccountIDs            []int `query:"account_id[]"`
-	SourceTransactionIDs  []int `query:"source_transaction_id[]"`
-	ParentTransactionIDs  []int `query:"parent_transaction_id[]"`
-	Limit                 *int  `query:"limit,omitempty"`
-	Offset                *int  `query:"offset,omitempty"`
+	IDs                  []int                        `query:"id[]"`
+	UserIDs              []int                        `query:"user_id[]"`
+	AccountIDs           []int                        `query:"account_id[]"`
+	SourceTransactionIDs []int                        `query:"source_transaction_id[]"`
+	ParentTransactionIDs []int                        `query:"parent_transaction_id[]"`
+	Types                []SettlementType             `query:"type[]"`
+	StartDate            *ComparableSearch[time.Time] `query:"start_date,omitempty"`
+	EndDate              *ComparableSearch[time.Time] `query:"end_date,omitempty"`
+	Limit                *int                         `query:"limit,omitempty"`
+	Offset               *int                         `query:"offset,omitempty"`
 }

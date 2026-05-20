@@ -8,6 +8,7 @@ import (
 
 	"github.com/finance_app/backend/internal/domain"
 	pkgErrors "github.com/finance_app/backend/pkg/errors"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -82,6 +83,98 @@ func TestTrigramSimilarity(t *testing.T) {
 
 	t.Run("empty string has zero similarity", func(t *testing.T) {
 		assert.Equal(t, 0.0, trigramSimilarity("", "Petz"))
+	})
+}
+
+func TestAllowedSettlementTypeFor(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    domain.TransactionType
+		wantType domain.SettlementType
+		wantOK   bool
+	}{
+		{"income → credit", domain.TransactionTypeIncome, domain.SettlementTypeCredit, true},
+		{"expense → debit", domain.TransactionTypeExpense, domain.SettlementTypeDebit, true},
+		{"transfer → skip", domain.TransactionTypeTransfer, "", false},
+		{"empty → skip", domain.TransactionType(""), "", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := allowedSettlementTypeFor(tc.input)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.wantType, got)
+		})
+	}
+}
+
+func TestFilterSettlementDuplicateMatches(t *testing.T) {
+	credit := func(id int, amount int64, desc string) hydratedSettlement {
+		return hydratedSettlement{
+			Settlement: &domain.Settlement{
+				ID: id, Amount: amount, Type: domain.SettlementTypeCredit,
+				AccountID: 10, SourceTransactionID: id + 100, Date: time.Now(),
+			},
+			Description: desc,
+		}
+	}
+	debit := func(id int, amount int64, desc string) hydratedSettlement {
+		return hydratedSettlement{
+			Settlement: &domain.Settlement{
+				ID: id, Amount: amount, Type: domain.SettlementTypeDebit,
+				AccountID: 10, SourceTransactionID: id + 100, Date: time.Now(),
+			},
+			Description: desc,
+		}
+	}
+
+	t.Run("income matches credit settlement only", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		require.Len(t, got, 1)
+		assert.Equal(t, 1, got[0].ID)
+		assert.Equal(t, domain.SettlementTypeCredit, got[0].Type)
+		assert.Equal(t, "Petz", got[0].Description)
+	})
+
+	t.Run("expense matches debit settlement only", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeExpense)
+		require.Len(t, got, 1)
+		assert.Equal(t, 2, got[0].ID)
+		assert.Equal(t, domain.SettlementTypeDebit, got[0].Type)
+	})
+
+	t.Run("transfer skips settlement matching entirely", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeTransfer)
+		assert.Nil(t, got)
+	})
+
+	t.Run("amount within tolerance matches, outside does not", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5002, "Petz"), credit(2, 5003, "Petz")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		require.Len(t, got, 1)
+		assert.Equal(t, 1, got[0].ID)
+	})
+
+	t.Run("description mismatch is filtered out", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5000, "Imec")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		assert.Empty(t, got)
+	})
+
+	t.Run("empty description skips similarity check", func(t *testing.T) {
+		candidates := []hydratedSettlement{credit(1, 5000, "Whatever")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "", domain.TransactionTypeIncome)
+		require.Len(t, got, 1)
+	})
+
+	t.Run("nil settlement is skipped without panic", func(t *testing.T) {
+		candidates := []hydratedSettlement{{Settlement: nil, Description: ""}, credit(1, 5000, "Petz")}
+		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		require.Len(t, got, 1)
+		assert.Equal(t, 1, got[0].ID)
 	})
 }
 
@@ -429,6 +522,88 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulk() {
 	suite.NotEmpty(byIndex[0].Matches)
 	suite.Empty(byIndex[1].Matches)
 	suite.Empty(byIndex[2].Matches)
+}
+
+// TestCheckDuplicatesBulkAgainstSettlements verifies that an imported income
+// row matches a credit settlement on the same connection account when amount,
+// description, and month align — and that an unrelated row does not.
+func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulkAgainstSettlements() {
+	ctx := context.Background()
+
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	privateAccount, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+
+	connection, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	sharedDate := time.Date(2026, 11, 12, 0, 0, 0, 0, time.UTC)
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       privateAccount.ID,
+		CategoryID:      category.ID,
+		Amount:          10000,
+		Date:            domain.Date{Time: sharedDate},
+		Description:     "Jantar restaurante",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Sanity check: a credit settlement of 5000 must exist on user1's side of the connection.
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		UserIDs:    []int{user1.ID},
+		AccountIDs: []int{connection.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlements, 1)
+	suite.Require().Equal(int64(5000), settlements[0].Amount)
+	suite.Require().Equal(domain.SettlementTypeCredit, settlements[0].Type)
+
+	connAccountID := connection.FromAccountID
+
+	rows := []domain.CheckDuplicateRowInput{
+		// Match: income on same connection account, same month, amount within tolerance, similar description.
+		{RowIndex: 0, Date: domain.Date{Time: time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC)}, Amount: 5001, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
+		// No match: expense looks at debit settlements, but the existing settlement is credit.
+		{RowIndex: 1, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Jantar restaurante", Type: domain.TransactionTypeExpense},
+		// No match: transfer skips settlement matching entirely.
+		{RowIndex: 2, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Jantar restaurante", Type: domain.TransactionTypeTransfer},
+		// No match: different month.
+		{RowIndex: 3, Date: domain.Date{Time: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)}, Amount: 5000, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
+		// No match: amount too far.
+		{RowIndex: 4, Date: domain.Date{Time: sharedDate}, Amount: 9999, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
+		// No match: description mismatch.
+		{RowIndex: 5, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
+	}
+
+	results, err := suite.Services.Transaction.CheckDuplicatesBulk(ctx, user1.ID, &connAccountID, rows)
+	suite.Require().NoError(err)
+	suite.Require().Len(results, len(rows))
+
+	byIndex := make(map[int]domain.CheckDuplicateRowResult, len(results))
+	for _, r := range results {
+		byIndex[r.RowIndex] = r
+	}
+	suite.Require().Len(byIndex[0].SettlementMatches, 1, "income should match the credit settlement")
+	suite.Equal(settlements[0].ID, byIndex[0].SettlementMatches[0].ID)
+	suite.Equal(int64(5000), byIndex[0].SettlementMatches[0].Amount)
+	suite.Equal(domain.SettlementTypeCredit, byIndex[0].SettlementMatches[0].Type)
+	suite.Equal("Jantar restaurante", byIndex[0].SettlementMatches[0].Description)
+
+	suite.Empty(byIndex[1].SettlementMatches, "expense should not match a credit settlement")
+	suite.Empty(byIndex[2].SettlementMatches, "transfer should skip settlement matching")
+	suite.Empty(byIndex[3].SettlementMatches, "different month should not match")
+	suite.Empty(byIndex[4].SettlementMatches, "amount outside tolerance should not match")
+	suite.Empty(byIndex[5].SettlementMatches, "description mismatch should not match")
 }
 
 func TestInferInstallment(t *testing.T) {

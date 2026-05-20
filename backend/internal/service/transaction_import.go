@@ -377,6 +377,129 @@ func searchMonthWindow(ctx context.Context, s *transactionService, userID int, d
 	return s.transactionRepo.Search(ctx, filter)
 }
 
+// hydratedSettlement carries a settlement together with the description of its
+// source transaction, which is required for trigram similarity matching.
+type hydratedSettlement struct {
+	Settlement  *domain.Settlement
+	Description string
+}
+
+// searchSettlementMonthWindow fetches every settlement for the user in the
+// calendar month of date, optionally scoped to a single account, and hydrates
+// each one with the description of its source transaction. The description is
+// what fuzzy matching needs — settlements themselves have no description.
+func searchSettlementMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]hydratedSettlement, error) {
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+	start := period.StartDate()
+	end := period.EndDate()
+
+	filter := domain.SettlementFilter{
+		UserIDs:   []int{userID},
+		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
+		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
+	}
+	if accountID != nil {
+		filter.AccountIDs = []int{*accountID}
+	}
+	settlements, err := s.settlementRepo.Search(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	if len(settlements) == 0 {
+		return nil, nil
+	}
+
+	sourceIDs := make([]int, 0, len(settlements))
+	seen := make(map[int]struct{}, len(settlements))
+	for _, st := range settlements {
+		if st == nil || st.SourceTransactionID == 0 {
+			continue
+		}
+		if _, ok := seen[st.SourceTransactionID]; ok {
+			continue
+		}
+		seen[st.SourceTransactionID] = struct{}{}
+		sourceIDs = append(sourceIDs, st.SourceTransactionID)
+	}
+
+	descByID := make(map[int]string, len(sourceIDs))
+	if len(sourceIDs) > 0 {
+		sources, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{IDs: sourceIDs})
+		if err != nil {
+			return nil, err
+		}
+		for _, tx := range sources {
+			if tx == nil {
+				continue
+			}
+			descByID[tx.ID] = tx.Description
+		}
+	}
+
+	out := make([]hydratedSettlement, 0, len(settlements))
+	for _, st := range settlements {
+		if st == nil {
+			continue
+		}
+		out = append(out, hydratedSettlement{
+			Settlement:  st,
+			Description: descByID[st.SourceTransactionID],
+		})
+	}
+	return out, nil
+}
+
+// allowedSettlementTypeFor returns which settlement type can duplicate an
+// imported row of the given transaction type. Returns ("", false) when
+// settlement matching should be skipped (e.g. transfer rows).
+func allowedSettlementTypeFor(t domain.TransactionType) (domain.SettlementType, bool) {
+	switch t {
+	case domain.TransactionTypeIncome:
+		return domain.SettlementTypeCredit, true
+	case domain.TransactionTypeExpense:
+		return domain.SettlementTypeDebit, true
+	default:
+		return "", false
+	}
+}
+
+// filterSettlementDuplicateMatches mirrors filterDuplicateMatches but for
+// settlements: amount within ±duplicateAmountThreshold, description trigram
+// similarity ≥ descriptionSimilarityThreshold (against the source transaction
+// description), and the settlement type aligned with the row type.
+func filterSettlementDuplicateMatches(candidates []hydratedSettlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
+	allowedType, ok := allowedSettlementTypeFor(rowType)
+	if !ok {
+		return nil
+	}
+	matches := make([]domain.SettlementMatch, 0)
+	for _, h := range candidates {
+		st := h.Settlement
+		if st == nil {
+			continue
+		}
+		if st.Type != allowedType {
+			continue
+		}
+		if diff := st.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
+			continue
+		}
+		if description != "" && trigramSimilarity(h.Description, description) < descriptionSimilarityThreshold {
+			continue
+		}
+		matches = append(matches, domain.SettlementMatch{
+			ID:                  st.ID,
+			AccountID:           st.AccountID,
+			Amount:              st.Amount,
+			Type:                st.Type,
+			Date:                st.Date,
+			SourceTransactionID: st.SourceTransactionID,
+			Description:         h.Description,
+		})
+	}
+	return matches
+}
+
 // filterDuplicateMatches keeps only the candidates that are possible
 // duplicates of (amount, description): amount within ±2 cents and, when a
 // description is supplied, trigram similarity >= descriptionSimilarityThreshold.
@@ -397,9 +520,10 @@ func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, desc
 	return matches
 }
 
-// detectDuplicateRows fills DuplicateMatches on every parsed row that has a
-// valid date and amount, querying the database once per (account, month)
-// window rather than once per row. It returns the count of flagged rows.
+// detectDuplicateRows fills DuplicateMatches and SettlementMatches on every
+// parsed row that has a valid date and amount, querying the database once per
+// (account, month) window rather than once per row. It returns the count of
+// rows flagged by at least one of the two checks.
 func detectDuplicateRows(ctx context.Context, s *transactionService, userID, accountID int, rows []domain.ParsedImportRow) int {
 	inputs := make([]domain.CheckDuplicateRowInput, 0, len(rows))
 	for i, row := range rows {
@@ -409,6 +533,7 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 				Date:        domain.Date{Time: *row.Date},
 				Amount:      row.Amount,
 				Description: row.Description,
+				Type:        row.Type,
 			})
 		}
 	}
@@ -416,15 +541,23 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 		return 0
 	}
 
-	matches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
+	txMatches, settlementMatches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
 	if err != nil {
 		return 0
 	}
 
 	count := 0
 	for i := range rows {
-		if m := matches[i]; len(m) > 0 {
+		flagged := false
+		if m := txMatches[i]; len(m) > 0 {
 			rows[i].DuplicateMatches = m
+			flagged = true
+		}
+		if m := settlementMatches[i]; len(m) > 0 {
+			rows[i].SettlementMatches = m
+			flagged = true
+		}
+		if flagged {
 			count++
 		}
 	}

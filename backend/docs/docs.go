@@ -1475,7 +1475,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Runs the duplicate check for one or more rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.",
+                "description": "Runs the duplicate check for one or more rows in a single request and returns the transaction and settlement matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity. Income rows are also compared against credit settlements; expense rows against debit settlements.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2434,6 +2434,9 @@ const docTemplate = `{
                 },
                 "row_index": {
                     "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/domain.TransactionType"
                 }
             }
         },
@@ -2448,6 +2451,12 @@ const docTemplate = `{
                 },
                 "row_index": {
                     "type": "integer"
+                },
+                "settlement_matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.SettlementMatch"
+                    }
                 }
             }
         },
@@ -2681,6 +2690,12 @@ const docTemplate = `{
                 "row_index": {
                     "type": "integer"
                 },
+                "settlement_matches": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.SettlementMatch"
+                    }
+                },
                 "status": {
                     "$ref": "#/definitions/domain.ImportRowStatus"
                 },
@@ -2751,6 +2766,33 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.SettlementMatch": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "description": "cents",
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "source_transaction_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/domain.SettlementType"
                 }
             }
         },

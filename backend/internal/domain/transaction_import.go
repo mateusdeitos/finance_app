@@ -19,22 +19,37 @@ const (
 
 // ParsedImportRow represents a single row from a parsed CSV import file.
 // It includes inferred values (e.g. category from transaction history) and
-// any transactions detected as possible duplicates of this row.
+// any transactions or settlements detected as possible duplicates of this row.
 type ParsedImportRow struct {
-	RowIndex                     int             `json:"row_index"`
-	Status                       ImportRowStatus `json:"status"`
-	Date                         *time.Time      `json:"date,omitempty"`
-	Description                  string          `json:"description"`
-	Type                         TransactionType `json:"type"`
-	Amount                       int64           `json:"amount"` // cents
-	CategoryID                   *int            `json:"category_id,omitempty"`
-	CategoryInferred             bool            `json:"category_inferred"`
-	DestinationAccountID         *int            `json:"destination_account_id,omitempty"`
-	RecurrenceType               *RecurrenceType `json:"recurrence_type,omitempty"`
-	RecurrenceCount              *int            `json:"recurrence_count,omitempty"`
-	RecurrenceCurrentInstallment *int            `json:"recurrence_current_installment,omitempty"`
-	ParseErrors                  []string        `json:"parse_errors,omitempty"`
-	DuplicateMatches             []Transaction   `json:"duplicate_matches,omitempty"`
+	RowIndex                     int                `json:"row_index"`
+	Status                       ImportRowStatus    `json:"status"`
+	Date                         *time.Time         `json:"date,omitempty"`
+	Description                  string             `json:"description"`
+	Type                         TransactionType    `json:"type"`
+	Amount                       int64              `json:"amount"` // cents
+	CategoryID                   *int               `json:"category_id,omitempty"`
+	CategoryInferred             bool               `json:"category_inferred"`
+	DestinationAccountID         *int               `json:"destination_account_id,omitempty"`
+	RecurrenceType               *RecurrenceType    `json:"recurrence_type,omitempty"`
+	RecurrenceCount              *int               `json:"recurrence_count,omitempty"`
+	RecurrenceCurrentInstallment *int               `json:"recurrence_current_installment,omitempty"`
+	ParseErrors                  []string           `json:"parse_errors,omitempty"`
+	DuplicateMatches             []Transaction      `json:"duplicate_matches,omitempty"`
+	SettlementMatches            []SettlementMatch  `json:"settlement_matches,omitempty"`
+}
+
+// SettlementMatch is a settlement flagged as a possible duplicate of an
+// imported income/expense row. Description is hydrated from the settlement's
+// source transaction so the UI can show meaningful text — settlements
+// themselves have no description column.
+type SettlementMatch struct {
+	ID                  int            `json:"id"`
+	AccountID           int            `json:"account_id"`
+	Amount              int64          `json:"amount"` // cents
+	Type                SettlementType `json:"type"`
+	Date                time.Time      `json:"date"`
+	SourceTransactionID int            `json:"source_transaction_id"`
+	Description         string         `json:"description"`
 }
 
 // DuplicateCriteria describes the thresholds used to flag a row as a possible
@@ -55,11 +70,15 @@ type ImportCSVResponse struct {
 }
 
 // CheckDuplicateRowInput is a single row submitted to the bulk duplicate check.
+// Type drives the settlement comparison: income matches against credit
+// settlements, expense matches against debit settlements, transfer skips
+// settlement matching entirely.
 type CheckDuplicateRowInput struct {
-	RowIndex    int    `json:"row_index"`
-	Date        Date   `json:"date"`
-	Amount      int64  `json:"amount"` // cents
-	Description string `json:"description"`
+	RowIndex    int             `json:"row_index"`
+	Date        Date            `json:"date"`
+	Amount      int64           `json:"amount"` // cents
+	Description string          `json:"description"`
+	Type        TransactionType `json:"type,omitempty"`
 }
 
 // CheckDuplicatesBulkRequest is the request body for the bulk duplicate check.
@@ -69,9 +88,13 @@ type CheckDuplicatesBulkRequest struct {
 }
 
 // CheckDuplicateRowResult holds the duplicate matches for one bulk-checked row.
+// Matches lists existing transactions; SettlementMatches lists existing
+// settlements (income rows match credit settlements, expense rows match
+// debit settlements). Both share the same amount/description thresholds.
 type CheckDuplicateRowResult struct {
-	RowIndex int           `json:"row_index"`
-	Matches  []Transaction `json:"matches"`
+	RowIndex          int                `json:"row_index"`
+	Matches           []Transaction      `json:"matches"`
+	SettlementMatches []SettlementMatch  `json:"settlement_matches,omitempty"`
 }
 
 // CheckDuplicatesBulkResponse is the response of the bulk duplicate check.
