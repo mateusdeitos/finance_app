@@ -39,7 +39,7 @@ func checkDuplicatesByWindow(ctx context.Context, s *transactionService, userID 
 		month time.Month
 	}
 	txWindows := make(map[monthKey][]*domain.Transaction)
-	settlementWindows := make(map[monthKey][]hydratedSettlement)
+	settlementWindows := make(map[monthKey][]*domain.Settlement)
 	settlementWindowLoaded := make(map[monthKey]bool)
 	txResult := make(map[int][]domain.Transaction, len(rows))
 	settlementResult := make(map[int][]domain.SettlementMatch, len(rows))

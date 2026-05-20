@@ -377,76 +377,25 @@ func searchMonthWindow(ctx context.Context, s *transactionService, userID int, d
 	return s.transactionRepo.Search(ctx, filter)
 }
 
-// hydratedSettlement carries a settlement together with the description of its
-// source transaction, which is required for trigram similarity matching.
-type hydratedSettlement struct {
-	Settlement  *domain.Settlement
-	Description string
-}
-
 // searchSettlementMonthWindow fetches every settlement for the user in the
-// calendar month of date, optionally scoped to a single account, and hydrates
-// each one with the description of its source transaction. The description is
-// what fuzzy matching needs — settlements themselves have no description.
-func searchSettlementMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]hydratedSettlement, error) {
+// calendar month of date, optionally scoped to a single account, and preloads
+// the source transaction on each one. The source transaction supplies the
+// description used by trigram similarity — settlements themselves have none.
+func searchSettlementMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Settlement, error) {
 	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
 	start := period.StartDate()
 	end := period.EndDate()
 
 	filter := domain.SettlementFilter{
-		UserIDs:   []int{userID},
-		StartDate: &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
-		EndDate:   &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
+		UserIDs:               []int{userID},
+		StartDate:             &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
+		EndDate:               &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
+		WithSourceTransaction: true,
 	}
 	if accountID != nil {
 		filter.AccountIDs = []int{*accountID}
 	}
-	settlements, err := s.settlementRepo.Search(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(settlements) == 0 {
-		return nil, nil
-	}
-
-	sourceIDs := make([]int, 0, len(settlements))
-	seen := make(map[int]struct{}, len(settlements))
-	for _, st := range settlements {
-		if st == nil || st.SourceTransactionID == 0 {
-			continue
-		}
-		if _, ok := seen[st.SourceTransactionID]; ok {
-			continue
-		}
-		seen[st.SourceTransactionID] = struct{}{}
-		sourceIDs = append(sourceIDs, st.SourceTransactionID)
-	}
-
-	descByID := make(map[int]string, len(sourceIDs))
-	if len(sourceIDs) > 0 {
-		sources, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{IDs: sourceIDs})
-		if err != nil {
-			return nil, err
-		}
-		for _, tx := range sources {
-			if tx == nil {
-				continue
-			}
-			descByID[tx.ID] = tx.Description
-		}
-	}
-
-	out := make([]hydratedSettlement, 0, len(settlements))
-	for _, st := range settlements {
-		if st == nil {
-			continue
-		}
-		out = append(out, hydratedSettlement{
-			Settlement:  st,
-			Description: descByID[st.SourceTransactionID],
-		})
-	}
-	return out, nil
+	return s.settlementRepo.Search(ctx, filter)
 }
 
 // allowedSettlementTypeFor returns which settlement type can duplicate an
@@ -465,16 +414,17 @@ func allowedSettlementTypeFor(t domain.TransactionType) (domain.SettlementType, 
 
 // filterSettlementDuplicateMatches mirrors filterDuplicateMatches but for
 // settlements: amount within ±duplicateAmountThreshold, description trigram
-// similarity ≥ descriptionSimilarityThreshold (against the source transaction
-// description), and the settlement type aligned with the row type.
-func filterSettlementDuplicateMatches(candidates []hydratedSettlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
+// similarity ≥ descriptionSimilarityThreshold (against the preloaded source
+// transaction description), and the settlement type aligned with the row type.
+// Settlements without a preloaded SourceTransaction contribute an empty
+// description — they only match when the row description is also empty.
+func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
 	allowedType, ok := allowedSettlementTypeFor(rowType)
 	if !ok {
 		return nil
 	}
 	matches := make([]domain.SettlementMatch, 0)
-	for _, h := range candidates {
-		st := h.Settlement
+	for _, st := range candidates {
 		if st == nil {
 			continue
 		}
@@ -484,7 +434,11 @@ func filterSettlementDuplicateMatches(candidates []hydratedSettlement, amount in
 		if diff := st.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
 			continue
 		}
-		if description != "" && trigramSimilarity(h.Description, description) < descriptionSimilarityThreshold {
+		var sourceDesc string
+		if st.SourceTransaction != nil {
+			sourceDesc = st.SourceTransaction.Description
+		}
+		if description != "" && trigramSimilarity(sourceDesc, description) < descriptionSimilarityThreshold {
 			continue
 		}
 		matches = append(matches, domain.SettlementMatch{
@@ -494,7 +448,7 @@ func filterSettlementDuplicateMatches(candidates []hydratedSettlement, amount in
 			Type:                st.Type,
 			Date:                st.Date,
 			SourceTransactionID: st.SourceTransactionID,
-			Description:         h.Description,
+			Description:         sourceDesc,
 		})
 	}
 	return matches

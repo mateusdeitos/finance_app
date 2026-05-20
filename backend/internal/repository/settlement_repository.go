@@ -37,6 +37,10 @@ func (r *settlementRepository) Search(ctx context.Context, filter domain.Settlem
 	var ents []entity.Settlement
 	query := GetTxFromContext(ctx, r.db)
 
+	if filter.WithSourceTransaction {
+		query = query.Preload("SourceTransaction")
+	}
+
 	if len(filter.IDs) > 0 {
 		query = query.Where("id IN ?", filter.IDs)
 	}

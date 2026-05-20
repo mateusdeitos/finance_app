@@ -2755,6 +2755,14 @@ const docTemplate = `{
                 "parent_transaction_id": {
                     "type": "integer"
                 },
+                "source_transaction": {
+                    "description": "SourceTransaction is populated when the caller requests\nWithSourceTransaction on the filter. nil otherwise.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Transaction"
+                        }
+                    ]
+                },
                 "source_transaction_id": {
                     "type": "integer"
                 },

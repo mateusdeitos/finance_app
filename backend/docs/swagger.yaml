@@ -334,6 +334,12 @@ definitions:
         type: integer
       parent_transaction_id:
         type: integer
+      source_transaction:
+        allOf:
+        - $ref: '#/definitions/domain.Transaction'
+        description: |-
+          SourceTransaction is populated when the caller requests
+          WithSourceTransaction on the filter. nil otherwise.
       source_transaction_id:
         type: integer
       type:

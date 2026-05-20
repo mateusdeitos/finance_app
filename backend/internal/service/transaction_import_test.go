@@ -109,27 +109,26 @@ func TestAllowedSettlementTypeFor(t *testing.T) {
 }
 
 func TestFilterSettlementDuplicateMatches(t *testing.T) {
-	credit := func(id int, amount int64, desc string) hydratedSettlement {
-		return hydratedSettlement{
-			Settlement: &domain.Settlement{
-				ID: id, Amount: amount, Type: domain.SettlementTypeCredit,
-				AccountID: 10, SourceTransactionID: id + 100, Date: time.Now(),
-			},
-			Description: desc,
+	settlement := func(id int, amount int64, t domain.SettlementType, desc string) *domain.Settlement {
+		return &domain.Settlement{
+			ID:                  id,
+			Amount:              amount,
+			Type:                t,
+			AccountID:           10,
+			SourceTransactionID: id + 100,
+			Date:                time.Now(),
+			SourceTransaction:   &domain.Transaction{ID: id + 100, Description: desc},
 		}
 	}
-	debit := func(id int, amount int64, desc string) hydratedSettlement {
-		return hydratedSettlement{
-			Settlement: &domain.Settlement{
-				ID: id, Amount: amount, Type: domain.SettlementTypeDebit,
-				AccountID: 10, SourceTransactionID: id + 100, Date: time.Now(),
-			},
-			Description: desc,
-		}
+	credit := func(id int, amount int64, desc string) *domain.Settlement {
+		return settlement(id, amount, domain.SettlementTypeCredit, desc)
+	}
+	debit := func(id int, amount int64, desc string) *domain.Settlement {
+		return settlement(id, amount, domain.SettlementTypeDebit, desc)
 	}
 
 	t.Run("income matches credit settlement only", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)
@@ -138,7 +137,7 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 	})
 
 	t.Run("expense matches debit settlement only", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeExpense)
 		require.Len(t, got, 1)
 		assert.Equal(t, 2, got[0].ID)
@@ -146,32 +145,46 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 	})
 
 	t.Run("transfer skips settlement matching entirely", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
+		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeTransfer)
 		assert.Nil(t, got)
 	})
 
 	t.Run("amount within tolerance matches, outside does not", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5002, "Petz"), credit(2, 5003, "Petz")}
+		candidates := []*domain.Settlement{credit(1, 5002, "Petz"), credit(2, 5003, "Petz")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)
 	})
 
 	t.Run("description mismatch is filtered out", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5000, "Imec")}
+		candidates := []*domain.Settlement{credit(1, 5000, "Imec")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
 		assert.Empty(t, got)
 	})
 
 	t.Run("empty description skips similarity check", func(t *testing.T) {
-		candidates := []hydratedSettlement{credit(1, 5000, "Whatever")}
+		candidates := []*domain.Settlement{credit(1, 5000, "Whatever")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 	})
 
+	t.Run("settlement missing preloaded source transaction is treated as empty description", func(t *testing.T) {
+		bare := &domain.Settlement{
+			ID: 1, Amount: 5000, Type: domain.SettlementTypeCredit, AccountID: 10,
+			SourceTransactionID: 101, Date: time.Now(),
+		}
+		candidates := []*domain.Settlement{bare}
+		// With a non-empty description, the bare settlement fails the
+		// similarity check (empty source description) and is filtered out.
+		assert.Empty(t, filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome))
+		// With an empty description, the similarity check is skipped and the
+		// settlement matches on amount + type alone.
+		require.Len(t, filterSettlementDuplicateMatches(candidates, 5000, "", domain.TransactionTypeIncome), 1)
+	})
+
 	t.Run("nil settlement is skipped without panic", func(t *testing.T) {
-		candidates := []hydratedSettlement{{Settlement: nil, Description: ""}, credit(1, 5000, "Petz")}
+		candidates := []*domain.Settlement{nil, credit(1, 5000, "Petz")}
 		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)

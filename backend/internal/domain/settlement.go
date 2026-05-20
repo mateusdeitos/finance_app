@@ -14,16 +14,19 @@ func (s SettlementType) IsValid() bool {
 }
 
 type Settlement struct {
-	ID                   int            `json:"id"`
-	UserID               int            `json:"user_id"`
-	Amount               int64          `json:"amount"` // Amount in cents
-	Type                 SettlementType `json:"type"`
-	AccountID            int            `json:"account_id"`
-	SourceTransactionID  int            `json:"source_transaction_id"`
-	ParentTransactionID  int            `json:"parent_transaction_id"`
-	Date                 time.Time      `json:"date"`
-	CreatedAt            *time.Time     `json:"created_at"`
-	UpdatedAt            *time.Time     `json:"updated_at"`
+	ID                  int            `json:"id"`
+	UserID              int            `json:"user_id"`
+	Amount              int64          `json:"amount"` // Amount in cents
+	Type                SettlementType `json:"type"`
+	AccountID           int            `json:"account_id"`
+	SourceTransactionID int            `json:"source_transaction_id"`
+	ParentTransactionID int            `json:"parent_transaction_id"`
+	Date                time.Time      `json:"date"`
+	CreatedAt           *time.Time     `json:"created_at"`
+	UpdatedAt           *time.Time     `json:"updated_at"`
+	// SourceTransaction is populated when the caller requests
+	// WithSourceTransaction on the filter. nil otherwise.
+	SourceTransaction *Transaction `json:"source_transaction,omitempty"`
 }
 
 type SettlementUpdateRequest struct {
@@ -39,6 +42,9 @@ type SettlementFilter struct {
 	Types                []SettlementType             `query:"type[]"`
 	StartDate            *ComparableSearch[time.Time] `query:"start_date,omitempty"`
 	EndDate              *ComparableSearch[time.Time] `query:"end_date,omitempty"`
-	Limit                *int                         `query:"limit,omitempty"`
-	Offset               *int                         `query:"offset,omitempty"`
+	// WithSourceTransaction preloads each settlement's source transaction.
+	// Opt-in so default settlement queries stay lean.
+	WithSourceTransaction bool `query:"with_source_transaction,omitempty"`
+	Limit                 *int `query:"limit,omitempty"`
+	Offset                *int `query:"offset,omitempty"`
 }
