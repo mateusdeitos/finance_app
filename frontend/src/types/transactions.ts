@@ -227,6 +227,22 @@ export namespace Transactions {
     parse_errors?: string[];
     /** Existing transactions detected as possible duplicates of this row. */
     duplicate_matches?: Transaction[];
+    /** Existing settlements detected as possible duplicates of this row.
+     * Populated only for income/expense rows on the destination account
+     * (income vs credit settlements, expense vs debit settlements). */
+    settlement_matches?: SettlementMatch[];
+  }
+
+  /** A settlement flagged as a possible duplicate of an imported row.
+   * Description is hydrated from the source transaction. */
+  export interface SettlementMatch {
+    id: number;
+    account_id: number;
+    amount: number; // cents
+    type: "credit" | "debit";
+    date: string;
+    source_transaction_id: number;
+    description: string;
   }
 
   export type TypeDefinitionRule = "positive_as_income" | "positive_as_expense";
@@ -249,6 +265,7 @@ export namespace Transactions {
   export interface CheckDuplicateRowResult {
     row_index: number;
     matches: Transaction[];
+    settlement_matches?: SettlementMatch[];
   }
 
   export interface ImportRowState {

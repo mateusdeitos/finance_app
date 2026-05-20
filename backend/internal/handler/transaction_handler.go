@@ -320,7 +320,7 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 
 // CheckDuplicatesBulk godoc
 // @Summary      Check rows for possible duplicates
-// @Description  Runs the duplicate check for one or more rows in a single request and returns the matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity.
+// @Description  Runs the duplicate check for one or more rows in a single request and returns the transaction and settlement matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity. Income rows are also compared against credit settlements; expense rows against debit settlements.
 // @Tags         transactions
 // @Accept       json
 // @Produce      json

@@ -136,7 +136,13 @@ export async function parseImportCSV(
 
 export async function checkDuplicatesBulk(params: {
   account_id: number;
-  rows: { row_index: number; date: string; amount: number; description: string }[];
+  rows: {
+    row_index: number;
+    date: string;
+    amount: number;
+    description: string;
+    type?: Transactions.TransactionType;
+  }[];
 }): Promise<{ rows: Transactions.CheckDuplicateRowResult[] }> {
   const res = await fetch(`${apiUrl}/api/transactions/check-duplicates-bulk`, {
     method: "POST",

@@ -18,6 +18,9 @@ export const importRowFormSchema = z
     // Transient: existing transactions flagged as possible duplicates of this
     // row. Recomputed on every date/amount/description edit; never persisted.
     duplicate_matches: z.array(z.custom<Transactions.Transaction>()),
+    // Transient: existing settlements flagged as possible duplicates of this
+    // row (income vs credit, expense vs debit). Recomputed on every edit.
+    settlement_matches: z.array(z.custom<Transactions.SettlementMatch>()),
   })
   .superRefine((data, ctx) => {
     // Validação só se aplica a linhas marcadas para importar

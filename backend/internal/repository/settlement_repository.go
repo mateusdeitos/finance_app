@@ -37,6 +37,10 @@ func (r *settlementRepository) Search(ctx context.Context, filter domain.Settlem
 	var ents []entity.Settlement
 	query := GetTxFromContext(ctx, r.db)
 
+	if filter.WithSourceTransaction {
+		query = query.Preload("SourceTransaction")
+	}
+
 	if len(filter.IDs) > 0 {
 		query = query.Where("id IN ?", filter.IDs)
 	}
@@ -51,6 +55,15 @@ func (r *settlementRepository) Search(ctx context.Context, filter domain.Settlem
 	}
 	if len(filter.ParentTransactionIDs) > 0 {
 		query = query.Where("parent_transaction_id IN ?", filter.ParentTransactionIDs)
+	}
+	if len(filter.Types) > 0 {
+		query = query.Where("type IN ?", filter.Types)
+	}
+	if filter.StartDate != nil && filter.StartDate.IsValid() {
+		query = query.Where(filter.StartDate.ToSQL("date"))
+	}
+	if filter.EndDate != nil && filter.EndDate.IsValid() {
+		query = query.Where(filter.EndDate.ToSQL("date"))
 	}
 	if filter.Limit != nil {
 		query = query.Limit(*filter.Limit)

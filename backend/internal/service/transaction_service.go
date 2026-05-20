@@ -15,6 +15,7 @@ type transactionService struct {
 	transactionRepo      repository.TransactionRepository
 	transactionRecurRepo repository.TransactionRecurrenceRepository
 	tagRepo              repository.TagRepository
+	settlementRepo       repository.SettlementRepository
 	services             *Services
 }
 
@@ -24,6 +25,7 @@ func NewTransactionService(repos *repository.Repositories, services *Services) T
 		transactionRepo:      repos.Transaction,
 		transactionRecurRepo: repos.TransactionRecurrence,
 		tagRepo:              repos.Tag,
+		settlementRepo:       repos.Settlement,
 		services:             services,
 	}
 }

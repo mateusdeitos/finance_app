@@ -377,6 +377,83 @@ func searchMonthWindow(ctx context.Context, s *transactionService, userID int, d
 	return s.transactionRepo.Search(ctx, filter)
 }
 
+// searchSettlementMonthWindow fetches every settlement for the user in the
+// calendar month of date, optionally scoped to a single account, and preloads
+// the source transaction on each one. The source transaction supplies the
+// description used by trigram similarity — settlements themselves have none.
+func searchSettlementMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Settlement, error) {
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+	start := period.StartDate()
+	end := period.EndDate()
+
+	filter := domain.SettlementFilter{
+		UserIDs:               []int{userID},
+		StartDate:             &domain.ComparableSearch[time.Time]{GreaterThanOrEqual: &start},
+		EndDate:               &domain.ComparableSearch[time.Time]{LessThanOrEqual: &end},
+		WithSourceTransaction: true,
+	}
+	if accountID != nil {
+		filter.AccountIDs = []int{*accountID}
+	}
+	return s.settlementRepo.Search(ctx, filter)
+}
+
+// allowedSettlementTypeFor returns which settlement type can duplicate an
+// imported row of the given transaction type. Returns ("", false) when
+// settlement matching should be skipped (e.g. transfer rows).
+func allowedSettlementTypeFor(t domain.TransactionType) (domain.SettlementType, bool) {
+	switch t {
+	case domain.TransactionTypeIncome:
+		return domain.SettlementTypeCredit, true
+	case domain.TransactionTypeExpense:
+		return domain.SettlementTypeDebit, true
+	default:
+		return "", false
+	}
+}
+
+// filterSettlementDuplicateMatches mirrors filterDuplicateMatches but for
+// settlements: amount within ±duplicateAmountThreshold, description trigram
+// similarity ≥ descriptionSimilarityThreshold (against the preloaded source
+// transaction description), and the settlement type aligned with the row type.
+// Settlements without a preloaded SourceTransaction contribute an empty
+// description — they only match when the row description is also empty.
+func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
+	allowedType, ok := allowedSettlementTypeFor(rowType)
+	if !ok {
+		return nil
+	}
+	matches := make([]domain.SettlementMatch, 0)
+	for _, st := range candidates {
+		if st == nil {
+			continue
+		}
+		if st.Type != allowedType {
+			continue
+		}
+		if diff := st.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
+			continue
+		}
+		var sourceDesc string
+		if st.SourceTransaction != nil {
+			sourceDesc = st.SourceTransaction.Description
+		}
+		if description != "" && trigramSimilarity(sourceDesc, description) < descriptionSimilarityThreshold {
+			continue
+		}
+		matches = append(matches, domain.SettlementMatch{
+			ID:                  st.ID,
+			AccountID:           st.AccountID,
+			Amount:              st.Amount,
+			Type:                st.Type,
+			Date:                st.Date,
+			SourceTransactionID: st.SourceTransactionID,
+			Description:         sourceDesc,
+		})
+	}
+	return matches
+}
+
 // filterDuplicateMatches keeps only the candidates that are possible
 // duplicates of (amount, description): amount within ±2 cents and, when a
 // description is supplied, trigram similarity >= descriptionSimilarityThreshold.
@@ -397,9 +474,10 @@ func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, desc
 	return matches
 }
 
-// detectDuplicateRows fills DuplicateMatches on every parsed row that has a
-// valid date and amount, querying the database once per (account, month)
-// window rather than once per row. It returns the count of flagged rows.
+// detectDuplicateRows fills DuplicateMatches and SettlementMatches on every
+// parsed row that has a valid date and amount, querying the database once per
+// (account, month) window rather than once per row. It returns the count of
+// rows flagged by at least one of the two checks.
 func detectDuplicateRows(ctx context.Context, s *transactionService, userID, accountID int, rows []domain.ParsedImportRow) int {
 	inputs := make([]domain.CheckDuplicateRowInput, 0, len(rows))
 	for i, row := range rows {
@@ -409,6 +487,7 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 				Date:        domain.Date{Time: *row.Date},
 				Amount:      row.Amount,
 				Description: row.Description,
+				Type:        row.Type,
 			})
 		}
 	}
@@ -416,15 +495,23 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 		return 0
 	}
 
-	matches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
+	txMatches, settlementMatches, err := checkDuplicatesByWindow(ctx, s, userID, &accountID, inputs)
 	if err != nil {
 		return 0
 	}
 
 	count := 0
 	for i := range rows {
-		if m := matches[i]; len(m) > 0 {
+		flagged := false
+		if m := txMatches[i]; len(m) > 0 {
 			rows[i].DuplicateMatches = m
+			flagged = true
+		}
+		if m := settlementMatches[i]; len(m) > 0 {
+			rows[i].SettlementMatches = m
+			flagged = true
+		}
+		if flagged {
 			count++
 		}
 	}

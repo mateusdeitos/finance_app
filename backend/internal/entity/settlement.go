@@ -8,16 +8,17 @@ import (
 )
 
 type Settlement struct {
-	ID                  int                    `gorm:"primaryKey;autoIncrement"`
-	UserID              int                    `gorm:"not null"`
-	Amount              int64                  `gorm:"not null"`
-	Type                domain.SettlementType  `gorm:"not null"`
-	AccountID           int                    `gorm:"not null"`
-	SourceTransactionID int                    `gorm:"not null"`
-	ParentTransactionID int                    `gorm:"not null"`
-	Date                time.Time              `gorm:"type:date;not null"`
+	ID                  int                   `gorm:"primaryKey;autoIncrement"`
+	UserID              int                   `gorm:"not null"`
+	Amount              int64                 `gorm:"not null"`
+	Type                domain.SettlementType `gorm:"not null"`
+	AccountID           int                   `gorm:"not null"`
+	SourceTransactionID int                   `gorm:"not null"`
+	ParentTransactionID int                   `gorm:"not null"`
+	Date                time.Time             `gorm:"type:date;not null"`
 	CreatedAt           *time.Time
 	UpdatedAt           *time.Time
+	SourceTransaction   *Transaction `gorm:"foreignKey:SourceTransactionID;<-:false"`
 }
 
 func (Settlement) BeforeCreate(tx *gorm.DB) error {
@@ -33,6 +34,10 @@ func (s *Settlement) BeforeUpdate(tx *gorm.DB) error {
 }
 
 func (s *Settlement) ToDomain() *domain.Settlement {
+	var sourceTx *domain.Transaction
+	if s.SourceTransaction != nil {
+		sourceTx = s.SourceTransaction.ToDomain()
+	}
 	return &domain.Settlement{
 		ID:                  s.ID,
 		UserID:              s.UserID,
@@ -44,6 +49,7 @@ func (s *Settlement) ToDomain() *domain.Settlement {
 		Date:                s.Date,
 		CreatedAt:           s.CreatedAt,
 		UpdatedAt:           s.UpdatedAt,
+		SourceTransaction:   sourceTx,
 	}
 }
 

@@ -71,6 +71,7 @@ export const ImportReviewRow = memo(
       sourceAccountId,
       destinationAccountId,
       duplicateMatches,
+      settlementMatches,
     ] = useWatch({
       control: form.control,
       name: [
@@ -86,6 +87,7 @@ export const ImportReviewRow = memo(
         `rows.${rowIndex}.account_id`,
         `rows.${rowIndex}.destination_account_id`,
         `rows.${rowIndex}.duplicate_matches`,
+        `rows.${rowIndex}.settlement_matches`,
       ],
     });
 
@@ -112,6 +114,7 @@ export const ImportReviewRow = memo(
         <DuplicateTransactionsDrawer
           row={{ date: row.date, description: row.description, amount: row.amount }}
           matches={row.duplicate_matches ?? []}
+          settlementMatches={row.settlement_matches ?? []}
           criteria={criteria ?? undefined}
         />
       ))
@@ -149,7 +152,7 @@ export const ImportReviewRow = memo(
           </Tooltip>
         );
       }
-      if (duplicateMatches?.length) {
+      if (duplicateMatches?.length || settlementMatches?.length) {
         return (
           <Tooltip label="Possível duplicidade detectada" withArrow>
             <ActionIcon
@@ -579,12 +582,13 @@ function RecurrencePopover({ namePrefix, summary, hasRecurrence, disabled }: Rec
 
 function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
   const form = useFormContext<ImportFormValues>();
-  const [date, amount, description, action] = useWatch({
+  const [date, amount, description, type, action] = useWatch({
     control: form.control,
     name: [
       `rows.${rowIndex}.date`,
       `rows.${rowIndex}.amount`,
       `rows.${rowIndex}.description`,
+      `rows.${rowIndex}.transaction_type`,
       `rows.${rowIndex}.action`,
     ],
   });
@@ -593,9 +597,13 @@ function RowDuplicateCheck({ rowIndex }: { rowIndex: number }) {
     date: date as string,
     amount: amount as number,
     description: description as string,
+    type: type as Transactions.TransactionType,
     accountId: form.getValues("accountId"),
     enabled: action === "import",
-    onResult: (matches) => form.setValue(`rows.${rowIndex}.duplicate_matches`, matches),
+    onResult: ({ matches, settlement_matches }) => {
+      form.setValue(`rows.${rowIndex}.duplicate_matches`, matches);
+      form.setValue(`rows.${rowIndex}.settlement_matches`, settlement_matches);
+    },
   });
 
   return null;

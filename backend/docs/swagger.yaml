@@ -122,6 +122,8 @@ definitions:
         type: string
       row_index:
         type: integer
+      type:
+        $ref: '#/definitions/domain.TransactionType'
     type: object
   domain.CheckDuplicateRowResult:
     properties:
@@ -131,6 +133,10 @@ definitions:
         type: array
       row_index:
         type: integer
+      settlement_matches:
+        items:
+          $ref: '#/definitions/domain.SettlementMatch'
+        type: array
     type: object
   domain.CheckDuplicatesBulkRequest:
     properties:
@@ -283,6 +289,10 @@ definitions:
         $ref: '#/definitions/domain.RecurrenceType'
       row_index:
         type: integer
+      settlement_matches:
+        items:
+          $ref: '#/definitions/domain.SettlementMatch'
+        type: array
       status:
         $ref: '#/definitions/domain.ImportRowStatus'
       type:
@@ -324,6 +334,12 @@ definitions:
         type: integer
       parent_transaction_id:
         type: integer
+      source_transaction:
+        allOf:
+        - $ref: '#/definitions/domain.Transaction'
+        description: |-
+          SourceTransaction is populated when the caller requests
+          WithSourceTransaction on the filter. nil otherwise.
       source_transaction_id:
         type: integer
       type:
@@ -332,6 +348,24 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  domain.SettlementMatch:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        description: cents
+        type: integer
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      source_transaction_id:
+        type: integer
+      type:
+        $ref: '#/definitions/domain.SettlementType'
     type: object
   domain.SettlementType:
     enum:
@@ -1634,8 +1668,10 @@ paths:
       consumes:
       - application/json
       description: Runs the duplicate check for one or more rows in a single request
-        and returns the matches per row_index. Matching considers the whole calendar
-        month, an amount range of ±2 cents, and fuzzy description similarity.
+        and returns the transaction and settlement matches per row_index. Matching
+        considers the whole calendar month, an amount range of ±2 cents, and fuzzy
+        description similarity. Income rows are also compared against credit settlements;
+        expense rows against debit settlements.
       parameters:
       - description: Bulk duplicate check params
         in: body
