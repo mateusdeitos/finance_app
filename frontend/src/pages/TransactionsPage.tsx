@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useHotkey } from "@/hooks/useHotkey";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -20,6 +21,7 @@ import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { SelectionActionBar } from "@/components/transactions/SelectionActionBar";
+import { ShortcutHint } from "@/components/ShortcutHint";
 import { PropagationSettingsDrawer, PropagationSetting } from "@/components/transactions/PropagationSettingsDrawer";
 import { BulkProgressDrawer, BulkProgressItem } from "@/components/transactions/BulkProgressDrawer";
 import { BulkDivisionDrawer } from "@/components/transactions/BulkDivisionDrawer";
@@ -464,6 +466,11 @@ export function TransactionsPage() {
   const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
   const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
+  const openCreateTransaction = useCallback(() => {
+    void renderDrawer(() => <CreateTransactionDrawer />);
+  }, []);
+  useHotkey("n", openCreateTransaction, { enabled: !isSelecting });
+
   async function handleSwipeDelete(tx: Transactions.Transaction) {
     try {
       let propagation: PropagationSetting | undefined;
@@ -554,7 +561,8 @@ export function TransactionsPage() {
             <Group gap="xs">
               <Button
                 leftSection={<IconPlus size={16} />}
-                onClick={() => void renderDrawer(() => <CreateTransactionDrawer />)}
+                rightSection={<ShortcutHint keys={["N"]} />}
+                onClick={openCreateTransaction}
                 data-testid={TransactionsTestIds.BtnNew}
               >
                 Nova Transação

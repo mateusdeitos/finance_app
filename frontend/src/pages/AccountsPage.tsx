@@ -4,10 +4,12 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { useActivateAccount } from '@/hooks/useActivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import { useHotkey } from '@/hooks/useHotkey'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
 import { Fab } from '@/components/Fab'
 import { PullToRefresh } from '@/components/PullToRefresh'
+import { ShortcutHint } from '@/components/ShortcutHint'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { Transactions } from '@/types/transactions'
 import { AccountsTestIds } from '@/testIds'
@@ -35,6 +37,8 @@ export function AccountsPage() {
     void renderDrawer(() => <AccountDrawer />)
   }
 
+  useHotkey('n', handleAdd)
+
   const hasAccounts = (query.data?.length ?? 0) > 0
   const isMobile = useIsMobile()
 
@@ -44,7 +48,12 @@ export function AccountsPage() {
       <Group justify="space-between" align="center">
         <Text fw={700} size="xl">Contas</Text>
         {!isMobile && (
-          <Button leftSection={<IconPlus size={16} />} onClick={handleAdd} data-testid={AccountsTestIds.BtnNew}>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            rightSection={<ShortcutHint keys={['N']} />}
+            onClick={handleAdd}
+            data-testid={AccountsTestIds.BtnNew}
+          >
             Nova Conta
           </Button>
         )}

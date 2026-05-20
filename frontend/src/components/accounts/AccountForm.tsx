@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Stack, TextInput, Textarea, Button, Group, Alert } from '@mantine/core'
 import { CurrencyInput } from '@/components/transactions/form/CurrencyInput'
+import { ShortcutHint, MOD_LABEL } from '@/components/ShortcutHint'
 import { ColorSwatchPicker, DEFAULT_AVATAR_COLOR } from '@/components/accounts/ColorSwatchPicker'
 import { useResetFormOnChange } from '@/hooks/useResetFormOnChange'
 import { Transactions } from '@/types/transactions'
@@ -63,8 +64,17 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
   const initialBalance = useWatch({ control, name: 'initial_balance' })
   const avatarColor = useWatch({ control, name: 'avatar_background_color' })
 
+  const submit = handleSubmit(onSubmit)
+
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault()
+      void submit()
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate data-testid={AccountsTestIds.Form}>
+    <form onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate data-testid={AccountsTestIds.Form}>
       <Stack gap="md">
         {error && (
           <Alert color="red" title="Erro" variant="light">
@@ -103,7 +113,12 @@ export function AccountForm({ initialValues, onSubmit, isPending, error }: Props
         />
 
         <Group justify="flex-end" mt="sm">
-          <Button type="submit" loading={isPending} data-testid={AccountsTestIds.BtnSave}>
+          <Button
+            type="submit"
+            loading={isPending}
+            rightSection={<ShortcutHint keys={[MOD_LABEL, '↵']} />}
+            data-testid={AccountsTestIds.BtnSave}
+          >
             Salvar
           </Button>
         </Group>

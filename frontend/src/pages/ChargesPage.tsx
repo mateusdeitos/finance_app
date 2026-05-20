@@ -4,6 +4,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useHotkey } from "@/hooks/useHotkey";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useCharges } from "@/hooks/useCharges";
@@ -13,6 +14,7 @@ import { useCancelCharge } from "@/hooks/useCancelCharge";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { Fab } from "@/components/Fab";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { ShortcutHint } from "@/components/ShortcutHint";
 import { Charges } from "@/types/charges";
 import { ChargeCard } from "@/components/charges/ChargeCard";
 import { ConfirmChargeActionDrawer, type ConfirmChargeAction } from "@/components/charges/ConfirmChargeActionDrawer";
@@ -94,6 +96,8 @@ export function ChargesPage() {
     void renderDrawer(() => <CreateChargeDrawer periodMonth={search.month} periodYear={search.year} />);
   }
 
+  useHotkey("n", openCreateCharge);
+
   async function refreshAll() {
     await Promise.all([invalidateCharges(), invalidatePendingCount()]);
   }
@@ -121,6 +125,7 @@ export function ChargesPage() {
           {!isMobile && (
             <Button
               leftSection={<IconPlus size={16} />}
+              rightSection={<ShortcutHint keys={["N"]} />}
               onClick={openCreateCharge}
               data-testid={ChargesTestIds.BtnNew}
             >
