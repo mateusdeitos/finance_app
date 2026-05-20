@@ -810,15 +810,21 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 
 	// Shared (connection) account expenses/incomes mirror to the partner via a
 	// linked transaction but never produce a settlement — the same guard exists
-	// in Create at transaction_create.go:252. Without this check, editing a
-	// shared-account transaction would treat the partner's mirrored row as a
+	// in Create at transaction_create.go:252. Without this short-circuit, editing
+	// a shared-account transaction would treat the partner's mirrored row as a
 	// split partner and create a stray settlement.
+	//
+	// We deliberately do NOT clean up any pre-existing settlements here: a
+	// settlement may carry a user-customized date, and silently deleting it on
+	// an unrelated edit (amount/description) would destroy that data. The
+	// shared-account invariant means none should exist in the first place; if
+	// one does, leave it alone.
 	account, err := s.services.Account.GetByID(ctx, userID, own.AccountID)
 	if err != nil {
 		return err
 	}
 	if account.UserConnection != nil {
-		return s.deleteSettlementsForSource(ctx, own.ID)
+		return nil
 	}
 
 	settlementType := domain.SettlementTypeCredit
