@@ -9,9 +9,14 @@ interface Args {
   date: string
   amount: number
   description: string
+  type: Transactions.TransactionType
   accountId: number
-  /** Receives the latest duplicate matches whenever a re-check resolves. */
-  onResult: (matches: Transactions.Transaction[]) => void
+  /** Receives the latest transaction and settlement matches whenever a
+   * re-check resolves. Both are overwritten on every result. */
+  onResult: (result: {
+    matches: Transactions.Transaction[]
+    settlement_matches: Transactions.SettlementMatch[]
+  }) => void
   debounceMs?: number
   /** When false, the hook never calls the backend. Default `true`. */
   enabled?: boolean
@@ -34,6 +39,7 @@ export function useDuplicateTransactionCheck({
   date,
   amount,
   description,
+  type,
   accountId,
   onResult,
   debounceMs = 500,
@@ -42,14 +48,16 @@ export function useDuplicateTransactionCheck({
   const [debouncedDate] = useDebouncedValue(date, debounceMs)
   const [debouncedAmount] = useDebouncedValue(amount, debounceMs)
   const [debouncedDescription] = useDebouncedValue(description, debounceMs)
+  const [debouncedType] = useDebouncedValue(type, debounceMs)
 
   // Captured once on mount: the CSV parse already returned matches for these
   // values, so a check only fires once a field differs from what was imported.
-  const [initial] = useState({ date, amount, description })
+  const [initial] = useState({ date, amount, description, type })
   const fieldsChanged =
     debouncedDate !== initial.date ||
     debouncedAmount !== initial.amount ||
-    debouncedDescription !== initial.description
+    debouncedDescription !== initial.description ||
+    debouncedType !== initial.type
 
   const { data } = useQuery({
     queryKey: [
@@ -57,6 +65,7 @@ export function useDuplicateTransactionCheck({
       debouncedDate,
       debouncedAmount,
       debouncedDescription,
+      debouncedType,
       accountId,
     ],
     queryFn: async () => {
@@ -68,10 +77,15 @@ export function useDuplicateTransactionCheck({
             date: debouncedDate,
             amount: debouncedAmount,
             description: debouncedDescription,
+            type: debouncedType,
           },
         ],
       })
-      return res.rows[0]?.matches ?? []
+      const row = res.rows[0]
+      return {
+        matches: row?.matches ?? [],
+        settlement_matches: row?.settlement_matches ?? [],
+      }
     },
     enabled: enabled && !!debouncedDate && debouncedAmount > 0 && fieldsChanged,
     staleTime: Infinity,

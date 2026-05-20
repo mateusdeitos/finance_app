@@ -85,6 +85,12 @@ export const ImportTestIds = {
   // Duplicate-transactions drawer
   DrawerDuplicates: 'drawer_duplicate_transactions',
   DrawerDuplicatesSkipBtn: 'btn_drawer_duplicates_skip',
+  DrawerDuplicatesTransactionsSection: 'section_drawer_duplicates_transactions',
+  DrawerDuplicatesSettlementsSection: 'section_drawer_duplicates_settlements',
+  DrawerDuplicatesTransactionCard: (id: number) =>
+    `card_drawer_duplicates_transaction_${id}` as const,
+  DrawerDuplicatesSettlementCard: (id: number) =>
+    `card_drawer_duplicates_settlement_${id}` as const,
 
   // Category-creation drawer (mounted from the import flow)
   DrawerCreateCategory: 'drawer_create_category',

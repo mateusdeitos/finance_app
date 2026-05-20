@@ -62,6 +62,7 @@ export function parsedRowToFormValues(
     import_status: 'idle',
     import_error: '',
     duplicate_matches: r.duplicate_matches ?? [],
+    settlement_matches: r.settlement_matches ?? [],
     account_id: accountId,
     date: r.date ?? '',
     description: r.description,
