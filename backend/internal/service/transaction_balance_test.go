@@ -1404,6 +1404,59 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Spans
 	suite.Assert().Equal(int64(6000), resultAccum.Balance)
 }
 
+// TestGetBalance_Accumulated_ExcludesConnectionAccountInitialBalance verifies
+// that the accumulated balance does NOT add a connection account's
+// initial_balance. Connection accounts represent a shared ledger and have no
+// opening balance; if one carries a stale initial_balance (e.g. it held a
+// balance before becoming a connection account), it must not inflate the
+// accumulated total.
+func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_ExcludesConnectionAccountInitialBalance() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	// Force a stale initial_balance onto the connection account, bypassing the
+	// account service guard, to simulate an account that carried a balance
+	// before it became a connection account.
+	err = suite.DB.Exec(
+		"UPDATE accounts SET initial_balance = ? WHERE id = ?",
+		int64(25000), conn.FromAccountID,
+	).Error
+	suite.Require().NoError(err)
+
+	date := now()
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+
+	// Accumulated balance for the connection account must be 0 — its stale
+	// initial_balance is excluded.
+	result, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		Accumulated: true,
+		AccountIDs:  []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(0), result.Balance)
+
+	// A regular account's initial_balance is still included.
+	regular, err := suite.Repos.Account.Create(ctx, &domain.Account{
+		UserID:         user1.ID,
+		Name:           "regular account",
+		InitialBalance: 7000,
+	})
+	suite.Require().NoError(err)
+
+	resultRegular, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		Accumulated: true,
+		AccountIDs:  []int{regular.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(7000), resultRegular.Balance)
+}
+
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_ConnectionAccountRejectsInitialBalance() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)

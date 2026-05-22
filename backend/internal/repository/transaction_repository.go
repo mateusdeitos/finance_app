@@ -361,7 +361,16 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 	var combined string
 	if filter.HideSettlements {
 		if filter.Accumulated {
-			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			// Connection accounts cannot hold an opening balance (the account
+			// service rejects setting one), so they must never contribute
+			// initial_balance to the accumulated total. Exclude any account
+			// referenced by a user_connection.
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts
+				WHERE user_id = ?
+				AND NOT EXISTS (
+					SELECT 1 FROM user_connections uc
+					WHERE uc.from_account_id = accounts.id OR uc.to_account_id = accounts.id
+				)`
 			args = append(args, filter.UserID)
 			if len(filter.AccountIDs) > 0 {
 				initialBalanceSQL += " AND id IN ?"
@@ -408,7 +417,16 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 		}
 
 		if filter.Accumulated {
-			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			// Connection accounts cannot hold an opening balance (the account
+			// service rejects setting one), so they must never contribute
+			// initial_balance to the accumulated total. Exclude any account
+			// referenced by a user_connection.
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts
+				WHERE user_id = ?
+				AND NOT EXISTS (
+					SELECT 1 FROM user_connections uc
+					WHERE uc.from_account_id = accounts.id OR uc.to_account_id = accounts.id
+				)`
 			args = append(args, filter.UserID)
 			if len(filter.AccountIDs) > 0 {
 				initialBalanceSQL += " AND id IN ?"
