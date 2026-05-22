@@ -262,42 +262,30 @@ export class TransactionsPage {
     await this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first().click();
   }
 
+  /** Locator for a transaction's selection checkbox. */
+  transactionCheckbox(transactionId: number): Locator {
+    return this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first();
+  }
+
+  /** Locator for a settlement's selection checkbox. */
+  settlementCheckbox(settlementId: number): Locator {
+    return this.page
+      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
+      .first();
+  }
+
   /** Click a transaction's selection checkbox, optionally holding Shift. */
   async toggleTransactionCheckbox(transactionId: number, options?: { shiftKey?: boolean }) {
-    const checkbox = this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first();
-    if (options?.shiftKey) {
-      await checkbox.click({ modifiers: ["Shift"] });
-    } else {
-      await checkbox.click();
-    }
+    await this.transactionCheckbox(transactionId).click(
+      options?.shiftKey ? { modifiers: ["Shift"] } : {},
+    );
   }
 
   /** Click a settlement's selection checkbox, optionally holding Shift. */
   async toggleSettlementCheckbox(settlementId: number, options?: { shiftKey?: boolean }) {
-    const checkbox = this.page
-      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
-      .first();
-    if (options?.shiftKey) {
-      await checkbox.click({ modifiers: ["Shift"] });
-    } else {
-      await checkbox.click();
-    }
-  }
-
-  /** Whether a transaction's selection checkbox is checked. */
-  async isTransactionSelected(transactionId: number): Promise<boolean> {
-    return this.page
-      .getByTestId(TransactionsTestIds.Checkbox(transactionId))
-      .first()
-      .isChecked();
-  }
-
-  /** Whether a settlement's selection checkbox is checked. */
-  async isSettlementSelected(settlementId: number): Promise<boolean> {
-    return this.page
-      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
-      .first()
-      .isChecked();
+    await this.settlementCheckbox(settlementId).click(
+      options?.shiftKey ? { modifiers: ["Shift"] } : {},
+    );
   }
 
   async getSelectedCount(): Promise<number> {

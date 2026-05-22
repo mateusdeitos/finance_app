@@ -1,12 +1,8 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
 import { TransactionsPage } from "../pages/TransactionsPage";
-import {
-  apiCreateTransaction,
-  apiFetchAs,
-  apiListTransactions,
-  openAuthedPage,
-} from "../helpers/api";
+import { apiCreateTransaction, apiFetchAs, openAuthedPage } from "../helpers/api";
 import { createUserAndPartner } from "../helpers/createUserAndPartner";
+import type { Transactions } from "@/types/transactions";
 
 // Regression for GitHub issue #159: the transaction listing interleaves
 // transactions and their inline settlements. A shift+click range must span
@@ -49,7 +45,13 @@ async function setupMixedGroup(browser: Browser): Promise<MixedGroupSetup> {
     { token: userToken },
   );
 
-  const list = await apiListTransactions(TX_MONTH, TX_YEAR, { token: userToken });
+  // with_settlements=true preloads settlements_from_source on the source tx —
+  // the listing omits it otherwise (mirrors the frontend's fetchTransactions).
+  const txsRes = await apiFetchAs(
+    userToken,
+    `/api/transactions?month=${TX_MONTH}&year=${TX_YEAR}&with_settlements=true`,
+  );
+  const list = (await txsRes.json()) as Transactions.Transaction[];
   const source = list.find((t) => t.id === created.id);
   const settlement = source?.settlements_from_source?.[0];
   if (!settlement) {
@@ -72,12 +74,12 @@ test.describe("Transaction listing shift+click selection", () => {
 
     // Anchor on the transaction, then shift+click the settlement below it.
     await transactionsPage.toggleTransactionCheckbox(txId);
-    expect(await transactionsPage.isTransactionSelected(txId)).toBe(true);
+    await expect(transactionsPage.transactionCheckbox(txId)).toBeChecked();
 
     await transactionsPage.toggleSettlementCheckbox(settlementId, { shiftKey: true });
 
-    expect(await transactionsPage.isTransactionSelected(txId)).toBe(true);
-    expect(await transactionsPage.isSettlementSelected(settlementId)).toBe(true);
+    await expect(transactionsPage.transactionCheckbox(txId)).toBeChecked();
+    await expect(transactionsPage.settlementCheckbox(settlementId)).toBeChecked();
     expect(await transactionsPage.getSelectedCount()).toBe(2);
 
     await page.close();
@@ -91,12 +93,12 @@ test.describe("Transaction listing shift+click selection", () => {
 
     // Anchor on the settlement, then shift+click the transaction above it.
     await transactionsPage.toggleSettlementCheckbox(settlementId);
-    expect(await transactionsPage.isSettlementSelected(settlementId)).toBe(true);
+    await expect(transactionsPage.settlementCheckbox(settlementId)).toBeChecked();
 
     await transactionsPage.toggleTransactionCheckbox(txId, { shiftKey: true });
 
-    expect(await transactionsPage.isSettlementSelected(settlementId)).toBe(true);
-    expect(await transactionsPage.isTransactionSelected(txId)).toBe(true);
+    await expect(transactionsPage.settlementCheckbox(settlementId)).toBeChecked();
+    await expect(transactionsPage.transactionCheckbox(txId)).toBeChecked();
     expect(await transactionsPage.getSelectedCount()).toBe(2);
 
     await page.close();
