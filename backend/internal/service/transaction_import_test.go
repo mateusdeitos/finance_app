@@ -121,13 +121,13 @@ func TestDescriptionsAreSimilar(t *testing.T) {
 		// Issue #160 examples that must now be flagged as possible duplicates.
 		{"accent vs no accent", "Farmácia São João", "Farmacia Sao Joao", true},
 		{"cedilla folded", "Promoção", "Promocao", true},
-		{"shared word amazon", "Amazon (fraldas Luca)", "Amazon", true},
 		{"shared word shopee", "Shopee (fraldas Luca)", "Shopee*Drogaria Coquei", true},
 		{"shared word sunrize", "Sunrize (whey Amanda)", "Zp *Sunrize", true},
 		// Trigram similarity still works for partial descriptions.
 		{"trigram partial match", "PETZ 22", "Petz", true},
 		// Guards against false positives.
 		{"unrelated descriptions", "Imec", "PETZ 22", false},
+		{"bare single-word description does not match on word overlap", "Amazon (fraldas Luca)", "Amazon", false},
 		{"generic word only does not match", "Compra cartao", "Compra debito", false},
 		{"short shared token does not match", "Zp Padaria", "Zp Acougue", false},
 		{"numeric shared token does not match", "Boleto 1234", "Pagamento 1234", false},

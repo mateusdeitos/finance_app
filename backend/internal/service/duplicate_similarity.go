@@ -137,23 +137,32 @@ func isSignificantWord(word string) bool {
 }
 
 // sharesSignificantWord reports whether a and b share at least one significant
-// word. This catches duplicates like "Amazon (fraldas Luca)" vs "Amazon" that
-// trigram similarity alone misses because the extra words drag the score down.
+// word. This catches duplicates like "Shopee (fraldas Luca)" vs "Shopee*Drogaria
+// Coquei" that trigram similarity alone misses because the extra words drag the
+// score down. The signal only fires when both descriptions have more than one
+// word: a bare single-word description (e.g. just "Amazon") is too generic to
+// flag a duplicate on its own.
 func sharesSignificantWord(a, b string) bool {
-	wordsA := make(map[string]struct{})
-	for _, w := range normalizedWords(a) {
-		if isSignificantWord(w) {
-			wordsA[w] = struct{}{}
-		}
-	}
-	if len(wordsA) == 0 {
+	wordsA := normalizedWords(a)
+	wordsB := normalizedWords(b)
+	if len(wordsA) < 2 || len(wordsB) < 2 {
 		return false
 	}
-	for _, w := range normalizedWords(b) {
+
+	significantA := make(map[string]struct{})
+	for _, w := range wordsA {
+		if isSignificantWord(w) {
+			significantA[w] = struct{}{}
+		}
+	}
+	if len(significantA) == 0 {
+		return false
+	}
+	for _, w := range wordsB {
 		if !isSignificantWord(w) {
 			continue
 		}
-		if _, ok := wordsA[w]; ok {
+		if _, ok := significantA[w]; ok {
 			return true
 		}
 	}
