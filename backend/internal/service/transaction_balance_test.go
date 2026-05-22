@@ -179,6 +179,72 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SettlementCounted
 	suite.Assert().Equal(int64(500), resultAccumThisMonth.Balance)
 }
 
+// TestGetBalance_ExcludesSettlementsWithDeletedSourceTransaction verifies that
+// a settlement whose source transaction was soft-deleted no longer counts
+// toward the balance. The transaction list (FindOrphanedSettlementTransactions)
+// already filters t.deleted_at IS NULL; GetBalance must do the same, otherwise
+// such orphaned settlements silently inflate the (accumulated) balance while
+// never appearing in the list.
+func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ExcludesSettlementsWithDeletedSourceTransaction() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	personal1, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	date := now()
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+
+	// split expense → settlement credit +500 on the connection account
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       personal1.ID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: date},
+		Description:     "split expense",
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	before, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Equal(int64(500), before.Balance)
+
+	// Soft-delete the settlement's source transaction directly, leaving the
+	// settlement orphaned (the transaction list would already hide it).
+	err = suite.DB.Exec(
+		"UPDATE transactions SET deleted_at = ? WHERE account_id = ? AND deleted_at IS NULL",
+		time.Now(), personal1.ID,
+	).Error
+	suite.Require().NoError(err)
+
+	// The orphaned settlement must no longer count — neither in the period
+	// balance nor in the accumulated balance.
+	after, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(0), after.Balance)
+
+	afterAccum, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
+		AccountIDs:  []int{conn.FromAccountID},
+		Accumulated: true,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(0), afterAccum.Balance)
+}
+
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SettlementDoesNotLeakIntoPrivateAccount() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)
