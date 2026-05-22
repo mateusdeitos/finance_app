@@ -32,6 +32,7 @@ import { formatBalance } from "@/utils/formatCents";
 import { localDateStr } from "@/utils/parseDate";
 import { Charges } from "@/types/charges";
 import { ChargesTestIds } from '@/testIds'
+import { ShortcutHint, MOD_LABEL } from '@/components/ShortcutHint'
 
 const createChargeSchema = z.object({
   connection_id: z.number("Selecione uma conexao"),
@@ -176,7 +177,16 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       title="Criar Cobrança"
       data-testid={ChargesTestIds.DrawerCreate}
     >
-      <form onSubmit={form.handleSubmit(handleSubmit)} noValidate>
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+            e.preventDefault();
+            void form.handleSubmit(handleSubmit)();
+          }
+        }}
+        noValidate
+      >
         <Stack gap="md">
           {submitError && (
             <Alert color="red" title="Erro" variant="light">
@@ -328,6 +338,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             loading={mutation.isPending}
             disabled={mutation.isPending}
             fullWidth
+            rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
             data-testid={ChargesTestIds.BtnSubmitCreate}
           >
             Criar Cobrança

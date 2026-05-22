@@ -20,6 +20,7 @@ import {
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
+import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
@@ -182,8 +183,17 @@ export const TransactionForm = ({
     };
   }
 
+  const submit = handleSubmit(onSubmit, onInvalid);
+
+  function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      void submit();
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
+    <form onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
@@ -425,7 +435,12 @@ export const TransactionForm = ({
               Salvar e criar outra
             </Button>
           )}
-          <Button type="submit" loading={isSubmitting || isPending} data-testid={TransactionsTestIds.BtnSave}>
+          <Button
+            type="submit"
+            loading={isSubmitting || isPending}
+            rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
+            data-testid={TransactionsTestIds.BtnSave}
+          >
             Salvar
           </Button>
         </Group>
