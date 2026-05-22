@@ -87,7 +87,7 @@ test.describe("Import shift+click selection", () => {
 
   // ── Basic: shift+click with no prior selection selects from 0 to clicked ──
   test("shift+click with no prior selection: selects from row 0 to clicked row", async () => {
-    // Shift+click row 4 — no prior selection, so nearestAbove = -1, fills 0..4
+    // Shift+click row 4 — no anchor yet, so the range falls back to row 0, fills 0..4
     await importPage.toggleRowCheckbox(4, { shiftKey: true });
 
     for (let i = 0; i <= 4; i++) {
@@ -98,13 +98,13 @@ test.describe("Import shift+click selection", () => {
     }
   });
 
-  // ── Shift+click fills only up to nearest selected row ──────────────────────
-  test("shift+click fills gap between nearest selected row and clicked row", async () => {
-    // Select row 2 normally
+  // ── Shift+click fills the range from the anchor to the clicked row ─────────
+  test("shift+click fills the range between the anchor and the clicked row", async () => {
+    // Select row 2 normally — it becomes the anchor
     await importPage.toggleRowCheckbox(2);
     expect(await importPage.isRowSelected(2)).toBe(true);
 
-    // Shift+click row 6 — should fill rows 3,4,5,6 (not 0,1)
+    // Shift+click row 6 — anchor is row 2, fills the range 2..6 (not 0,1)
     await importPage.toggleRowCheckbox(6, { shiftKey: true });
 
     expect(await importPage.isRowSelected(0)).toBe(false);
@@ -115,13 +115,13 @@ test.describe("Import shift+click selection", () => {
     expect(await importPage.isRowSelected(7)).toBe(false);
   });
 
-  // ── Multiple selected rows: fills from nearest, not earliest ───────────────
-  test("with multiple selected: shift+click fills from nearest selected above", async () => {
-    // Select rows 1 and 4
+  // ── Anchor is the last plain click, not the earliest selected row ──────────
+  test("with multiple selected: shift+click fills from the last plain-clicked row", async () => {
+    // Select rows 1 and 4 — row 4 is the last plain click, so it is the anchor
     await importPage.toggleRowCheckbox(1);
     await importPage.toggleRowCheckbox(4);
 
-    // Shift+click row 7 — nearest above is 4, fills 5,6,7 (not 2,3)
+    // Shift+click row 7 — anchor is row 4, fills 4..7 (row 1 stays, 2,3 untouched)
     await importPage.toggleRowCheckbox(7, { shiftKey: true });
 
     expect(await importPage.isRowSelected(0)).toBe(false);
@@ -131,6 +131,23 @@ test.describe("Import shift+click selection", () => {
     for (let i = 4; i <= 7; i++) {
       expect(await importPage.isRowSelected(i)).toBe(true);
     }
+  });
+
+  // ── Regression #159: anchor below the shift-clicked row fills upward ───────
+  test("shift+click above the anchor selects the upward range", async () => {
+    // Select row 6 normally — it becomes the anchor
+    await importPage.toggleRowCheckbox(6);
+    expect(await importPage.isRowSelected(6)).toBe(true);
+
+    // Shift+click row 2 — should fill the range 2..6, not 0..2
+    await importPage.toggleRowCheckbox(2, { shiftKey: true });
+
+    expect(await importPage.isRowSelected(0)).toBe(false);
+    expect(await importPage.isRowSelected(1)).toBe(false);
+    for (let i = 2; i <= 6; i++) {
+      expect(await importPage.isRowSelected(i)).toBe(true);
+    }
+    expect(await importPage.isRowSelected(7)).toBe(false);
   });
 
   // ── Normal click (no shift) toggles single row ─────────────────────────────

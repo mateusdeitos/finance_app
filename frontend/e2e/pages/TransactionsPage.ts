@@ -262,6 +262,32 @@ export class TransactionsPage {
     await this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first().click();
   }
 
+  /** Locator for a transaction's selection checkbox. */
+  transactionCheckbox(transactionId: number): Locator {
+    return this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first();
+  }
+
+  /** Locator for a settlement's selection checkbox. */
+  settlementCheckbox(settlementId: number): Locator {
+    return this.page
+      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
+      .first();
+  }
+
+  /** Click a transaction's selection checkbox, optionally holding Shift. */
+  async toggleTransactionCheckbox(transactionId: number, options?: { shiftKey?: boolean }) {
+    await this.transactionCheckbox(transactionId).click(
+      options?.shiftKey ? { modifiers: ["Shift"] } : {},
+    );
+  }
+
+  /** Click a settlement's selection checkbox, optionally holding Shift. */
+  async toggleSettlementCheckbox(settlementId: number, options?: { shiftKey?: boolean }) {
+    await this.settlementCheckbox(settlementId).click(
+      options?.shiftKey ? { modifiers: ["Shift"] } : {},
+    );
+  }
+
   async getSelectedCount(): Promise<number> {
     const text = await this.page.getByTestId(TransactionsTestIds.SelectionCount).textContent();
     const match = text?.match(/(\d+)/);

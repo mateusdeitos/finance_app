@@ -32,6 +32,10 @@ import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
 import { TransactionsTestIds } from "@/testIds";
 
+// A selectable row within a group. Transactions and settlements interleave
+// visually, so shift+click ranges are computed over a unified, type-tagged list.
+type RowRef = { type: "tx" | "settlement"; id: number };
+
 export function TransactionsPage() {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const routeNavigate = useNavigate({ from: "/transactions" });
@@ -46,110 +50,95 @@ export function TransactionsPage() {
   // other and so action handlers can dispatch each kind to the right endpoint.
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [selectedSettlementIds, setSelectedSettlementIds] = useState<Set<number>>(new Set());
+  // Anchor for shift+click range selection. A cross-type anchor can't be
+  // derived from one Set's insertion order, so it's tracked explicitly.
+  const [anchor, setAnchor] = useState<
+    { groupKey: string; type: RowRef["type"]; id: number } | null
+  >(null);
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     setSelectedSettlementIds(new Set());
+    setAnchor(null);
   }, []);
 
-  // Per-group ordered ID maps for shift+click range selection. Settlements
-  // (inline + synthetic) get their own map keyed by the real settlement.id.
-  const { data: groupRowMaps } = useGroupedTransactions(
+  // Per-group ordered row list for shift+click range selection. A group
+  // interleaves transactions and settlements (inline + synthetic); the range
+  // must span both types, so the list is unified and tagged by type in the
+  // same visual order TransactionGroup renders.
+  const { data: groupRows } = useGroupedTransactions(
     useMemo(
       () => (groups) => {
-        const txIds = new Map<string, number[]>();
-        const settlementIds = new Map<string, number[]>();
+        const map = new Map<string, RowRef[]>();
         for (const g of groups) {
-          const txList: number[] = [];
-          const settlementList: number[] = [];
+          const list: RowRef[] = [];
           for (const tx of g.transactions) {
             if (tx.origin_settlement_id !== undefined) {
-              settlementList.push(tx.origin_settlement_id);
+              list.push({ type: "settlement", id: tx.origin_settlement_id });
               continue;
             }
-            txList.push(tx.id);
+            list.push({ type: "tx", id: tx.id });
             for (const s of tx.settlements_from_source ?? []) {
-              settlementList.push(s.id);
+              list.push({ type: "settlement", id: s.id });
             }
           }
-          txIds.set(g.key, txList);
-          settlementIds.set(g.key, settlementList);
+          map.set(g.key, list);
         }
-        return { txIds, settlementIds };
+        return map;
       },
       [],
     ),
   );
-  const groupTxIdsMap = groupRowMaps.txIds;
-  const groupSettlementIdsMap = groupRowMaps.settlementIds;
 
-  const handleSelectTransaction = useCallback(
-    (id: number, shiftKey: boolean, groupKey: string) => {
-      if (shiftKey && selectedIds.size > 0) {
-        const groupTxIds = groupTxIdsMap.get(groupKey);
-        if (groupTxIds) {
-          // Derive anchor from last item in selectedIds (Set preserves insertion order)
-          const ids = [...selectedIds];
-          const lastSelected = ids[ids.length - 1];
-          const anchorIdx = groupTxIds.indexOf(lastSelected);
-          const targetIdx = groupTxIds.indexOf(id);
-
-          if (anchorIdx !== -1 && targetIdx !== -1) {
-            const start = Math.min(anchorIdx, targetIdx);
-            const end = Math.max(anchorIdx, targetIdx);
-            const rangeIds = groupTxIds.slice(start, end + 1);
-            setSelectedIds((prev) => {
-              const next = new Set(prev);
-              for (const rid of rangeIds) next.add(rid);
-              return next;
-            });
-            return;
-          }
+  const handleSelectRow = useCallback(
+    (type: RowRef["type"], id: number, shiftKey: boolean, groupKey: string) => {
+      const rows = groupRows.get(groupKey);
+      if (shiftKey && anchor && anchor.groupKey === groupKey && rows) {
+        const anchorIdx = rows.findIndex(
+          (r) => r.type === anchor.type && r.id === anchor.id,
+        );
+        const targetIdx = rows.findIndex((r) => r.type === type && r.id === id);
+        if (anchorIdx !== -1 && targetIdx !== -1) {
+          const range = rows.slice(
+            Math.min(anchorIdx, targetIdx),
+            Math.max(anchorIdx, targetIdx) + 1,
+          );
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            for (const r of range) if (r.type === "tx") next.add(r.id);
+            return next;
+          });
+          setSelectedSettlementIds((prev) => {
+            const next = new Set(prev);
+            for (const r of range) if (r.type === "settlement") next.add(r.id);
+            return next;
+          });
+          setAnchor({ groupKey, type, id });
+          return;
         }
       }
 
-      // Normal single toggle
-      setSelectedIds((prev) => {
+      const setter = type === "tx" ? setSelectedIds : setSelectedSettlementIds;
+      setter((prev) => {
         const next = new Set(prev);
         if (next.has(id)) next.delete(id);
         else next.add(id);
         return next;
       });
+      setAnchor({ groupKey, type, id });
     },
-    [selectedIds, groupTxIdsMap],
+    [anchor, groupRows],
+  );
+
+  const handleSelectTransaction = useCallback(
+    (id: number, shiftKey: boolean, groupKey: string) =>
+      handleSelectRow("tx", id, shiftKey, groupKey),
+    [handleSelectRow],
   );
 
   const handleSelectSettlement = useCallback(
-    (id: number, shiftKey: boolean, groupKey: string) => {
-      if (shiftKey && selectedSettlementIds.size > 0) {
-        const groupSettlementIds = groupSettlementIdsMap.get(groupKey);
-        if (groupSettlementIds) {
-          const ids = [...selectedSettlementIds];
-          const lastSelected = ids[ids.length - 1];
-          const anchorIdx = groupSettlementIds.indexOf(lastSelected);
-          const targetIdx = groupSettlementIds.indexOf(id);
-
-          if (anchorIdx !== -1 && targetIdx !== -1) {
-            const start = Math.min(anchorIdx, targetIdx);
-            const end = Math.max(anchorIdx, targetIdx);
-            const rangeIds = groupSettlementIds.slice(start, end + 1);
-            setSelectedSettlementIds((prev) => {
-              const next = new Set(prev);
-              for (const rid of rangeIds) next.add(rid);
-              return next;
-            });
-            return;
-          }
-        }
-      }
-
-      setSelectedSettlementIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
-    },
-    [selectedSettlementIds, groupSettlementIdsMap],
+    (id: number, shiftKey: boolean, groupKey: string) =>
+      handleSelectRow("settlement", id, shiftKey, groupKey),
+    [handleSelectRow],
   );
 
   const { query: accountsQuery } = useAccounts();
