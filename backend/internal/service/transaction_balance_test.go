@@ -106,6 +106,79 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_IncludesSettlemen
 	suite.Assert().Equal(int64(-500), result.Balance)
 }
 
+// TestGetBalance_SettlementCountedBySettlementDate verifies that a settlement
+// contributes to the balance of the month of its own date (s.date), not the
+// month of its source transaction (t.date). Settlement dates are user-
+// customizable via SplitSettings.Date and decoupled from the source
+// transaction, and the transaction list buckets settlements by s.date — the
+// balance must agree so the accumulated balance matches the displayed list.
+func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SettlementCountedBySettlementDate() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	personal1, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	lastMonth := clampToEndOfMonth(now(), now().Year(), now().Month()-1)
+	thisMonth := now()
+	lastMonthPeriod := domain.Period{Month: int(lastMonth.Month()), Year: lastMonth.Year()}
+	thisMonthPeriod := domain.Period{Month: int(thisMonth.Month()), Year: thisMonth.Year()}
+
+	// Source transaction dated last month, but the settlement's date is
+	// overridden to this month via SplitSettings.Date.
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       personal1.ID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: lastMonth},
+		Description:     "split expense, settlement moved to this month",
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50), Date: &domain.Date{Time: thisMonth}},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// The settlement credit (+500) belongs to THIS month — its own date —
+	// not last month, where the source transaction lives.
+	resultThisMonth, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, thisMonthPeriod, domain.BalanceFilter{
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(500), resultThisMonth.Balance)
+
+	// Last month's balance must NOT include a settlement dated this month.
+	resultLastMonth, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, lastMonthPeriod, domain.BalanceFilter{
+		AccountIDs: []int{conn.FromAccountID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(0), resultLastMonth.Balance)
+
+	// Accumulated through last month must NOT include a settlement dated this month.
+	resultAccumLastMonth, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, lastMonthPeriod, domain.BalanceFilter{
+		AccountIDs:  []int{conn.FromAccountID},
+		Accumulated: true,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(0), resultAccumLastMonth.Balance)
+
+	// Accumulated through this month includes it.
+	resultAccumThisMonth, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, thisMonthPeriod, domain.BalanceFilter{
+		AccountIDs:  []int{conn.FromAccountID},
+		Accumulated: true,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(500), resultAccumThisMonth.Balance)
+}
+
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_SettlementDoesNotLeakIntoPrivateAccount() {
 	ctx := context.Background()
 	user1, err := suite.createTestUser(ctx)
