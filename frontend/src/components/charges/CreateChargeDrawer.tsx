@@ -7,7 +7,6 @@ import {
   Avatar,
   Button,
   Group,
-  NumberInput,
   Radio,
   Select,
   Skeleton,
@@ -16,6 +15,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
+import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { DateInput, MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
@@ -35,13 +35,14 @@ import { ChargesTestIds } from '@/testIds'
 import { ShortcutHint, MOD_LABEL } from '@/components/ShortcutHint'
 
 const createChargeSchema = z.object({
-  connection_id: z.number("Selecione uma conexao"),
+  connection_id: z.number("Selecione uma conexão"),
   my_account_id: z.number("Selecione uma conta"),
   period_month: z.number().min(1).max(12),
   period_year: z.number(),
   description: z.string().optional(),
   role: z.enum(["charger", "payer"], { error: "Selecione seu papel" }),
-  amount: z.number().positive("Informe um valor maior que zero").optional(),
+  // Amount in cents. 0 means "not informed" — the backend uses the current balance.
+  amount: z.number().int().nonnegative(),
   date: z.string().min(1, "Selecione uma data"),
 });
 
@@ -102,7 +103,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_year: periodYear,
       description: "",
       role: undefined,
-      amount: undefined,
+      amount: 0,
       date: localDateStr(new Date()),
     },
   });
@@ -123,8 +124,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
     <Skeleton height={16} mt={4} width={160} />
   ) : balanceQuery.data ? (
     balanceQuery.data.balance < 0
-      ? `Voce deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
-      : `Devem a voce ${formatBalance(balanceQuery.data.balance)}`
+      ? `Você deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
+      : `Devem a você ${formatBalance(balanceQuery.data.balance)}`
   ) : undefined;
 
   function handleSubmit(values: CreateChargeFormValues) {
@@ -136,7 +137,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_year: values.period_year,
       description: values.description || undefined,
       role: values.role,
-      amount: values.amount != null ? Math.round(values.amount * 100) : undefined,
+      amount: values.amount > 0 ? values.amount : undefined,
       date: new Date(values.date).toISOString(),
     };
     mutation.mutate(payload, {
@@ -207,8 +208,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               control={form.control}
               render={({ field, fieldState }) => (
                 <Select
-                  label="Conexao"
-                  placeholder="Selecione uma conexao"
+                  label="Conexão"
+                  placeholder="Selecione uma conexão"
                   data={connectionOptions}
                   value={field.value != null ? String(field.value) : null}
                   onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
@@ -253,7 +254,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             render={({ field, fieldState }) => (
               <MonthPickerInput
                 label="Periodo"
-                placeholder="Selecione o mes"
+                placeholder="Selecione o mês"
+                valueFormat="MM/YYYY"
                 value={`${watchedYear}-${String(field.value).padStart(2, "0")}-01`}
                 onChange={(date) => {
                   if (date) {
@@ -274,6 +276,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               <DateInput
                 label="Data"
                 placeholder="Selecione uma data"
+                valueFormat="DD/MM/YYYY"
                 value={field.value || null}
                 onChange={(date) => field.onChange(date ?? "")}
                 error={fieldState.error?.message}
@@ -306,18 +309,11 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             name="amount"
             control={form.control}
             render={({ field, fieldState }) => (
-              <NumberInput
+              <CurrencyInput
                 label="Valor (opcional)"
-                description="Deixe em branco para usar o saldo atual"
-                placeholder="0,00"
-                value={field.value ?? ""}
-                onChange={(v) => field.onChange(typeof v === "number" ? v : undefined)}
-                min={0}
-                step={0.01}
-                decimalScale={2}
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
+                description="Deixe em 0,00 para usar o saldo atual da conexão"
+                value={field.value ?? 0}
+                onChange={field.onChange}
                 error={fieldState.error?.message}
                 data-testid={ChargesTestIds.InputAmount}
               />
@@ -325,7 +321,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
           />
 
           <Textarea
-            label="Descricao (opcional)"
+            label="Descrição (opcional)"
             autosize
             minRows={2}
             {...form.register("description")}

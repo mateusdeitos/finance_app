@@ -361,7 +361,16 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 	var combined string
 	if filter.HideSettlements {
 		if filter.Accumulated {
-			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			// Connection accounts cannot hold an opening balance (the account
+			// service rejects setting one), so they must never contribute
+			// initial_balance to the accumulated total. Exclude any account
+			// referenced by a user_connection.
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts
+				WHERE user_id = ?
+				AND NOT EXISTS (
+					SELECT 1 FROM user_connections uc
+					WHERE uc.from_account_id = accounts.id OR uc.to_account_id = accounts.id
+				)`
 			args = append(args, filter.UserID)
 			if len(filter.AccountIDs) > 0 {
 				initialBalanceSQL += " AND id IN ?"
@@ -378,16 +387,23 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 			)
 		}
 	} else {
-		// Settlements leg — filtered by account_id only (no category/tag columns on settlements)
+		// Settlements leg — filtered by account_id only (no category/tag columns on settlements).
+		// Bucket settlements by their own date (s.date), not the source transaction's
+		// date (t.date): settlement dates are user-customizable and decoupled from the
+		// source transaction. The transaction list places settlements by s.date, so
+		// using t.date here would put a settlement in a different month than the list
+		// shows, making the accumulated balance disagree with the displayed running
+		// balance. The join still excludes settlements whose source transaction was
+		// soft-deleted, matching FindOrphanedSettlementTransactions.
 		settlementSQL := `SELECT CASE WHEN s.type = 'credit' THEN s.amount ELSE -s.amount END AS amount
 			FROM settlements s
 			JOIN transactions t ON t.id = s.source_transaction_id
-			WHERE s.user_id = ? AND t.date <= ?`
+			WHERE t.deleted_at IS NULL AND s.user_id = ? AND s.date <= ?`
 		args = append(args, filter.UserID, endDate)
 
 		if !filter.Accumulated {
 			startDate := filter.Period.StartDate()
-			settlementSQL += " AND t.date >= ?"
+			settlementSQL += " AND s.date >= ?"
 			args = append(args, startDate)
 		}
 
@@ -401,7 +417,16 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 		}
 
 		if filter.Accumulated {
-			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts WHERE user_id = ?`
+			// Connection accounts cannot hold an opening balance (the account
+			// service rejects setting one), so they must never contribute
+			// initial_balance to the accumulated total. Exclude any account
+			// referenced by a user_connection.
+			initialBalanceSQL := `SELECT initial_balance AS amount FROM accounts
+				WHERE user_id = ?
+				AND NOT EXISTS (
+					SELECT 1 FROM user_connections uc
+					WHERE uc.from_account_id = accounts.id OR uc.to_account_id = accounts.id
+				)`
 			args = append(args, filter.UserID)
 			if len(filter.AccountIDs) > 0 {
 				initialBalanceSQL += " AND id IN ?"

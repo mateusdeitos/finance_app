@@ -183,6 +183,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
                 label="Data da transferência"
                 description="Data utilizada na transferência entre contas para quitação da cobrança"
                 placeholder="Selecione uma data"
+                valueFormat="DD/MM/YYYY"
                 value={field.value || null}
                 onChange={(date) => field.onChange(date ?? "")}
                 error={fieldState.error?.message}

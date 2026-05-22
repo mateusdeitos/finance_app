@@ -1,7 +1,7 @@
 import { type Page, type Locator, expect } from "@playwright/test";
 import { ChargesTestIds, CommonTestIds, type ChargeRole } from '@/testIds'
 import {
-  NumberField,
+  CurrencyField,
   RadioField,
   SelectField,
   TextareaField,
@@ -95,9 +95,9 @@ export class ChargesPage {
     await new RadioField(this.createDrawer, ChargesTestIds.RadioRole(opts.role)).pick();
 
     if (opts.amount != null) {
-      // Mantine NumberInput uses comma as the decimal separator (locale pt-BR).
-      await new NumberField(this.createDrawer, ChargesTestIds.InputAmount).fill(
-        opts.amount.toFixed(2).replace('.', ','),
+      // opts.amount is in reais; CurrencyInput works in cents.
+      await new CurrencyField(this.createDrawer, ChargesTestIds.InputAmount).fillCents(
+        Math.round(opts.amount * 100),
       );
     }
 
