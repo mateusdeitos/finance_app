@@ -7,7 +7,6 @@ import {
   Avatar,
   Button,
   Group,
-  NumberInput,
   Radio,
   Select,
   Skeleton,
@@ -16,6 +15,7 @@ import {
   Textarea,
 } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
+import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
 import { DateInput, MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
@@ -40,7 +40,8 @@ const createChargeSchema = z.object({
   period_year: z.number(),
   description: z.string().optional(),
   role: z.enum(["charger", "payer"], { error: "Selecione seu papel" }),
-  amount: z.number().positive("Informe um valor maior que zero").optional(),
+  // Amount in cents. 0 means "not informed" — the backend uses the current balance.
+  amount: z.number().int().nonnegative(),
   date: z.string().min(1, "Selecione uma data"),
 });
 
@@ -101,7 +102,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_year: periodYear,
       description: "",
       role: undefined,
-      amount: undefined,
+      amount: 0,
       date: localDateStr(new Date()),
     },
   });
@@ -135,7 +136,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
       period_year: values.period_year,
       description: values.description || undefined,
       role: values.role,
-      amount: values.amount != null ? Math.round(values.amount * 100) : undefined,
+      amount: values.amount > 0 ? values.amount : undefined,
       date: new Date(values.date).toISOString(),
     };
     mutation.mutate(payload, {
@@ -296,18 +297,11 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             name="amount"
             control={form.control}
             render={({ field, fieldState }) => (
-              <NumberInput
+              <CurrencyInput
                 label="Valor (opcional)"
-                description="Deixe em branco para usar o saldo atual"
-                placeholder="0,00"
-                value={field.value ?? ""}
-                onChange={(v) => field.onChange(typeof v === "number" ? v : undefined)}
-                min={0}
-                step={0.01}
-                decimalScale={2}
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
+                description="Deixe em 0,00 para usar o saldo atual"
+                value={field.value ?? 0}
+                onChange={field.onChange}
                 error={fieldState.error?.message}
                 data-testid={ChargesTestIds.InputAmount}
               />

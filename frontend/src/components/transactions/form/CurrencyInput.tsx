@@ -10,6 +10,7 @@ interface Props {
   onChange: (cents: number) => void;
   error?: string;
   label?: string;
+  description?: string;
   required?: boolean;
   disabled?: boolean;
   allowNegative?: boolean;
@@ -37,6 +38,7 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
     onChange,
     error,
     label,
+    description,
     required,
     disabled,
     allowNegative,
@@ -100,6 +102,7 @@ export const CurrencyInput = forwardRef<CurrencyInputHandle, Props>(function Cur
     <TextInput
       ref={inputRef}
       label={label}
+      description={description}
       required={required}
       disabled={disabled}
       value={formatCents(value)}
