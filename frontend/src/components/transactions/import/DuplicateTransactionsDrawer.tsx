@@ -41,9 +41,7 @@ export function DuplicateTransactionsDrawer({ row, matches, settlementMatches, c
   const accountName = (id: number) =>
     accountOptions.find((o) => o.value === String(id))?.label ?? `Conta ${id}`
 
-  const similarityLabel = criteria
-    ? `Descrição parecida (similaridade ≥ ${Math.round(criteria.description_similarity_threshold * 100)}%)`
-    : 'Descrição parecida'
+  const similarityLabel = 'Descrição parecida (texto semelhante ou palavra em comum)'
   const amountLabel = criteria
     ? `Valor a até ${criteria.amount_tolerance_cents} ${criteria.amount_tolerance_cents === 1 ? 'centavo' : 'centavos'} de diferença`
     : 'Valor próximo'

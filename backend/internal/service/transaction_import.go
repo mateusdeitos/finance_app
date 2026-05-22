@@ -413,9 +413,9 @@ func allowedSettlementTypeFor(t domain.TransactionType) (domain.SettlementType, 
 }
 
 // filterSettlementDuplicateMatches mirrors filterDuplicateMatches but for
-// settlements: amount within ±duplicateAmountThreshold, description trigram
-// similarity ≥ descriptionSimilarityThreshold (against the preloaded source
-// transaction description), and the settlement type aligned with the row type.
+// settlements: amount within ±duplicateAmountThreshold, a similar description
+// (against the preloaded source transaction description), and the settlement
+// type aligned with the row type.
 // Settlements without a preloaded SourceTransaction contribute an empty
 // description — they only match when the row description is also empty.
 func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
@@ -438,7 +438,7 @@ func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount in
 		if st.SourceTransaction != nil {
 			sourceDesc = st.SourceTransaction.Description
 		}
-		if description != "" && trigramSimilarity(sourceDesc, description) < descriptionSimilarityThreshold {
+		if description != "" && !descriptionsAreSimilar(sourceDesc, description) {
 			continue
 		}
 		matches = append(matches, domain.SettlementMatch{
@@ -456,7 +456,8 @@ func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount in
 
 // filterDuplicateMatches keeps only the candidates that are possible
 // duplicates of (amount, description): amount within ±2 cents and, when a
-// description is supplied, trigram similarity >= descriptionSimilarityThreshold.
+// description is supplied, a similar description (accent-folded trigram
+// similarity or a shared significant word).
 func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, description string) []domain.Transaction {
 	matches := make([]domain.Transaction, 0)
 	for _, tx := range candidates {
@@ -466,7 +467,7 @@ func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, desc
 		if diff := tx.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
 			continue
 		}
-		if description != "" && trigramSimilarity(tx.Description, description) < descriptionSimilarityThreshold {
+		if description != "" && !descriptionsAreSimilar(tx.Description, description) {
 			continue
 		}
 		matches = append(matches, *tx)
