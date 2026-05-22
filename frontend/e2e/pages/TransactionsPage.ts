@@ -262,6 +262,44 @@ export class TransactionsPage {
     await this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first().click();
   }
 
+  /** Click a transaction's selection checkbox, optionally holding Shift. */
+  async toggleTransactionCheckbox(transactionId: number, options?: { shiftKey?: boolean }) {
+    const checkbox = this.page.getByTestId(TransactionsTestIds.Checkbox(transactionId)).first();
+    if (options?.shiftKey) {
+      await checkbox.click({ modifiers: ["Shift"] });
+    } else {
+      await checkbox.click();
+    }
+  }
+
+  /** Click a settlement's selection checkbox, optionally holding Shift. */
+  async toggleSettlementCheckbox(settlementId: number, options?: { shiftKey?: boolean }) {
+    const checkbox = this.page
+      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
+      .first();
+    if (options?.shiftKey) {
+      await checkbox.click({ modifiers: ["Shift"] });
+    } else {
+      await checkbox.click();
+    }
+  }
+
+  /** Whether a transaction's selection checkbox is checked. */
+  async isTransactionSelected(transactionId: number): Promise<boolean> {
+    return this.page
+      .getByTestId(TransactionsTestIds.Checkbox(transactionId))
+      .first()
+      .isChecked();
+  }
+
+  /** Whether a settlement's selection checkbox is checked. */
+  async isSettlementSelected(settlementId: number): Promise<boolean> {
+    return this.page
+      .getByTestId(TransactionsTestIds.CheckboxSettlement(settlementId))
+      .first()
+      .isChecked();
+  }
+
   async getSelectedCount(): Promise<number> {
     const text = await this.page.getByTestId(TransactionsTestIds.SelectionCount).textContent();
     const match = text?.match(/(\d+)/);
