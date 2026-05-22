@@ -34,7 +34,7 @@ import { Charges } from "@/types/charges";
 import { ChargesTestIds } from '@/testIds'
 
 const createChargeSchema = z.object({
-  connection_id: z.number("Selecione uma conexao"),
+  connection_id: z.number("Selecione uma conexão"),
   my_account_id: z.number("Selecione uma conta"),
   period_month: z.number().min(1).max(12),
   period_year: z.number(),
@@ -198,8 +198,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               control={form.control}
               render={({ field, fieldState }) => (
                 <Select
-                  label="Conexao"
-                  placeholder="Selecione uma conexao"
+                  label="Conexão"
+                  placeholder="Selecione uma conexão"
                   data={connectionOptions}
                   value={field.value != null ? String(field.value) : null}
                   onChange={(val) => field.onChange(val != null ? Number(val) : undefined)}
@@ -244,7 +244,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             render={({ field, fieldState }) => (
               <MonthPickerInput
                 label="Periodo"
-                placeholder="Selecione o mes"
+                placeholder="Selecione o mês"
                 value={`${watchedYear}-${String(field.value).padStart(2, "0")}-01`}
                 onChange={(date) => {
                   if (date) {
@@ -299,7 +299,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             render={({ field, fieldState }) => (
               <CurrencyInput
                 label="Valor (opcional)"
-                description="Deixe em 0,00 para usar o saldo atual"
+                description="Deixe em 0,00 para usar o saldo atual da conexão"
                 value={field.value ?? 0}
                 onChange={field.onChange}
                 error={fieldState.error?.message}
@@ -309,7 +309,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
           />
 
           <Textarea
-            label="Descricao (opcional)"
+            label="Descrição (opcional)"
             autosize
             minRows={2}
             {...form.register("description")}
