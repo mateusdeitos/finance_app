@@ -245,6 +245,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               <MonthPickerInput
                 label="Periodo"
                 placeholder="Selecione o mês"
+                valueFormat="MM/YYYY"
                 value={`${watchedYear}-${String(field.value).padStart(2, "0")}-01`}
                 onChange={(date) => {
                   if (date) {
@@ -265,6 +266,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
               <DateInput
                 label="Data"
                 placeholder="Selecione uma data"
+                valueFormat="DD/MM/YYYY"
                 value={field.value || null}
                 onChange={(date) => field.onChange(date ?? "")}
                 error={fieldState.error?.message}
