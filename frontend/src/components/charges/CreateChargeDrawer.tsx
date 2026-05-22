@@ -123,8 +123,8 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
     <Skeleton height={16} mt={4} width={160} />
   ) : balanceQuery.data ? (
     balanceQuery.data.balance < 0
-      ? `Voce deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
-      : `Devem a voce ${formatBalance(balanceQuery.data.balance)}`
+      ? `Você deve ${formatBalance(Math.abs(balanceQuery.data.balance))}`
+      : `Devem a você ${formatBalance(balanceQuery.data.balance)}`
   ) : undefined;
 
   function handleSubmit(values: CreateChargeFormValues) {
