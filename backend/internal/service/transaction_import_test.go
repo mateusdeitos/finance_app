@@ -84,6 +84,61 @@ func TestTrigramSimilarity(t *testing.T) {
 	t.Run("empty string has zero similarity", func(t *testing.T) {
 		assert.Equal(t, 0.0, trigramSimilarity("", "Petz"))
 	})
+
+	t.Run("accents are folded before trigram comparison", func(t *testing.T) {
+		// Issue #160 example: "Farmácia São João" must match "Farmacia Sao Joao".
+		assert.Equal(t, 1.0, trigramSimilarity("São João", "Sao Joao"))
+	})
+}
+
+func TestFoldAccents(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"São João", "Sao Joao"},
+		{"Farmácia", "Farmacia"},
+		{"Promoção", "Promocao"},
+		{"açaí", "acai"},
+		{"Crédito", "Credito"},
+		{"plain ascii", "plain ascii"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			assert.Equal(t, tc.want, foldAccents(tc.in))
+		})
+	}
+}
+
+func TestDescriptionsAreSimilar(t *testing.T) {
+	cases := []struct {
+		name string
+		a    string
+		b    string
+		want bool
+	}{
+		// Issue #160 examples that must now be flagged as possible duplicates.
+		{"accent vs no accent", "Farmácia São João", "Farmacia Sao Joao", true},
+		{"cedilla folded", "Promoção", "Promocao", true},
+		{"shared word shopee", "Shopee (fraldas Luca)", "Shopee*Drogaria Coquei", true},
+		{"shared word sunrize", "Sunrize (whey Amanda)", "Zp *Sunrize", true},
+		// Trigram similarity still works for partial descriptions.
+		{"trigram partial match", "PETZ 22", "Petz", true},
+		// Guards against false positives.
+		{"unrelated descriptions", "Imec", "PETZ 22", false},
+		{"bare single-word description does not match on word overlap", "Amazon (fraldas Luca)", "Amazon", false},
+		{"generic word only does not match", "Compra cartao", "Compra debito", false},
+		{"short shared token does not match", "Zp Padaria", "Zp Acougue", false},
+		{"numeric shared token does not match", "Boleto 1234", "Pagamento 1234", false},
+		{"empty description is not similar", "", "Amazon", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, descriptionsAreSimilar(tc.a, tc.b))
+		})
+	}
 }
 
 func TestAllowedSettlementTypeFor(t *testing.T) {
