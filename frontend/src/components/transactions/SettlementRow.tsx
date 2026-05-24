@@ -90,11 +90,13 @@ export function SettlementRow({
       </div>
 
       <div className={classes.leadingAvatar}>
-        <Tooltip label={account?.name ?? '—'} withArrow position="top">
-          <span style={{ display: 'inline-flex' }}>
-            <AccountAvatar account={account} size={26} />
-          </span>
-        </Tooltip>
+        {isMobile && (
+          <Tooltip label={account?.name ?? '—'} withArrow position="top">
+            <span style={{ display: 'inline-flex' }}>
+              <AccountAvatar account={account} size={26} />
+            </span>
+          </Tooltip>
+        )}
       </div>
 
       <div className={classes.main}>

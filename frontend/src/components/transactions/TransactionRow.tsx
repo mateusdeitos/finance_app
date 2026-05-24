@@ -267,9 +267,16 @@ export function TransactionRow({
         />
       </div>
 
-      {/* Mobile-only: leading account avatar (or stacked from/to for transfers) */}
+      {/* Mobile-only: leading account avatar (or stacked from/to for transfers).
+          We keep the slot div in the grid on every viewport so the grid template
+          stays the same, but only mount the avatar content on mobile — that way
+          the desktop AccountCell remains the single bearer of the
+          TransferAvatarGroup / AvatarAccount testids and avatar-related tests
+          don't get duplicate matches. */}
       <div className={classes.leadingAvatar} onClick={colClick("account_id")}>
-        <LeadingAvatarCell tx={tx} account={account} fromAccount={fromAccount} toAccount={toAccount} />
+        {isMobile && (
+          <LeadingAvatarCell tx={tx} account={account} fromAccount={fromAccount} toAccount={toAccount} />
+        )}
       </div>
 
       {/* Description + meta + tags */}
