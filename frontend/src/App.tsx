@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
 import { queryClient } from './queryClient'
+import { PWAUpdateNotifier } from './components/PWAUpdateNotifier'
 
 const ReactQueryDevtools = import.meta.env.PROD
   ? () => null
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} context={{ queryClient }} />
+      <PWAUpdateNotifier />
       <Suspense>
         <ReactQueryDevtools initialIsOpen={false} />
         <TanStackRouterDevtools router={router} initialIsOpen={false} />
