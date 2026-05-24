@@ -17,6 +17,8 @@ import { CreateTransactionDrawer } from "@/components/transactions/CreateTransac
 import { TransactionFab } from "@/components/transactions/TransactionFab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { successHaptic } from "@/utils/haptics";
+import { MonthlyStats } from "@/components/transactions/MonthlyStats";
+import { NetSummary } from "@/components/transactions/NetSummary";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { TransactionList } from "@/components/transactions/TransactionList";
@@ -490,11 +492,15 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-            <PeriodNavigator
-              month={search.month}
-              year={search.year}
-              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-            />
+            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+              />
+              <MonthlyStats />
+            </Group>
+            <NetSummary />
             <TextSearch />
             <TransactionFilters orientation="row" hideTextSearch scrollable />
           </Stack>
@@ -541,12 +547,15 @@ export function TransactionsPage() {
         }}
       >
         <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-          <Group justify="space-between" align="center">
-            <PeriodNavigator
-              month={search.month}
-              year={search.year}
-              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-            />
+          <Group justify="space-between" align="center" wrap="nowrap">
+            <Group gap="md" wrap="nowrap" align="center">
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+              />
+              <MonthlyStats />
+            </Group>
             <Group gap="xs">
               <Button
                 leftSection={<IconPlus size={16} />}
@@ -578,6 +587,7 @@ export function TransactionsPage() {
               </Menu>
             </Group>
           </Group>
+          <NetSummary />
           <TransactionFilters orientation="row" />
         </Stack>
       </Box>

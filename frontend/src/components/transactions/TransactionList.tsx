@@ -4,9 +4,7 @@ import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { Transactions } from "@/types/transactions";
-import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { TransactionGroup } from "./TransactionGroup";
-import classes from "./TransactionGroup.module.css";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
@@ -70,14 +68,9 @@ export function TransactionList({
 
   if (groups.length === 0) {
     return (
-      <Stack gap="sm">
-        <div className={classes.rows}>
-          <OpeningBalanceRow />
-        </div>
-        <Text ta="center" c="dimmed" py="xl">
-          Nenhuma transação encontrada
-        </Text>
-      </Stack>
+      <Text ta="center" c="dimmed" py="xl">
+        Nenhuma transação encontrada
+      </Text>
     );
   }
 
@@ -92,7 +85,6 @@ export function TransactionList({
           categories={categories}
           currentUserId={currentUserId}
           groupTotal={groupTotals[i]}
-          isFirst={i === 0}
           accountFilter={filters.accountIds}
           selectedIds={selectedIds}
           selectedSettlementIds={selectedSettlementIds}

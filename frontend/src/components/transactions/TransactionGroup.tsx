@@ -5,7 +5,6 @@ import { fetchTransaction } from "@/api/transactions";
 import { Transactions } from "@/types/transactions";
 import { formatSignedCents } from "@/utils/formatCents";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { SettlementRow } from "./SettlementRow";
 import { TransactionRow } from "./TransactionRow";
 import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
@@ -46,7 +45,6 @@ interface TransactionGroupProps {
   currentUserId: number;
   accountFilter?: number[];
   groupTotal?: number;
-  isFirst?: boolean;
   selectedIds?: Set<number>;
   selectedSettlementIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean) => void;
@@ -63,7 +61,6 @@ export function TransactionGroup({
   currentUserId,
   accountFilter,
   groupTotal,
-  isFirst = false,
   selectedIds,
   selectedSettlementIds,
   onSelectTransaction,
@@ -180,7 +177,6 @@ export function TransactionGroup({
         )}
       </Group>
       <div className={classes.rows}>
-        {isFirst && <OpeningBalanceRow />}
         {group.transactions.map((tx) => {
           const isSynthetic = tx.origin_settlement_id !== undefined;
           const isOwner =
