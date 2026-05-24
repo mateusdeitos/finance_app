@@ -22,15 +22,14 @@ export default defineConfig({
     tanstackRouter({ routesDirectory: "./src/routes", generatedRouteTree: "./src/routeTree.gen.ts" }),
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
+      injectRegister: false,
       devOptions: {
         enabled: false,
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true,
         navigateFallback: "/index.html",
         // Cache do boot de autenticação: serve a resposta anterior
         // imediatamente se o backend (Cloud Run) demorar mais que 2s para
