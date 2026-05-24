@@ -1,4 +1,4 @@
-import { Anchor, Box, Group, ScrollArea, Stack, Text } from "@mantine/core";
+import { Anchor, Box, Group, Stack, Text } from "@mantine/core";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { AccountFilter } from "./filters/AccountFilter";
 import { CategoryFilter } from "./filters/CategoryFilter";
@@ -41,7 +41,7 @@ function SectionHeader({ title, count, onClear }: SectionHeaderProps) {
         )}
       </Group>
       {count > 0 && onClear && (
-        <Anchor component="button" size="xs" c="blue.6" fw={500} onClick={onClear}>
+        <Anchor component="button" type="button" size="xs" c="blue.6" fw={500} onClick={onClear}>
           Limpar
         </Anchor>
       )}
@@ -55,8 +55,8 @@ function SectionHeader({ title, count, onClear }: SectionHeaderProps) {
  * commit immediately to the URL search params (no Aplicar button) and
  * stay in sync with the listing in real time.
  *
- * Sits inside the TransactionsPage main column as a 280px sticky column,
- * leaving the AppShell navbar (220px) untouched on the left.
+ * Sits inside the TransactionsPage main column as a 280px column on the
+ * left, leaving the AppShell navbar (220px) untouched.
  */
 export function DesktopFiltersSidebar() {
   const search = useSearch({ from: "/_authenticated/transactions" });
@@ -74,21 +74,19 @@ export function DesktopFiltersSidebar() {
 
   return (
     <Box className={classes.sidebar} aria-label="Filtros laterais">
-      <ScrollArea className={classes.scroll} type="hover" scrollbarSize={6}>
-        <Stack gap={4} pb="md">
-          <SectionHeader title="Contas" count={accountsCount} onClear={clearAccounts} />
-          <Box px="md">
-            <AccountFilter inline />
-          </Box>
+      <Stack gap={4}>
+        <SectionHeader title="Contas" count={accountsCount} onClear={clearAccounts} />
+        <Box px="md">
+          <AccountFilter inline />
+        </Box>
 
-          <Box my="md" className={classes.divider} />
+        <Box my="md" className={classes.divider} />
 
-          <SectionHeader title="Categorias" count={categoriesCount} onClear={clearCategories} />
-          <Box px="md">
-            <CategoryFilter inline />
-          </Box>
-        </Stack>
-      </ScrollArea>
+        <SectionHeader title="Categorias" count={categoriesCount} onClear={clearCategories} />
+        <Box px="md">
+          <CategoryFilter inline />
+        </Box>
+      </Stack>
     </Box>
   );
 }

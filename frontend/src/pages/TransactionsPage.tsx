@@ -535,19 +535,14 @@ export function TransactionsPage() {
 
   return (
     <Box
-      // 2-column desktop shell: a 280px persistent filter sidebar (Contas +
-      // Categorias) on the left, then the main column with the toolbar,
-      // summary, condensed filter row and the list. The sidebar lives inside
-      // the page (not the AppShell aside) so it stays scoped to /transactions.
-      style={{
-        display: "grid",
-        gridTemplateColumns: "280px minmax(0, 1fr)",
-        gap: "var(--mantine-spacing-md)",
-        alignItems: "start",
-      }}
+      // 2-column desktop shell built with flexbox (sidebar + main). The sidebar
+      // lives inside the page (not the AppShell aside) so it stays scoped to
+      // /transactions, and the main column carries the toolbar + summary +
+      // condensed filter chip row + list as before.
+      style={{ display: "flex", alignItems: "stretch", gap: "var(--mantine-spacing-md)" }}
     >
       <DesktopFiltersSidebar />
-      <Stack gap="md" style={{ minWidth: 0 }}>
+      <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
         <Box
           style={{
             position: "sticky",
