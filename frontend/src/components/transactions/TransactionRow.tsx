@@ -46,14 +46,14 @@ function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCe
   if (tx.type === "transfer") {
     return (
       <Group gap={4} wrap="nowrap" data-testid={TransactionsTestIds.TransferAvatarGroup}>
-        <Tooltip label={fromAccount?.name ?? "\u2014"} withArrow position="top">
-          <span>
+        <Tooltip label={fromAccount?.name ?? "—"} withArrow position="top">
+          <span style={{ display: "inline-flex" }}>
             <AccountAvatar account={fromAccount} size={28} />
           </span>
         </Tooltip>
         <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
-        <Tooltip label={toAccount?.name ?? "\u2014"} withArrow position="top">
-          <span>
+        <Tooltip label={toAccount?.name ?? "—"} withArrow position="top">
+          <span style={{ display: "inline-flex" }}>
             <AccountAvatar account={toAccount} size={28} />
           </span>
         </Tooltip>
@@ -62,9 +62,46 @@ function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCe
   }
 
   return (
-    <Tooltip label={account?.name ?? "\u2014"} withArrow position="top">
+    <Tooltip label={account?.name ?? "—"} withArrow position="top">
       <span style={{ display: "inline-flex" }}>
         <AccountAvatar account={account} size={28} />
+      </span>
+    </Tooltip>
+  );
+}
+
+interface LeadingAvatarCellProps {
+  tx: Transactions.Transaction;
+  account: Transactions.Account | null | undefined;
+  fromAccount: Transactions.Account | null | undefined;
+  toAccount: Transactions.Account | null | undefined;
+}
+
+// Mobile-only leading avatar slot. Transfers stack the from/to avatars with a
+// 50% overlap and a ring in the page color to read as "de → para" without
+// needing an explicit arrow at this density.
+function LeadingAvatarCell({ tx, account, fromAccount, toAccount }: LeadingAvatarCellProps) {
+  if (tx.type === "transfer") {
+    return (
+      <div className={classes.transferAvatars} data-testid={TransactionsTestIds.TransferAvatarGroup}>
+        <Tooltip label={fromAccount?.name ?? "—"} withArrow position="top">
+          <span style={{ display: "inline-flex" }}>
+            <AccountAvatar account={fromAccount} size={20} />
+          </span>
+        </Tooltip>
+        <Tooltip label={toAccount?.name ?? "—"} withArrow position="top">
+          <span style={{ display: "inline-flex" }}>
+            <AccountAvatar account={toAccount} size={20} />
+          </span>
+        </Tooltip>
+      </div>
+    );
+  }
+
+  return (
+    <Tooltip label={account?.name ?? "—"} withArrow position="top">
+      <span style={{ display: "inline-flex" }}>
+        <AccountAvatar account={account} size={26} />
       </span>
     </Tooltip>
   );
@@ -194,13 +231,32 @@ export function TransactionRow({
 
   const swipeEnabled = isMobile && !selectionMode && !!onDelete;
 
+  // Meta line: on mobile we collapse category + account name into the meta
+  // line below the description (their dedicated columns are hidden on mobile).
+  const metaParts: string[] = [];
+  if (groupBy !== "date") metaParts.push(dateLabel);
+  if (isMobile) {
+    if (tx.type !== "transfer" && groupBy !== "category" && category?.name) {
+      metaParts.push(category.name);
+    }
+    if (groupBy !== "account") {
+      if (tx.type === "transfer") {
+        const from = fromAccount?.name ?? "—";
+        const to = toAccount?.name ?? "—";
+        metaParts.push(`${from} → ${to}`);
+      } else if (account?.name) {
+        metaParts.push(account.name);
+      }
+    }
+  }
+
   const rowContent = (
     <div
       data-transaction-id={tx.id}
       className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
       onClick={selectionMode ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); } : undefined}
     >
-      {/* Col 1: checkbox or other-user warning */}
+      {/* Col 1: checkbox */}
       <div className={classes.checkbox}>
         <Checkbox
           checked={isSelected ?? false}
@@ -211,53 +267,65 @@ export function TransactionRow({
         />
       </div>
 
-      {/* Col 2: date + description + tags */}
+      {/* Mobile-only: leading account avatar (or stacked from/to for transfers) */}
+      <div className={classes.leadingAvatar} onClick={colClick("account_id")}>
+        <LeadingAvatarCell tx={tx} account={account} fromAccount={fromAccount} toAccount={toAccount} />
+      </div>
+
+      {/* Description + meta + tags */}
       <div className={classes.main} onClick={colClick("description")}>
-        {groupBy !== "date" && (
-          <Text size="xs" c="dimmed">
-            {dateLabel}
-          </Text>
-        )}
-        <Group gap={4} wrap="nowrap">
-          <Text size="sm" fw={500} lineClamp={1}>
+        <Group gap={6} wrap="nowrap" align="flex-start">
+          <Text size="sm" fw={500} lineClamp={2} style={{ flex: "1 1 auto", minWidth: 0 }}>
             {tx.description}
           </Text>
           <RecurrenceBadge transaction={tx} />
           {hasLinkedUser && (
             <Tooltip label="Compartilhada">
-              <IconUsers size={14} style={{ flexShrink: 0, opacity: 0.6 }} />
+              <IconUsers size={11} style={{ flexShrink: 0, opacity: 0.6, marginTop: 2 }} />
             </Tooltip>
           )}
         </Group>
-        {tags.length > 0 && (
-          <Group gap={4} mt={2}>
+        {(metaParts.length > 0 || visibleTags.length > 0) && (
+          <Group gap={6} mt={2} wrap="wrap">
+            {metaParts.length > 0 && (
+              <Text size="xs" c="dimmed">
+                {metaParts.join(" · ")}
+              </Text>
+            )}
             {visibleTags.map((tag) => (
-              <Badge key={tag.id} size="xs" variant="outline" radius="sm">
-                {tag.name}
+              <Badge
+                key={tag.id}
+                size="xs"
+                variant="light"
+                color="blue"
+                radius="xl"
+                styles={{ root: { textTransform: "none", fontWeight: 500 } }}
+              >
+                #{tag.name}
               </Badge>
             ))}
             {extraTags > 0 && (
               <Text size="xs" c="dimmed">
-                (...)
+                +{extraTags}
               </Text>
             )}
           </Group>
         )}
       </div>
 
-      {/* Col 3: category */}
+      {/* Desktop-only column: category */}
       <div className={classes.category} onClick={colClick("category_id")}>
         <CategoryCell tx={tx} groupBy={groupBy} category={category} />
       </div>
 
-      {/* Col 4: account (or from→to for transfers) */}
+      {/* Desktop-only column: account (or from→to for transfers) */}
       <div className={classes.account} onClick={colClick("account_id")}>
         <AccountCell tx={tx} groupBy={groupBy} account={account} fromAccount={fromAccount} toAccount={toAccount} />
       </div>
 
-      {/* Col 5: amount */}
+      {/* Amount */}
       <div className={classes.amount} onClick={colClick("amount")}>
-        <Text size="sm" fw={600} c={tx.operation_type === "credit" ? "teal" : "red"}>
+        <Text size="sm" fw={600} c={tx.type === "transfer" ? "dimmed" : (tx.operation_type === "credit" ? "teal" : "red")}>
           {formatCents(tx.amount, tx.operation_type)}
         </Text>
       </div>

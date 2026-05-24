@@ -210,6 +210,8 @@ export function TransactionGroup({
                     ? () => openSyntheticEditDrawer(sourceTxId)
                     : undefined
                 }
+                // Synthetic rows don't carry the source tx's date in the
+                // listing payload; the chip renders without a "de …" suffix.
               />
             );
           }
@@ -250,6 +252,7 @@ export function TransactionGroup({
                       groupBy={groupBy}
                       accounts={accounts}
                       description={tx.description}
+                      parentDate={tx.date}
                       isSelected={selectedSettlementIds?.has(s.id)}
                       isSelectionMode={isSelectionActive}
                       onSelect={onSelectSettlement}
