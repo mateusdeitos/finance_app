@@ -17,6 +17,7 @@ import { CreateTransactionDrawer } from "@/components/transactions/CreateTransac
 import { TransactionFab } from "@/components/transactions/TransactionFab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { successHaptic } from "@/utils/haptics";
+import { MobileFilterBar } from "@/components/transactions/MobileFilterBar";
 import { MonthlyStats } from "@/components/transactions/MonthlyStats";
 import { NetSummary } from "@/components/transactions/NetSummary";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
@@ -29,7 +30,6 @@ import { BulkProgressDrawer, BulkProgressItem } from "@/components/transactions/
 import { BulkDivisionDrawer } from "@/components/transactions/BulkDivisionDrawer";
 import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDrawer";
 import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
-import { TextSearch } from "@/components/transactions/filters/TextSearch";
 import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
 import { TransactionsTestIds } from "@/testIds";
@@ -501,8 +501,7 @@ export function TransactionsPage() {
               <MonthlyStats />
             </Group>
             <NetSummary />
-            <TextSearch />
-            <TransactionFilters orientation="row" hideTextSearch scrollable />
+            <MobileFilterBar />
           </Stack>
         </Box>
 
