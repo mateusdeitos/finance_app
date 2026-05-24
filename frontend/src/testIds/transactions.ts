@@ -71,6 +71,12 @@ export const TransactionsTestIds = {
   SwitchHideSettlements: 'switch_hide_settlements',
   BtnClearFilters: 'btn_clear_filters',
 
+  // Mobile filter row (search + 2 icon buttons that open drawers)
+  BtnOpenFiltersDrawer: 'btn_open_filters_drawer',
+  BtnOpenCategoriesFilterDrawer: 'btn_open_categories_filter_drawer',
+  DrawerFilters: 'drawer_filters',
+  DrawerCategoriesFilter: 'drawer_categories_filter',
+
   // Per-kind filter Popover triggers + dropdowns
   BtnFilter: (kind: TransactionFilterKind) => `btn_filter_${kind}` as const,
   PopoverFilter: (kind: TransactionFilterKind) => `popover_filter_${kind}` as const,

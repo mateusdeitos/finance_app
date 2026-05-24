@@ -41,7 +41,7 @@ export function TextSearch({ style, onFocusChange }: TextSearchProps) {
       onChange={(e) => setValue(e.currentTarget.value)}
       onFocus={() => onFocusChange?.(true)}
       onBlur={() => onFocusChange?.(false)}
-      style={{ minWidth: 200, flex: 1, ...style }}
+      style={{ minWidth: 200, ...style }}
       data-testid={TransactionsTestIds.InputTextSearch}
     />
   )
