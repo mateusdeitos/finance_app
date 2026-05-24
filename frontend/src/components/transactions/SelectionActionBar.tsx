@@ -1,4 +1,4 @@
-import { Button, Group, Menu, Text } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Menu, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
@@ -14,29 +14,57 @@ interface SelectionActionBarProps {
   onDelete: () => void
 }
 
-export function SelectionActionBar({ count, onClearSelection, onCategoryChange, onDateChange, onDivisaoChange, connectedAccountsCount, onDelete }: SelectionActionBarProps) {
+/**
+ * Action bar shown while the user has rows selected. Sits at the bottom of
+ * the viewport (above the safe area) and mirrors the variation C layout:
+ * a Limpar action on the left, a centered count chip in the brand's
+ * blue-glow tint, and a primary Ações menu on the right.
+ */
+export function SelectionActionBar({
+  count,
+  onClearSelection,
+  onCategoryChange,
+  onDateChange,
+  onDivisaoChange,
+  connectedAccountsCount,
+  onDelete,
+}: SelectionActionBarProps) {
   return (
     <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
-      <Group justify="space-between" align="center" style={{ flex: 1 }}>
-        <Group gap="xs" align="center">
-          <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
+      <Group justify="space-between" align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
+        <ActionIcon
+          variant="subtle"
+          color="gray"
+          size="lg"
+          radius="xl"
+          aria-label="Limpar seleção"
+          onClick={() => { tapHaptic(); onClearSelection(); }}
+          data-testid={TransactionsTestIds.BtnClearSelection}
+        >
+          <IconX size={18} />
+        </ActionIcon>
+
+        <Badge
+          size="lg"
+          radius="xl"
+          variant="light"
+          color="blue"
+          styles={{ root: { textTransform: 'none', fontWeight: 600 } }}
+        >
+          <Text size="sm" fw={600} component="span" data-testid={TransactionsTestIds.SelectionCount}>
             {count}
           </Text>
-          <Button
-            size="compact-sm"
-            variant="subtle"
-            leftSection={<IconX size={14} />}
-            onClick={() => { tapHaptic(); onClearSelection(); }}
-            data-testid={TransactionsTestIds.BtnClearSelection}
-          >
-            Limpar seleção
-          </Button>
-        </Group>
-        <Menu shadow="md" width={200}>
+          {' '}
+          {count === 1 ? 'selecionada' : 'selecionadas'}
+        </Badge>
+
+        <Menu shadow="md" width={220} position="top-end">
           <Menu.Target>
             <Button
               size="sm"
-              variant="default"
+              variant="filled"
+              color="blue"
+              radius="xl"
               rightSection={<IconChevronDown size={14} />}
               data-testid={TransactionsTestIds.BtnBulkActionsMenu}
             >
