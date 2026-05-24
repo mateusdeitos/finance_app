@@ -3,7 +3,6 @@ import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
-import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { Transactions } from "@/types/transactions";
 import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { TransactionGroup } from "./TransactionGroup";
@@ -60,26 +59,10 @@ export function TransactionList({
 
   const { groups, accounts, categories, isLoading } = useGroupedTransactions();
 
-  const { query: balanceQuery } = useOpeningBalance({
-    month: search.month,
-    year: search.year,
-    accumulated: search.accumulated,
-    hideSettlements: search.hideSettlements,
-  });
-
-  const openingBalance = balanceQuery.data?.balance ?? 0;
-
   const groupTotals = useMemo(
     () => groups.map((g) => groupNetTotal(g, search.hideSettlements, filters.accountIds)),
     [groups, search.hideSettlements, filters.accountIds],
   );
-
-  const runningBalances = useMemo(() => {
-    return groupTotals.reduce<number[]>((acc, total) => {
-      const prev = acc.length > 0 ? acc[acc.length - 1] : openingBalance;
-      return [...acc, prev + total];
-    }, []);
-  }, [groupTotals, openingBalance]);
 
   if (isLoading) {
     return <TransactionListSkeleton />;
@@ -109,7 +92,6 @@ export function TransactionList({
           categories={categories}
           currentUserId={currentUserId}
           groupTotal={groupTotals[i]}
-          runningBalance={runningBalances[i]}
           isFirst={i === 0}
           accountFilter={filters.accountIds}
           selectedIds={selectedIds}
