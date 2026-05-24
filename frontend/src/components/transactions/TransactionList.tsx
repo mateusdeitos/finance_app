@@ -1,9 +1,10 @@
-import { Stack, Text } from "@mantine/core";
+import { Stack } from "@mantine/core";
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { Transactions } from "@/types/transactions";
+import { EmptyState } from "./EmptyState";
 import { TransactionGroup } from "./TransactionGroup";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
@@ -67,11 +68,7 @@ export function TransactionList({
   }
 
   if (groups.length === 0) {
-    return (
-      <Text ta="center" c="dimmed" py="xl">
-        Nenhuma transação encontrada
-      </Text>
-    );
+    return <EmptyState />;
   }
 
   return (
