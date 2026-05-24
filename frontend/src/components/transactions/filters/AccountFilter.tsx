@@ -1,13 +1,57 @@
-import { Button, Checkbox, Divider, Indicator, Popover, Stack, Text } from '@mantine/core'
+import { Badge, Button, Checkbox, Divider, Indicator, Popover, Stack, Text } from '@mantine/core'
 import { IconBuildingBank } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useAccounts } from '@/hooks/useAccounts'
+import { AccountAvatar } from '@/components/AccountAvatar'
 import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
+import classes from './AccountFilter.module.css'
 
 interface AccountFilterProps {
   inline?: boolean
+}
+
+function AccountRow({
+  account,
+  checked,
+  onToggle,
+}: {
+  account: Transactions.Account
+  checked: boolean
+  onToggle: () => void
+}) {
+  const isShared = !!account.user_connection
+  return (
+    <label
+      className={`${classes.row}${checked ? ` ${classes.rowSelected}` : ''}`}
+      data-account-name={account.name}
+    >
+      <AccountAvatar account={account} size={28} />
+      <span className={classes.label}>
+        <span className={classes.name}>{account.name}</span>
+        {isShared && (
+          <Badge
+            size="xs"
+            color="grape"
+            variant="light"
+            radius="sm"
+            styles={{ root: { letterSpacing: 0.5, fontWeight: 700 } }}
+          >
+            COMPARTILHADA
+          </Badge>
+        )}
+      </span>
+      <Checkbox
+        checked={checked}
+        onChange={onToggle}
+        size="sm"
+        tabIndex={-1}
+        data-testid={TransactionsTestIds.CheckboxFilterAccount(account.id)}
+        aria-label={account.name}
+      />
+    </label>
+  )
 }
 
 function AccountGroup({
@@ -22,20 +66,24 @@ function AccountGroup({
   toggle: (id: number) => void
 }) {
   if (accounts.length === 0) return null
+  const selectedInGroup = accounts.filter((a) => selected.includes(a.id)).length
   return (
-    <>
-      <Text size="xs" fw={600} c="dimmed" tt="uppercase">{label}</Text>
+    <Stack gap={2}>
+      <div className={classes.groupHeader}>
+        <span className={classes.groupTitle}>{label}</span>
+        <span className={classes.groupCount}>
+          {selectedInGroup}/{accounts.length}
+        </span>
+      </div>
       {accounts.map((acc) => (
-        <Checkbox
+        <AccountRow
           key={acc.id}
-          label={acc.name}
+          account={acc}
           checked={selected.includes(acc.id)}
-          onChange={() => toggle(acc.id)}
-          data-testid={TransactionsTestIds.CheckboxFilterAccount(acc.id)}
-          data-account-name={acc.name}
+          onToggle={() => toggle(acc.id)}
         />
       ))}
-    </>
+    </Stack>
   )
 }
 
@@ -57,7 +105,7 @@ function AccountOptions({ accounts, selected, toggle }: {
   }
 
   return (
-    <>
+    <Stack gap="xs">
       <AccountGroup label="Minhas contas" accounts={activeOwn} selected={selected} toggle={toggle} />
       {activeOwn.length > 0 && activeShared.length > 0 && <Divider />}
       <AccountGroup label="Contas compartilhadas" accounts={activeShared} selected={selected} toggle={toggle} />
@@ -65,7 +113,7 @@ function AccountOptions({ accounts, selected, toggle }: {
       {hasActive && hasInactive && <Divider />}
 
       <AccountGroup label="Inativas" accounts={[...inactiveOwn, ...inactiveShared]} selected={selected} toggle={toggle} />
-    </>
+    </Stack>
   )
 }
 

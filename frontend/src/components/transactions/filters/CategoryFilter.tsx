@@ -7,6 +7,37 @@ import { useCategories } from '@/hooks/useCategories'
 import classes from './CategoryFilter.module.css'
 import { TransactionsTestIds } from '@/testIds'
 
+interface CategoryRowProps {
+  category: Transactions.Category
+  checked: boolean
+  onToggle: () => void
+  isRoot?: boolean
+}
+
+function CategoryRow({ category, checked, onToggle, isRoot }: CategoryRowProps) {
+  return (
+    <label
+      className={`${classes.row}${checked ? ` ${classes.rowSelected}` : ''}`}
+      data-category-name={category.name}
+    >
+      <span className={classes.label}>
+        {category.emoji && <Text size="sm" lh={1}>{category.emoji}</Text>}
+        <span className={`${classes.name}${isRoot ? ` ${classes.nameRoot}` : ''}`}>
+          {category.name}
+        </span>
+      </span>
+      <Checkbox
+        checked={checked}
+        onChange={onToggle}
+        size="sm"
+        tabIndex={-1}
+        data-testid={TransactionsTestIds.CheckboxFilterCategory(category.id)}
+        aria-label={category.name}
+      />
+    </label>
+  )
+}
+
 interface CategoryNodeProps {
   category: Transactions.Category
   selected: number[]
@@ -18,8 +49,8 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <Stack gap={4}>
-      <Group gap={4} wrap="nowrap">
+    <Stack gap={2}>
+      <Group gap={4} wrap="nowrap" align="center">
         {hasChildren ? (
           <UnstyledButton onClick={() => setExpanded((e) => !e)} style={{ lineHeight: 1, display: 'flex' }}>
             {expanded
@@ -30,35 +61,22 @@ function CategoryNode({ category, selected, onToggle }: CategoryNodeProps) {
         ) : (
           <span style={{ width: 14 }} />
         )}
-        <Checkbox
-          label={
-            <Group gap={6} wrap="nowrap">
-              {category.emoji && <Text size="sm" lh={1}>{category.emoji}</Text>}
-              <Text size="sm">{category.name}</Text>
-            </Group>
-          }
+        <CategoryRow
+          category={category}
           checked={selected.includes(category.id)}
-          onChange={() => onToggle(category.id)}
-          data-testid={TransactionsTestIds.CheckboxFilterCategory(category.id)}
-          data-category-name={category.name}
+          onToggle={() => onToggle(category.id)}
+          isRoot
         />
       </Group>
       {hasChildren && (
         <Collapse expanded={expanded}>
-          <Stack gap={4} ml={42}>
+          <Stack gap={2} ml={32}>
             {category.children!.map((child) => (
-              <Checkbox
+              <CategoryRow
                 key={child.id}
-                label={
-                  <Group gap={6} wrap="nowrap">
-                    {child.emoji && <Text size="sm" lh={1}>{child.emoji}</Text>}
-                    <Text size="sm">{child.name}</Text>
-                  </Group>
-                }
+                category={child}
                 checked={selected.includes(child.id)}
-                onChange={() => onToggle(child.id)}
-                data-testid={TransactionsTestIds.CheckboxFilterCategory(child.id)}
-                data-category-name={child.name}
+                onToggle={() => onToggle(child.id)}
               />
             ))}
           </Stack>
