@@ -2,6 +2,7 @@ import { Box, Group, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { Fragment } from "react";
 import { fetchTransaction } from "@/api/transactions";
+import { TransactionsTestIds } from "@/testIds";
 import { Transactions } from "@/types/transactions";
 import { formatSignedCents } from "@/utils/formatCents";
 import { renderDrawer } from "@/utils/renderDrawer";
@@ -161,7 +162,13 @@ export function TransactionGroup({
 
   return (
     <Box className={classes.group}>
-      <Group justify="space-between" align="baseline" className={classes.header} wrap="nowrap">
+      <Group
+        justify="space-between"
+        align="baseline"
+        className={classes.header}
+        wrap="nowrap"
+        data-testid={TransactionsTestIds.GroupHeader(group.key)}
+      >
         <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: "0.06em" }}>
           {group.label}
         </Text>
