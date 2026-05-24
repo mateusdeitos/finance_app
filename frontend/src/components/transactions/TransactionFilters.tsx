@@ -11,9 +11,19 @@ interface TransactionFiltersProps {
   orientation?: 'row' | 'column'
   hideTextSearch?: boolean
   scrollable?: boolean
+  /** Hide the Contas chip — useful when accounts live in a persistent sidebar. */
+  hideAccountFilter?: boolean
+  /** Hide the Categorias chip — useful when categories live in a persistent sidebar. */
+  hideCategoryFilter?: boolean
 }
 
-export function TransactionFilters({ orientation = 'row', hideTextSearch, scrollable }: TransactionFiltersProps) {
+export function TransactionFilters({
+  orientation = 'row',
+  hideTextSearch,
+  scrollable,
+  hideAccountFilter,
+  hideCategoryFilter,
+}: TransactionFiltersProps) {
   const inline = orientation === 'column'
   const className = inline
     ? classes.column
@@ -22,8 +32,8 @@ export function TransactionFilters({ orientation = 'row', hideTextSearch, scroll
     <div className={className}>
       {!hideTextSearch && <TextSearch />}
       <TagFilter inline={inline} />
-      <CategoryFilter inline={inline} />
-      <AccountFilter inline={inline} />
+      {!hideCategoryFilter && <CategoryFilter inline={inline} />}
+      {!hideAccountFilter && <AccountFilter inline={inline} />}
       <AdvancedFilter inline={inline} />
       <GroupBySelector />
       <ClearFiltersButton />

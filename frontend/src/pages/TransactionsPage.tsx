@@ -17,6 +17,7 @@ import { CreateTransactionDrawer } from "@/components/transactions/CreateTransac
 import { TransactionFab } from "@/components/transactions/TransactionFab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { successHaptic } from "@/utils/haptics";
+import { DesktopFiltersSidebar } from "@/components/transactions/DesktopFiltersSidebar";
 import { MobileFilterBar } from "@/components/transactions/MobileFilterBar";
 import { MonthlyStats } from "@/components/transactions/MonthlyStats";
 import { NetSummary } from "@/components/transactions/NetSummary";
@@ -533,71 +534,85 @@ export function TransactionsPage() {
   }
 
   return (
-    <Stack gap="md">
-      <Box
-        style={{
-          position: "sticky",
-          top: "calc(-1 * var(--mantine-spacing-md))",
-          zIndex: 10,
-          background: "var(--mantine-color-body)",
-          marginTop: "calc(-1 * var(--mantine-spacing-md))",
-          paddingTop: "var(--mantine-spacing-md)",
-          paddingBottom: "var(--mantine-spacing-xs)",
-        }}
-      >
-        <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Group gap="md" wrap="nowrap" align="center">
-              <PeriodNavigator
-                month={search.month}
-                year={search.year}
-                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-              />
-              <MonthlyStats />
+    <Box
+      // 2-column desktop shell: a 280px persistent filter sidebar (Contas +
+      // Categorias) on the left, then the main column with the toolbar,
+      // summary, condensed filter row and the list. The sidebar lives inside
+      // the page (not the AppShell aside) so it stays scoped to /transactions.
+      style={{
+        display: "grid",
+        gridTemplateColumns: "280px minmax(0, 1fr)",
+        gap: "var(--mantine-spacing-md)",
+        alignItems: "start",
+      }}
+    >
+      <DesktopFiltersSidebar />
+      <Stack gap="md" style={{ minWidth: 0 }}>
+        <Box
+          style={{
+            position: "sticky",
+            top: "calc(-1 * var(--mantine-spacing-md))",
+            zIndex: 10,
+            background: "var(--mantine-color-body)",
+            marginTop: "calc(-1 * var(--mantine-spacing-md))",
+            paddingTop: "var(--mantine-spacing-md)",
+            paddingBottom: "var(--mantine-spacing-xs)",
+          }}
+        >
+          <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
+            <Group justify="space-between" align="center" wrap="nowrap">
+              <Group gap="md" wrap="nowrap" align="center">
+                <PeriodNavigator
+                  month={search.month}
+                  year={search.year}
+                  onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+                />
+                <MonthlyStats />
+              </Group>
+              <Group gap="xs">
+                <Button
+                  leftSection={<IconPlus size={16} />}
+                  rightSection={<ShortcutHint keys={["N"]} />}
+                  onClick={openCreateTransaction}
+                  data-testid={TransactionsTestIds.BtnNew}
+                >
+                  Nova Transação
+                </Button>
+                <Menu shadow="md" width={200}>
+                  <Menu.Target>
+                    <ActionIcon
+                      variant="default"
+                      aria-label="Mais opções"
+                      data-testid={TransactionsTestIds.BtnMoreOptions}
+                    >
+                      <IconDots size={16} />
+                    </ActionIcon>
+                  </Menu.Target>
+                  <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconTableImport size={14} />}
+                      onClick={() => void navigate({ to: "/transactions/import" })}
+                      data-testid={TransactionsTestIds.MenuItemImportTransactions}
+                    >
+                      Importar transações
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              </Group>
             </Group>
-            <Group gap="xs">
-              <Button
-                leftSection={<IconPlus size={16} />}
-                rightSection={<ShortcutHint keys={["N"]} />}
-                onClick={openCreateTransaction}
-                data-testid={TransactionsTestIds.BtnNew}
-              >
-                Nova Transação
-              </Button>
-              <Menu shadow="md" width={200}>
-                <Menu.Target>
-                  <ActionIcon
-                    variant="default"
-                    aria-label="Mais opções"
-                    data-testid={TransactionsTestIds.BtnMoreOptions}
-                  >
-                    <IconDots size={16} />
-                  </ActionIcon>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Item
-                    leftSection={<IconTableImport size={14} />}
-                    onClick={() => void navigate({ to: "/transactions/import" })}
-                    data-testid={TransactionsTestIds.MenuItemImportTransactions}
-                  >
-                    Importar transações
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-            </Group>
-          </Group>
-          <NetSummary />
-          <TransactionFilters orientation="row" />
-        </Stack>
-      </Box>
+            <NetSummary />
+            <TransactionFilters orientation="row" hideAccountFilter hideCategoryFilter />
+          </Stack>
+        </Box>
 
-      <TransactionList
-        currentUserId={currentUserId}
-        selectedIds={selectedIds}
-        selectedSettlementIds={selectedSettlementIds}
-        onSelectTransaction={handleSelectTransaction}
-        onSelectSettlement={handleSelectSettlement}
-      />
+        <TransactionList
+          currentUserId={currentUserId}
+          selectedIds={selectedIds}
+          selectedSettlementIds={selectedSettlementIds}
+          onSelectTransaction={handleSelectTransaction}
+          onSelectSettlement={handleSelectSettlement}
+        />
+      </Stack>
 
       {isSelecting && (
         <SelectionActionBar
@@ -610,6 +625,6 @@ export function TransactionsPage() {
           onDelete={handleDeleteClick}
         />
       )}
-    </Stack>
+    </Box>
   );
 }
