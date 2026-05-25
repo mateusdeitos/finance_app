@@ -594,31 +594,12 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm">
-            <Group justify="space-between" align="center" wrap="wrap" gap="sm">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
               <PeriodNavigator
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
               />
-              <Group
-                gap="xs"
-                wrap="wrap"
-                style={{
-                  opacity: isSelecting ? 0.5 : 1,
-                  transition: "opacity 150ms ease",
-                  flex: "1 1 auto",
-                  minWidth: 0,
-                }}
-                inert={isSelecting || undefined}
-              >
-                <Box style={{ width: 240 }}>
-                  <TextSearch />
-                </Box>
-                <TagFilter />
-                <AdvancedFilter />
-                <GroupByMenuButton />
-                <ClearFiltersButton />
-              </Group>
               <Group gap="xs" wrap="nowrap">
                 <Button
                   leftSection={<IconPlus size={16} />}
@@ -649,6 +630,24 @@ export function TransactionsPage() {
                   </Menu.Dropdown>
                 </Menu>
               </Group>
+            </Group>
+            <Group
+              gap="xs"
+              wrap="wrap"
+              align="center"
+              style={{
+                opacity: isSelecting ? 0.5 : 1,
+                transition: "opacity 150ms ease",
+              }}
+              inert={isSelecting || undefined}
+            >
+              <Box style={{ width: 260 }}>
+                <TextSearch />
+              </Box>
+              <TagFilter />
+              <AdvancedFilter />
+              <GroupByMenuButton />
+              <ClearFiltersButton />
             </Group>
             <DesktopSummary />
           </Stack>
