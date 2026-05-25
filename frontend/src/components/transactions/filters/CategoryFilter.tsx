@@ -127,7 +127,7 @@ export function CategoryFilter({ inline }: CategoryFilterProps) {
     return (
       <Stack gap="xs">
         <Text size="sm" fw={500}>Categorias</Text>
-        <Stack gap="xs" className={classes.list}>
+        <Stack gap="xs">
           <CategoryOptions categories={categories} selected={selected} toggle={toggle} />
         </Stack>
       </Stack>
