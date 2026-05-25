@@ -1,6 +1,7 @@
 export const OnboardingTestIds = {
   Page: 'page_onboarding',
   Stepper: 'stepper_onboarding',
+  StepAcceptInvite: 'step_onboarding_accept_invite',
   StepAccounts: 'step_onboarding_accounts',
   StepCategories: 'step_onboarding_categories',
   StepImport: 'step_onboarding_import',
@@ -9,6 +10,7 @@ export const OnboardingTestIds = {
   BtnFinish: 'btn_onboarding_finish',
   BtnGoToImport: 'btn_onboarding_go_to_import',
   BtnSkipImport: 'btn_onboarding_skip_import',
+  BtnSkipInvite: 'btn_onboarding_skip_invite',
   AlertError: 'alert_onboarding_error',
 
   // Accounts

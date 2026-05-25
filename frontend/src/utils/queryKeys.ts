@@ -6,6 +6,7 @@ export const QueryKeys = {
   Categories: 'categories',
   Tags: 'tags',
   InviteInfo: 'invite-info',
+  UserConnections: 'user-connections',
   Charges: 'charges',
   ChargesPendingCount: 'charges-pending-count',
   Onboarding: 'onboarding',
