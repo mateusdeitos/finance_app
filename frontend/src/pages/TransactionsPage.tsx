@@ -25,6 +25,7 @@ import { NetSummary } from "@/components/transactions/NetSummary";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
 import { GroupByMenuButton } from "@/components/transactions/filters/GroupByMenuButton";
 import { AdvancedFilter } from "@/components/transactions/filters/AdvancedFilter";
+import { ClearFiltersButton } from "@/components/transactions/ClearFiltersButton";
 import { TextSearch } from "@/components/transactions/filters/TextSearch";
 import { TagFilter } from "@/components/transactions/filters/TagFilter";
 import { TransactionList } from "@/components/transactions/TransactionList";
@@ -573,6 +574,7 @@ export function TransactionsPage() {
                 <TagFilter />
                 <AdvancedFilter />
                 <GroupByMenuButton />
+                <ClearFiltersButton />
                 <Box style={{ width: 1, height: 18, background: "var(--mantine-color-default-border)", margin: "0 4px" }} />
                 <Button
                   leftSection={<IconPlus size={16} />}
