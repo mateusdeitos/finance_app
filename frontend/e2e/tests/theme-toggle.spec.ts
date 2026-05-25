@@ -5,6 +5,10 @@ test.describe('Theme toggle', () => {
   test('cycles color scheme and persists across reload', async ({ page }) => {
     await page.goto('/accounts')
 
+    // On desktop the toggle lives inside the sidebar user pill's menu
+    // dropdown; open it first so the toggle becomes visible.
+    await page.getByTestId(CommonTestIds.SidebarUserPill).click()
+
     const toggle = page.getByTestId(CommonTestIds.ThemeToggle)
     const html = page.locator('html')
 
@@ -18,6 +22,7 @@ test.describe('Theme toggle', () => {
 
     // Preference persists across a full reload (localStorage).
     await page.reload()
+    await page.getByTestId(CommonTestIds.SidebarUserPill).click()
     await expect(html).toHaveAttribute('data-mantine-color-scheme', 'dark')
     await expect(toggle).toHaveAttribute('data-color-scheme', 'dark')
 

@@ -1,4 +1,4 @@
-import { Badge, Menu, SegmentedControl, Text, useMantineColorScheme, type MantineColorScheme } from '@mantine/core'
+import { Badge, Group, Menu, Text } from '@mantine/core'
 import {
   IconCreditCard,
   IconReceipt2,
@@ -7,9 +7,6 @@ import {
   IconUserPlus,
   IconLogout,
   IconChevronDown,
-  IconDeviceDesktop,
-  IconMoon,
-  IconSun,
   type Icon as TablerIcon,
 } from '@tabler/icons-react'
 import { Link, useRouterState } from '@tanstack/react-router'
@@ -18,6 +15,7 @@ import { useLogout } from '@/hooks/useLogout'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
 import { UserAvatar } from '@/components/UserAvatar'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { InviteDrawer } from '@/components/InviteDrawer'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { CommonTestIds } from '@/testIds'
@@ -74,8 +72,6 @@ export function DesktopSidebar() {
 
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
-
-  const { colorScheme, setColorScheme } = useMantineColorScheme()
 
   const openInvite = () => {
     void renderDrawer(() => <InviteDrawer />).catch(() => {})
@@ -164,9 +160,12 @@ export function DesktopSidebar() {
           </Menu.Target>
           <Menu.Dropdown data-testid={CommonTestIds.SidebarUserMenu}>
             <Menu.Label>{user.email}</Menu.Label>
-            <Menu.Item closeMenuOnClick={false}>
-              <ThemeSegment colorScheme={colorScheme} setColorScheme={setColorScheme} />
-            </Menu.Item>
+            <div className={classes.themeMenuItem}>
+              <Group gap="xs" wrap="nowrap" align="center">
+                <Text size="sm">Tema</Text>
+                <ThemeToggle />
+              </Group>
+            </div>
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconLogout size={16} />}
@@ -183,26 +182,3 @@ export function DesktopSidebar() {
   )
 }
 
-function ThemeSegment({
-  colorScheme,
-  setColorScheme,
-}: {
-  colorScheme: MantineColorScheme
-  setColorScheme: (value: MantineColorScheme) => void
-}) {
-  return (
-    <div className={classes.themeMenuItem}>
-      <Text size="sm">Tema</Text>
-      <SegmentedControl
-        size="xs"
-        value={colorScheme}
-        onChange={(value) => setColorScheme(value as MantineColorScheme)}
-        data={[
-          { value: 'light', label: <IconSun size={14} /> },
-          { value: 'dark', label: <IconMoon size={14} /> },
-          { value: 'auto', label: <IconDeviceDesktop size={14} /> },
-        ]}
-      />
-    </div>
-  )
-}
