@@ -74,7 +74,9 @@ export function TagFilter({ inline }: TagFilterProps) {
         </Indicator>
       </Popover.Target>
       <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('tags')}>
-        <TagOptions tags={tags} selected={selected} toggle={toggle} />
+        <div style={{ maxWidth: 400, maxHeight: '5.5rem', overflowY: 'auto' }}>
+          <TagOptions tags={tags} selected={selected} toggle={toggle} />
+        </div>
       </Popover.Dropdown>
     </Popover>
   )

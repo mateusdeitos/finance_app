@@ -526,6 +526,7 @@ export function TransactionsPage() {
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+                disabled={isSelecting}
               />
               <MonthlyStats />
             </Group>
@@ -623,6 +624,7 @@ export function TransactionsPage() {
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+                disabled={isSelecting}
               />
               <div
                 style={{
