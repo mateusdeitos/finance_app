@@ -19,6 +19,7 @@ import {
 } from '@tabler/icons-react'
 import { useInviteInfo } from '@/hooks/useInviteInfo'
 import { useAcceptInvite } from '@/hooks/useAcceptInvite'
+import { useUserConnections } from '@/hooks/useUserConnections'
 import { getInitials } from '@/utils/getInitials'
 import { CommonTestIds } from '@/testIds'
 import { SuggestedSplitCard } from '@/components/connections/SuggestedSplitCard'
@@ -29,6 +30,14 @@ export function ConnectWithPage() {
   const search = useSearch({ from: '/_authenticated/connect-with/$externalId' })
   const navigate = useNavigate()
   const { query: inviteQuery } = useInviteInfo(externalId)
+  const inviterId = inviteQuery.data?.id
+  const { query: existingConnectionQuery } = useUserConnections((connections) =>
+    inviterId
+      ? connections.find(
+          (c) => c.from_user_id === inviterId && c.connection_status === 'accepted',
+        )
+      : undefined,
+  )
   const { mutation: acceptMutation } = useAcceptInvite({
     onSuccess: (result) => {
       if (!result.alreadyConnected) {
@@ -84,7 +93,10 @@ export function ConnectWithPage() {
   const inviter = inviteQuery.data
   const inviterFirstName = inviter.name.split(' ')[0] ?? inviter.name
 
-  if (acceptMutation.data?.alreadyConnected) {
+  const alreadyConnected =
+    acceptMutation.data?.alreadyConnected || Boolean(existingConnectionQuery.data)
+
+  if (alreadyConnected) {
     return (
       <PageShell>
         <ConnectedAlreadyCard inviterName={inviter.name} onGoToApp={goHome} />

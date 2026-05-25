@@ -197,7 +197,7 @@ func (suite *ServiceTestWithDBSuite) createAcceptedTestUserConnection(ctx contex
 	assert.Greater(suite.T(), userConnection.ToAccountID, 0)
 
 	assert.Equal(suite.T(), fromDefaultSplitPercentage, userConnection.FromDefaultSplitPercentage)
-	assert.Equal(suite.T(), fromDefaultSplitPercentage, userConnection.ToDefaultSplitPercentage)
+	assert.Equal(suite.T(), 100-fromDefaultSplitPercentage, userConnection.ToDefaultSplitPercentage)
 	assert.Equal(suite.T(), domain.UserConnectionStatusPending, userConnection.ConnectionStatus)
 
 	err = suite.Services.UserConnection.UpdateStatus(ctx, toUserID, userConnection.ID, domain.UserConnectionStatusAccepted)

@@ -29,6 +29,12 @@ export async function fetchInviteInfo(externalId: string): Promise<UserConnectio
   return res.json()
 }
 
+export async function fetchUserConnections(): Promise<UserConnections.Connection[]> {
+  const res = await fetch(`${apiUrl}/api/user-connections`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Failed to fetch user connections')
+  return res.json()
+}
+
 export type AcceptInviteResult = {
   alreadyConnected: boolean
   connection: UserConnections.Connection

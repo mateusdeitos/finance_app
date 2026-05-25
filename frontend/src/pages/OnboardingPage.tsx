@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Alert, Button, Container, Group, Paper, Stack, Stepper, Text } from '@mantine/core'
 import { IconAlertCircle } from '@tabler/icons-react'
+import { useSearch } from '@tanstack/react-router'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCompleteOnboarding, useOnboardingStatus } from '@/hooks/useOnboardingStatus'
 import { AccountsStep } from '@/components/onboarding/AccountsStep'
 import { CategoriesStep } from '@/components/onboarding/CategoriesStep'
 import { ImportStep } from '@/components/onboarding/ImportStep'
+import { AcceptInviteStep } from '@/components/onboarding/AcceptInviteStep'
 import { PRESET_COLORS } from '@/components/accounts/ColorSwatchPicker'
 import {
   buildInitialAccounts,
@@ -17,12 +19,31 @@ import {
 import type { OnboardingSetupRequest } from '@/api/onboarding'
 import { OnboardingTestIds } from '@/testIds'
 
-const STEP_ACCOUNTS = 0
-const STEP_CATEGORIES = 1
-const STEP_IMPORT = 2
+const STEP_INVITE = 'invite'
+const STEP_ACCOUNTS = 'accounts'
+const STEP_CATEGORIES = 'categories'
+const STEP_IMPORT = 'import'
+
+type OnboardingStepKey =
+  | typeof STEP_INVITE
+  | typeof STEP_ACCOUNTS
+  | typeof STEP_CATEGORIES
+  | typeof STEP_IMPORT
 
 export function OnboardingPage() {
-  const [step, setStep] = useState(STEP_ACCOUNTS)
+  const { invite, split } = useSearch({ from: '/_authenticated/onboarding' })
+  const hasInvite = Boolean(invite)
+
+  const stepOrder = useMemo<OnboardingStepKey[]>(
+    () =>
+      hasInvite
+        ? [STEP_INVITE, STEP_ACCOUNTS, STEP_CATEGORIES, STEP_IMPORT]
+        : [STEP_ACCOUNTS, STEP_CATEGORIES, STEP_IMPORT],
+    [hasInvite],
+  )
+
+  const [stepKey, setStepKey] = useState<OnboardingStepKey>(stepOrder[0])
+  const stepIndex = stepOrder.indexOf(stepKey)
   const [accounts, setAccounts] = useState<OnboardingAccount[]>(buildInitialAccounts)
   const [categories, setCategories] = useState<OnboardingCategoryItem[]>(buildInitialCategories)
 
@@ -35,9 +56,19 @@ export function OnboardingPage() {
       invalidateOnboarding()
       invalidateAccounts()
       invalidateCategories()
-      setStep(STEP_IMPORT)
+      setStepKey(STEP_IMPORT)
     },
   })
+
+  function goNext() {
+    const next = stepOrder[stepIndex + 1]
+    if (next) setStepKey(next)
+  }
+
+  function goPrev() {
+    const prev = stepOrder[stepIndex - 1]
+    if (prev) setStepKey(prev)
+  }
 
   // --- Account handlers ---
 
@@ -156,21 +187,30 @@ export function OnboardingPage() {
         </Stack>
 
         <Stepper
-          active={step}
+          active={stepIndex}
           allowNextStepsSelect={false}
           onStepClick={(s) => {
-            if (s < step) setStep(s)
+            if (s < stepIndex) setStepKey(stepOrder[s])
           }}
           size="sm"
           data-testid={OnboardingTestIds.Stepper}
         >
+          {hasInvite && <Stepper.Step label="Conexão" />}
           <Stepper.Step label="Contas" />
           <Stepper.Step label="Categorias" />
           <Stepper.Step label="Importar" />
         </Stepper>
 
         <Paper withBorder radius="md" p="md">
-          {step === STEP_ACCOUNTS && (
+          {stepKey === STEP_INVITE && invite && (
+            <AcceptInviteStep
+              externalId={invite}
+              suggestedSplit={split}
+              onAccepted={goNext}
+              onSkip={goNext}
+            />
+          )}
+          {stepKey === STEP_ACCOUNTS && (
             <AccountsStep
               accounts={accounts}
               onToggle={toggleAccount}
@@ -180,7 +220,7 @@ export function OnboardingPage() {
               onRemoveAccount={removeAccount}
             />
           )}
-          {step === STEP_CATEGORIES && (
+          {stepKey === STEP_CATEGORIES && (
             <CategoriesStep
               categories={categories}
               onToggle={toggleCategory}
@@ -190,7 +230,7 @@ export function OnboardingPage() {
               onRemove={removeCategory}
             />
           )}
-          {step === STEP_IMPORT && <ImportStep />}
+          {stepKey === STEP_IMPORT && <ImportStep />}
         </Paper>
 
         {error && (
@@ -204,19 +244,19 @@ export function OnboardingPage() {
           </Alert>
         )}
 
-        {step !== STEP_IMPORT && (
+        {stepKey !== STEP_IMPORT && stepKey !== STEP_INVITE && (
           <Group justify="space-between">
             <Button
               variant="subtle"
-              onClick={() => setStep((s) => Math.max(STEP_ACCOUNTS, s - 1))}
-              disabled={step === STEP_ACCOUNTS || completeMutation.isPending}
+              onClick={goPrev}
+              disabled={stepIndex === 0 || completeMutation.isPending}
               data-testid={OnboardingTestIds.BtnBack}
             >
               Voltar
             </Button>
-            {step === STEP_ACCOUNTS ? (
+            {stepKey === STEP_ACCOUNTS ? (
               <Button
-                onClick={() => setStep(STEP_CATEGORIES)}
+                onClick={() => setStepKey(STEP_CATEGORIES)}
                 data-testid={OnboardingTestIds.BtnNext}
               >
                 Próximo

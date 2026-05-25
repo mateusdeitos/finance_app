@@ -75,7 +75,7 @@ func (s *userConnectionService) Create(ctx context.Context, fromUserID, toUserID
 		FromDefaultSplitPercentage: fromDefaultSplitPercentage,
 		ToUserID:                   toUserID,
 		ToAccountID:                toAccount.ID,
-		ToDefaultSplitPercentage:   fromDefaultSplitPercentage,
+		ToDefaultSplitPercentage:   100 - fromDefaultSplitPercentage,
 		ConnectionStatus:           domain.UserConnectionStatusPending,
 	}); err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -139,7 +139,7 @@ func (s *userConnectionService) AcceptInviteByExternalID(ctx context.Context, cu
 		FromDefaultSplitPercentage: fromDefaultSplitPercentage,
 		ToUserID:                   currentUserID,
 		ToAccountID:                currentUserAccount.ID,
-		ToDefaultSplitPercentage:   fromDefaultSplitPercentage,
+		ToDefaultSplitPercentage:   100 - fromDefaultSplitPercentage,
 		ConnectionStatus:           domain.UserConnectionStatusAccepted,
 	})
 	if err != nil {

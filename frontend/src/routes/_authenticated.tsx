@@ -23,6 +23,17 @@ export const Route = createFileRoute('/_authenticated')({
         })
         .catch(() => ({ completed: true }))
       if (!status.completed) {
+        const connectWithMatch = location.pathname.match(/^\/connect-with\/([^/]+)\/?$/)
+        if (connectWithMatch) {
+          const splitParam = (location.search as { split?: number }).split
+          throw redirect({
+            to: '/onboarding',
+            search: {
+              invite: connectWithMatch[1],
+              ...(typeof splitParam === 'number' ? { split: splitParam } : {}),
+            },
+          })
+        }
         throw redirect({ to: '/onboarding' })
       }
     }
