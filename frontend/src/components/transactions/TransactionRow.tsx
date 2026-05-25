@@ -292,15 +292,16 @@ export function TransactionRow({
           <Text size="sm" fw={500} lineClamp={2} style={{ flex: "1 1 auto", minWidth: 0 }}>
             {tx.description}
           </Text>
-          <RecurrenceBadge transaction={tx} />
+          {!isMobile && <RecurrenceBadge transaction={tx} />}
           {hasLinkedUser && (
             <Tooltip label="Compartilhada">
               <IconUsers size={11} style={{ flexShrink: 0, opacity: 0.6, marginTop: 2 }} />
             </Tooltip>
           )}
         </Group>
-        {(metaParts.length > 0 || visibleTags.length > 0) && (
-          <Group gap={6} mt={2} wrap="wrap">
+        {(metaParts.length > 0 || visibleTags.length > 0 || (isMobile && !!tx.transaction_recurrence_id)) && (
+          <Group gap={6} mt={2} wrap="wrap" align="center">
+            {isMobile && <RecurrenceBadge transaction={tx} />}
             {metaParts.length > 0 && (
               <Text size="xs" c="dimmed">
                 {metaParts.join(" · ")}
