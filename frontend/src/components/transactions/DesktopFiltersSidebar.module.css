@@ -4,7 +4,7 @@
   align-self: flex-start;
   position: sticky;
   top: calc(-1 * var(--mantine-spacing-md));
-  max-height: 100dvh;
+  height: 100dvh;
   overflow-y: auto;
   background: light-dark(var(--mantine-color-body), var(--mantine-color-dark-7));
   border-right: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
