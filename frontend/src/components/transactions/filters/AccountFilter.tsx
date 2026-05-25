@@ -26,10 +26,6 @@ function AccountRow({
       className={`${classes.row}${checked ? ` ${classes.rowSelected}` : ''}`}
       data-account-name={account.name}
     >
-      <AccountAvatar account={account} size={28} />
-      <span className={classes.label}>
-        <span className={classes.name}>{account.name}</span>
-      </span>
       <Checkbox
         checked={checked}
         onChange={onToggle}
@@ -38,6 +34,10 @@ function AccountRow({
         data-testid={TransactionsTestIds.CheckboxFilterAccount(account.id)}
         aria-label={account.name}
       />
+      <AccountAvatar account={account} size={28} />
+      <span className={classes.label}>
+        <span className={classes.name}>{account.name}</span>
+      </span>
     </label>
   )
 }

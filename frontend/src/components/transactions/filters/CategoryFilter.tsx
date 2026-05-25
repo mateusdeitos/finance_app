@@ -20,12 +20,6 @@ function CategoryRow({ category, checked, onToggle, isRoot }: CategoryRowProps) 
       className={`${classes.row}${checked ? ` ${classes.rowSelected}` : ''}`}
       data-category-name={category.name}
     >
-      <span className={classes.label}>
-        {category.emoji && <Text size="sm" lh={1}>{category.emoji}</Text>}
-        <span className={`${classes.name}${isRoot ? ` ${classes.nameRoot}` : ''}`}>
-          {category.name}
-        </span>
-      </span>
       <Checkbox
         checked={checked}
         onChange={onToggle}
@@ -34,6 +28,12 @@ function CategoryRow({ category, checked, onToggle, isRoot }: CategoryRowProps) 
         data-testid={TransactionsTestIds.CheckboxFilterCategory(category.id)}
         aria-label={category.name}
       />
+      <span className={classes.label}>
+        {category.emoji && <Text size="sm" lh={1}>{category.emoji}</Text>}
+        <span className={`${classes.name}${isRoot ? ` ${classes.nameRoot}` : ''}`}>
+          {category.name}
+        </span>
+      </span>
     </label>
   )
 }
