@@ -13,8 +13,53 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>FinanceApp</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("mantine-color-scheme-value");
+          var scheme =
+            stored && stored !== "auto"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-mantine-color-scheme", scheme);
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        z-index: 9999;
+        transition: opacity 200ms ease-out;
+      }
+      :root[data-mantine-color-scheme="dark"] #app-splash {
+        background: #1a1b1e;
+      }
+      #app-splash.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #app-splash .app-splash-spinner {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 3px solid rgba(34, 139, 230, 0.2);
+        border-top-color: #228be6;
+        animation: app-splash-spin 0.8s linear infinite;
+      }
+      @keyframes app-splash-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
+    <div id="app-splash"><div class="app-splash-spinner" aria-label="Carregando"></div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
