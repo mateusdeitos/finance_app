@@ -594,60 +594,60 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm">
-            <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
+            <Group align="center" wrap="nowrap" gap="xs">
               <PeriodNavigator
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
               />
-              <Group gap="xs" wrap="nowrap">
-                <Button
-                  leftSection={<IconPlus size={16} />}
-                  rightSection={<ShortcutHint keys={["N"]} />}
-                  onClick={openCreateTransaction}
-                  data-testid={TransactionsTestIds.BtnNew}
-                >
-                  Nova Transação
-                </Button>
-                <Menu shadow="md" width={200}>
-                  <Menu.Target>
-                    <ActionIcon
-                      variant="default"
-                      aria-label="Mais opções"
-                      data-testid={TransactionsTestIds.BtnMoreOptions}
-                    >
-                      <IconDots size={16} />
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Item
-                      leftSection={<IconTableImport size={14} />}
-                      onClick={() => void navigate({ to: "/transactions/import" })}
-                      data-testid={TransactionsTestIds.MenuItemImportTransactions}
-                    >
-                      Importar transações
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
+              <Group
+                gap="xs"
+                wrap="nowrap"
+                align="center"
+                style={{
+                  flex: "1 1 0%",
+                  minWidth: 0,
+                  opacity: isSelecting ? 0.5 : 1,
+                  transition: "opacity 150ms ease",
+                }}
+                inert={isSelecting || undefined}
+              >
+                <Box style={{ flex: "1 1 0%", minWidth: 120, maxWidth: 280 }}>
+                  <TextSearch />
+                </Box>
+                <TagFilter />
+                <AdvancedFilter />
+                <GroupByMenuButton />
+                <ClearFiltersButton />
               </Group>
-            </Group>
-            <Group
-              gap="xs"
-              wrap="wrap"
-              align="center"
-              style={{
-                opacity: isSelecting ? 0.5 : 1,
-                transition: "opacity 150ms ease",
-              }}
-              inert={isSelecting || undefined}
-            >
-              <Box style={{ width: 260 }}>
-                <TextSearch />
-              </Box>
-              <TagFilter />
-              <AdvancedFilter />
-              <GroupByMenuButton />
-              <ClearFiltersButton />
+              <Button
+                leftSection={<IconPlus size={16} />}
+                rightSection={<ShortcutHint keys={["N"]} />}
+                onClick={openCreateTransaction}
+                data-testid={TransactionsTestIds.BtnNew}
+              >
+                Nova Transação
+              </Button>
+              <Menu shadow="md" width={200}>
+                <Menu.Target>
+                  <ActionIcon
+                    variant="default"
+                    aria-label="Mais opções"
+                    data-testid={TransactionsTestIds.BtnMoreOptions}
+                  >
+                    <IconDots size={16} />
+                  </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Menu.Item
+                    leftSection={<IconTableImport size={14} />}
+                    onClick={() => void navigate({ to: "/transactions/import" })}
+                    data-testid={TransactionsTestIds.MenuItemImportTransactions}
+                  >
+                    Importar transações
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
             </Group>
             <DesktopSummary />
           </Stack>
