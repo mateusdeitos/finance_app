@@ -583,7 +583,6 @@ export function TransactionsPage() {
           alignSelf: "stretch",
           opacity: isSelecting ? 0.5 : 1,
           transition: "opacity 150ms ease",
-          minHeight: "100%",
         }}
       >
         <DesktopFiltersSidebar />
