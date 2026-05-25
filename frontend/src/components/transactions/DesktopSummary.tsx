@@ -53,7 +53,7 @@ interface StatProps {
 
 function Stat({ label, amount, color, hero }: StatProps) {
   return (
-    <Stack gap={2} pr="lg">
+    <Stack gap={2} px="lg">
       <Text
         size="xs"
         c="dimmed"
@@ -117,21 +117,19 @@ export function DesktopSummary() {
           <Stat label="Despesas" amount={-expense} color="red" />
           <Divider orientation="vertical" />
           {isLoading ? (
-            <Stack gap={2} pl="lg">
+            <Stack gap={2} px="lg">
               <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
                 Saldo do mês
               </Text>
               <Skeleton height={24} width={140} radius="sm" />
             </Stack>
           ) : (
-            <div style={{ paddingLeft: "var(--mantine-spacing-lg)" }}>
-              <Stat
-                label="Saldo do mês"
-                amount={displayedNet}
-                color={displayedNet < 0 ? "red" : "teal"}
-                hero
-              />
-            </div>
+            <Stat
+              label="Saldo do mês"
+              amount={displayedNet}
+              color={displayedNet < 0 ? "red" : "teal"}
+              hero
+            />
           )}
         </Group>
         <SegmentedControl
