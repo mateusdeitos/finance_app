@@ -547,7 +547,16 @@ export function TransactionsPage() {
       // condensed filter chip row + list as before.
       style={{ display: "flex", alignItems: "stretch", gap: "var(--mantine-spacing-md)" }}
     >
-      <DesktopFiltersSidebar />
+      <Box
+        inert={isSelecting || undefined}
+        style={{
+          display: "flex",
+          opacity: isSelecting ? 0.5 : 1,
+          transition: "opacity 150ms ease",
+        }}
+      >
+        <DesktopFiltersSidebar />
+      </Box>
       <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
         <Box
           style={{
@@ -560,21 +569,36 @@ export function TransactionsPage() {
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
-          <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
+          <Stack gap="sm">
             <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
               <PeriodNavigator
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
               />
-              <Box style={{ flex: 1, maxWidth: 360 }}>
-                <TextSearch />
+              <Box
+                inert={isSelecting || undefined}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--mantine-spacing-xs)",
+                  opacity: isSelecting ? 0.5 : 1,
+                  transition: "opacity 150ms ease",
+                  minWidth: 0,
+                }}
+              >
+                <Box style={{ flex: 1, maxWidth: 360 }}>
+                  <TextSearch />
+                </Box>
+                <Group gap="xs" wrap="nowrap">
+                  <TagFilter />
+                  <AdvancedFilter />
+                  <GroupByMenuButton />
+                  <ClearFiltersButton />
+                </Group>
               </Box>
               <Group gap="xs" wrap="nowrap">
-                <TagFilter />
-                <AdvancedFilter />
-                <GroupByMenuButton />
-                <ClearFiltersButton />
                 <Box style={{ width: 1, height: 18, background: "var(--mantine-color-default-border)", margin: "0 4px" }} />
                 <Button
                   leftSection={<IconPlus size={16} />}
