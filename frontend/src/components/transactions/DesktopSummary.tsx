@@ -105,7 +105,7 @@ export function DesktopSummary() {
   });
   const openingBalance = openingQuery.data?.balance ?? 0;
   const displayedNet = search.accumulated ? openingBalance + monthNet : monthNet;
-  const isLoading = search.accumulated ? openingQuery.isLoading : txLoading;
+  const isLoading = txLoading || (search.accumulated && openingQuery.isLoading);
 
   function toggleAccumulated(value: string) {
     void navigate({

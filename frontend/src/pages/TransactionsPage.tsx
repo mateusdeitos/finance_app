@@ -594,19 +594,26 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm">
-            <Group align="center" wrap="nowrap" gap="xs">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto minmax(0, 1fr) auto auto",
+                alignItems: "center",
+                gap: "var(--mantine-spacing-xs)",
+              }}
+            >
               <PeriodNavigator
                 month={search.month}
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
               />
-              <Group
-                gap="xs"
-                wrap="nowrap"
-                align="center"
+              <div
                 style={{
-                  flex: "1 1 0%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--mantine-spacing-xs)",
                   minWidth: 0,
+                  overflow: "hidden",
                   opacity: isSelecting ? 0.5 : 1,
                   transition: "opacity 150ms ease",
                 }}
@@ -619,7 +626,7 @@ export function TransactionsPage() {
                 <AdvancedFilter />
                 <GroupByMenuButton />
                 <ClearFiltersButton />
-              </Group>
+              </div>
               <Button
                 leftSection={<IconPlus size={16} />}
                 rightSection={<ShortcutHint keys={["N"]} />}
@@ -648,7 +655,7 @@ export function TransactionsPage() {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            </Group>
+            </div>
             <DesktopSummary />
           </Stack>
         </Box>
