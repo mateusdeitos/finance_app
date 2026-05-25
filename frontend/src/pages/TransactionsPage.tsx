@@ -594,7 +594,7 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm">
-            <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
+            <Group justify="space-between" align="center" wrap="wrap" gap="sm">
               <PeriodNavigator
                 month={search.month}
                 year={search.year}
