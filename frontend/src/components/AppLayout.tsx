@@ -1,58 +1,48 @@
-import { AppShell, Badge, Group, Text, NavLink, Menu, Box } from "@mantine/core";
-import { IconReceipt2, IconChevronDown, IconUsers, IconWallet, IconTree, IconCreditCard } from "@tabler/icons-react";
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { AppShell, Group, Menu, Text, Box } from "@mantine/core";
+import { IconLogout, IconUsers } from "@tabler/icons-react";
+import { Link, Outlet } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { MobileTabBar } from "@/components/MobileTabBar";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { CommonTestIds } from '@/testIds'
 
-const navLinks: Array<{ label: string; icon: typeof IconReceipt2; to: string }> = [
-  { label: "Transações", icon: IconReceipt2, to: "/transactions" },
-  { label: "Contas", icon: IconWallet, to: "/accounts" },
-  { label: "Categorias", icon: IconTree, to: "/categories" },
-  { label: "Cobranças", icon: IconCreditCard, to: "/charges" },
-];
+const MOBILE_HEADER_HEIGHT = 50;
+const MOBILE_TAB_BAR_HEIGHT = 56;
 
 export function AppLayout() {
   const { query: meQuery } = useMe();
   const user = meQuery.data;
-  const routerState = useRouterState();
-  const currentPath = routerState.location.pathname;
   const { mutation: logoutMutation } = useLogout();
   const isMobile = useIsMobile();
 
-  const { query: pendingCountQuery } = useChargesPendingCount();
-  const pendingCount = pendingCountQuery.data?.count ?? 0;
-
-  const chargeNavLinks = navLinks.map((link) =>
-    link.to === "/charges" && pendingCount > 0 ? { ...link, badge: pendingCount } : { ...link, badge: undefined },
-  );
-
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: MOBILE_HEADER_HEIGHT, collapsed: !isMobile }}
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: true, desktop: false } }}
       padding="md"
       style={{
-        ["--app-shell-header-height" as string]: "calc(60px + env(safe-area-inset-top))",
-        ["--app-shell-header-offset" as string]: "calc(60px + env(safe-area-inset-top))",
+        ["--app-shell-header-height" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
+        ["--app-shell-header-offset" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
       }}
     >
       <AppShell.Header
-        style={{ height: "calc(60px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}
+        hiddenFrom="sm"
+        style={{
+          height: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
+          paddingTop: "env(safe-area-inset-top)",
+        }}
       >
-        <Group h="100%" px="md" justify="space-between">
+        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Link to="/transactions" style={{ textDecoration: "none" }}>
-            <Group gap="xs">
-              <img src="/icon.svg" width={36} height={36} alt="FinanceApp" />
-              <Text fw={700} size="lg" c="blue.7">
+            <Group gap="xs" wrap="nowrap">
+              <img src="/icon.svg" width={24} height={24} alt="FinanceApp" />
+              <Text fw={700} size="sm" c="blue.7">
                 FinanceApp
               </Text>
             </Group>
@@ -63,28 +53,25 @@ export function AppLayout() {
             {user && (
               <Menu shadow="md" position="bottom-end">
                 <Menu.Target>
-                  <Group gap={4} wrap="nowrap" align="center" style={{ cursor: "pointer" }}>
+                  <Box style={{ cursor: "pointer", display: "flex" }}>
                     <UserAvatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size="sm" />
-                    <Text size="sm" fw={500} visibleFrom="sm">
-                      {user.name.split(" ")[0]}
-                    </Text>
-                    <IconChevronDown size={14} />
-                  </Group>
+                  </Box>
                 </Menu.Target>
                 <Menu.Dropdown>
                   <Menu.Label>{user.email}</Menu.Label>
-                  {!isMobile && (
-                    <>
-                      <Menu.Item
-                        leftSection={<IconUsers size={16} />}
-                        onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
-                      >
-                        Criar Conexão
-                      </Menu.Item>
-                      <Menu.Divider />
-                    </>
-                  )}
-                  <Menu.Item onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+                  <Menu.Item
+                    leftSection={<IconUsers size={16} />}
+                    onClick={() => void renderDrawer(() => <InviteDrawer />).catch(() => {})}
+                  >
+                    Criar Conexão
+                  </Menu.Item>
+                  <Menu.Divider />
+                  <Menu.Item
+                    leftSection={<IconLogout size={16} />}
+                    color="red"
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                  >
                     Sair
                   </Menu.Item>
                 </Menu.Dropdown>
@@ -94,24 +81,8 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs" visibleFrom="sm">
-        {chargeNavLinks.map(({ label, icon: Icon, to, badge }) => (
-          <NavLink
-            key={to}
-            component={Link}
-            to={to}
-            label={label}
-            leftSection={<Icon size={18} />}
-            rightSection={
-              badge ? (
-                <Badge size="xs" circle color="red" data-testid={CommonTestIds.NavBadge(to.slice(1))}>
-                  {badge}
-                </Badge>
-              ) : undefined
-            }
-            active={currentPath === to}
-          />
-        ))}
+      <AppShell.Navbar p={0} visibleFrom="sm">
+        <DesktopSidebar />
       </AppShell.Navbar>
 
       <AppShell.Main
@@ -121,7 +92,7 @@ export function AppLayout() {
           overflow: "hidden auto",
           boxSizing: "border-box",
           paddingBottom: isMobile
-            ? "calc(var(--mantine-spacing-md) + 56px + env(safe-area-inset-bottom))"
+            ? `calc(var(--mantine-spacing-md) + ${MOBILE_TAB_BAR_HEIGHT}px + env(safe-area-inset-bottom))`
             : undefined,
         }}
       >
