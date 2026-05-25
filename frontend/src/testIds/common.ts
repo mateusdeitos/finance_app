@@ -19,4 +19,9 @@ export const CommonTestIds = {
    * (e.g. `nav_badge_charges` for `/charges`).
    */
   NavBadge: (route: string) => `nav_badge_${route}` as const,
+  SidebarBrand: 'sidebar_brand',
+  SidebarUserPill: 'sidebar_user_pill',
+  SidebarUserMenu: 'sidebar_user_menu',
+  NavCreateConnection: 'nav_create_connection',
+  NavConnection: (connectionId: number) => `nav_connection_${connectionId}` as const,
 } as const
