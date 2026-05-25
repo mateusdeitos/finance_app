@@ -610,16 +610,16 @@ export function TransactionsPage() {
               <div
                 style={{
                   display: "flex",
+                  flexWrap: "wrap",
                   alignItems: "center",
                   gap: "var(--mantine-spacing-xs)",
                   minWidth: 0,
-                  overflow: "hidden",
                   opacity: isSelecting ? 0.5 : 1,
                   transition: "opacity 150ms ease",
                 }}
                 inert={isSelecting || undefined}
               >
-                <Box style={{ flex: "1 1 0%", minWidth: 120, maxWidth: 280 }}>
+                <Box style={{ flex: "1 1 200px", minWidth: 140, maxWidth: 280 }}>
                   <TextSearch />
                 </Box>
                 <TagFilter />
