@@ -6,10 +6,12 @@ test.describe('Theme toggle', () => {
     await page.goto('/accounts')
 
     // On desktop the toggle lives inside the sidebar user pill's menu
-    // dropdown; open it first so the toggle becomes visible.
+    // dropdown; the mobile header also renders one but is CSS-hidden via
+    // hiddenFrom="sm", so two elements share the testid. Scope to the
+    // visible dropdown to avoid Playwright strict-mode violations.
     await page.getByTestId(CommonTestIds.SidebarUserPill).click()
-
-    const toggle = page.getByTestId(CommonTestIds.ThemeToggle)
+    const dropdown = page.getByTestId(CommonTestIds.SidebarUserMenu)
+    const toggle = dropdown.getByTestId(CommonTestIds.ThemeToggle)
     const html = page.locator('html')
 
     await expect(toggle).toBeVisible()
