@@ -575,8 +575,10 @@ export function TransactionsPage() {
         inert={isSelecting || undefined}
         style={{
           display: "flex",
+          alignSelf: "stretch",
           opacity: isSelecting ? 0.5 : 1,
           transition: "opacity 150ms ease",
+          minHeight: "100%",
         }}
       >
         <DesktopFiltersSidebar />
