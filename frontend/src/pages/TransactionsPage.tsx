@@ -569,7 +569,12 @@ export function TransactionsPage() {
       // lives inside the page (not the AppShell aside) so it stays scoped to
       // /transactions, and the main column carries the toolbar + summary +
       // condensed filter chip row + list as before.
-      style={{ display: "flex", alignItems: "stretch", gap: "var(--mantine-spacing-md)" }}
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        gap: "var(--mantine-spacing-md)",
+        minHeight: "calc(100vh - 2 * var(--mantine-spacing-md))",
+      }}
     >
       <Box
         inert={isSelecting || undefined}
