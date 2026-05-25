@@ -1,5 +1,11 @@
 import { Button, Menu } from "@mantine/core";
-import { IconCalendar, IconChevronDown } from "@tabler/icons-react";
+import {
+  IconBuildingBank,
+  IconCalendar,
+  IconCategory,
+  IconChevronDown,
+} from "@tabler/icons-react";
+import type { ComponentType } from "react";
 import { useTransactionsSearch } from "@/hooks/useTransactionsSearch";
 import { Transactions } from "@/types/transactions";
 import { TransactionsTestIds } from "@/testIds";
@@ -8,6 +14,14 @@ const LABELS: Record<Transactions.GroupBy, string> = {
   date: "Data",
   category: "Categoria",
   account: "Conta",
+};
+
+type IconComponent = ComponentType<{ size?: number | string }>;
+
+const ICONS: Record<Transactions.GroupBy, IconComponent> = {
+  date: IconCalendar,
+  category: IconCategory,
+  account: IconBuildingBank,
 };
 
 const OPTIONS: Transactions.GroupBy[] = ["date", "category", "account"];
@@ -21,6 +35,7 @@ const OPTIONS: Transactions.GroupBy[] = ["date", "category", "account"];
 export function GroupByMenuButton() {
   const { search, update } = useTransactionsSearch();
   const groupBy = search.groupBy ?? "date";
+  const ActiveIcon = ICONS[groupBy];
 
   function pick(value: Transactions.GroupBy) {
     update((prev) => ({ ...prev, groupBy: value }));
@@ -32,7 +47,7 @@ export function GroupByMenuButton() {
         <Button
           variant="default"
           size="sm"
-          leftSection={<IconCalendar size={14} />}
+          leftSection={<ActiveIcon size={14} />}
           rightSection={<IconChevronDown size={11} />}
           data-testid={TransactionsTestIds.BtnGroupByMenu}
         >
@@ -40,15 +55,19 @@ export function GroupByMenuButton() {
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
-        {OPTIONS.map((value) => (
-          <Menu.Item
-            key={value}
-            onClick={() => pick(value)}
-            data-testid={TransactionsTestIds.MenuItemGroupBy(value)}
-          >
-            {LABELS[value]}
-          </Menu.Item>
-        ))}
+        {OPTIONS.map((value) => {
+          const Icon = ICONS[value];
+          return (
+            <Menu.Item
+              key={value}
+              leftSection={<Icon size={14} />}
+              onClick={() => pick(value)}
+              data-testid={TransactionsTestIds.MenuItemGroupBy(value)}
+            >
+              {LABELS[value]}
+            </Menu.Item>
+          );
+        })}
       </Menu.Dropdown>
     </Menu>
   );
