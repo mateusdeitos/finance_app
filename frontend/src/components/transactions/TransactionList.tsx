@@ -3,9 +3,11 @@ import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Transactions } from "@/types/transactions";
 import { EmptyState } from "./EmptyState";
 import { TransactionGroup } from "./TransactionGroup";
+import { TransactionListHeader } from "./TransactionListHeader";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
 
 interface TransactionListProps {
@@ -55,6 +57,7 @@ export function TransactionList({
 }: TransactionListProps) {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const filters = useActiveFilters();
+  const isMobile = useIsMobile();
 
   const { groups, accounts, categories, isLoading } = useGroupedTransactions();
 
@@ -73,6 +76,7 @@ export function TransactionList({
 
   return (
     <Stack gap="sm">
+      {!isMobile && <TransactionListHeader groupBy={search.groupBy} />}
       {groups.map((group, i) => (
         <TransactionGroup
           key={group.key}

@@ -26,9 +26,16 @@ function CategoryCell({ tx, groupBy, category }: CategoryCellProps) {
   if (tx.type === "transfer") return null;
 
   return (
-    <Text size="sm" c="dimmed" lineClamp={1}>
-      {category?.name ?? "—"}
-    </Text>
+    <Group gap={6} wrap="nowrap" align="center">
+      {category?.emoji && (
+        <span style={{ fontSize: "0.9375rem", lineHeight: 1 }} aria-hidden>
+          {category.emoji}
+        </span>
+      )}
+      <Text size="sm" c="dimmed" lineClamp={1}>
+        {category?.name ?? "—"}
+      </Text>
+    </Group>
   );
 }
 
