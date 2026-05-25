@@ -614,7 +614,13 @@ export function TransactionsPage() {
           minWidth: 0,
           height: "100%",
           overflowY: "auto",
-          padding: "var(--mantine-spacing-md)",
+          paddingLeft: "var(--mantine-spacing-md)",
+          paddingRight: "var(--mantine-spacing-md)",
+          paddingBottom: "var(--mantine-spacing-md)",
+          // No padding-top: overflow:auto clips at the padding-box edge, so
+          // any padding-top here would let scrolled rows bleed above the
+          // sticky toolbar. The toolbar carries its own padding-top instead
+          // and its body-coloured background covers the edge.
         }}
       >
         <Box
@@ -623,7 +629,7 @@ export function TransactionsPage() {
             top: 0,
             zIndex: 10,
             background: "var(--mantine-color-body)",
-            paddingTop: 8,
+            paddingTop: "var(--mantine-spacing-md)",
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
