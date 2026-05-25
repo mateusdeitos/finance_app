@@ -583,16 +583,17 @@ export function TransactionsPage() {
       // column owns its own vertical scroll: the sidebar scrolls internally
       // only if contas+categorias don't fit in the viewport, and the right
       // column scrolls only if the transaction list is taller than the
-      // viewport. The outer Box fills exactly AppShell.Main's content area
-      // (height 100%, overflow hidden) so there's never a page-level
-      // scrollbar.
+      // viewport. Negative margins on all four sides bleed past AppShell.Main's
+      // `padding="md"` so the sidebar's vertical divider extends to the
+      // actual edges of the main area; the right column re-adds its own
+      // padding internally so the sticky toolbar still sits where it did.
       style={{
         display: "flex",
         alignItems: "stretch",
-        gap: "var(--mantine-spacing-md)",
-        height: "100%",
+        height: "calc(100% + 2 * var(--mantine-spacing-md))",
         minHeight: 0,
         overflow: "hidden",
+        margin: "calc(-1 * var(--mantine-spacing-md))",
       }}
     >
       <Box
@@ -613,6 +614,7 @@ export function TransactionsPage() {
           minWidth: 0,
           height: "100%",
           overflowY: "auto",
+          padding: "var(--mantine-spacing-md)",
         }}
       >
         <Box
