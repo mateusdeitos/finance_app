@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Indicator, Popover, Stack, Text } from '@mantine/core'
+import { Badge, Box, Button, Group, Indicator, Popover, Stack, Text } from '@mantine/core'
 import { IconTag } from '@tabler/icons-react'
 import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { useState } from 'react'
@@ -74,9 +74,9 @@ export function TagFilter({ inline }: TagFilterProps) {
         </Indicator>
       </Popover.Target>
       <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('tags')}>
-        <div style={{ maxWidth: 400, maxHeight: '5.5rem', overflowY: 'auto' }}>
+        <Box style={{ maxWidth: 400, maxHeight: '5.5rem', overflowY: 'auto' }}>
           <TagOptions tags={tags} selected={selected} toggle={toggle} />
-        </div>
+        </Box>
       </Popover.Dropdown>
     </Popover>
   )
