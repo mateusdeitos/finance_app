@@ -1,6 +1,6 @@
 import { Button, Menu } from "@mantine/core";
 import { IconCalendar, IconChevronDown } from "@tabler/icons-react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useTransactionsSearch } from "@/hooks/useTransactionsSearch";
 import { Transactions } from "@/types/transactions";
 import { TransactionsTestIds } from "@/testIds";
 
@@ -19,14 +19,11 @@ const OPTIONS: Transactions.GroupBy[] = ["date", "category", "account"];
  * FiltersDrawer still uses GroupBySelector (SegmentedControl).
  */
 export function GroupByMenuButton() {
-  const navigate = useNavigate({ from: "/transactions" });
-  const search = useSearch({ from: "/_authenticated/transactions" });
+  const { search, update } = useTransactionsSearch();
   const groupBy = search.groupBy ?? "date";
 
   function pick(value: Transactions.GroupBy) {
-    void navigate({
-      search: (prev) => ({ ...prev, groupBy: value }),
-    });
+    update((prev) => ({ ...prev, groupBy: value }));
   }
 
   return (

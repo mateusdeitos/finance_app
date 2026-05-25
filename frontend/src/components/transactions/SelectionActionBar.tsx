@@ -1,11 +1,14 @@
-import { Button, Group, Menu, Text } from '@mantine/core'
+import { Button, Group, Menu, Stack, Text } from '@mantine/core'
 import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
+import { formatSignedCents } from '@/utils/formatCents'
 import { tapHaptic, warningHaptic } from '@/utils/haptics'
 
 interface SelectionActionBarProps {
   count: number
+  /** Signed sum (in cents) of every selected transaction + settlement. */
+  totalCents: number
   onClearSelection: () => void
   onCategoryChange: () => void
   onDateChange: () => void
@@ -26,6 +29,7 @@ interface SelectionActionBarProps {
  */
 export function SelectionActionBar({
   count,
+  totalCents,
   onClearSelection,
   onCategoryChange,
   onDateChange,
@@ -35,12 +39,15 @@ export function SelectionActionBar({
   variant = 'fixed',
 }: SelectionActionBarProps) {
   const className = variant === 'inline' ? `${classes.bar} ${classes.barInline}` : classes.bar
+  const totalColor = totalCents > 0 ? 'teal.7' : totalCents < 0 ? 'red.7' : 'blue.7'
+  const countLabel = count === 1 ? 'selecionada' : 'selecionadas'
+  const formattedTotal = formatSignedCents(totalCents)
   return (
     <div className={className} data-testid={TransactionsTestIds.SelectionActionBar}>
       <Group align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
         <Button
           variant="default"
-          size="md"
+          size="sm"
           radius="xl"
           onClick={() => { tapHaptic(); onClearSelection(); }}
           data-testid={TransactionsTestIds.BtnClearSelection}
@@ -49,16 +56,31 @@ export function SelectionActionBar({
         </Button>
 
         <div className={classes.countPill} style={{ flex: 1 }}>
-          <Text size="sm" fw={600} component="span" c="blue.7">
-            <span data-testid={TransactionsTestIds.SelectionCount}>{count}</span>{' '}
-            {count === 1 ? 'selecionada' : 'selecionadas'}
-          </Text>
+          {variant === 'inline' ? (
+            <Stack gap={0} align="center">
+              <Text size="sm" fw={700} c={totalColor} style={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                {formattedTotal}
+              </Text>
+              <Text c="blue.7" fw={500} style={{ fontSize: '0.625rem', lineHeight: 1.1 }}>
+                <span data-testid={TransactionsTestIds.SelectionCount}>{count}</span> {countLabel}
+              </Text>
+            </Stack>
+          ) : (
+            <Text size="sm" fw={600} component="span">
+              <span style={{ fontWeight: 700, color: `var(--mantine-color-${totalColor.replace('.', '-')})`, fontVariantNumeric: 'tabular-nums' }}>
+                {formattedTotal}
+              </span>{' '}
+              <span style={{ color: 'var(--mantine-color-blue-7)' }}>
+                (<span data-testid={TransactionsTestIds.SelectionCount}>{count}</span> {countLabel})
+              </span>
+            </Text>
+          )}
         </div>
 
         <Menu shadow="md" width={220} position="top-end">
           <Menu.Target>
             <Button
-              size="md"
+              size="sm"
               variant="filled"
               color="blue"
               radius="xl"

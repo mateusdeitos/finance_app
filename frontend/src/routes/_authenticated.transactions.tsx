@@ -5,7 +5,7 @@ import { TransactionsPage } from '@/pages/TransactionsPage'
 
 const now = new Date()
 
-const transactionSearchSchema = z.object({
+export const transactionSearchSchema = z.object({
   month: z.coerce.number().int().min(1).max(12).default(now.getMonth() + 1),
   year: z.coerce.number().int().default(now.getFullYear()),
   query: z.string().default(''),
@@ -17,6 +17,8 @@ const transactionSearchSchema = z.object({
   accumulated: z.coerce.boolean().default(false),
   hideSettlements: z.coerce.boolean().default(false),
 })
+
+export type TransactionsSearch = z.infer<typeof transactionSearchSchema>
 
 export const Route = createFileRoute('/_authenticated/transactions')({
   validateSearch: zodValidator(transactionSearchSchema),

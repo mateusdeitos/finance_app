@@ -1,5 +1,5 @@
 import { Button, Drawer, Stack, Text } from "@mantine/core";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useTransactionsSearch } from "@/hooks/useTransactionsSearch";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { TransactionsTestIds } from "@/testIds";
 import { CategoryFilter } from "./filters/CategoryFilter";
@@ -12,12 +12,11 @@ import { CategoryFilter } from "./filters/CategoryFilter";
  */
 export function CategoriesFilterDrawer() {
   const { opened, reject } = useDrawerContext<void>();
-  const search = useSearch({ from: "/_authenticated/transactions" });
-  const navigate = useNavigate({ from: "/transactions" });
+  const { search, update } = useTransactionsSearch();
   const selectedCount = search.categoryIds?.length ?? 0;
 
   function clearCategories() {
-    void navigate({ search: (prev) => ({ ...prev, categoryIds: [] }) });
+    update((prev) => ({ ...prev, categoryIds: [] }));
   }
 
   return (

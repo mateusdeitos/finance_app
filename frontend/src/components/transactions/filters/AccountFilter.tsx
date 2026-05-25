@@ -1,6 +1,6 @@
 import { Button, Checkbox, Divider, Indicator, Popover, Stack, Text } from '@mantine/core'
 import { IconBuildingBank } from '@tabler/icons-react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { useState } from 'react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { AccountAvatar } from '@/components/AccountAvatar'
@@ -108,8 +108,7 @@ function AccountOptions({ accounts, selected, toggle }: {
 export function AccountFilter({ inline }: AccountFilterProps) {
   const { query: accountsQuery } = useAccounts()
   const accounts = accountsQuery.data ?? []
-  const navigate = useNavigate({ from: '/transactions' })
-  const search = useSearch({ from: '/_authenticated/transactions' })
+  const { search, update } = useTransactionsSearch()
   const [opened, setOpened] = useState(false)
 
   const selected: number[] = search.accountIds ?? []
@@ -118,7 +117,7 @@ export function AccountFilter({ inline }: AccountFilterProps) {
     const next = selected.includes(id)
       ? selected.filter((a) => a !== id)
       : [...selected, id]
-    navigate({ search: (prev) => ({ ...prev, accountIds: next.length ? next : undefined }) })
+    update((prev) => ({ ...prev, accountIds: next }))
   }
 
   if (inline) {

@@ -463,6 +463,29 @@ export function TransactionsPage() {
   const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
   const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
+  // Signed total (in cents) of every selected transaction + settlement.
+  // Used by SelectionActionBar to show "saldo das transações selecionadas"
+  // — credit moves the total up, debit moves it down. Transfers count too
+  // so users see what they've actually picked, even if those net to zero.
+  const selectedTotalCents = useMemo(() => {
+    let total = 0;
+    for (const id of selectedIds) {
+      const tx = allTransactions.find((t) => t.id === id);
+      if (!tx) continue;
+      total += (tx.operation_type === "credit" ? 1 : -1) * tx.amount;
+    }
+    for (const sid of selectedSettlementIds) {
+      for (const tx of allTransactions) {
+        const s = tx.settlements_from_source?.find((x) => x.id === sid);
+        if (s) {
+          total += (s.type === "credit" ? 1 : -1) * s.amount;
+          break;
+        }
+      }
+    }
+    return total;
+  }, [selectedIds, selectedSettlementIds, allTransactions]);
+
   const openCreateTransaction = useCallback(() => {
     void renderDrawer(() => <CreateTransactionDrawer />);
   }, []);
@@ -511,6 +534,7 @@ export function TransactionsPage() {
               <SelectionActionBar
                 variant="inline"
                 count={totalSelected}
+                totalCents={selectedTotalCents}
                 onClearSelection={clearSelection}
                 onCategoryChange={handleCategoryChange}
                 onDateChange={handleDateChange}
@@ -646,6 +670,7 @@ export function TransactionsPage() {
       {isSelecting && (
         <SelectionActionBar
           count={totalSelected}
+          totalCents={selectedTotalCents}
           onClearSelection={clearSelection}
           onCategoryChange={handleCategoryChange}
           onDateChange={handleDateChange}

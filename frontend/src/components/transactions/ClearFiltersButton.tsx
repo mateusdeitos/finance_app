@@ -1,42 +1,34 @@
 import { ActionIcon, Button } from '@mantine/core'
-import { useNavigate, useSearch } from '@tanstack/react-router'
 import { IconX } from '@tabler/icons-react'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { TransactionsTestIds } from '@/testIds'
 
 interface ClearFiltersButtonProps {
   variant?: 'icon' | 'button'
 }
 
-function useHasActiveFilters() {
-  const search = useSearch({ from: '/_authenticated/transactions' })
-  return (
+export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonProps) {
+  const { search, update } = useTransactionsSearch()
+  const hasActiveFilters =
     search.tagIds.length > 0 ||
     search.categoryIds.length > 0 ||
     search.accountIds.length > 0 ||
     search.types.length > 0 ||
     search.query !== '' ||
     search.hideSettlements === true
-  )
-}
-
-export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonProps) {
-  const hasActiveFilters = useHasActiveFilters()
-  const navigate = useNavigate({ from: '/transactions' })
 
   if (!hasActiveFilters) return null
 
   function clearFilters() {
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        tagIds: [],
-        categoryIds: [],
-        accountIds: [],
-        types: [],
-        query: '',
-        hideSettlements: false,
-      }),
-    })
+    update((prev) => ({
+      ...prev,
+      tagIds: [],
+      categoryIds: [],
+      accountIds: [],
+      types: [],
+      query: '',
+      hideSettlements: false,
+    }))
   }
 
   if (variant === 'icon') {

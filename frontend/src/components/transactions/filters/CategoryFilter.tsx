@@ -1,6 +1,6 @@
 import { Button, Checkbox, Collapse, Group, Indicator, Popover, Stack, Text, UnstyledButton } from '@mantine/core'
 import { IconCategory, IconChevronDown, IconChevronRight } from '@tabler/icons-react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { useState } from 'react'
 import { Transactions } from '@/types/transactions'
 import { useCategories } from '@/hooks/useCategories'
@@ -111,8 +111,7 @@ function CategoryOptions({ categories, selected, toggle }: {
 export function CategoryFilter({ inline }: CategoryFilterProps) {
   const { query: categoriesQuery } = useCategories()
   const categories = categoriesQuery.data ?? []
-  const navigate = useNavigate({ from: '/transactions' })
-  const search = useSearch({ from: '/_authenticated/transactions' })
+  const { search, update } = useTransactionsSearch()
   const [opened, setOpened] = useState(false)
 
   const selected: number[] = search.categoryIds ?? []
@@ -121,7 +120,7 @@ export function CategoryFilter({ inline }: CategoryFilterProps) {
     const next = selected.includes(id)
       ? selected.filter((c) => c !== id)
       : [...selected, id]
-    navigate({ search: (prev) => ({ ...prev, categoryIds: next.length ? next : undefined }) })
+    update((prev) => ({ ...prev, categoryIds: next }))
   }
 
   if (inline) {

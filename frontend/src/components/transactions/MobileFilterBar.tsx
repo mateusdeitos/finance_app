@@ -1,7 +1,7 @@
 import { ActionIcon, Button, Group, Indicator } from "@mantine/core";
 import { IconAdjustmentsHorizontal, IconCategory } from "@tabler/icons-react";
-import { useSearch } from "@tanstack/react-router";
 import { useState } from "react";
+import { useTransactionsSearch } from "@/hooks/useTransactionsSearch";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { TransactionsTestIds } from "@/testIds";
 import { CategoriesFilterDrawer } from "./CategoriesFilterDrawer";
@@ -19,7 +19,7 @@ import { TextSearch } from "./filters/TextSearch";
  */
 export function MobileFilterBar() {
   const [focused, setFocused] = useState(false);
-  const search = useSearch({ from: "/_authenticated/transactions" });
+  const { search } = useTransactionsSearch();
 
   const categoriesCount = search.categoryIds?.length ?? 0;
   // Everything other than text + categories rolls up into the "Filtros" badge:
