@@ -90,7 +90,7 @@ export function DesktopSummary() {
   const search = useSearch({ from: "/_authenticated/transactions" });
   const navigate = useNavigate({ from: "/transactions" });
   const filters = useActiveFilters();
-  const { groups } = useGroupedTransactions();
+  const { groups, isLoading: txLoading } = useGroupedTransactions();
 
   const { income, expense, net: monthNet } = useMemo(
     () => computeTotals(groups, search.hideSettlements, filters.accountIds),
@@ -105,7 +105,7 @@ export function DesktopSummary() {
   });
   const openingBalance = openingQuery.data?.balance ?? 0;
   const displayedNet = search.accumulated ? openingBalance + monthNet : monthNet;
-  const isLoading = search.accumulated && openingQuery.isLoading;
+  const isLoading = search.accumulated ? openingQuery.isLoading : txLoading;
 
   function toggleAccumulated(value: string) {
     void navigate({
