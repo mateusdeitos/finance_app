@@ -144,8 +144,10 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 	}
 
 	if len(filter.TagIDs) > 0 {
-		query = query.Joins("JOIN transaction_tags ON transaction_tags.transaction_id = transactions.id")
-		query = query.Where("transaction_tags.tag_id IN ?", filter.TagIDs)
+		// EXISTS keeps the result set on one row per transaction. A JOIN here
+		// would multiply rows by the number of matching tags (a tx with 4 of
+		// the filtered tags would appear 4x in the listing).
+		query = query.Where("EXISTS (SELECT 1 FROM transaction_tags tt WHERE tt.transaction_id = transactions.id AND tt.tag_id IN ?)", filter.TagIDs)
 	}
 
 	if len(filter.RecurrenceIDs) > 0 {
