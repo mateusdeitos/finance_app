@@ -18,11 +18,15 @@ import { TransactionFab } from "@/components/transactions/TransactionFab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { successHaptic } from "@/utils/haptics";
 import { DesktopFiltersSidebar } from "@/components/transactions/DesktopFiltersSidebar";
+import { DesktopSummary } from "@/components/transactions/DesktopSummary";
 import { MobileFilterBar } from "@/components/transactions/MobileFilterBar";
 import { MonthlyStats } from "@/components/transactions/MonthlyStats";
 import { NetSummary } from "@/components/transactions/NetSummary";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
-import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import { GroupByMenuButton } from "@/components/transactions/filters/GroupByMenuButton";
+import { AdvancedFilter } from "@/components/transactions/filters/AdvancedFilter";
+import { TextSearch } from "@/components/transactions/filters/TextSearch";
+import { TagFilter } from "@/components/transactions/filters/TagFilter";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { SelectionActionBar } from "@/components/transactions/SelectionActionBar";
 import { ShortcutHint } from "@/components/ShortcutHint";
@@ -556,16 +560,20 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-            <Group justify="space-between" align="center" wrap="nowrap">
-              <Group gap="md" wrap="nowrap" align="center">
-                <PeriodNavigator
-                  month={search.month}
-                  year={search.year}
-                  onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-                />
-                <MonthlyStats />
-              </Group>
-              <Group gap="xs">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+              />
+              <Box style={{ flex: 1, maxWidth: 360 }}>
+                <TextSearch />
+              </Box>
+              <Group gap="xs" wrap="nowrap">
+                <TagFilter />
+                <AdvancedFilter />
+                <GroupByMenuButton />
+                <Box style={{ width: 1, height: 18, background: "var(--mantine-color-default-border)", margin: "0 4px" }} />
                 <Button
                   leftSection={<IconPlus size={16} />}
                   rightSection={<ShortcutHint keys={["N"]} />}
@@ -596,8 +604,7 @@ export function TransactionsPage() {
                 </Menu>
               </Group>
             </Group>
-            <NetSummary />
-            <TransactionFilters orientation="row" hideAccountFilter hideCategoryFilter />
+            <DesktopSummary />
           </Stack>
         </Box>
 

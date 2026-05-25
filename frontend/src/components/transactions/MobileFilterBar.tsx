@@ -10,7 +10,7 @@ import { TextSearch } from "./filters/TextSearch";
 
 /**
  * Mobile-only filter row that pairs the search pill with two icon buttons
- * (Categorias / Filtros avançados). The chips row of TransactionFilters is
+ * (Categorias / Filtros avançados). The chip row used previously is now
  * collapsed into these two drawers, matching variation C of the design.
  *
  * When the search input is focused, the icon buttons collapse and a

@@ -67,6 +67,9 @@ export const TransactionsTestIds = {
   // Filters (top-level)
   InputTextSearch: 'input_text_search',
   SegmentedGroupBy: 'segmented_group_by',
+  BtnGroupByMenu: 'btn_group_by_menu',
+  MenuItemGroupBy: (option: 'date' | 'category' | 'account') =>
+    `menu_item_group_by_${option}` as const,
   AdvancedFiltersPopover: 'advanced_filters_popover',
   BtnOpenAdvancedFilters: 'open_advanced_filters',
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
