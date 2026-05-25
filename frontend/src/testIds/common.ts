@@ -19,4 +19,15 @@ export const CommonTestIds = {
    * (e.g. `nav_badge_charges` for `/charges`).
    */
   NavBadge: (route: string) => `nav_badge_${route}` as const,
+
+  /* Invite drawer + accept-invite flow */
+  InvitePartnerNameInput: 'input_invite_partner_name',
+  InviteSplitChip: (pct: number) => `chip_invite_split_${pct}` as const,
+  InviteSplitChipCustom: 'chip_invite_split_custom',
+  InviteSplitCustomDec: 'btn_invite_split_custom_dec',
+  InviteSplitCustomInc: 'btn_invite_split_custom_inc',
+  InviteCopyLink: 'btn_invite_copy_link',
+  ConnectWithAccept: 'btn_connect_with_accept',
+  ConnectWithDecline: 'btn_connect_with_decline',
+  ConnectWithGoToApp: 'btn_connect_with_go_to_app',
 } as const

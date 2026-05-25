@@ -1,9 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
-import { acceptInvite } from '@/api/userConnections'
+import { acceptInvite, type AcceptInviteResult } from '@/api/userConnections'
 
-export function useAcceptInvite() {
+type AcceptArgs = { externalId: string; splitPercentage?: number }
+
+export function useAcceptInvite(options?: { onSuccess?: (result: AcceptInviteResult) => void }) {
   const mutation = useMutation({
-    mutationFn: (externalId: string) => acceptInvite(externalId),
+    mutationFn: ({ externalId, splitPercentage }: AcceptArgs) =>
+      acceptInvite(externalId, splitPercentage),
+    onSuccess: options?.onSuccess,
   })
   return { mutation }
 }

@@ -29,19 +29,32 @@ export async function fetchInviteInfo(externalId: string): Promise<UserConnectio
   return res.json()
 }
 
-export async function acceptInvite(externalId: string): Promise<UserConnections.Connection> {
+export type AcceptInviteResult = {
+  alreadyConnected: boolean
+  connection: UserConnections.Connection
+}
+
+export async function acceptInvite(
+  externalId: string,
+  splitPercentage = 50,
+): Promise<AcceptInviteResult> {
   const res = await fetch(`${apiUrl}/api/user-connections/accept-invite`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ external_id: externalId, from_default_split_percentage: 50 }),
+    body: JSON.stringify({
+      external_id: externalId,
+      from_default_split_percentage: splitPercentage,
+    }),
   })
   if (res.status === 409) {
-    return res.json().catch(() => ({}) as UserConnections.Connection)
+    const conn = await res.json().catch(() => ({}) as UserConnections.Connection)
+    return { alreadyConnected: true, connection: conn }
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.message ?? 'Failed to accept invite')
   }
-  return res.json()
+  const conn = (await res.json()) as UserConnections.Connection
+  return { alreadyConnected: false, connection: conn }
 }
