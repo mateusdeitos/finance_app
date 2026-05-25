@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { TransactionsPage } from "../pages/TransactionsPage";
+import { TransactionsTestIds } from "@/testIds";
 import {
   apiCreateAccount,
   apiDeleteAccount,
@@ -102,9 +103,12 @@ test.describe("Nested category display in transaction list", () => {
     // Switch to group by category
     await transactionsPage.selectGroupBy("category");
 
-    // The child category name should appear as a group label
-    await expect(page.getByText(childCategoryName)).toBeVisible({
-      timeout: 10000,
-    });
+    // The child category name should appear as a group label. Use the
+    // GroupHeader testid (group.key === label) to scope to the list — without
+    // it, getByText(childCategoryName) now also matches the same name in the
+    // always-open desktop filter sidebar's category checkbox.
+    await expect(
+      page.getByTestId(TransactionsTestIds.GroupHeader(childCategoryName)),
+    ).toBeVisible({ timeout: 10000 });
   });
 });

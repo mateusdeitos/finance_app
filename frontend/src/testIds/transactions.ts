@@ -12,6 +12,8 @@ export const TransactionsTestIds = {
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,
   CheckboxSettlement: (settlementId: number | string) => `checkbox_settlement_${settlementId}` as const,
   SettlementRow: (settlementId: number | string) => `row_settlement_${settlementId}` as const,
+  /** Group header for a TransactionGroup; key matches group.key (label string). */
+  GroupHeader: (key: string) => `group_header_${key}` as const,
   InputSplitDate: (rowIndex: number | string) => `input_split_date_${rowIndex}` as const,
 
   // Drawers (create / update / linked)
@@ -65,11 +67,20 @@ export const TransactionsTestIds = {
   // Filters (top-level)
   InputTextSearch: 'input_text_search',
   SegmentedGroupBy: 'segmented_group_by',
+  BtnGroupByMenu: 'btn_group_by_menu',
+  MenuItemGroupBy: (option: 'date' | 'category' | 'account') =>
+    `menu_item_group_by_${option}` as const,
   AdvancedFiltersPopover: 'advanced_filters_popover',
   BtnOpenAdvancedFilters: 'open_advanced_filters',
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
   BtnClearFilters: 'btn_clear_filters',
+
+  // Mobile filter row (search + 2 icon buttons that open drawers)
+  BtnOpenFiltersDrawer: 'btn_open_filters_drawer',
+  BtnOpenCategoriesFilterDrawer: 'btn_open_categories_filter_drawer',
+  DrawerFilters: 'drawer_filters',
+  DrawerCategoriesFilter: 'drawer_categories_filter',
 
   // Per-kind filter Popover triggers + dropdowns
   BtnFilter: (kind: TransactionFilterKind) => `btn_filter_${kind}` as const,

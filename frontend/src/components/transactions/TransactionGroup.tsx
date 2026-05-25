@@ -2,10 +2,10 @@ import { Box, Group, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { Fragment } from "react";
 import { fetchTransaction } from "@/api/transactions";
+import { TransactionsTestIds } from "@/testIds";
 import { Transactions } from "@/types/transactions";
-import { formatBalance, formatSignedCents } from "@/utils/formatCents";
+import { formatSignedCents } from "@/utils/formatCents";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { OpeningBalanceRow } from "./OpeningBalanceRow";
 import { SettlementRow } from "./SettlementRow";
 import { TransactionRow } from "./TransactionRow";
 import { UpdateTransactionDrawer } from "./UpdateTransactionDrawer";
@@ -46,8 +46,6 @@ interface TransactionGroupProps {
   currentUserId: number;
   accountFilter?: number[];
   groupTotal?: number;
-  runningBalance?: number;
-  isFirst?: boolean;
   selectedIds?: Set<number>;
   selectedSettlementIds?: Set<number>;
   onSelectTransaction?: (id: number, shiftKey: boolean) => void;
@@ -64,8 +62,6 @@ export function TransactionGroup({
   currentUserId,
   accountFilter,
   groupTotal,
-  runningBalance,
-  isFirst = false,
   selectedIds,
   selectedSettlementIds,
   onSelectTransaction,
@@ -166,13 +162,28 @@ export function TransactionGroup({
 
   return (
     <Box className={classes.group}>
-      <Group justify="space-between" align="center" className={classes.header}>
-        <Text size="xs" fw={600} c="dimmed" tt="uppercase">
+      <Group
+        justify="space-between"
+        align="baseline"
+        className={classes.header}
+        wrap="nowrap"
+        data-testid={TransactionsTestIds.GroupHeader(group.key)}
+      >
+        <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: "0.06em" }}>
           {group.label}
         </Text>
+        {groupTotal !== undefined && (
+          <Text
+            size="xs"
+            fw={600}
+            c={groupTotal >= 0 ? "teal" : "red"}
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            subtotal {formatSignedCents(groupTotal)}
+          </Text>
+        )}
       </Group>
       <div className={classes.rows}>
-        {isFirst && <OpeningBalanceRow />}
         {group.transactions.map((tx) => {
           const isSynthetic = tx.origin_settlement_id !== undefined;
           const isOwner =
@@ -210,6 +221,8 @@ export function TransactionGroup({
                     ? () => openSyntheticEditDrawer(sourceTxId)
                     : undefined
                 }
+                // Synthetic rows don't carry the source tx's date in the
+                // listing payload; the chip renders without a "de …" suffix.
               />
             );
           }
@@ -250,6 +263,7 @@ export function TransactionGroup({
                       groupBy={groupBy}
                       accounts={accounts}
                       description={tx.description}
+                      parentDate={tx.date}
                       isSelected={selectedSettlementIds?.has(s.id)}
                       isSelectionMode={isSelectionActive}
                       onSelect={onSelectSettlement}
@@ -263,24 +277,6 @@ export function TransactionGroup({
             </Fragment>
           );
         })}
-        {groupTotal !== undefined && runningBalance !== undefined && (
-          <div className={classes.footerRow}>
-            <Text size="xs" c="dimmed">
-              Subtotal
-            </Text>
-            <Group gap="xs">
-              <Text size="xs" fw={500} c={groupTotal >= 0 ? "teal" : "red"}>
-                {formatSignedCents(groupTotal)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                ·
-              </Text>
-              <Text size="xs" fw={600} c={runningBalance < 0 ? "red" : "teal"}>
-                {formatBalance(runningBalance)}
-              </Text>
-            </Group>
-          </div>
-        )}
       </div>
     </Box>
   );

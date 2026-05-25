@@ -1,5 +1,5 @@
 import { SegmentedControl, Stack, Text } from '@mantine/core'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
 
@@ -19,14 +19,11 @@ const OPTIONS = [
 ]
 
 export function GroupBySelector() {
-  const navigate = useNavigate({ from: '/transactions' })
-  const search = useSearch({ from: '/_authenticated/transactions' })
+  const { search, update } = useTransactionsSearch()
   const groupBy = search.groupBy ?? 'date'
 
   function onChange(value: string) {
-    navigate({
-      search: (prev) => ({ ...prev, groupBy: value as Transactions.GroupBy }),
-    })
+    update((prev) => ({ ...prev, groupBy: value as Transactions.GroupBy }))
   }
 
   return (

@@ -8,3 +8,28 @@
   background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
 }
+
+/* Inline variant: flows in the document instead of pinning to the viewport
+   bottom. Used on mobile, where the bar takes the slot of the filter row
+   so the summaries above stay visible during selection mode. */
+.barInline {
+  position: static;
+  padding: 0;
+  background: transparent;
+  border-top: none;
+}
+
+/* Filled blue-glow pill that stretches to fill the row between the Limpar
+   ghost button and the Ações primary button. Matches the "2 selecionadas"
+   pill from the design. */
+.countPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: light-dark(var(--mantine-color-blue-0), rgba(34, 139, 230, 0.15));
+  color: var(--mantine-color-blue-7);
+}

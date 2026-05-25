@@ -1,42 +1,89 @@
-import { Button, Group, Menu, Text } from '@mantine/core'
-import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
+import { Button, Group, Menu, Stack, Text } from '@mantine/core'
+import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
+import { formatSignedCents } from '@/utils/formatCents'
 import { tapHaptic, warningHaptic } from '@/utils/haptics'
 
 interface SelectionActionBarProps {
   count: number
+  /** Signed sum (in cents) of every selected transaction + settlement. */
+  totalCents: number
   onClearSelection: () => void
   onCategoryChange: () => void
   onDateChange: () => void
   onDivisaoChange: () => void
   connectedAccountsCount: number
   onDelete: () => void
+  /** `inline` flows in the document; `fixed` (default) pins to the viewport bottom. */
+  variant?: 'fixed' | 'inline'
 }
 
-export function SelectionActionBar({ count, onClearSelection, onCategoryChange, onDateChange, onDivisaoChange, connectedAccountsCount, onDelete }: SelectionActionBarProps) {
+/**
+ * Action bar shown while the user has rows selected. Default `fixed` variant
+ * sits at the bottom of the viewport (above the safe area); the `inline`
+ * variant flows in the document so it can take the slot of the filter row in
+ * the sticky header. Mirrors the variation C layout in both variants:
+ * a Limpar action on the left, a centered count chip in the brand's
+ * blue-glow tint, and a primary Ações menu on the right.
+ */
+export function SelectionActionBar({
+  count,
+  totalCents,
+  onClearSelection,
+  onCategoryChange,
+  onDateChange,
+  onDivisaoChange,
+  connectedAccountsCount,
+  onDelete,
+  variant = 'fixed',
+}: SelectionActionBarProps) {
+  const className = variant === 'inline' ? `${classes.bar} ${classes.barInline}` : classes.bar
+  const totalColor = totalCents > 0 ? 'teal.7' : totalCents < 0 ? 'red.7' : 'blue.7'
+  const countLabel = count === 1 ? 'selecionada' : 'selecionadas'
+  const formattedTotal = formatSignedCents(totalCents)
   return (
-    <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
-      <Group justify="space-between" align="center" style={{ flex: 1 }}>
-        <Group gap="xs" align="center">
-          <Text size="sm" fw={700} data-testid={TransactionsTestIds.SelectionCount}>
-            {count}
-          </Text>
-          <Button
-            size="compact-sm"
-            variant="subtle"
-            leftSection={<IconX size={14} />}
-            onClick={() => { tapHaptic(); onClearSelection(); }}
-            data-testid={TransactionsTestIds.BtnClearSelection}
-          >
-            Limpar seleção
-          </Button>
-        </Group>
-        <Menu shadow="md" width={200}>
+    <div className={className} data-testid={TransactionsTestIds.SelectionActionBar}>
+      <Group align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
+        <Button
+          variant="default"
+          size="sm"
+          radius="xl"
+          onClick={() => { tapHaptic(); onClearSelection(); }}
+          data-testid={TransactionsTestIds.BtnClearSelection}
+        >
+          Limpar
+        </Button>
+
+        <div className={classes.countPill} style={{ flex: 1 }}>
+          {variant === 'inline' ? (
+            <Stack gap={0} align="center">
+              <Text size="sm" fw={700} c={totalColor} style={{ fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                {formattedTotal}
+              </Text>
+              <Text c="blue.7" fw={500} style={{ fontSize: '0.625rem', lineHeight: 1.1 }}>
+                <span data-testid={TransactionsTestIds.SelectionCount}>{count}</span> {countLabel}
+              </Text>
+            </Stack>
+          ) : (
+            <Text size="sm" fw={600} component="span">
+              <span style={{ fontWeight: 700, color: `var(--mantine-color-${totalColor.replace('.', '-')})`, fontVariantNumeric: 'tabular-nums' }}>
+                {formattedTotal}
+              </span>{' '}
+              <span style={{ color: 'var(--mantine-color-blue-7)' }}>
+                (<span data-testid={TransactionsTestIds.SelectionCount}>{count}</span> {countLabel})
+              </span>
+            </Text>
+          )}
+        </div>
+
+        <Menu shadow="md" width={220} position="top-end">
           <Menu.Target>
             <Button
               size="sm"
-              variant="default"
+              variant="filled"
+              color="blue"
+              radius="xl"
               rightSection={<IconChevronDown size={14} />}
               data-testid={TransactionsTestIds.BtnBulkActionsMenu}
             >

@@ -40,9 +40,8 @@ export class TransactionsPage {
   }
 
   async selectGroupBy(option: 'date' | 'category' | 'account') {
-    await new SegmentedField(this.page, TransactionsTestIds.SegmentedGroupBy).pick(
-      TransactionsTestIds.SegmentGroupBy(option),
-    );
+    await this.page.getByTestId(TransactionsTestIds.BtnGroupByMenu).click();
+    await this.page.getByTestId(TransactionsTestIds.MenuItemGroupBy(option)).click();
     await this.page.waitForLoadState('networkidle');
   }
 

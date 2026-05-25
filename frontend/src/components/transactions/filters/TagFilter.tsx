@@ -1,6 +1,6 @@
-import { Badge, Button, Group, Indicator, Popover, Stack, Text } from '@mantine/core'
+import { Badge, Box, Button, Group, Indicator, Popover, Stack, Text } from '@mantine/core'
 import { IconTag } from '@tabler/icons-react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { useState } from 'react'
 import { useTags } from '@/hooks/useTags'
 import { TransactionsTestIds } from '@/testIds'
@@ -38,8 +38,7 @@ function TagOptions({ tags, selected, toggle }: {
 export function TagFilter({ inline }: TagFilterProps) {
   const { query: tagsQuery } = useTags()
   const tags = tagsQuery.data ?? []
-  const navigate = useNavigate({ from: '/transactions' })
-  const search = useSearch({ from: '/_authenticated/transactions' })
+  const { search, update } = useTransactionsSearch()
   const [opened, setOpened] = useState(false)
 
   const selected: number[] = search.tagIds ?? []
@@ -48,7 +47,7 @@ export function TagFilter({ inline }: TagFilterProps) {
     const next = selected.includes(id)
       ? selected.filter((t) => t !== id)
       : [...selected, id]
-    navigate({ search: (prev) => ({ ...prev, tagIds: next.length ? next : undefined }) })
+    update((prev) => ({ ...prev, tagIds: next }))
   }
 
   if (inline) {
@@ -75,7 +74,9 @@ export function TagFilter({ inline }: TagFilterProps) {
         </Indicator>
       </Popover.Target>
       <Popover.Dropdown data-testid={TransactionsTestIds.PopoverFilter('tags')}>
-        <TagOptions tags={tags} selected={selected} toggle={toggle} />
+        <Box style={{ maxWidth: 400, maxHeight: '5.5rem', overflowY: 'auto' }}>
+          <TagOptions tags={tags} selected={selected} toggle={toggle} />
+        </Box>
       </Popover.Dropdown>
     </Popover>
   )

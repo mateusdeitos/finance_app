@@ -17,8 +17,17 @@ import { CreateTransactionDrawer } from "@/components/transactions/CreateTransac
 import { TransactionFab } from "@/components/transactions/TransactionFab";
 import { PullToRefresh } from "@/components/PullToRefresh";
 import { successHaptic } from "@/utils/haptics";
+import { DesktopFiltersSidebar } from "@/components/transactions/DesktopFiltersSidebar";
+import { DesktopSummary } from "@/components/transactions/DesktopSummary";
+import { MobileFilterBar } from "@/components/transactions/MobileFilterBar";
+import { MonthlyStats } from "@/components/transactions/MonthlyStats";
+import { NetSummary } from "@/components/transactions/NetSummary";
 import { PeriodNavigator } from "@/components/transactions/PeriodNavigator";
-import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import { GroupByMenuButton } from "@/components/transactions/filters/GroupByMenuButton";
+import { AdvancedFilter } from "@/components/transactions/filters/AdvancedFilter";
+import { ClearFiltersButton } from "@/components/transactions/ClearFiltersButton";
+import { TextSearch } from "@/components/transactions/filters/TextSearch";
+import { TagFilter } from "@/components/transactions/filters/TagFilter";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { SelectionActionBar } from "@/components/transactions/SelectionActionBar";
 import { ShortcutHint } from "@/components/ShortcutHint";
@@ -27,7 +36,6 @@ import { BulkProgressDrawer, BulkProgressItem } from "@/components/transactions/
 import { BulkDivisionDrawer } from "@/components/transactions/BulkDivisionDrawer";
 import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDrawer";
 import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
-import { TextSearch } from "@/components/transactions/filters/TextSearch";
 import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
 import { TransactionsTestIds } from "@/testIds";
@@ -455,6 +463,42 @@ export function TransactionsPage() {
   const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
   const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
+  // Indexes by id — built once per transactions payload so the selection
+  // total below (and any other id-lookup downstream) stays O(1) per id
+  // instead of scanning allTransactions for every selected row.
+  const txById = useMemo(() => {
+    const m = new Map<number, Transactions.Transaction>();
+    for (const tx of allTransactions) m.set(tx.id, tx);
+    return m;
+  }, [allTransactions]);
+
+  const settlementById = useMemo(() => {
+    const m = new Map<number, Transactions.Settlement>();
+    for (const tx of allTransactions) {
+      for (const s of tx.settlements_from_source ?? []) m.set(s.id, s);
+    }
+    return m;
+  }, [allTransactions]);
+
+  // Signed total (in cents) of every selected transaction + settlement.
+  // Used by SelectionActionBar to show "saldo das transações selecionadas"
+  // — credit moves the total up, debit moves it down. Transfers count too
+  // so users see what they've actually picked, even if those net to zero.
+  const selectedTotalCents = useMemo(() => {
+    let total = 0;
+    for (const id of selectedIds) {
+      const tx = txById.get(id);
+      if (!tx) continue;
+      total += (tx.operation_type === "credit" ? 1 : -1) * tx.amount;
+    }
+    for (const sid of selectedSettlementIds) {
+      const s = settlementById.get(sid);
+      if (!s) continue;
+      total += (s.type === "credit" ? 1 : -1) * s.amount;
+    }
+    return total;
+  }, [selectedIds, selectedSettlementIds, txById, settlementById]);
+
   const openCreateTransaction = useCallback(() => {
     void renderDrawer(() => <CreateTransactionDrawer />);
   }, []);
@@ -489,14 +533,32 @@ export function TransactionsPage() {
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
-          <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-            <PeriodNavigator
-              month={search.month}
-              year={search.year}
-              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-            />
-            <TextSearch />
-            <TransactionFilters orientation="row" hideTextSearch scrollable />
+          <Stack gap="xs">
+            <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+                disabled={isSelecting}
+              />
+              <MonthlyStats />
+            </Group>
+            <NetSummary />
+            {isSelecting ? (
+              <SelectionActionBar
+                variant="inline"
+                count={totalSelected}
+                totalCents={selectedTotalCents}
+                onClearSelection={clearSelection}
+                onCategoryChange={handleCategoryChange}
+                onDateChange={handleDateChange}
+                onDivisaoChange={handleDivisionClick}
+                connectedAccountsCount={connectedAccountsCount}
+                onDelete={handleDeleteClick}
+              />
+            ) : (
+              <MobileFilterBar />
+            )}
           </Stack>
         </Box>
 
@@ -510,44 +572,92 @@ export function TransactionsPage() {
         />
 
         {!isSelecting && <TransactionFab />}
-
-        {isSelecting && (
-          <SelectionActionBar
-            count={totalSelected}
-            onClearSelection={clearSelection}
-            onCategoryChange={handleCategoryChange}
-            onDateChange={handleDateChange}
-            onDivisaoChange={handleDivisionClick}
-            connectedAccountsCount={connectedAccountsCount}
-            onDelete={handleDeleteClick}
-          />
-        )}
       </Stack>
       </PullToRefresh>
     );
   }
 
   return (
-    <Stack gap="md">
+    <Box
+      // 2-column desktop shell built with flexbox (sidebar + main). Each
+      // column owns its own vertical scroll: the sidebar scrolls internally
+      // only if contas+categorias don't fit in the viewport, and the right
+      // column scrolls only if the transaction list is taller than the
+      // viewport. The outer Box fills exactly AppShell.Main's content area
+      // (height 100%, overflow hidden) so there's never a page-level
+      // scrollbar.
+      style={{
+        display: "flex",
+        alignItems: "stretch",
+        gap: "var(--mantine-spacing-md)",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
+      }}
+    >
       <Box
+        inert={isSelecting || undefined}
         style={{
-          position: "sticky",
-          top: "calc(-1 * var(--mantine-spacing-md))",
-          zIndex: 10,
-          background: "var(--mantine-color-body)",
-          marginTop: "calc(-1 * var(--mantine-spacing-md))",
-          paddingTop: "var(--mantine-spacing-md)",
-          paddingBottom: "var(--mantine-spacing-xs)",
+          display: "flex",
+          alignSelf: "stretch",
+          opacity: isSelecting ? 0.5 : 1,
+          transition: "opacity 150ms ease",
         }}
       >
-        <Stack gap="sm" style={{ visibility: isSelecting ? "hidden" : undefined }}>
-          <Group justify="space-between" align="center">
-            <PeriodNavigator
-              month={search.month}
-              year={search.year}
-              onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
-            />
-            <Group gap="xs">
+        <DesktopFiltersSidebar />
+      </Box>
+      <Stack
+        gap="md"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          overflowY: "auto",
+        }}
+      >
+        <Box
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            background: "var(--mantine-color-body)",
+            paddingBottom: "var(--mantine-spacing-xs)",
+          }}
+        >
+          <Stack gap="sm">
+            <Box
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto minmax(0, 1fr) auto auto",
+                alignItems: "center",
+                gap: "var(--mantine-spacing-xs)",
+              }}
+            >
+              <PeriodNavigator
+                month={search.month}
+                year={search.year}
+                onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
+                disabled={isSelecting}
+              />
+              <Group
+                gap="xs"
+                wrap="wrap"
+                align="center"
+                style={{
+                  minWidth: 0,
+                  opacity: isSelecting ? 0.5 : 1,
+                  transition: "opacity 150ms ease",
+                }}
+                inert={isSelecting || undefined}
+              >
+                <Box style={{ flex: "1 1 200px", minWidth: 140, maxWidth: 280 }}>
+                  <TextSearch />
+                </Box>
+                <TagFilter />
+                <AdvancedFilter />
+                <GroupByMenuButton />
+                <ClearFiltersButton />
+              </Group>
               <Button
                 leftSection={<IconPlus size={16} />}
                 rightSection={<ShortcutHint keys={["N"]} />}
@@ -576,23 +686,33 @@ export function TransactionsPage() {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            </Group>
-          </Group>
-          <TransactionFilters orientation="row" />
-        </Stack>
-      </Box>
+            </Box>
+            <DesktopSummary />
+          </Stack>
+        </Box>
 
-      <TransactionList
-        currentUserId={currentUserId}
-        selectedIds={selectedIds}
-        selectedSettlementIds={selectedSettlementIds}
-        onSelectTransaction={handleSelectTransaction}
-        onSelectSettlement={handleSelectSettlement}
-      />
+        <TransactionList
+          currentUserId={currentUserId}
+          selectedIds={selectedIds}
+          selectedSettlementIds={selectedSettlementIds}
+          onSelectTransaction={handleSelectTransaction}
+          onSelectSettlement={handleSelectSettlement}
+        />
+        {isSelecting && (
+          <Box
+            aria-hidden
+            style={{
+              height: "calc(4.5rem + env(safe-area-inset-bottom))",
+              flexShrink: 0,
+            }}
+          />
+        )}
+      </Stack>
 
       {isSelecting && (
         <SelectionActionBar
           count={totalSelected}
+          totalCents={selectedTotalCents}
           onClearSelection={clearSelection}
           onCategoryChange={handleCategoryChange}
           onDateChange={handleDateChange}
@@ -601,6 +721,6 @@ export function TransactionsPage() {
           onDelete={handleDeleteClick}
         />
       )}
-    </Stack>
+    </Box>
   );
 }

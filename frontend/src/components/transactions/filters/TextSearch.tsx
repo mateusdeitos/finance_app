@@ -1,16 +1,19 @@
-import { TextInput } from '@mantine/core'
+import { ActionIcon, CloseButton, TextInput } from '@mantine/core'
 import React, { useState } from 'react'
 import { IconSearch } from '@tabler/icons-react'
-import { useSearch } from '@tanstack/react-router'
 import { useSyncTransactionsSearchQuery } from '@/hooks/useSyncTransactionsSearchQuery'
+import { useTransactionsSearch } from '@/hooks/useTransactionsSearch'
 import { TransactionsTestIds } from '@/testIds'
 
 interface TextSearchProps {
   style?: React.CSSProperties
+  /** Notifies the parent when the input gains/loses focus so it can collapse
+   *  sibling filters into a single full-width search row. */
+  onFocusChange?: (focused: boolean) => void
 }
 
-export function TextSearch({ style }: TextSearchProps) {
-  const search = useSearch({ from: '/_authenticated/transactions' })
+export function TextSearch({ style, onFocusChange }: TextSearchProps) {
+  const { search } = useTransactionsSearch()
   const [value, setValue] = useState(search.query ?? '')
 
   useSyncTransactionsSearchQuery(value)
@@ -18,9 +21,26 @@ export function TextSearch({ style }: TextSearchProps) {
   return (
     <TextInput
       placeholder="Buscar transações..."
-      leftSection={<IconSearch size={16} />}
+      radius="xl"
+      leftSection={
+        <ActionIcon size="sm" variant="transparent" color="gray" tabIndex={-1} aria-hidden>
+          <IconSearch size={16} />
+        </ActionIcon>
+      }
+      rightSection={
+        value ? (
+          <CloseButton
+            aria-label="Limpar busca"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setValue('')}
+            size="sm"
+          />
+        ) : null
+      }
       value={value}
       onChange={(e) => setValue(e.currentTarget.value)}
+      onFocus={() => onFocusChange?.(true)}
+      onBlur={() => onFocusChange?.(false)}
       style={{ minWidth: 200, ...style }}
       data-testid={TransactionsTestIds.InputTextSearch}
     />

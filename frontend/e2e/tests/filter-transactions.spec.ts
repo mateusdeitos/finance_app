@@ -132,8 +132,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descA)).toBeVisible();
     await expect(page.getByText(descB)).toBeVisible();
 
-    // Open account filter popover and select accountA
-    await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
+    // The Contas filter lives in the always-open desktop sidebar — no popover
+    // to open, the checkbox is already on screen.
     await page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountAId)).check();
     await page.waitForLoadState("networkidle");
 
@@ -168,8 +168,8 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(descA)).toBeVisible();
     await expect(page.getByText(descB)).toBeVisible();
 
-    // Open category filter popover and select categoryA
-    await page.getByTestId(TransactionsTestIds.BtnFilter('categories')).click();
+    // Categories filter lives in the always-open desktop sidebar — the
+    // checkbox is rendered in the sidebar, no popover trigger to click.
     await page.getByTestId(TransactionsTestIds.CheckboxFilterCategory(categoryAId)).check();
     await page.waitForLoadState("networkidle");
 
@@ -445,8 +445,7 @@ test.describe("Transaction Filters", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
-    // Apply account filter for accountA
-    await page.getByTestId(TransactionsTestIds.BtnFilter('accounts')).click();
+    // Apply account filter for accountA via the always-open desktop sidebar.
     await page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountAId)).check();
     await page.waitForLoadState("networkidle");
 

@@ -9,9 +9,10 @@ interface PeriodNavigatorProps {
   month: number
   year: number
   onPeriodChange: (month: number, year: number) => void
+  disabled?: boolean
 }
 
-export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigatorProps) {
+export function PeriodNavigator({ month, year, onPeriodChange, disabled }: PeriodNavigatorProps) {
   const value = `${year}-${String(month).padStart(2, '0')}-01`
 
   function goToPrev() {
@@ -36,19 +37,27 @@ export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigator
   }
 
   return (
-    <Group className={classes.root} gap="xs" wrap="nowrap">
-      <ActionIcon variant="subtle" color="gray" onClick={goToPrev} aria-label="Mês anterior">
-        <IconChevronLeft size={18} />
+    <Group
+      className={classes.root}
+      gap={2}
+      wrap="nowrap"
+      inert={disabled || undefined}
+      style={{ opacity: disabled ? 0.5 : 1, transition: 'opacity 150ms ease' }}
+    >
+      <ActionIcon variant="subtle" color="gray" size="sm" onClick={goToPrev} aria-label="Mês anterior">
+        <IconChevronLeft size={16} />
       </ActionIcon>
       <MonthPickerInput
         value={value}
         onChange={handleChange}
         valueFormat="MM/YYYY"
+        size="xs"
+        disabled={disabled}
         classNames={{ input: classes.input }}
         aria-label="Período"
       />
-      <ActionIcon variant="subtle" color="gray" onClick={goToNext} aria-label="Próximo mês">
-        <IconChevronRight size={18} />
+      <ActionIcon variant="subtle" color="gray" size="sm" onClick={goToNext} aria-label="Próximo mês">
+        <IconChevronRight size={16} />
       </ActionIcon>
     </Group>
   )

@@ -1,6 +1,6 @@
 import { Button, Indicator, Popover, Stack, Switch, Text } from "@mantine/core";
 import { IconAdjustments } from "@tabler/icons-react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useTransactionsSearch } from "@/hooks/useTransactionsSearch";
 import { useState } from "react";
 import { Transactions } from "@/types/transactions";
 import { TransactionsTestIds } from "@/testIds";
@@ -38,8 +38,7 @@ function TypeOptions({
 }
 
 export function AdvancedFilter({ inline }: AdvancedFilterProps) {
-  const navigate = useNavigate({ from: "/transactions" });
-  const search = useSearch({ from: "/_authenticated/transactions" });
+  const { search, update } = useTransactionsSearch();
   const [opened, setOpened] = useState(false);
 
   const selected: Transactions.TransactionType[] = search.types ?? [];
@@ -49,15 +48,11 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
     const next = selected.includes(value)
       ? selected.filter((t) => t !== value)
       : [...selected, value];
-    navigate({
-      search: (prev) => ({ ...prev, types: next.length ? next : undefined }),
-    });
+    update((prev) => ({ ...prev, types: next }));
   }
 
   function toggleHideSettlements() {
-    navigate({
-      search: (prev) => ({ ...prev, hideSettlements: !hideSettlements }),
-    });
+    update((prev) => ({ ...prev, hideSettlements: !hideSettlements }));
   }
 
   const advancedCount = selected.length + (hideSettlements ? 1 : 0);
@@ -94,7 +89,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             onClick={() => setOpened((o) => !o)}
             data-testid={TransactionsTestIds.BtnOpenAdvancedFilters}
           >
-            Filtros avançados
+            Filtros
           </Button>
         </Indicator>
       </Popover.Target>
