@@ -58,7 +58,7 @@ export function MobileTabBar() {
             onClick={() => { if (!active) tapHaptic() }}
           >
             <span className={classes.iconWrap}>
-              <Icon size={22} stroke={1.8} />
+              <Icon size={20} stroke={1.8} />
               {showBadge && (
                 <Badge
                   size="xs"
@@ -83,7 +83,7 @@ export function MobileTabBar() {
         aria-label="Mais"
       >
         <span className={classes.iconWrap}>
-          <IconDots size={22} stroke={1.8} />
+          <IconDots size={20} stroke={1.8} />
         </span>
         <span className={classes.label}>Mais</span>
       </UnstyledButton>

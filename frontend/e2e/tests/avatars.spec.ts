@@ -31,20 +31,23 @@ test.describe('Avatar System', () => {
     await apiDeleteCategory(categoryId).catch(() => undefined)
   })
 
-  // ── AVA-02: Header avatar ────────────────────────────────────────────────
-  test('header shows UserAvatar component (initials fallback for test user)', async ({ page }) => {
+  // ── AVA-02: Sidebar user-pill avatar ─────────────────────────────────────
+  test('sidebar user pill shows UserAvatar component (initials fallback for test user)', async ({ page }) => {
     await page.goto('/transactions')
     await page.waitForLoadState('networkidle')
 
     // Test user has no OAuth photo, so UserAvatar shows initials via Mantine's
-    // placeholder element. The placeholder is the child of the Avatar root
-    // (which has data-testid="avatar_user"); we drill with native descendant
-    // class narrowing as a last resort since Mantine does not expose the
-    // placeholder separately.
-    const headerAvatar = page.locator('header').getByTestId(CommonTestIds.AvatarUser).first()
-    await expect(headerAvatar).toBeVisible()
+    // placeholder element. On desktop the avatar lives in the sidebar's
+    // user pill; on mobile it lives in the top header. Either way it is
+    // exposed through CommonTestIds.AvatarUser; we scope here to the
+    // SidebarUserPill since the Playwright project runs Desktop Chrome.
+    const pillAvatar = page
+      .getByTestId(CommonTestIds.SidebarUserPill)
+      .getByTestId(CommonTestIds.AvatarUser)
+      .first()
+    await expect(pillAvatar).toBeVisible()
 
-    const placeholder = headerAvatar.locator('.mantine-Avatar-placeholder')
+    const placeholder = pillAvatar.locator('.mantine-Avatar-placeholder')
     await expect(placeholder).toBeVisible()
     const text = await placeholder.textContent()
     expect(text?.trim().length).toBeGreaterThan(0)
