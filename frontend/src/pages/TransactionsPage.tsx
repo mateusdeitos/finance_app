@@ -660,6 +660,15 @@ export function TransactionsPage() {
           onSelectTransaction={handleSelectTransaction}
           onSelectSettlement={handleSelectSettlement}
         />
+        {isSelecting && (
+          <div
+            aria-hidden
+            style={{
+              height: "calc(4.5rem + env(safe-area-inset-bottom))",
+              flexShrink: 0,
+            }}
+          />
+        )}
       </Stack>
 
       {isSelecting && (
