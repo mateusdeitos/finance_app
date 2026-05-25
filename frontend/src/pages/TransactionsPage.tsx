@@ -573,7 +573,7 @@ export function TransactionsPage() {
         display: "flex",
         alignItems: "stretch",
         gap: "var(--mantine-spacing-md)",
-        minHeight: "calc(100vh - 2 * var(--mantine-spacing-md))",
+        minHeight: "100%",
       }}
     >
       <Box
