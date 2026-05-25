@@ -26,10 +26,14 @@ export function AppLayout() {
       header={{ height: MOBILE_HEADER_HEIGHT, collapsed: !isMobile }}
       navbar={{ width: 220, breakpoint: "sm", collapsed: { mobile: true, desktop: false } }}
       padding="md"
-      style={{
-        ["--app-shell-header-height" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
-        ["--app-shell-header-offset" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
-      }}
+      style={
+        isMobile
+          ? {
+              ["--app-shell-header-height" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
+              ["--app-shell-header-offset" as string]: `calc(${MOBILE_HEADER_HEIGHT}px + env(safe-area-inset-top))`,
+            }
+          : undefined
+      }
     >
       <AppShell.Header
         hiddenFrom="sm"
