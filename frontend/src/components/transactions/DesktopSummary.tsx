@@ -49,9 +49,10 @@ interface StatProps {
   amount: number;
   color: string;
   hero?: boolean;
+  loading?: boolean;
 }
 
-function Stat({ label, amount, color, hero }: StatProps) {
+function Stat({ label, amount, color, hero, loading }: StatProps) {
   return (
     <Stack gap={2} px="lg">
       <Text
@@ -63,14 +64,18 @@ function Stat({ label, amount, color, hero }: StatProps) {
       >
         {label}
       </Text>
-      <Text
-        fw={700}
-        c={color}
-        size={hero ? "xl" : "md"}
-        style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" }}
-      >
-        {formatSignedCents(amount)}
-      </Text>
+      {loading ? (
+        <Skeleton height={hero ? 26 : 20} width={hero ? 140 : 110} radius="sm" />
+      ) : (
+        <Text
+          fw={700}
+          c={color}
+          size={hero ? "xl" : "md"}
+          style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" }}
+        >
+          {formatSignedCents(amount)}
+        </Text>
+      )}
     </Stack>
   );
 }
@@ -112,25 +117,17 @@ export function DesktopSummary() {
     <Card withBorder radius="md" padding="sm">
       <Group justify="space-between" align="center" wrap="nowrap">
         <Group gap={0} wrap="nowrap" align="center">
-          <Stat label="Receitas" amount={income} color="teal" />
+          <Stat label="Receitas" amount={income} color="teal" loading={isLoading} />
           <Divider orientation="vertical" />
-          <Stat label="Despesas" amount={-expense} color="red" />
+          <Stat label="Despesas" amount={-expense} color="red" loading={isLoading} />
           <Divider orientation="vertical" />
-          {isLoading ? (
-            <Stack gap={2} px="lg">
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
-                Saldo do mês
-              </Text>
-              <Skeleton height={24} width={140} radius="sm" />
-            </Stack>
-          ) : (
-            <Stat
-              label="Saldo do mês"
-              amount={displayedNet}
-              color={displayedNet < 0 ? "red" : "teal"}
-              hero
-            />
-          )}
+          <Stat
+            label="Saldo do mês"
+            amount={displayedNet}
+            color={displayedNet < 0 ? "red" : "teal"}
+            hero
+            loading={isLoading}
+          />
         </Group>
         <SegmentedControl
           value={search.accumulated ? "accumulated" : "month"}
