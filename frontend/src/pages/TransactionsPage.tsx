@@ -621,6 +621,7 @@ export function TransactionsPage() {
             top: 0,
             zIndex: 10,
             background: "var(--mantine-color-body)",
+            paddingTop: 8,
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
