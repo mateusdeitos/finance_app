@@ -18,3 +18,17 @@
   background: transparent;
   border-top: none;
 }
+
+/* Filled blue-glow pill that stretches to fill the row between the Limpar
+   ghost button and the Ações primary button. Matches the "2 selecionadas"
+   pill from the design. */
+.countPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: light-dark(var(--mantine-color-blue-0), rgba(34, 139, 230, 0.15));
+  color: var(--mantine-color-blue-7);
+}

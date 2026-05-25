@@ -1,5 +1,5 @@
-import { ActionIcon, Badge, Button, Group, Menu, Text } from '@mantine/core'
-import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
+import { Button, Group, Menu, Text } from '@mantine/core'
+import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
 import { tapHaptic, warningHaptic } from '@/utils/haptics'
@@ -37,37 +37,28 @@ export function SelectionActionBar({
   const className = variant === 'inline' ? `${classes.bar} ${classes.barInline}` : classes.bar
   return (
     <div className={className} data-testid={TransactionsTestIds.SelectionActionBar}>
-      <Group justify="space-between" align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          size="lg"
+      <Group align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
+        <Button
+          variant="default"
+          size="md"
           radius="xl"
-          aria-label="Limpar seleção"
           onClick={() => { tapHaptic(); onClearSelection(); }}
           data-testid={TransactionsTestIds.BtnClearSelection}
         >
-          <IconX size={18} />
-        </ActionIcon>
+          Limpar
+        </Button>
 
-        <Badge
-          size="lg"
-          radius="xl"
-          variant="light"
-          color="blue"
-          styles={{ root: { textTransform: 'none', fontWeight: 600 } }}
-        >
-          <Text size="sm" fw={600} component="span" data-testid={TransactionsTestIds.SelectionCount}>
-            {count}
+        <div className={classes.countPill} style={{ flex: 1 }}>
+          <Text size="sm" fw={600} component="span" c="blue.7">
+            <span data-testid={TransactionsTestIds.SelectionCount}>{count}</span>{' '}
+            {count === 1 ? 'selecionada' : 'selecionadas'}
           </Text>
-          {' '}
-          {count === 1 ? 'selecionada' : 'selecionadas'}
-        </Badge>
+        </div>
 
         <Menu shadow="md" width={220} position="top-end">
           <Menu.Target>
             <Button
-              size="sm"
+              size="md"
               variant="filled"
               color="blue"
               radius="xl"
