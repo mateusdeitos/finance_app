@@ -142,7 +142,9 @@ function CategoryRow({ category, checked, onToggle, onUpdateName, onRemove, isPa
         borderRadius: 6,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        background: isParent ? 'var(--mantine-color-gray-0)' : undefined,
+        background: isParent
+          ? 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))'
+          : undefined,
       }}
     >
       <Checkbox
@@ -221,7 +223,9 @@ function InlineAdd({ onSave, onCancel, isParent }: InlineAddProps) {
       style={{
         padding: '0.5rem 0.75rem',
         borderRadius: 6,
-        background: isParent ? 'var(--mantine-color-gray-0)' : undefined,
+        background: isParent
+          ? 'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))'
+          : undefined,
       }}
     >
       <Box w={28} ta="center">
