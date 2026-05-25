@@ -523,6 +523,54 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDelete_Standalone_Propagation
 	suite.Assert().Len(txs, 0, "standalone tx must be deleted with propagation=all")
 }
 
+// TestSearch_MultipleTagFilterDoesNotDuplicate guards against the JOIN-based
+// tag filter that previously multiplied result rows by the number of matching
+// tags on each transaction. A transaction carrying N of the filter's tags
+// must still appear exactly once.
+func (suite *TransactionDeleteTestWithDBSuite) TestSearch_MultipleTagFilterDoesNotDuplicate() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	tag1, err := suite.createTestTag(ctx, user)
+	suite.Require().NoError(err)
+	tag2, err := suite.createTestTag(ctx, user)
+	suite.Require().NoError(err)
+	tag3, err := suite.createTestTag(ctx, user)
+	suite.Require().NoError(err)
+	tag4, err := suite.createTestTag(ctx, user)
+	suite.Require().NoError(err)
+
+	txID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          5000,
+		Date:            domain.Date{Time: time.Now().UTC()},
+		Description:     "multi-tag tx",
+		Tags: []domain.Tag{
+			{ID: tag1.ID, Name: tag1.Name},
+			{ID: tag2.ID, Name: tag2.Name},
+			{ID: tag3.ID, Name: tag3.Name},
+			{ID: tag4.ID, Name: tag4.Name},
+		},
+	})
+	suite.Require().NoError(err)
+
+	txs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user.ID,
+		TagIDs: []int{tag1.ID, tag2.ID, tag3.ID, tag4.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txs, 1, "tx with 4 matching tags must not be duplicated 4x")
+	suite.Assert().Equal(txID, txs[0].ID)
+}
+
 // TestDelete_Standalone_PropagationCurrentAndFuture exercises
 // deleteCurrentAndFutureInstallmentsOfRecurrence when TransactionRecurrenceID == nil.
 func (suite *TransactionDeleteTestWithDBSuite) TestDelete_Standalone_PropagationCurrentAndFuture() {
