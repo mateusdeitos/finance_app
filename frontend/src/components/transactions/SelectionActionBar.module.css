@@ -26,7 +26,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
+  align-self: stretch;
+  min-height: 2.625rem;
   padding: 0 1rem;
   border-radius: 999px;
   background: light-dark(var(--mantine-color-blue-0), rgba(34, 139, 230, 0.15));
