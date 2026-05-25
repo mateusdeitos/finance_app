@@ -49,11 +49,16 @@ export const TransactionsTestIds = {
   // Tags
   TagsInput: 'input_tags',
 
-  // Extra sections panel switcher (tags / recurrence / split)
+  // Extra sections accordion (tags / recurrence / split). Names kept from the
+  // previous SegmentedControl-based UI so e2e selectors don't need a rename.
   SegmentedExtraSections: 'segmented_extra_sections',
   SegmentExtraSection: (panel: TransactionExtraPanel) =>
     `segment_extra_section_${panel}` as const,
   SwitchRecurrenceEnabled: 'switch_recurrence_enabled',
+
+  // Date quick-shortcut chips below the date picker.
+  DateChip: (key: 'today' | 'yesterday' | 'day_before') =>
+    `chip_date_${key}` as const,
 
   // Split
   InputSplitAmount: 'input_split_amount',

@@ -12,15 +12,13 @@ import {
   Stack,
   SegmentedControl,
   Select,
-  Button,
   Alert,
-  Group,
   SimpleGrid,
-  Box,
+  Group,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
-import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
+import { IconTrendingDown, IconTrendingUp, IconArrowRight } from "@tabler/icons-react";
 import { DatePickerInput } from "@mantine/dates";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
@@ -28,9 +26,11 @@ import { useFlattenCategories } from "@/hooks/useCategories";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
-import { TransactionExtraSections } from "./TransactionExtraSections";
+import { TransactionAccordionSections } from "./TransactionAccordionSections";
+import { DateQuickChips } from "./DateQuickChips";
+import { TransactionFormFooter } from "./TransactionFormFooter";
 import { TransactionFormValues } from "./transactionFormSchema";
-import { TransactionsTestIds, type TransactionExtraPanel } from "@/testIds";
+import { TransactionsTestIds, type TransactionExtraPanel, type TransactionType } from "@/testIds";
 
 // React Hook Form DevTool — dev-only; lazy-loaded so it is excluded from the
 // production bundle. The cast restores the generic prop type that `lazy` erases.
@@ -54,6 +54,19 @@ const PANEL_ERROR_FIELDS: Record<TransactionExtraPanel, (keyof TransactionFormVa
   recurrence: ["recurrenceType", "recurrenceCurrentInstallment", "recurrenceTotalInstallments"],
   split: ["split_settings"],
   tags: ["tags"],
+};
+
+/** Mantine color associated with each transaction type — drives the segmented indicator. */
+const TYPE_COLOR: Record<TransactionType, string> = {
+  expense: "red",
+  income: "teal",
+  transfer: "blue",
+};
+
+const TYPE_ICON: Record<TransactionType, ReactNode> = {
+  expense: <IconTrendingDown size={14} />,
+  income: <IconTrendingUp size={14} />,
+  transfer: <IconArrowRight size={14} />,
 };
 
 interface Props {
@@ -192,6 +205,8 @@ export const TransactionForm = ({
     }
   }
 
+  const typeColor = TYPE_COLOR[transactionType];
+
   return (
     <form onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
@@ -206,32 +221,18 @@ export const TransactionForm = ({
           name="transaction_type"
           render={({ field }) => (
             <SegmentedControl
-              data={[
-                {
-                  value: "expense",
-                  label: (
-                    <span data-testid={TransactionsTestIds.SegmentTransactionType("expense")}>
-                      Despesa
+              color={typeColor}
+              data={(["expense", "income", "transfer"] as const).map((t) => ({
+                value: t,
+                label: (
+                  <Group gap={6} wrap="nowrap" justify="center">
+                    {TYPE_ICON[t]}
+                    <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
+                      {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
                     </span>
-                  ),
-                },
-                {
-                  value: "income",
-                  label: (
-                    <span data-testid={TransactionsTestIds.SegmentTransactionType("income")}>
-                      Receita
-                    </span>
-                  ),
-                },
-                {
-                  value: "transfer",
-                  label: (
-                    <span data-testid={TransactionsTestIds.SegmentTransactionType("transfer")}>
-                      Transferência
-                    </span>
-                  ),
-                },
-              ]}
+                  </Group>
+                ),
+              }))}
               value={field.value}
               onChange={(val) => {
                 field.onChange(val);
@@ -243,58 +244,44 @@ export const TransactionForm = ({
           )}
         />
 
+        <Controller
+          control={control}
+          name="amount"
+          render={({ field }) => (
+            <CurrencyInput
+              ref={field.ref}
+              label="Valor (R$)"
+              required
+              withCalculator
+              value={field.value}
+              onChange={field.onChange}
+              error={errors.amount?.message}
+              data-testid={TransactionsTestIds.InputAmount}
+            />
+          )}
+        />
+
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
           <Controller
             control={control}
             name="date"
             render={({ field }) => (
-              <DatePickerInput
-                ref={field.ref}
-                label="Data"
-                required
-                value={field.value || null}
-                onChange={(date) => field.onChange(date ?? "")}
-                error={errors.date?.message}
-                valueFormat="DD/MM/YYYY"
-              />
+              <div>
+                <DatePickerInput
+                  ref={field.ref}
+                  label="Data"
+                  required
+                  value={field.value || null}
+                  onChange={(date) => field.onChange(date ?? "")}
+                  error={errors.date?.message}
+                  valueFormat="DD/MM/YYYY"
+                />
+                <DateQuickChips value={field.value} onChange={field.onChange} />
+              </div>
             )}
           />
 
-          <Controller
-            control={control}
-            name="amount"
-            render={({ field }) => (
-              <CurrencyInput
-                ref={field.ref}
-                label="Valor (R$)"
-                required
-                withCalculator
-                value={field.value}
-                onChange={field.onChange}
-                error={errors.amount?.message}
-                data-testid={TransactionsTestIds.InputAmount}
-              />
-            )}
-          />
-        </SimpleGrid>
-
-        <Controller
-          control={control}
-          name="description"
-          render={({ field }) => (
-            <DescriptionAutocomplete
-              ref={field.ref}
-              value={field.value}
-              onChange={field.onChange}
-              onSuggestionSelect={handleSuggestionSelect}
-              error={errors.description?.message}
-              required
-            />
-          )}
-        />
-
-        {isTransfer ? (
-          <SimpleGrid cols={{ base: 1, sm: 2 }}>
+          {isTransfer ? (
             <Controller
               control={control}
               name="account_id"
@@ -318,91 +305,106 @@ export const TransactionForm = ({
                 />
               )}
             />
+          ) : (
             <Controller
               control={control}
-              name="destination_account_id"
+              name="account_id"
               render={({ field }) => (
                 <Select
                   ref={field.ref}
-                  label="Conta de destino"
+                  label="Conta"
                   required
                   data={groupedAccountOptions}
                   value={field.value ? String(field.value) : null}
-                  onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onChange={(val) => {
+                    field.onChange(val ? Number(val) : null);
+                    // Clear split settings when selecting a shared account
+                    const acct = accounts.find((a) => a.id === Number(val));
+                    if (acct?.user_connection) {
+                      setValue("split_settings", []);
+                    }
+                  }}
                   onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                  error={errors.destination_account_id?.message}
+                  error={errors.account_id?.message}
                   searchable
                   renderOption={({ option }) => (
-                    <span data-testid={TransactionsTestIds.OptionDestinationAccount(option.value)}>
+                    <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
                       {option.label}
                     </span>
                   )}
-                  data-testid={TransactionsTestIds.SelectDestinationAccount}
+                  data-testid={TransactionsTestIds.SelectAccount}
                 />
               )}
             />
-          </SimpleGrid>
+          )}
+        </SimpleGrid>
+
+        <Controller
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <DescriptionAutocomplete
+              ref={field.ref}
+              value={field.value}
+              onChange={field.onChange}
+              onSuggestionSelect={handleSuggestionSelect}
+              error={errors.description?.message}
+              required
+            />
+          )}
+        />
+
+        {isTransfer ? (
+          <Controller
+            control={control}
+            name="destination_account_id"
+            render={({ field }) => (
+              <Select
+                ref={field.ref}
+                label="Conta de destino"
+                required
+                data={groupedAccountOptions}
+                value={field.value ? String(field.value) : null}
+                onChange={(val) => field.onChange(val ? Number(val) : null)}
+                onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
+                error={errors.destination_account_id?.message}
+                searchable
+                renderOption={({ option }) => (
+                  <span data-testid={TransactionsTestIds.OptionDestinationAccount(option.value)}>
+                    {option.label}
+                  </span>
+                )}
+                data-testid={TransactionsTestIds.SelectDestinationAccount}
+              />
+            )}
+          />
         ) : (
-          <>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <Controller
-                control={control}
-                name="category_id"
-                render={({ field }) => (
-                  <Select
-                    ref={field.ref}
-                    label="Categoria"
-                    data={categoryOptions}
-                    value={field.value ? String(field.value) : null}
-                    onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(categoryOptions, (val) => field.onChange(val))}
-                    error={errors.category_id?.message}
-                    searchable
-                    clearable
-                    renderOption={({ option }) => (
-                      <span data-testid={TransactionsTestIds.OptionCategory(option.value)}>
-                        {option.label}
-                      </span>
-                    )}
-                    data-testid={TransactionsTestIds.SelectCategory}
-                  />
+          <Controller
+            control={control}
+            name="category_id"
+            render={({ field }) => (
+              <Select
+                ref={field.ref}
+                label="Categoria"
+                data={categoryOptions}
+                value={field.value ? String(field.value) : null}
+                onChange={(val) => field.onChange(val ? Number(val) : null)}
+                onBlur={makeSelectBlurHandler(categoryOptions, (val) => field.onChange(val))}
+                error={errors.category_id?.message}
+                searchable
+                clearable
+                renderOption={({ option }) => (
+                  <span data-testid={TransactionsTestIds.OptionCategory(option.value)}>
+                    {option.label}
+                  </span>
                 )}
+                data-testid={TransactionsTestIds.SelectCategory}
               />
-              <Controller
-                control={control}
-                name="account_id"
-                render={({ field }) => (
-                  <Select
-                    ref={field.ref}
-                    label="Conta"
-                    required
-                    data={groupedAccountOptions}
-                    value={field.value ? String(field.value) : null}
-                    onChange={(val) => {
-                      field.onChange(val ? Number(val) : null);
-                      // Clear split settings when selecting a shared account
-                      const acct = accounts.find((a) => a.id === Number(val));
-                      if (acct?.user_connection) {
-                        setValue("split_settings", []);
-                      }
-                    }}
-                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                    error={errors.account_id?.message}
-                    searchable
-                    renderOption={({ option }) => (
-                      <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
-                        {option.label}
-                      </span>
-                    )}
-                    data-testid={TransactionsTestIds.SelectAccount}
-                  />
-                )}
-              />
-            </SimpleGrid>
-          </>
+            )}
+          />
         )}
 
-        <TransactionExtraSections
+        <TransactionAccordionSections
           activePanel={activePanel}
           onPanelChange={setActivePanel}
           splitApplicable={splitApplicable}
@@ -412,39 +414,12 @@ export const TransactionForm = ({
 
       {extraContent}
 
-      <Box
-        style={{
-          position: "sticky",
-          bottom: 0,
-          zIndex: 3,
-          background: "var(--mantine-color-body)",
-          borderTop: "1px solid var(--mantine-color-default-border)",
-          paddingTop: "var(--mantine-spacing-md)",
-          paddingBottom: "var(--mantine-spacing-md)",
-          marginTop: "var(--mantine-spacing-md)",
-        }}
-      >
-        <Group justify="flex-end">
-          {onSaveAndCreateAnother && (
-            <Button
-              variant="default"
-              type="button"
-              loading={isSubmitting || isPending}
-              onClick={handleSubmit(onSaveAndCreateAnother, onInvalid)}
-            >
-              Salvar e criar outra
-            </Button>
-          )}
-          <Button
-            type="submit"
-            loading={isSubmitting || isPending}
-            rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
-            data-testid={TransactionsTestIds.BtnSave}
-          >
-            Salvar
-          </Button>
-        </Group>
-      </Box>
+      <TransactionFormFooter
+        loading={isSubmitting || !!isPending}
+        onSaveAndCreateAnother={
+          onSaveAndCreateAnother ? handleSubmit(onSaveAndCreateAnother, onInvalid) : undefined
+        }
+      />
       <Suspense>
         <DevTool control={control} />
       </Suspense>
