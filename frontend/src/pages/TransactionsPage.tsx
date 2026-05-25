@@ -600,30 +600,26 @@ export function TransactionsPage() {
                 year={search.year}
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
               />
-              <Box
-                inert={isSelecting || undefined}
+              <Group
+                gap="xs"
+                wrap="wrap"
                 style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--mantine-spacing-xs)",
                   opacity: isSelecting ? 0.5 : 1,
                   transition: "opacity 150ms ease",
+                  flex: "1 1 auto",
                   minWidth: 0,
                 }}
+                inert={isSelecting || undefined}
               >
-                <Box style={{ flex: 1, maxWidth: 360 }}>
+                <Box style={{ width: 240 }}>
                   <TextSearch />
                 </Box>
-                <Group gap="xs" wrap="nowrap">
-                  <TagFilter />
-                  <AdvancedFilter />
-                  <GroupByMenuButton />
-                  <ClearFiltersButton />
-                </Group>
-              </Box>
+                <TagFilter />
+                <AdvancedFilter />
+                <GroupByMenuButton />
+                <ClearFiltersButton />
+              </Group>
               <Group gap="xs" wrap="nowrap">
-                <Box style={{ width: 1, height: 18, background: "var(--mantine-color-default-border)", margin: "0 4px" }} />
                 <Button
                   leftSection={<IconPlus size={16} />}
                   rightSection={<ShortcutHint keys={["N"]} />}
