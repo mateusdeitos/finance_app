@@ -565,15 +565,20 @@ export function TransactionsPage() {
 
   return (
     <Box
-      // 2-column desktop shell built with flexbox (sidebar + main). The sidebar
-      // lives inside the page (not the AppShell aside) so it stays scoped to
-      // /transactions, and the main column carries the toolbar + summary +
-      // condensed filter chip row + list as before.
+      // 2-column desktop shell built with flexbox (sidebar + main). Each
+      // column owns its own vertical scroll: the sidebar scrolls internally
+      // only if contas+categorias don't fit in the viewport, and the right
+      // column scrolls only if the transaction list is taller than the
+      // viewport. The outer Box fills exactly AppShell.Main's content area
+      // (height 100%, overflow hidden) so there's never a page-level
+      // scrollbar.
       style={{
         display: "flex",
         alignItems: "stretch",
         gap: "var(--mantine-spacing-md)",
-        minHeight: "100%",
+        height: "100%",
+        minHeight: 0,
+        overflow: "hidden",
       }}
     >
       <Box
@@ -587,15 +592,21 @@ export function TransactionsPage() {
       >
         <DesktopFiltersSidebar />
       </Box>
-      <Stack gap="md" style={{ flex: 1, minWidth: 0 }}>
+      <Stack
+        gap="md"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          height: "100%",
+          overflowY: "auto",
+        }}
+      >
         <Box
           style={{
             position: "sticky",
-            top: "calc(-1 * var(--mantine-spacing-md))",
+            top: 0,
             zIndex: 10,
             background: "var(--mantine-color-body)",
-            marginTop: "calc(-1 * var(--mantine-spacing-md))",
-            paddingTop: "var(--mantine-spacing-md)",
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
