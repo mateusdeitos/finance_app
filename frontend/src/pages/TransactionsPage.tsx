@@ -463,6 +463,23 @@ export function TransactionsPage() {
   const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
   const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
+  // Indexes by id — built once per transactions payload so the selection
+  // total below (and any other id-lookup downstream) stays O(1) per id
+  // instead of scanning allTransactions for every selected row.
+  const txById = useMemo(() => {
+    const m = new Map<number, Transactions.Transaction>();
+    for (const tx of allTransactions) m.set(tx.id, tx);
+    return m;
+  }, [allTransactions]);
+
+  const settlementById = useMemo(() => {
+    const m = new Map<number, Transactions.Settlement>();
+    for (const tx of allTransactions) {
+      for (const s of tx.settlements_from_source ?? []) m.set(s.id, s);
+    }
+    return m;
+  }, [allTransactions]);
+
   // Signed total (in cents) of every selected transaction + settlement.
   // Used by SelectionActionBar to show "saldo das transações selecionadas"
   // — credit moves the total up, debit moves it down. Transfers count too
@@ -470,21 +487,17 @@ export function TransactionsPage() {
   const selectedTotalCents = useMemo(() => {
     let total = 0;
     for (const id of selectedIds) {
-      const tx = allTransactions.find((t) => t.id === id);
+      const tx = txById.get(id);
       if (!tx) continue;
       total += (tx.operation_type === "credit" ? 1 : -1) * tx.amount;
     }
     for (const sid of selectedSettlementIds) {
-      for (const tx of allTransactions) {
-        const s = tx.settlements_from_source?.find((x) => x.id === sid);
-        if (s) {
-          total += (s.type === "credit" ? 1 : -1) * s.amount;
-          break;
-        }
-      }
+      const s = settlementById.get(sid);
+      if (!s) continue;
+      total += (s.type === "credit" ? 1 : -1) * s.amount;
     }
     return total;
-  }, [selectedIds, selectedSettlementIds, allTransactions]);
+  }, [selectedIds, selectedSettlementIds, txById, settlementById]);
 
   const openCreateTransaction = useCallback(() => {
     void renderDrawer(() => <CreateTransactionDrawer />);
@@ -612,7 +625,7 @@ export function TransactionsPage() {
           }}
         >
           <Stack gap="sm">
-            <div
+            <Box
               style={{
                 display: "grid",
                 gridTemplateColumns: "auto minmax(0, 1fr) auto auto",
@@ -626,12 +639,11 @@ export function TransactionsPage() {
                 onPeriodChange={(m, y) => routeNavigate({ search: { ...search, month: m, year: y } })}
                 disabled={isSelecting}
               />
-              <div
+              <Group
+                gap="xs"
+                wrap="wrap"
+                align="center"
                 style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: "var(--mantine-spacing-xs)",
                   minWidth: 0,
                   opacity: isSelecting ? 0.5 : 1,
                   transition: "opacity 150ms ease",
@@ -645,7 +657,7 @@ export function TransactionsPage() {
                 <AdvancedFilter />
                 <GroupByMenuButton />
                 <ClearFiltersButton />
-              </div>
+              </Group>
               <Button
                 leftSection={<IconPlus size={16} />}
                 rightSection={<ShortcutHint keys={["N"]} />}
@@ -674,7 +686,7 @@ export function TransactionsPage() {
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            </div>
+            </Box>
             <DesktopSummary />
           </Stack>
         </Box>
@@ -687,7 +699,7 @@ export function TransactionsPage() {
           onSelectSettlement={handleSelectSettlement}
         />
         {isSelecting && (
-          <div
+          <Box
             aria-hidden
             style={{
               height: "calc(4.5rem + env(safe-area-inset-bottom))",
