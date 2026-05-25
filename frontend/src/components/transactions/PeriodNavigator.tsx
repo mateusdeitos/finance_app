@@ -36,19 +36,20 @@ export function PeriodNavigator({ month, year, onPeriodChange }: PeriodNavigator
   }
 
   return (
-    <Group className={classes.root} gap="xs" wrap="nowrap">
-      <ActionIcon variant="subtle" color="gray" onClick={goToPrev} aria-label="Mês anterior">
-        <IconChevronLeft size={18} />
+    <Group className={classes.root} gap={2} wrap="nowrap">
+      <ActionIcon variant="subtle" color="gray" size="sm" onClick={goToPrev} aria-label="Mês anterior">
+        <IconChevronLeft size={16} />
       </ActionIcon>
       <MonthPickerInput
         value={value}
         onChange={handleChange}
         valueFormat="MM/YYYY"
+        size="xs"
         classNames={{ input: classes.input }}
         aria-label="Período"
       />
-      <ActionIcon variant="subtle" color="gray" onClick={goToNext} aria-label="Próximo mês">
-        <IconChevronRight size={18} />
+      <ActionIcon variant="subtle" color="gray" size="sm" onClick={goToNext} aria-label="Próximo mês">
+        <IconChevronRight size={16} />
       </ActionIcon>
     </Group>
   )

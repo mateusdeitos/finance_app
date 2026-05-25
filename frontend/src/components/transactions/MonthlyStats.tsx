@@ -61,21 +61,21 @@ export function MonthlyStats() {
   );
 
   return (
-    <Group gap="sm" wrap="nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
-      <Stack gap={0} align="flex-end">
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
+    <Group gap="xs" wrap="nowrap" style={{ fontVariantNumeric: "tabular-nums", minWidth: 0 }}>
+      <Stack gap={0} align="flex-end" style={{ minWidth: 0 }}>
+        <Text c="dimmed" tt="uppercase" fw={600} style={{ fontSize: "0.5625rem", letterSpacing: "0.04em", lineHeight: 1.1 }}>
           entrou
         </Text>
-        <Text size="sm" fw={600} c="teal">
+        <Text fw={600} c="teal" style={{ fontSize: "0.75rem", lineHeight: 1.2 }}>
           {formatSignedCents(income)}
         </Text>
       </Stack>
       <Divider orientation="vertical" />
-      <Stack gap={0} align="flex-end">
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
+      <Stack gap={0} align="flex-end" style={{ minWidth: 0 }}>
+        <Text c="dimmed" tt="uppercase" fw={600} style={{ fontSize: "0.5625rem", letterSpacing: "0.04em", lineHeight: 1.1 }}>
           saiu
         </Text>
-        <Text size="sm" fw={600} c="red">
+        <Text fw={600} c="red" style={{ fontSize: "0.75rem", lineHeight: 1.2 }}>
           {formatSignedCents(-expense)}
         </Text>
       </Stack>
