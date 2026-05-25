@@ -1,4 +1,4 @@
-import { Badge, Button, Checkbox, Divider, Indicator, Popover, Stack, Text } from '@mantine/core'
+import { Button, Checkbox, Divider, Indicator, Popover, Stack, Text } from '@mantine/core'
 import { IconBuildingBank } from '@tabler/icons-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
@@ -21,7 +21,6 @@ function AccountRow({
   checked: boolean
   onToggle: () => void
 }) {
-  const isShared = !!account.user_connection
   return (
     <label
       className={`${classes.row}${checked ? ` ${classes.rowSelected}` : ''}`}
@@ -30,17 +29,6 @@ function AccountRow({
       <AccountAvatar account={account} size={28} />
       <span className={classes.label}>
         <span className={classes.name}>{account.name}</span>
-        {isShared && (
-          <Badge
-            size="xs"
-            color="grape"
-            variant="light"
-            radius="sm"
-            styles={{ root: { letterSpacing: 0.5, fontWeight: 700 } }}
-          >
-            COMPARTILHADA
-          </Badge>
-        )}
       </span>
       <Checkbox
         checked={checked}

@@ -8,3 +8,13 @@
   background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border-top: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
 }
+
+/* Inline variant: flows in the document instead of pinning to the viewport
+   bottom. Used on mobile, where the bar takes the slot of the filter row
+   so the summaries above stay visible during selection mode. */
+.barInline {
+  position: static;
+  padding: 0;
+  background: transparent;
+  border-top: none;
+}

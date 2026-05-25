@@ -492,7 +492,7 @@ export function TransactionsPage() {
             paddingBottom: "var(--mantine-spacing-xs)",
           }}
         >
-          <Stack gap="xs" style={{ visibility: isSelecting ? "hidden" : undefined }}>
+          <Stack gap="xs">
             <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
               <PeriodNavigator
                 month={search.month}
@@ -502,7 +502,20 @@ export function TransactionsPage() {
               <MonthlyStats />
             </Group>
             <NetSummary />
-            <MobileFilterBar />
+            {isSelecting ? (
+              <SelectionActionBar
+                variant="inline"
+                count={totalSelected}
+                onClearSelection={clearSelection}
+                onCategoryChange={handleCategoryChange}
+                onDateChange={handleDateChange}
+                onDivisaoChange={handleDivisionClick}
+                connectedAccountsCount={connectedAccountsCount}
+                onDelete={handleDeleteClick}
+              />
+            ) : (
+              <MobileFilterBar />
+            )}
           </Stack>
         </Box>
 
@@ -516,18 +529,6 @@ export function TransactionsPage() {
         />
 
         {!isSelecting && <TransactionFab />}
-
-        {isSelecting && (
-          <SelectionActionBar
-            count={totalSelected}
-            onClearSelection={clearSelection}
-            onCategoryChange={handleCategoryChange}
-            onDateChange={handleDateChange}
-            onDivisaoChange={handleDivisionClick}
-            connectedAccountsCount={connectedAccountsCount}
-            onDelete={handleDeleteClick}
-          />
-        )}
       </Stack>
       </PullToRefresh>
     );

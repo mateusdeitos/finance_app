@@ -1,9 +1,11 @@
 import { MantineProvider } from "@mantine/core";
 import { useDisclosure, useTimeout } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { RouterContextProvider } from "@tanstack/react-router";
 import { createContext, ReactElement, useContext } from "react";
 import { createRoot } from "react-dom/client";
 import { queryClient } from "@/queryClient";
+import { router } from "@/router";
 import { theme } from "@/theme";
 
 // ─── Context ─────────────────────────────────────────────────────────────────
@@ -78,9 +80,11 @@ export function renderDrawer<T>(factory: () => ReactElement): Promise<T> {
           }}
         >
           <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={theme} defaultColorScheme="auto">
-              {factory()}
-            </MantineProvider>
+            <RouterContextProvider router={router}>
+              <MantineProvider theme={theme} defaultColorScheme="auto">
+                {factory()}
+              </MantineProvider>
+            </RouterContextProvider>
           </QueryClientProvider>
         </DrawerContext.Provider>
       );

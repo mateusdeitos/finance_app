@@ -92,7 +92,7 @@ export function NetSummary() {
           radius="xl"
           data={[
             { label: "Mês", value: "month" },
-            { label: "Acum.", value: "accumulated" },
+            { label: "Acumulado", value: "accumulated" },
           ]}
         />
       </Group>

@@ -12,11 +12,15 @@ interface SelectionActionBarProps {
   onDivisaoChange: () => void
   connectedAccountsCount: number
   onDelete: () => void
+  /** `inline` flows in the document; `fixed` (default) pins to the viewport bottom. */
+  variant?: 'fixed' | 'inline'
 }
 
 /**
- * Action bar shown while the user has rows selected. Sits at the bottom of
- * the viewport (above the safe area) and mirrors the variation C layout:
+ * Action bar shown while the user has rows selected. Default `fixed` variant
+ * sits at the bottom of the viewport (above the safe area); the `inline`
+ * variant flows in the document so it can take the slot of the filter row in
+ * the sticky header. Mirrors the variation C layout in both variants:
  * a Limpar action on the left, a centered count chip in the brand's
  * blue-glow tint, and a primary Ações menu on the right.
  */
@@ -28,9 +32,11 @@ export function SelectionActionBar({
   onDivisaoChange,
   connectedAccountsCount,
   onDelete,
+  variant = 'fixed',
 }: SelectionActionBarProps) {
+  const className = variant === 'inline' ? `${classes.bar} ${classes.barInline}` : classes.bar
   return (
-    <div className={classes.bar} data-testid={TransactionsTestIds.SelectionActionBar}>
+    <div className={className} data-testid={TransactionsTestIds.SelectionActionBar}>
       <Group justify="space-between" align="center" wrap="nowrap" style={{ flex: 1 }} gap="sm">
         <ActionIcon
           variant="subtle"
