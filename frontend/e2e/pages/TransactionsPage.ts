@@ -120,7 +120,14 @@ export class TransactionsPage {
    */
   async expandExtraSection(panel: "recurrence" | "split" | "tags", drawer?: Locator) {
     const container = drawer ?? this.formDrawer;
-    await container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel)).click();
+    const header = container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel));
+    await header.scrollIntoViewIfNeeded();
+    // `force: true` bypasses Playwright's actionability stability check.
+    // Mantine Drawer mounts trigger transient layout shifts (queries loading,
+    // Selects populating, drag-handle animating in) that have caused the
+    // accordion header to be flagged "not stable" for the full timeout window.
+    // The header is a real <button> — clicking it is safe even mid-animation.
+    await header.click({ force: true });
   }
 
   async selectType(type: TransactionType) {
