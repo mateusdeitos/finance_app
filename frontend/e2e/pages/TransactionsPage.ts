@@ -115,19 +115,25 @@ export class TransactionsPage {
 
   /**
    * Expand the recurrence / split / tags accordion in the create-or-update form
-   * so its content becomes visible. No-op if already open — clicking the header
-   * toggles, so callers should only call this once.
+   * so its content becomes visible. No-op if already open.
+   *
+   * Uses dispatchEvent('click') directly on the Accordion.Control button
+   * because:
+   *   - Playwright `.click()` flagged the element as "not stable" (Mantine's
+   *     drawer slide-in animation shifts coordinates by a few px during the
+   *     transition);
+   *   - `.click({ force: true })` then dispatched at the original coords and
+   *     missed the moving target (aria-expanded stayed "false");
+   *   - `dispatchEvent` sends a synthetic click straight to the element — no
+   *     actionability check, no coordinate hit-test. The Accordion's onClick
+   *     fires deterministically.
    */
   async expandExtraSection(panel: "recurrence" | "split" | "tags", drawer?: Locator) {
     const container = drawer ?? this.formDrawer;
     const titleEl = container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel));
-    // The testid lives on a <Text> inside Accordion.Control's UnstyledButton.
-    // Click the actual <button> to guarantee the onClick fires reliably (and to
-    // give us a stable element to wait `aria-expanded` on).
     const button = titleEl.locator("xpath=ancestor::button[1]");
     if ((await button.getAttribute("aria-expanded")) === "true") return;
-    await button.scrollIntoViewIfNeeded();
-    await button.click({ force: true });
+    await button.dispatchEvent("click");
     await expect(button).toHaveAttribute("aria-expanded", "true", { timeout: 5000 });
   }
 
