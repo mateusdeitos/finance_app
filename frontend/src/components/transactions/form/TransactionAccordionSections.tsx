@@ -11,8 +11,9 @@ import { SplitSettingsFields } from "./SplitSettingsFields";
 import { TransactionFormValues } from "./transactionFormSchema";
 
 interface Props {
-  activePanel: TransactionExtraPanel;
-  onPanelChange: (panel: TransactionExtraPanel) => void;
+  /** Which panel is open. `null` means all collapsed. */
+  activePanel: TransactionExtraPanel | null;
+  onPanelChange: (panel: TransactionExtraPanel | null) => void;
   /** Whether the "Divisão" panel applies (non-transfer, personal account, has connections). */
   splitApplicable: boolean;
   /** Forwarded to RecurrenceFields — disables the current installment input on updates. */
@@ -152,17 +153,15 @@ export function TransactionAccordionSections({
   const tagsError = !!errors.tags;
   const splitError = !!errors.split_settings;
 
-  // Coerce to a value the Accordion accepts. When the active panel is "split"
-  // but split no longer applies (e.g. user switched to transfer), fall back.
-  const effectivePanel: TransactionExtraPanel =
-    activePanel === "split" && !splitApplicable ? "recurrence" : activePanel;
+  // If the active panel is "split" but split no longer applies (e.g. user
+  // switched to transfer), collapse everything instead of falling through.
+  const effectivePanel: TransactionExtraPanel | null =
+    activePanel === "split" && !splitApplicable ? null : activePanel;
 
   return (
     <Accordion
       value={effectivePanel}
-      onChange={(value) => {
-        if (value) onPanelChange(value as TransactionExtraPanel);
-      }}
+      onChange={(value) => onPanelChange((value as TransactionExtraPanel | null) ?? null)}
       variant="separated"
       chevronPosition="left"
       data-testid={TransactionsTestIds.SegmentedExtraSections}

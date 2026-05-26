@@ -120,12 +120,12 @@ export const TransactionForm = ({
   );
   const splitApplicable = !isTransfer && !isSharedAccount && hasConnectedAccounts;
 
-  const [activePanel, setActivePanel] = useState<TransactionExtraPanel>(() => {
+  const [activePanel, setActivePanel] = useState<TransactionExtraPanel | null>(() => {
     const values = getValues();
     if (values.recurrenceEnabled) return "recurrence";
     if ((values.split_settings?.length ?? 0) > 0) return "split";
     if ((values.tags?.length ?? 0) > 0) return "tags";
-    return "recurrence";
+    return null;
   });
 
   /** On invalid submit, jump to the first panel holding an error so it isn't hidden. */
