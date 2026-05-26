@@ -133,15 +133,10 @@ export const TransactionForm = ({
     // Surface a generic top-level alert so users (and e2e tests) see that
     // submission failed even when every individual error sits inside a
     // collapsed accordion. Field errors stay visible inline.
-    const fields = Object.keys(formErrors);
-    if (fields.length > 0) {
-      const snapshot = getValues();
-      const errorDetails = fields
-        .map((f) => `${f}=${(formErrors as Record<string, { message?: string }>)[f]?.message ?? "?"}`)
-        .join("; ");
+    if (Object.keys(formErrors).length > 0) {
       setError("_general" as keyof TransactionFormValues, {
         type: "validation",
-        message: `Verifique os campos. errors[${errorDetails}] values[type=${snapshot.transaction_type}, account=${snapshot.account_id}(${typeof snapshot.account_id}), dest=${snapshot.destination_account_id}(${typeof snapshot.destination_account_id}), cat=${snapshot.category_id}(${typeof snapshot.category_id}), date=${snapshot.date}]`,
+        message: "Verifique os campos destacados no formulário",
       });
     }
     const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
@@ -300,6 +295,7 @@ export const TransactionForm = ({
 
           {isTransfer ? (
             <Controller
+              key="account-personal"
               control={control}
               name="account_id"
               render={({ field }) => (
@@ -324,6 +320,7 @@ export const TransactionForm = ({
             />
           ) : (
             <Controller
+              key="account-grouped"
               control={control}
               name="account_id"
               render={({ field }) => (
@@ -373,6 +370,7 @@ export const TransactionForm = ({
 
         {isTransfer ? (
           <Controller
+            key="destination-account"
             control={control}
             name="destination_account_id"
             render={({ field }) => (
@@ -397,6 +395,7 @@ export const TransactionForm = ({
           />
         ) : (
           <Controller
+            key="category"
             control={control}
             name="category_id"
             render={({ field }) => (
