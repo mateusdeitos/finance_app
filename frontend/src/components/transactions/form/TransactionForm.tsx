@@ -136,9 +136,12 @@ export const TransactionForm = ({
     const fields = Object.keys(formErrors);
     if (fields.length > 0) {
       const snapshot = getValues();
+      const errorDetails = fields
+        .map((f) => `${f}=${(formErrors as Record<string, { message?: string }>)[f]?.message ?? "?"}`)
+        .join("; ");
       setError("_general" as keyof TransactionFormValues, {
         type: "validation",
-        message: `Verifique os campos do formulário (${fields.join(", ")}) [type=${snapshot.transaction_type}, account=${snapshot.account_id}, dest=${snapshot.destination_account_id}, cat=${snapshot.category_id}]`,
+        message: `Verifique os campos. errors[${errorDetails}] values[type=${snapshot.transaction_type}, account=${snapshot.account_id}(${typeof snapshot.account_id}), dest=${snapshot.destination_account_id}(${typeof snapshot.destination_account_id}), cat=${snapshot.category_id}(${typeof snapshot.category_id}), date=${snapshot.date}]`,
       });
     }
     const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
