@@ -1,5 +1,6 @@
 import { Box, Button, Group, Stack } from "@mantine/core";
 import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { TransactionsTestIds } from "@/testIds";
 
 interface Props {
@@ -20,57 +21,61 @@ const footerStyle: React.CSSProperties = {
 };
 
 export function TransactionFormFooter({ loading, onSaveAndCreateAnother }: Props) {
+  // Render exactly one Salvar button so e2e selectors (and screen readers)
+  // never see two `BtnSave` testids at once.
+  const isMobile = useIsMobile();
+
   return (
     <Box style={footerStyle}>
-      {/* Mobile (< sm): Salvar full-width, "Salvar e criar outra" as a subtle link below */}
-      <Stack gap="xs" hiddenFrom="sm">
-        <Button
-          type="submit"
-          fullWidth
-          size="md"
-          loading={loading}
-          data-testid={TransactionsTestIds.BtnSave}
-        >
-          Salvar
-        </Button>
-        {onSaveAndCreateAnother && (
+      {isMobile ? (
+        <Stack gap="xs">
           <Button
-            type="button"
-            variant="subtle"
+            type="submit"
             fullWidth
-            size="sm"
+            size="md"
             loading={loading}
-            onClick={onSaveAndCreateAnother}
+            data-testid={TransactionsTestIds.BtnSave}
           >
-            Salvar e criar outra
+            Salvar
           </Button>
-        )}
-      </Stack>
-
-      {/* Desktop (>= sm): horizontal layout, primary Salvar on the right */}
-      <Group justify="space-between" visibleFrom="sm">
-        {onSaveAndCreateAnother ? (
+          {onSaveAndCreateAnother && (
+            <Button
+              type="button"
+              variant="subtle"
+              fullWidth
+              size="sm"
+              loading={loading}
+              onClick={onSaveAndCreateAnother}
+            >
+              Salvar e criar outra
+            </Button>
+          )}
+        </Stack>
+      ) : (
+        <Group justify="space-between">
+          {onSaveAndCreateAnother ? (
+            <Button
+              type="button"
+              variant="subtle"
+              loading={loading}
+              onClick={onSaveAndCreateAnother}
+              rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
+            >
+              Salvar e criar outra
+            </Button>
+          ) : (
+            <span />
+          )}
           <Button
-            type="button"
-            variant="subtle"
+            type="submit"
             loading={loading}
-            onClick={onSaveAndCreateAnother}
-            rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
+            rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
+            data-testid={TransactionsTestIds.BtnSave}
           >
-            Salvar e criar outra
+            Salvar
           </Button>
-        ) : (
-          <span />
-        )}
-        <Button
-          type="submit"
-          loading={loading}
-          rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
-          data-testid={TransactionsTestIds.BtnSave}
-        >
-          Salvar
-        </Button>
-      </Group>
+        </Group>
+      )}
     </Box>
   );
 }
