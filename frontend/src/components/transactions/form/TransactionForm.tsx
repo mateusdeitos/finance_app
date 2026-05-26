@@ -135,9 +135,10 @@ export const TransactionForm = ({
     // collapsed accordion. Field errors stay visible inline.
     const fields = Object.keys(formErrors);
     if (fields.length > 0) {
+      const snapshot = getValues();
       setError("_general" as keyof TransactionFormValues, {
         type: "validation",
-        message: `Verifique os campos do formulário (${fields.join(", ")})`,
+        message: `Verifique os campos do formulário (${fields.join(", ")}) [type=${snapshot.transaction_type}, account=${snapshot.account_id}, dest=${snapshot.destination_account_id}, cat=${snapshot.category_id}]`,
       });
     }
     const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
