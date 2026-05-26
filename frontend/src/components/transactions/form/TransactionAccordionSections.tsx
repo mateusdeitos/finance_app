@@ -153,10 +153,17 @@ export function TransactionAccordionSections({
   const tagsError = !!errors.tags;
   const splitError = !!errors.split_settings;
 
-  // If the active panel is "split" but split no longer applies (e.g. user
+  // Show the Divisão accordion when the user *can* create splits OR when
+  // the form already carries existing splits (Update flow for an expense
+  // whose linked partner connection is now inactive, shared account, etc.).
+  // Without the second condition, editing an old split-bearing transaction
+  // would silently hide its rows.
+  const splitVisible = splitApplicable || (splitSettings?.length ?? 0) > 0;
+
+  // If the active panel is "split" but the section isn't visible (e.g. user
   // switched to transfer), collapse everything instead of falling through.
   const effectivePanel: TransactionExtraPanel | null =
-    activePanel === "split" && !splitApplicable ? null : activePanel;
+    activePanel === "split" && !splitVisible ? null : activePanel;
 
   return (
     <Accordion
@@ -199,7 +206,7 @@ export function TransactionAccordionSections({
         </Accordion.Panel>
       </Accordion.Item>
 
-      {splitApplicable && (
+      {splitVisible && (
         <Accordion.Item value="split">
           <Accordion.Control>
             <Group justify="space-between" wrap="nowrap" gap="sm">

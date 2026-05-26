@@ -84,6 +84,7 @@ function SplitRowControls({
           min={1}
           max={100}
           suffix="%"
+          hideControls
           value={percentage}
           onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
           size="sm"
@@ -106,7 +107,7 @@ function SplitRowControls({
         />
       )}
 
-      <Text size="xs" c="dimmed" className={classes.preview}>
+      <Text size="sm" c="dimmed" className={classes.preview}>
         {mode === "percentage" && totalAmount > 0 ? `= R$ ${formatCurrency(calculatedAmount)}` : ""}
       </Text>
 
@@ -119,7 +120,7 @@ function SplitRowControls({
             onChange={(value) => field.onChange(value)}
             valueFormat="DD/MM/YYYY"
             placeholder="Acerto"
-            leftSection={<IconCalendar size={12} />}
+            leftSection={<IconCalendar size={14} />}
             clearable
             size="sm"
             classNames={{ input: classes.dateInput }}
