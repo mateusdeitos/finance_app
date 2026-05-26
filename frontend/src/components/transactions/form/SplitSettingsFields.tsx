@@ -8,7 +8,6 @@ import {
   Text,
   Alert,
   Stack,
-  Box,
   NumberInput,
   Tooltip,
   SegmentedControl,

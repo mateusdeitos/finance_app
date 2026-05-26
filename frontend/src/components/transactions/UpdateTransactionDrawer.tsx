@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Divider, Stack } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useTags } from "@/hooks/useTags";
@@ -17,6 +18,7 @@ import {
   TransactionFormValues,
 } from "./form/transactionFormSchema";
 import { TransactionForm, FocusField } from "./form/TransactionForm";
+import { MobileFormHeader } from "./form/MobileFormHeader";
 import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { TransactionsTestIds } from "@/testIds";
@@ -29,6 +31,8 @@ interface Props {
 export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
   const { opened, close } = useDrawerContext<void>();
   const [submitError, setSubmitError] = useState<string | undefined>();
+  const isMobile = useIsMobile();
+  const formId = useId();
 
   const { query: accountsQuery } = useAccounts();
   const accounts = accountsQuery.data ?? [];
@@ -133,13 +137,26 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
     <ResponsiveDrawer
       opened={opened}
       onClose={close}
-      title="Editar transação"
+      title={
+        isMobile ? (
+          <MobileFormHeader
+            title="Editar transação"
+            onCancel={close}
+            formId={formId}
+            loading={mutation.isPending}
+          />
+        ) : (
+          "Editar transação"
+        )
+      }
+      withCloseButton={!isMobile}
       size="lg"
       data-testid={TransactionsTestIds.DrawerUpdate}
     >
       <FormProvider {...methods}>
         <TransactionForm
           focusField={focusField}
+          formId={formId}
           onSubmitPayload={handleSubmitPayload as (values: TransactionFormValues) => void}
           onSaveAndCreateAnother={handleSaveAndCreateAnother as (values: TransactionFormValues) => void}
           isPending={mutation.isPending}

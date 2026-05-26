@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useState } from "react";
+import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useId, useState } from "react";
 import {
   useFormContext,
   Controller,
@@ -80,6 +80,11 @@ interface Props {
   extraContent?: ReactNode;
   /** When true, disables the current installment input in RecurrenceFields. */
   isUpdate?: boolean;
+  /**
+   * Stable id applied to the `<form>` element. Lets buttons outside the form
+   * (e.g. the mobile drawer header's Salvar) submit it via `form={...}`.
+   */
+  formId?: string;
 }
 
 export const TransactionForm = ({
@@ -90,7 +95,10 @@ export const TransactionForm = ({
   submitError,
   extraContent,
   isUpdate = false,
+  formId,
 }: Props) => {
+  const fallbackId = useId();
+  const resolvedFormId = formId ?? fallbackId;
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
 
@@ -220,7 +228,7 @@ export const TransactionForm = ({
   const typeColor = TYPE_COLOR[transactionType];
 
   return (
-    <form onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
+    <form id={resolvedFormId} onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
