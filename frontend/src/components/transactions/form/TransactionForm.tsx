@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useId, useState } from "react";
+import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useId } from "react";
 import {
   useFormContext,
   Controller,
@@ -112,7 +112,6 @@ export const TransactionForm = ({
     setError,
     clearErrors,
     setFocus,
-    getValues,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
@@ -128,32 +127,27 @@ export const TransactionForm = ({
   );
   const splitApplicable = !isTransfer && !isSharedAccount && hasConnectedAccounts;
 
-  const [activePanel, setActivePanel] = useState<TransactionExtraPanel | null>(() => {
-    const values = getValues();
-    if (values.recurrenceEnabled) return "recurrence";
-    if ((values.split_settings?.length ?? 0) > 0) return "split";
-    if ((values.tags?.length ?? 0) > 0) return "tags";
-    return null;
-  });
+  // Panels we want the Accordion to seed open. The Accordion is uncontrolled
+  // (multiple mode) — this value is only read on its first mount as the
+  // `defaultValue`. Any panel whose fields hold a validation error is added
+  // so it stays visible after a failed submit.
+  const panelsWithErrors: TransactionExtraPanel[] = (
+    ["recurrence", "split", "tags"] as const
+  ).filter(
+    (panel) =>
+      !(panel === "split" && !splitApplicable) &&
+      PANEL_ERROR_FIELDS[panel].some((f) => errors[f]),
+  );
 
-  /** On invalid submit, jump to the first panel holding an error so it isn't hidden. */
+  /** On invalid submit, surface a generic top-level alert. Field errors stay
+   *  visible inline; their parent accordion was either already open or will
+   *  remount with the panel in the `forceOpen` set on the next render. */
   const onInvalid = (formErrors: FieldErrors<TransactionFormValues>) => {
-    // Surface a generic top-level alert so users (and e2e tests) see that
-    // submission failed even when every individual error sits inside a
-    // collapsed accordion. Field errors stay visible inline.
     if (Object.keys(formErrors).length > 0) {
       setError("_general" as keyof TransactionFormValues, {
         type: "validation",
         message: "Verifique os campos destacados no formulário",
       });
-    }
-    const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
-    for (const panel of order) {
-      if (panel === "split" && !splitApplicable) continue;
-      if (PANEL_ERROR_FIELDS[panel].some((f) => formErrors[f])) {
-        setActivePanel(panel);
-        return;
-      }
     }
   };
 
@@ -429,8 +423,7 @@ export const TransactionForm = ({
         )}
 
         <TransactionAccordionSections
-          activePanel={activePanel}
-          onPanelChange={setActivePanel}
+          forceOpen={panelsWithErrors}
           splitApplicable={splitApplicable}
           isUpdate={isUpdate}
         />

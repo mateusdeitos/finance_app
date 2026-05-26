@@ -11,9 +11,13 @@ import { SplitSettingsFields } from "./SplitSettingsFields";
 import { TransactionFormValues } from "./transactionFormSchema";
 
 interface Props {
-  /** Which panel is open. `null` means all collapsed. */
-  activePanel: TransactionExtraPanel | null;
-  onPanelChange: (panel: TransactionExtraPanel | null) => void;
+  /**
+   * Panels that should be force-open. The accordion is in `multiple` mode so
+   * the user can toggle additional panels independently; this prop only seeds
+   * the *minimum* set that must stay visible (e.g. on submit-invalid we force
+   * the panel holding the error open).
+   */
+  forceOpen: TransactionExtraPanel[];
   /** Whether the "Divisão" panel applies (non-transfer, personal account, has connections). */
   splitApplicable: boolean;
   /** Forwarded to RecurrenceFields — disables the current installment input on updates. */
@@ -128,8 +132,7 @@ function TagsSummary() {
 }
 
 export function TransactionAccordionSections({
-  activePanel,
-  onPanelChange,
+  forceOpen,
   splitApplicable,
   isUpdate,
 }: Props) {
@@ -156,19 +159,26 @@ export function TransactionAccordionSections({
   // Show the Divisão accordion when the user *can* create splits OR when
   // the form already carries existing splits (Update flow for an expense
   // whose linked partner connection is now inactive, shared account, etc.).
-  // Without the second condition, editing an old split-bearing transaction
-  // would silently hide its rows.
   const splitVisible = splitApplicable || (splitSettings?.length ?? 0) > 0;
 
-  // If the active panel is "split" but the section isn't visible (e.g. user
-  // switched to transfer), collapse everything instead of falling through.
-  const effectivePanel: TransactionExtraPanel | null =
-    activePanel === "split" && !splitVisible ? null : activePanel;
+  // The accordion runs in `multiple` mode (uncontrolled): Mantine manages
+  // toggling internally. We only seed the *initial* open set:
+  // - any panel that already has data (recurrence enabled, splits, tags)
+  // - any panel that the parent flagged via `forceOpen` (e.g. submit-invalid
+  //   wants the panel with the error open). Note: this is a `defaultValue`
+  //   only — re-renders don't reset open state; users keep what they toggled.
+  const initialOpen = (() => {
+    const set = new Set<TransactionExtraPanel>(forceOpen);
+    if (recurrenceEnabled) set.add("recurrence");
+    if ((splitSettings?.length ?? 0) > 0) set.add("split");
+    if ((tags?.length ?? 0) > 0) set.add("tags");
+    return Array.from(set);
+  })();
 
   return (
     <Accordion
-      value={effectivePanel}
-      onChange={(value) => onPanelChange((value as TransactionExtraPanel | null) ?? null)}
+      multiple
+      defaultValue={initialOpen}
       variant="separated"
       chevronPosition="left"
       data-testid={TransactionsTestIds.SegmentedExtraSections}
