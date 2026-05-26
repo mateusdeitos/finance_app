@@ -101,6 +101,8 @@ export const TransactionForm = ({
     control,
     handleSubmit,
     setValue,
+    setError,
+    clearErrors,
     setFocus,
     getValues,
     formState: { errors, isSubmitting, dirtyFields },
@@ -128,6 +130,16 @@ export const TransactionForm = ({
 
   /** On invalid submit, jump to the first panel holding an error so it isn't hidden. */
   const onInvalid = (formErrors: FieldErrors<TransactionFormValues>) => {
+    // Surface a generic top-level alert so users (and e2e tests) see that
+    // submission failed even when every individual error sits inside a
+    // collapsed accordion. Field errors stay visible inline.
+    const fields = Object.keys(formErrors);
+    if (fields.length > 0) {
+      setError("_general" as keyof TransactionFormValues, {
+        type: "validation",
+        message: `Verifique os campos do formulário (${fields.join(", ")})`,
+      });
+    }
     const order: TransactionExtraPanel[] = ["recurrence", "split", "tags"];
     for (const panel of order) {
       if (panel === "split" && !splitApplicable) continue;
@@ -141,6 +153,7 @@ export const TransactionForm = ({
   const generalError = submitError ?? (errors as Record<string, { message?: string }>)["_general"]?.message;
 
   const onSubmit = (values: TransactionFormValues) => {
+    clearErrors("_general" as keyof TransactionFormValues);
     onSubmitPayload({ ...values, date: values.date });
   };
 
