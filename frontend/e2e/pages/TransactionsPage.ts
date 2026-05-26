@@ -115,19 +115,20 @@ export class TransactionsPage {
 
   /**
    * Expand the recurrence / split / tags accordion in the create-or-update form
-   * so its content (Switch, inputs, etc.) becomes visible. No-op if already open
-   * — clicking the header toggles, so callers should only call this once.
+   * so its content becomes visible. No-op if already open — clicking the header
+   * toggles, so callers should only call this once.
    */
   async expandExtraSection(panel: "recurrence" | "split" | "tags", drawer?: Locator) {
     const container = drawer ?? this.formDrawer;
-    const header = container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel));
-    await header.scrollIntoViewIfNeeded();
-    // `force: true` bypasses Playwright's actionability stability check.
-    // Mantine Drawer mounts trigger transient layout shifts (queries loading,
-    // Selects populating, drag-handle animating in) that have caused the
-    // accordion header to be flagged "not stable" for the full timeout window.
-    // The header is a real <button> — clicking it is safe even mid-animation.
-    await header.click({ force: true });
+    const titleEl = container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel));
+    // The testid lives on a <Text> inside Accordion.Control's UnstyledButton.
+    // Click the actual <button> to guarantee the onClick fires reliably (and to
+    // give us a stable element to wait `aria-expanded` on).
+    const button = titleEl.locator("xpath=ancestor::button[1]");
+    if ((await button.getAttribute("aria-expanded")) === "true") return;
+    await button.scrollIntoViewIfNeeded();
+    await button.click({ force: true });
+    await expect(button).toHaveAttribute("aria-expanded", "true", { timeout: 5000 });
   }
 
   async selectType(type: TransactionType) {
