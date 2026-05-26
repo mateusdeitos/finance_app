@@ -152,7 +152,8 @@ export class TransactionsPage {
   }
 
   async submitForm() {
-    await this.page.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.assertNoFormErrors();
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
