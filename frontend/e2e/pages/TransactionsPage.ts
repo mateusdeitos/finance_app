@@ -65,7 +65,11 @@ export class TransactionsPage {
 
   /** Assert no form error alert is visible. Call after submit to catch validation/API errors early. */
   async assertNoFormErrors() {
-    await expect(this.page.getByTestId(TransactionsTestIds.AlertFormError)).not.toBeVisible();
+    const alert = this.page.getByTestId(TransactionsTestIds.AlertFormError);
+    if (await alert.isVisible()) {
+      const text = (await alert.textContent()) ?? "<empty>";
+      throw new Error(`Form error alert visible: ${text.trim()}`);
+    }
   }
 
   /** Clear the description input and type a new value. */
