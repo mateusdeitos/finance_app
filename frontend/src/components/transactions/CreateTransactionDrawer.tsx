@@ -115,6 +115,7 @@ export function CreateTransactionDrawer() {
       opened={opened}
       onClose={close}
       title={TYPE_LABELS[transactionType]}
+      size="lg"
       data-testid={TransactionsTestIds.DrawerCreate}
     >
       <FormProvider {...methods}>

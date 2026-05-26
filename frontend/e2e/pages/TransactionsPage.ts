@@ -113,6 +113,16 @@ export class TransactionsPage {
     await expect(this.formDrawer).toBeVisible();
   }
 
+  /**
+   * Expand the recurrence / split / tags accordion in the create-or-update form
+   * so its content (Switch, inputs, etc.) becomes visible. No-op if already open
+   * — clicking the header toggles, so callers should only call this once.
+   */
+  async expandExtraSection(panel: "recurrence" | "split" | "tags", drawer?: Locator) {
+    const container = drawer ?? this.formDrawer;
+    await container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel)).click();
+  }
+
   async selectType(type: TransactionType) {
     await new SegmentedField(this.formDrawer, TransactionsTestIds.SegmentedTransactionType).pick(
       TransactionsTestIds.SegmentTransactionType(type),

@@ -91,7 +91,8 @@ test.describe('Recurrence current installment disabled state', () => {
     await transactionsPage.clickTransactionRow(tx.id)
     await expect(transactionsPage.updateDrawer).toBeVisible()
 
-    // Enable recurrence toggle (Recorrência panel is the default active panel)
+    // Expand the recurrence accordion and enable the toggle
+    await transactionsPage.expandExtraSection('recurrence', transactionsPage.updateDrawer)
     await new SwitchField(transactionsPage.updateDrawer, TransactionsTestIds.SwitchRecurrenceEnabled).set(true)
 
     const currentInstallmentInput = transactionsPage.updateDrawer.getByLabel('Parcela atual')

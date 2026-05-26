@@ -134,6 +134,7 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       opened={opened}
       onClose={close}
       title="Editar transação"
+      size="lg"
       data-testid={TransactionsTestIds.DrawerUpdate}
     >
       <FormProvider {...methods}>

@@ -24,7 +24,7 @@ function dateFromOffset(offsetDays: number): string {
 
 export function DateQuickChips({ value, onChange }: Props) {
   return (
-    <Group gap={6} mt={6}>
+    <Group gap={6} mt={6} wrap="wrap">
       {CHIPS.map((chip) => {
         const chipDate = dateFromOffset(chip.offsetDays);
         const active = value === chipDate;
