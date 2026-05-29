@@ -48,6 +48,12 @@ export const DescriptionAutocomplete = forwardRef<HTMLInputElement, Props>(funct
       error={error}
       data-testid={TransactionsTestIds.InputDescription}
       defaultDropdownOpened={false}
+      // Mantine's `openOnFocus` defaults to `true`: focusing the input opens
+      // the suggestion dropdown. When the Drawer's FocusTrap activates and
+      // tab-lands on the description field, an unwanted portal pops up over
+      // the rest of the form and intercepts clicks. Restrict opening to
+      // explicit user interaction (click or typing).
+      openOnFocus={false}
       renderOption={({ option }) => (
         <span data-testid={TransactionsTestIds.OptionDescriptionSuggestion(option.value)}>
           {option.value}

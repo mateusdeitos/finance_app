@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCategories } from "@/hooks/useCategories";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useMe } from "@/hooks/useMe";
 import { useTransactionPrefill } from "@/hooks/useTransactionPrefill";
 import { useCreateTransaction } from "@/hooks/useCreateTransaction";
@@ -16,6 +17,7 @@ import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
 import { TransactionForm } from "./form/TransactionForm";
+import { MobileFormHeader } from "./form/MobileFormHeader";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { TransactionsTestIds } from '@/testIds'
 
@@ -28,6 +30,8 @@ const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
 export function CreateTransactionDrawer() {
   const { opened, close } = useDrawerContext<void>();
   const [submitError, setSubmitError] = useState<string | undefined>();
+  const isMobile = useIsMobile();
+  const formId = useId();
 
   const { query: meQuery } = useMe((me) => me.id);
   const currentUserId = meQuery.data ?? 0;
@@ -114,12 +118,26 @@ export function CreateTransactionDrawer() {
     <ResponsiveDrawer
       opened={opened}
       onClose={close}
-      title={TYPE_LABELS[transactionType]}
+      title={
+        isMobile ? (
+          <MobileFormHeader
+            title={TYPE_LABELS[transactionType]}
+            onCancel={close}
+            formId={formId}
+            loading={mutation.isPending}
+          />
+        ) : (
+          TYPE_LABELS[transactionType]
+        )
+      }
+      withCloseButton={!isMobile}
+      size="lg"
       data-testid={TransactionsTestIds.DrawerCreate}
     >
       <FormProvider {...methods}>
         <TransactionForm
           focusField="amount"
+          formId={formId}
           onSubmitPayload={handleSubmitPayload}
           onSaveAndCreateAnother={handleSaveAndCreateAnother}
           isPending={mutation.isPending}

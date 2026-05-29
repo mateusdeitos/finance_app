@@ -1,4 +1,5 @@
 import { MantineProvider } from "@mantine/core";
+import { DatesProvider } from "@mantine/dates";
 import { useDisclosure, useTimeout } from "@mantine/hooks";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterContextProvider } from "@tanstack/react-router";
@@ -82,7 +83,9 @@ export function renderDrawer<T>(factory: () => ReactElement): Promise<T> {
           <QueryClientProvider client={queryClient}>
             <RouterContextProvider router={router}>
               <MantineProvider theme={theme} defaultColorScheme="auto">
-                {factory()}
+                <DatesProvider settings={{ locale: "pt-br", firstDayOfWeek: 0 }}>
+                  {factory()}
+                </DatesProvider>
               </MantineProvider>
             </RouterContextProvider>
           </QueryClientProvider>

@@ -8,16 +8,14 @@ import {
   Text,
   Alert,
   Stack,
-  Divider,
-  Box,
   NumberInput,
   Tooltip,
-  Switch,
+  SegmentedControl,
   Select,
-  Anchor,
+  UnstyledButton,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-import { IconX, IconPercentage, IconCurrencyReal } from "@tabler/icons-react";
+import { IconX, IconPlus, IconCheck, IconCalendar } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
 import {
   Controller,
@@ -31,6 +29,9 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useMe } from "@/hooks/useMe";
 import { getInitials } from "@/utils/getInitials";
 import { TransactionsTestIds } from "@/testIds";
+import classes from "./SplitSettingsFields.module.css";
+
+type SplitMode = "percentage" | "amount";
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString("pt-BR", {
@@ -39,23 +40,23 @@ function formatCurrency(cents: number): string {
   });
 }
 
-// ─── SplitRowControls ─────────────────────────────────────────────────────────
+// ─── SplitRowControls (inputs + date) ────────────────────────────────────────
 
 interface SplitRowControlsProps {
   account: Transactions.Account;
   currentUserId: number;
   totalAmount: number;
-  rowPath: string; // full RHF path to this row's `amount` field
+  rowPath: string;
   rowIndex: number;
   error?: string;
-  onlyPercentage: boolean;
+  mode: SplitMode;
 }
 
 function SplitRowControls({
   account,
   currentUserId,
   totalAmount,
-  onlyPercentage,
+  mode,
   rowPath,
   rowIndex,
   error,
@@ -66,85 +67,49 @@ function SplitRowControls({
   const percentageFieldName = `${rowPath}.percentage`;
   const dateFieldName = `${rowPath}.date`;
 
-  const fieldValue = (useWatch({ control, name: amountFieldName }) as number | undefined) ?? 0;
-
   const conn = account.user_connection!;
   const isFrom = conn.from_user_id === currentUserId;
   const defaultPercentage = isFrom ? conn.from_default_split_percentage : conn.to_default_split_percentage;
 
-  const [mode, setMode] = useState<"percentage" | "amount">(() =>
-    fieldValue > 0 && !onlyPercentage ? "amount" : "percentage",
-  );
   const [percentage, setPercentage] = useState(defaultPercentage);
 
   const calculatedAmount = Math.round((totalAmount * percentage) / 100);
 
   useSyncSplitAmount(setValue, amountFieldName, percentageFieldName, mode, calculatedAmount, percentage);
 
-  function toggleMode() {
-    const next = mode === "percentage" ? "amount" : "percentage";
-    if (next === "amount") {
-      setValue(amountFieldName, calculatedAmount);
-      setValue(percentageFieldName, undefined);
-    }
-    setMode(next);
-  }
-
   return (
-    <>
-      {!onlyPercentage && (
-        <Tooltip label={mode === "percentage" ? "Mudar para valor fixo" : "Mudar para percentual"} withArrow>
-          <Switch
-            size="md"
-            checked={mode === "amount"}
-            onChange={toggleMode}
-            thumbIcon={
-              mode === "percentage" ? (
-                <IconPercentage size={10} stroke={3} color="var(--mantine-color-blue-6)" />
-              ) : (
-                <IconCurrencyReal size={10} stroke={3} color="var(--mantine-color-teal-6)" />
-              )
-            }
-            styles={{ track: { cursor: "pointer" } }}
-          />
-        </Tooltip>
+    <div className={classes.controlsRow}>
+      {mode === "percentage" ? (
+        <NumberInput
+          min={1}
+          max={100}
+          suffix="%"
+          hideControls
+          value={percentage}
+          onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
+          size="sm"
+          classNames={{ input: classes.pctInput }}
+          data-testid={TransactionsTestIds.InputSplitPercentage}
+        />
+      ) : (
+        <Controller
+          control={control}
+          name={amountFieldName}
+          render={({ field }) => (
+            <CurrencyInput
+              ref={field.ref}
+              value={(field.value as number | undefined) ?? 0}
+              onChange={field.onChange}
+              error={error}
+              data-testid={TransactionsTestIds.InputSplitAmount}
+            />
+          )}
+        />
       )}
 
-      {mode === "percentage" ? (
-        <Group gap="xs" align="center" wrap="nowrap" style={{ flex: 1 }}>
-          <NumberInput
-            min={1}
-            max={100}
-            suffix="%"
-            value={percentage}
-            onChange={(val) => setPercentage(Math.min(100, Math.max(1, Number(val))))}
-            style={{ width: 90 }}
-            size="sm"
-            data-testid={TransactionsTestIds.InputSplitPercentage}
-          />
-          {totalAmount > 0 && (
-            <Text size="sm" c="dimmed">
-              = R$ {formatCurrency(calculatedAmount)}
-            </Text>
-          )}
-        </Group>
-      ) : (
-        <Box style={{ flex: 1 }}>
-          <Controller
-            control={control}
-            name={amountFieldName}
-            render={({ field }) => (
-              <CurrencyInput
-                ref={field.ref}
-                value={(field.value as number | undefined) ?? 0}
-                onChange={field.onChange}
-                error={error}
-                data-testid={TransactionsTestIds.InputSplitAmount}
-              />
-            )}
-          />
-        </Box>
-      )}
+      <Text size="sm" c="dimmed" className={classes.preview}>
+        {mode === "percentage" && totalAmount > 0 ? `= R$ ${formatCurrency(calculatedAmount)}` : ""}
+      </Text>
 
       <Controller
         control={control}
@@ -154,22 +119,22 @@ function SplitRowControls({
             value={(field.value as string | null) ?? null}
             onChange={(value) => field.onChange(value)}
             valueFormat="DD/MM/YYYY"
-            placeholder="Data acerto"
+            placeholder="Acerto"
+            leftSection={<IconCalendar size={14} />}
             clearable
             size="sm"
-            style={{ width: 130, flexShrink: 0 }}
+            classNames={{ input: classes.dateInput }}
             data-testid={TransactionsTestIds.InputSplitDate(rowIndex)}
           />
         )}
       />
-    </>
+    </div>
   );
 }
 
-// ─── SplitRow ─────────────────────────────────────────────────────────────────
+// ─── SplitRow (card per partner) ─────────────────────────────────────────────
 
 interface SplitRowProps {
-  /** Full RHF path to this split row, e.g. `"split_settings.0"` or `"rows.2.split_settings.0"`. */
   rowPath: string;
   rowIndex: number;
   connectedAccounts: Transactions.Account[];
@@ -179,7 +144,7 @@ interface SplitRowProps {
   onRemove: () => void;
   error?: string;
   comboboxWithinPortal?: boolean;
-  onlyPercentage?: boolean;
+  mode: SplitMode;
 }
 
 function SplitRow({
@@ -192,7 +157,7 @@ function SplitRow({
   onRemove,
   error,
   comboboxWithinPortal = true,
-  onlyPercentage = false,
+  mode,
 }: SplitRowProps) {
   const { control, setValue } = useFormContext<FieldValues>();
   const connectionId = useWatch({
@@ -215,47 +180,64 @@ function SplitRow({
 
   if (!connectionId || connectionId === 0) {
     return (
-      <Group gap="sm" align="center" wrap="nowrap">
-        <Select
-          placeholder="Selecionar conta"
-          data={selectData}
-          size="sm"
-          style={{ flex: 1 }}
-          comboboxProps={{ withinPortal: comboboxWithinPortal }}
-          onChange={(val) => {
-            if (val) {
-              setValue(`${rowPath}.connection_id`, Number(val));
-            }
-          }}
-        />
-        <ActionIcon size="sm" variant="subtle" color="red" onClick={onRemove} title="Remover divisão">
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      <div className={classes.card}>
+        <Group gap="sm" align="center" wrap="nowrap">
+          <Select
+            placeholder="Selecionar conta"
+            data={selectData}
+            size="sm"
+            style={{ flex: 1 }}
+            comboboxProps={{ withinPortal: comboboxWithinPortal }}
+            onChange={(val) => {
+              if (val) setValue(`${rowPath}.connection_id`, Number(val));
+            }}
+          />
+          <ActionIcon variant="subtle" color="gray" onClick={onRemove} title="Remover divisão">
+            <IconX size={14} />
+          </ActionIcon>
+        </Group>
+      </div>
     );
   }
 
+  const partnerName = selectedAccount?.description || selectedAccount?.name || "";
+
   return (
     <Stack gap={4}>
-      <Group gap="sm" align="center" wrap="nowrap">
-        {selectedAccount && (
-          <Tooltip label={selectedAccount.description ?? selectedAccount.name} withArrow>
+      <div className={classes.card}>
+        <div className={classes.headerRow}>
+          {selectedAccount && (
             <Avatar
-              size="sm"
+              size={22}
               radius="xl"
-              color="blue"
-              src={selectedAccount.user_connection
-                ? (selectedAccount.user_connection.from_user_id === selectedAccount.user_id
+              color="grape"
+              src={
+                selectedAccount.user_connection
+                  ? selectedAccount.user_connection.from_user_id === selectedAccount.user_id
                     ? selectedAccount.user_connection.to_user_avatar_url
-                    : selectedAccount.user_connection.from_user_avatar_url)
-                : undefined}
+                    : selectedAccount.user_connection.from_user_avatar_url
+                  : undefined
+              }
               imageProps={{ referrerPolicy: "no-referrer" }}
-              style={{ cursor: "default" }}
             >
-              {getInitials(selectedAccount.description || selectedAccount.name)}
+              {getInitials(partnerName)}
             </Avatar>
+          )}
+          <Tooltip label={partnerName} withArrow disabled={partnerName.length <= 30}>
+            <Text size="sm" fw={500} className={classes.name}>
+              {partnerName}
+            </Text>
           </Tooltip>
-        )}
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={onRemove}
+            title="Remover divisão"
+            className={classes.removeBtn}
+          >
+            <IconX size={14} />
+          </ActionIcon>
+        </div>
 
         {selectedAccount && (
           <SplitRowControls
@@ -265,21 +247,10 @@ function SplitRow({
             rowPath={rowPath}
             rowIndex={rowIndex}
             error={error}
-            onlyPercentage={onlyPercentage}
+            mode={mode}
           />
         )}
-
-        <ActionIcon
-          size="sm"
-          variant="subtle"
-          color="red"
-          onClick={onRemove}
-          title="Remover divisão"
-          style={{ flexShrink: 0 }}
-        >
-          <IconX size={14} />
-        </ActionIcon>
-      </Group>
+      </div>
 
       {error && (
         <Text size="xs" c="red">
@@ -293,20 +264,11 @@ function SplitRow({
 // ─── SplitSettingsFields ─────────────────────────────────────────────────────
 
 interface SplitSettingsFieldsProps {
-  /**
-   * Prefix prepended to every field name, e.g. `"rows.2."`.
-   * Defaults to `""` (top-level), which is the transaction form usage.
-   */
+  /** Prefix prepended to every field name, e.g. `"rows.2."`. */
   namePrefix?: string;
-  /**
-   * Whether the connection Select's dropdown renders inside a portal.
-   * Set to `false` when used inside a Popover.
-   */
+  /** Whether the connection Select's dropdown renders inside a portal. */
   comboboxWithinPortal?: boolean;
-
-  /**
-   * Whether to allow settings the split as amount
-   */
+  /** Force percentage-only mode (used by Bulk + Import flows). */
   onlyPercentage?: boolean;
 }
 
@@ -322,10 +284,17 @@ export function SplitSettingsFields({
   const totalAmount = (useWatch({ control, name: `${namePrefix}amount` }) as number) ?? 0;
 
   const fieldName = `${namePrefix}split_settings`;
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: fieldName,
+  const { fields, append, remove } = useFieldArray({ control, name: fieldName });
+
+  // Lifted toggle: a single %/R$ mode applies to every row in the section.
+  const [mode, setMode] = useState<SplitMode>(() => {
+    if (onlyPercentage) return "percentage";
+    // If any row already has a fixed amount (no percentage), start in "amount".
+    const initial = (fields as unknown as { amount?: number; percentage?: number }[]) ?? [];
+    const looksFixed = initial.some((r) => (r.amount ?? 0) > 0 && r.percentage == null);
+    return looksFixed ? "amount" : "percentage";
   });
+  const effectiveMode: SplitMode = onlyPercentage ? "percentage" : mode;
 
   const { query: meQuery } = useMe((me) => me.id);
   const currentUserId = meQuery.data ?? 0;
@@ -346,20 +315,40 @@ export function SplitSettingsFields({
       },
     }) ?? [];
 
+  // Sum of partners' shares — used to surface the implicit user remainder.
+  const partnerAmounts =
+    (useWatch({ control, name: fieldName }) as { amount?: number }[] | undefined) ?? [];
+  const partnerSum = partnerAmounts.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const sumPct = totalAmount > 0 ? Math.round((partnerSum * 100) / totalAmount) : 0;
+  const isHundred = totalAmount > 0 && partnerSum === totalAmount;
+
   if (connectedAccounts.length === 0) return null;
 
   const hasAvailableConnections =
-    connectedAccounts.filter((a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id)).length > 0;
+    connectedAccounts.filter((a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id))
+      .length > 0;
 
   const fieldError = (suffix: string) => getFieldErrorMessage(errors, `${namePrefix}${suffix}`);
-
   const generalError = fieldError("split_settings");
 
   return (
     <Stack gap="xs">
-      <Text fw={500} size="sm">
-        Divisão
-      </Text>
+      <Group justify="space-between" align="center">
+        <Text size="xs" c="dimmed" fw={500}>
+          Divisão entre pessoas
+        </Text>
+        {!onlyPercentage && (
+          <SegmentedControl
+            size="xs"
+            value={mode}
+            onChange={(v) => setMode(v as SplitMode)}
+            data={[
+              { value: "percentage", label: "%" },
+              { value: "amount", label: "R$" },
+            ]}
+          />
+        )}
+      </Group>
 
       {generalError && (
         <Alert color="red" variant="light" p="xs">
@@ -367,9 +356,7 @@ export function SplitSettingsFields({
         </Alert>
       )}
 
-      <Divider />
-
-      <Stack gap="sm">
+      <Stack gap="xs">
         {fields.map((field, index) => {
           const othersUsed = (fields as unknown as { connection_id: number }[])
             .filter((_, i) => i !== index)
@@ -390,17 +377,17 @@ export function SplitSettingsFields({
               onRemove={() => remove(index)}
               error={rowError}
               comboboxWithinPortal={comboboxWithinPortal}
-              onlyPercentage={onlyPercentage}
+              mode={effectiveMode}
             />
           );
         })}
+      </Stack>
 
-        {hasAvailableConnections && (
-          <Anchor
-            component="button"
+      <Group justify="space-between" align="center" mt={4}>
+        {hasAvailableConnections ? (
+          <UnstyledButton
             type="button"
-            size="sm"
-            c="dimmed"
+            className={classes.addBtn}
             onClick={() => {
               const available = connectedAccounts.filter(
                 (a) => a.user_connection && !usedConnectionIds.includes(a.user_connection.id),
@@ -408,13 +395,23 @@ export function SplitSettingsFields({
               const connectionId = available.length === 1 ? available[0].user_connection!.id : 0;
               append({ connection_id: connectionId, amount: 0, date: null });
             }}
-            style={{ alignSelf: "flex-start" }}
             data-testid={TransactionsTestIds.BtnAddSplitRow}
           >
-            + Adicionar divisão
-          </Anchor>
+            <IconPlus size={13} />
+            <span>Adicionar pessoa</span>
+          </UnstyledButton>
+        ) : (
+          <span />
         )}
-      </Stack>
+        {fields.length > 0 && totalAmount > 0 && (
+          <Group gap={4} align="center">
+            {isHundred && <IconCheck size={12} color="var(--mantine-color-teal-6)" stroke={3} />}
+            <Text size="xs" fw={600} c={isHundred ? "teal" : "dimmed"}>
+              {`Soma ${sumPct}% (R$ ${formatCurrency(partnerSum)})`}
+            </Text>
+          </Group>
+        )}
+      </Group>
     </Stack>
   );
 }

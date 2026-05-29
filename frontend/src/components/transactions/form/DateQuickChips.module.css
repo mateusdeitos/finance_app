@@ -1,0 +1,23 @@
+.chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: var(--mantine-color-dimmed);
+  border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  line-height: 1.4;
+}
+
+.chip:hover {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-white));
+}
+
+.chip[data-active] {
+  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+  color: light-dark(var(--mantine-color-blue-7), var(--mantine-color-blue-4));
+  border-color: var(--mantine-color-blue-6);
+}

@@ -109,7 +109,8 @@ test.describe('Recurrence', () => {
     // Fill the main expense fields first
     await transactionsPage.fillExpense(1000, `Parcela invalida - e2e ${Date.now()}`, testAccountId, testCategoryId)
 
-    // Enable recurrence toggle (Recorrência panel is the default active panel)
+    // Expand the recurrence accordion and enable the toggle
+    await transactionsPage.expandExtraSection('recurrence')
     await new SwitchField(transactionsPage.formDrawer, TransactionsTestIds.SwitchRecurrenceEnabled).set(true)
 
     // Fill invalid values: current (5) > total (3)

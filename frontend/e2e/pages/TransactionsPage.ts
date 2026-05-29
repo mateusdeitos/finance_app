@@ -65,7 +65,11 @@ export class TransactionsPage {
 
   /** Assert no form error alert is visible. Call after submit to catch validation/API errors early. */
   async assertNoFormErrors() {
-    await expect(this.page.getByTestId(TransactionsTestIds.AlertFormError)).not.toBeVisible();
+    const alert = this.page.getByTestId(TransactionsTestIds.AlertFormError);
+    if (await alert.isVisible()) {
+      const text = (await alert.textContent()) ?? "<empty>";
+      throw new Error(`Form error alert visible: ${text.trim()}`);
+    }
   }
 
   /** Clear the description input and type a new value. */
@@ -107,6 +111,30 @@ export class TransactionsPage {
   async openCreateForm() {
     await this.page.getByTestId(TransactionsTestIds.BtnNew).first().click();
     await expect(this.formDrawer).toBeVisible();
+  }
+
+  /**
+   * Expand the recurrence / split / tags accordion in the create-or-update form
+   * so its content becomes visible. No-op if already open.
+   *
+   * Uses dispatchEvent('click') directly on the Accordion.Control button
+   * because:
+   *   - Playwright `.click()` flagged the element as "not stable" (Mantine's
+   *     drawer slide-in animation shifts coordinates by a few px during the
+   *     transition);
+   *   - `.click({ force: true })` then dispatched at the original coords and
+   *     missed the moving target (aria-expanded stayed "false");
+   *   - `dispatchEvent` sends a synthetic click straight to the element — no
+   *     actionability check, no coordinate hit-test. The Accordion's onClick
+   *     fires deterministically.
+   */
+  async expandExtraSection(panel: "recurrence" | "split" | "tags", drawer?: Locator) {
+    const container = drawer ?? this.formDrawer;
+    const titleEl = container.getByTestId(TransactionsTestIds.SegmentExtraSection(panel));
+    const button = titleEl.locator("xpath=ancestor::button[1]");
+    if ((await button.getAttribute("aria-expanded")) === "true") return;
+    await button.dispatchEvent("click");
+    await expect(button).toHaveAttribute("aria-expanded", "true", { timeout: 5000 });
   }
 
   async selectType(type: TransactionType) {
@@ -152,7 +180,8 @@ export class TransactionsPage {
   }
 
   async submitForm() {
-    await this.page.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSave).click();
+    await this.assertNoFormErrors();
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
