@@ -32,6 +32,7 @@ import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionAccordionSections } from "./TransactionAccordionSections";
 import { DateQuickChips } from "./DateQuickChips";
 import { TransactionFormFooter } from "./TransactionFormFooter";
+import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
 import { TransactionsTestIds, type TransactionExtraPanel, type TransactionType } from "@/testIds";
 
@@ -112,6 +113,21 @@ interface Props {
    * (e.g. the mobile drawer header's Salvar) submit it via `form={...}`.
    */
   formId?: string;
+  /**
+   * When provided, the source-account Select is replaced with a read-only
+   * display of the partner's avatar + name. Used in the Update flow when
+   * the transaction's account belongs to another user (e.g. the credit side
+   * of a cross-user transfer created from a charge acceptance).
+   */
+  lockedSourceAccount?: LockedAccountInfo;
+  /** Same as `lockedSourceAccount`, applied to `destination_account_id`. */
+  lockedDestinationAccount?: LockedAccountInfo;
+}
+
+export interface LockedAccountInfo {
+  avatarUrl?: string;
+  name: string;
+  description?: string;
 }
 
 export const TransactionForm = ({
@@ -123,6 +139,8 @@ export const TransactionForm = ({
   extraContent,
   isUpdate = false,
   formId,
+  lockedSourceAccount,
+  lockedDestinationAccount,
 }: Props) => {
   const fallbackId = useId();
   const resolvedFormId = formId ?? fallbackId;
@@ -322,7 +340,15 @@ export const TransactionForm = ({
             )}
           />
 
-          {isTransfer ? (
+          {lockedSourceAccount ? (
+            <ReadOnlyAccountField
+              label="Conta"
+              required
+              avatarUrl={lockedSourceAccount.avatarUrl}
+              name={lockedSourceAccount.name}
+              description={lockedSourceAccount.description}
+            />
+          ) : isTransfer ? (
             <Controller
               key="account-personal"
               control={control}
@@ -398,30 +424,40 @@ export const TransactionForm = ({
         />
 
         {isTransfer ? (
-          <Controller
-            key="destination-account"
-            control={control}
-            name="destination_account_id"
-            render={({ field }) => {
-              const selected = accounts.find((a) => a.id === field.value);
-              return (
-                <Select
-                  ref={field.ref}
-                  label="Conta de destino"
-                  required
-                  data={groupedAccountOptions}
-                  value={field.value ? String(field.value) : null}
-                  onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                  error={errors.destination_account_id?.message}
-                  searchable
-                  leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
-                  renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionDestinationAccount)}
-                  data-testid={TransactionsTestIds.SelectDestinationAccount}
-                />
-              );
-            }}
-          />
+          lockedDestinationAccount ? (
+            <ReadOnlyAccountField
+              label="Conta de destino"
+              required
+              avatarUrl={lockedDestinationAccount.avatarUrl}
+              name={lockedDestinationAccount.name}
+              description={lockedDestinationAccount.description}
+            />
+          ) : (
+            <Controller
+              key="destination-account"
+              control={control}
+              name="destination_account_id"
+              render={({ field }) => {
+                const selected = accounts.find((a) => a.id === field.value);
+                return (
+                  <Select
+                    ref={field.ref}
+                    label="Conta de destino"
+                    required
+                    data={groupedAccountOptions}
+                    value={field.value ? String(field.value) : null}
+                    onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
+                    error={errors.destination_account_id?.message}
+                    searchable
+                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
+                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionDestinationAccount)}
+                    data-testid={TransactionsTestIds.SelectDestinationAccount}
+                  />
+                );
+              }}
+            />
+          )
         ) : (
           <Controller
             key="category"
