@@ -13,13 +13,16 @@ import {
   SegmentedControl,
   Select,
   Alert,
+  Badge,
   SimpleGrid,
   Group,
+  Text,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
 import { IconTrendingDown, IconTrendingUp, IconArrowRight } from "@tabler/icons-react";
 import { DatePickerInput } from "@mantine/dates";
+import { AccountAvatar } from "@/components/AccountAvatar";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
@@ -55,6 +58,30 @@ const PANEL_ERROR_FIELDS: Record<TransactionExtraPanel, (keyof TransactionFormVa
   split: ["split_settings"],
   tags: ["tags"],
 };
+
+/** Renders an account Select option with avatar + name + shared badge. */
+function renderAccountOption(
+  accounts: Transactions.Account[],
+  testIdFor: (id: string) => string,
+) {
+  const Component = ({ option }: { option: ComboboxItem }) => {
+    const acc = accounts.find((a) => String(a.id) === option.value);
+    return (
+      <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }} data-testid={testIdFor(option.value)}>
+        <AccountAvatar account={acc} size={22} />
+        <Text size="sm" style={{ flex: 1, minWidth: 0 }} truncate>
+          {acc?.name ?? option.label}
+        </Text>
+        {acc?.user_connection && (
+          <Badge size="xs" color="grape" variant="light">
+            Compartilhada
+          </Badge>
+        )}
+      </Group>
+    );
+  };
+  return Component;
+}
 
 /** Mantine color associated with each transaction type — drives the segmented indicator. */
 const TYPE_COLOR: Record<TransactionType, string> = {
@@ -300,57 +327,57 @@ export const TransactionForm = ({
               key="account-personal"
               control={control}
               name="account_id"
-              render={({ field }) => (
-                <Select
-                  ref={field.ref}
-                  label="Conta"
-                  required
-                  data={personalAccountOptions}
-                  value={field.value ? String(field.value) : null}
-                  onChange={(val) => field.onChange(val ? Number(val) : null)}
-                  onBlur={makeSelectBlurHandler(personalAccountOptions, (val) => field.onChange(val))}
-                  error={errors.account_id?.message}
-                  searchable
-                  renderOption={({ option }) => (
-                    <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
-                      {option.label}
-                    </span>
-                  )}
-                  data-testid={TransactionsTestIds.SelectAccount}
-                />
-              )}
+              render={({ field }) => {
+                const selected = accounts.find((a) => a.id === field.value);
+                return (
+                  <Select
+                    ref={field.ref}
+                    label="Conta"
+                    required
+                    data={personalAccountOptions}
+                    value={field.value ? String(field.value) : null}
+                    onChange={(val) => field.onChange(val ? Number(val) : null)}
+                    onBlur={makeSelectBlurHandler(personalAccountOptions, (val) => field.onChange(val))}
+                    error={errors.account_id?.message}
+                    searchable
+                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
+                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionAccount)}
+                    data-testid={TransactionsTestIds.SelectAccount}
+                  />
+                );
+              }}
             />
           ) : (
             <Controller
               key="account-grouped"
               control={control}
               name="account_id"
-              render={({ field }) => (
-                <Select
-                  ref={field.ref}
-                  label="Conta"
-                  required
-                  data={groupedAccountOptions}
-                  value={field.value ? String(field.value) : null}
-                  onChange={(val) => {
-                    field.onChange(val ? Number(val) : null);
-                    // Clear split settings when selecting a shared account
-                    const acct = accounts.find((a) => a.id === Number(val));
-                    if (acct?.user_connection) {
-                      setValue("split_settings", []);
-                    }
-                  }}
-                  onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                  error={errors.account_id?.message}
-                  searchable
-                  renderOption={({ option }) => (
-                    <span data-testid={TransactionsTestIds.OptionAccount(option.value)}>
-                      {option.label}
-                    </span>
-                  )}
-                  data-testid={TransactionsTestIds.SelectAccount}
-                />
-              )}
+              render={({ field }) => {
+                const selected = accounts.find((a) => a.id === field.value);
+                return (
+                  <Select
+                    ref={field.ref}
+                    label="Conta"
+                    required
+                    data={groupedAccountOptions}
+                    value={field.value ? String(field.value) : null}
+                    onChange={(val) => {
+                      field.onChange(val ? Number(val) : null);
+                      // Clear split settings when selecting a shared account
+                      const acct = accounts.find((a) => a.id === Number(val));
+                      if (acct?.user_connection) {
+                        setValue("split_settings", []);
+                      }
+                    }}
+                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
+                    error={errors.account_id?.message}
+                    searchable
+                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
+                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionAccount)}
+                    data-testid={TransactionsTestIds.SelectAccount}
+                  />
+                );
+              }}
             />
           )}
         </SimpleGrid>
@@ -375,25 +402,25 @@ export const TransactionForm = ({
             key="destination-account"
             control={control}
             name="destination_account_id"
-            render={({ field }) => (
-              <Select
-                ref={field.ref}
-                label="Conta de destino"
-                required
-                data={groupedAccountOptions}
-                value={field.value ? String(field.value) : null}
-                onChange={(val) => field.onChange(val ? Number(val) : null)}
-                onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                error={errors.destination_account_id?.message}
-                searchable
-                renderOption={({ option }) => (
-                  <span data-testid={TransactionsTestIds.OptionDestinationAccount(option.value)}>
-                    {option.label}
-                  </span>
-                )}
-                data-testid={TransactionsTestIds.SelectDestinationAccount}
-              />
-            )}
+            render={({ field }) => {
+              const selected = accounts.find((a) => a.id === field.value);
+              return (
+                <Select
+                  ref={field.ref}
+                  label="Conta de destino"
+                  required
+                  data={groupedAccountOptions}
+                  value={field.value ? String(field.value) : null}
+                  onChange={(val) => field.onChange(val ? Number(val) : null)}
+                  onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
+                  error={errors.destination_account_id?.message}
+                  searchable
+                  leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
+                  renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionDestinationAccount)}
+                  data-testid={TransactionsTestIds.SelectDestinationAccount}
+                />
+              );
+            }}
           />
         ) : (
           <Controller
