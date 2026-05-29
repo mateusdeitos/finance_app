@@ -144,6 +144,66 @@ func (s *ChargeServiceTestSuite) TestAccept_CreatesTransfers() {
 	assert.Equal(s.T(), 4, count, "expected 4 transaction rows (2 mains + 2 linked)")
 }
 
+func (s *ChargeServiceTestSuite) TestAccept_SetsOriginalUserID() {
+	ctx := context.Background()
+
+	// Set up users and connection
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	// Private accounts
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	// Seed a credit in charger's connection account so balance > 0 (no role swap)
+	periodMonth, periodYear := 3, 2026
+	conn.SwapIfNeeded(charger.ID)
+	chargerConnAccID := conn.FromAccountID
+	s.seedTransaction(ctx, charger.ID, chargerConnAccID, 10000, domain.OperationTypeCredit, periodMonth, periodYear)
+
+	// Create pending charge with charger's private account set, then accept as payer
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx,
+		charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID,
+		periodMonth, periodYear, chargeDate,
+	)
+
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
+		AccountID: payerPrivAcc.ID,
+		Date:      acceptDate,
+	})
+	s.Require().NoError(err)
+
+	// Regression: every settlement transaction must carry original_user_id, equal to its
+	// user_id (each transfer is an intra-user move). Charger and payer each own 2 rows.
+	var rows []struct {
+		UserID         int  `gorm:"column:user_id"`
+		OriginalUserID *int `gorm:"column:original_user_id"`
+	}
+	err = s.DB.WithContext(ctx).
+		Raw("SELECT user_id, original_user_id FROM transactions WHERE charge_id = ? AND deleted_at IS NULL", charge.ID).
+		Scan(&rows).Error
+	s.Require().NoError(err)
+	s.Require().Len(rows, 4)
+
+	ownerCount := map[int]int{}
+	for _, r := range rows {
+		s.Require().NotNil(r.OriginalUserID, "original_user_id must be set on charge settlement transactions")
+		assert.Equal(s.T(), r.UserID, *r.OriginalUserID, "original_user_id must equal user_id for intra-user charge transfers")
+		ownerCount[r.UserID]++
+	}
+	assert.Equal(s.T(), 2, ownerCount[charger.ID], "charger should own 2 settlement rows")
+	assert.Equal(s.T(), 2, ownerCount[payer.ID], "payer should own 2 settlement rows")
+}
+
 func (s *ChargeServiceTestSuite) TestAccept_Atomic() {
 	ctx := context.Background()
 

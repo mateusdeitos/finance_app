@@ -162,28 +162,36 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	chargerDate := *charge.Date // initiator's date (stored at create time)
 	payerDate := req.Date       // acceptor's date (from accept request)
 
+	// OriginalUserID for each transfer = its own owner. Each transfer is an intra-user
+	// move (connection account <-> private account of the same user), so original_user_id
+	// matches user_id on every leg — consistent with same-user transfers created elsewhere.
+	chargerUserIDCopy := charge.ChargerUserID
+	payerUserIDCopy := charge.PayerUserID
+
 	// ---- Build charger's transfer: connection account → private account ----
 	// FROM (debit): chargerConnAccountID
 	// TO (credit):  chargerPrivateAccID
 	chargerTransfer := &domain.Transaction{
-		UserID:        charge.ChargerUserID,
-		AccountID:     chargerConnAccountID,
-		Type:          domain.TransactionTypeTransfer,
-		OperationType: domain.OperationTypeDebit,
-		Amount:        amount,
-		Date:          chargerDate,
-		Description:   "Charge settlement",
-		ChargeID:      &chargeIDCopy,
+		UserID:         charge.ChargerUserID,
+		OriginalUserID: &chargerUserIDCopy,
+		AccountID:      chargerConnAccountID,
+		Type:           domain.TransactionTypeTransfer,
+		OperationType:  domain.OperationTypeDebit,
+		Amount:         amount,
+		Date:           chargerDate,
+		Description:    "Charge settlement",
+		ChargeID:       &chargeIDCopy,
 		LinkedTransactions: []domain.Transaction{
 			{
-				UserID:        charge.ChargerUserID,
-				AccountID:     chargerPrivateAccID,
-				Type:          domain.TransactionTypeTransfer,
-				OperationType: domain.OperationTypeCredit,
-				Amount:        amount,
-				Date:          chargerDate,
-				Description:   "Charge settlement",
-				ChargeID:      &chargeIDCopy,
+				UserID:         charge.ChargerUserID,
+				OriginalUserID: &chargerUserIDCopy,
+				AccountID:      chargerPrivateAccID,
+				Type:           domain.TransactionTypeTransfer,
+				OperationType:  domain.OperationTypeCredit,
+				Amount:         amount,
+				Date:           chargerDate,
+				Description:    "Charge settlement",
+				ChargeID:       &chargeIDCopy,
 			},
 		},
 	}
@@ -195,24 +203,26 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	// FROM (debit): payerPrivateAccID
 	// TO (credit):  payerConnAccountID
 	payerTransfer := &domain.Transaction{
-		UserID:        charge.PayerUserID,
-		AccountID:     payerPrivateAccID,
-		Type:          domain.TransactionTypeTransfer,
-		OperationType: domain.OperationTypeDebit,
-		Amount:        amount,
-		Date:          payerDate,
-		Description:   "Charge settlement",
-		ChargeID:      &chargeIDCopy,
+		UserID:         charge.PayerUserID,
+		OriginalUserID: &payerUserIDCopy,
+		AccountID:      payerPrivateAccID,
+		Type:           domain.TransactionTypeTransfer,
+		OperationType:  domain.OperationTypeDebit,
+		Amount:         amount,
+		Date:           payerDate,
+		Description:    "Charge settlement",
+		ChargeID:       &chargeIDCopy,
 		LinkedTransactions: []domain.Transaction{
 			{
-				UserID:        charge.PayerUserID,
-				AccountID:     payerConnAccountID,
-				Type:          domain.TransactionTypeTransfer,
-				OperationType: domain.OperationTypeCredit,
-				Amount:        amount,
-				Date:          payerDate,
-				Description:   "Charge settlement",
-				ChargeID:      &chargeIDCopy,
+				UserID:         charge.PayerUserID,
+				OriginalUserID: &payerUserIDCopy,
+				AccountID:      payerConnAccountID,
+				Type:           domain.TransactionTypeTransfer,
+				OperationType:  domain.OperationTypeCredit,
+				Amount:         amount,
+				Date:           payerDate,
+				Description:    "Charge settlement",
+				ChargeID:       &chargeIDCopy,
 			},
 		},
 	}
