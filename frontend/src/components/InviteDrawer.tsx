@@ -42,7 +42,7 @@ export function InviteDrawer() {
       onClose={reject}
       title="Criar conexão"
       data-testid={CommonTestIds.DrawerInvite}
-      padding={0}
+      styles={{ body: { padding: 0 } }}
     >
       <Stack gap={0} style={{ minHeight: '100%' }}>
         <PartnerAvatarPair
