@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Divider, Stack } from "@mantine/core";
+import { Alert, Divider, Stack } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -103,11 +104,40 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
     };
   };
 
+  // A shared account (one wrapping a user_connection) can't be represented in
+  // the transfer source Select, which offers personal accounts only (see
+  // `personalAccountOptions` in TransactionForm). Surface it as a read-only
+  // display using the same partner avatar shown elsewhere for shared accounts.
+  const buildSharedAccountInfo = (account: Transactions.Account): LockedAccountInfo | null => {
+    const conn = account.user_connection;
+    if (!conn || !currentUserId) return null;
+    const isFromUser = conn.from_user_id === currentUserId;
+    return {
+      avatarUrl: isFromUser ? conn.to_user_avatar_url : conn.from_user_avatar_url,
+      name: account.name,
+      description: "Conta compartilhada",
+    };
+  };
+
+  // Resolve the transaction's own ("from") account, matching shared accounts by
+  // their underlying connection account ids the same way the destination does.
+  const sourceAccount = accounts.find((a) => {
+    const ids = [a.id];
+    if (a.user_connection) {
+      ids.push(a.user_connection.from_account_id, a.user_connection.to_account_id);
+    }
+    return ids.includes(transaction.account_id);
+  });
+
   const ownsSourceAccount = accounts.some((a) => a.id === transaction.account_id);
   const lockedSourceAccount =
-    accountsLoaded && !ownsSourceAccount && transaction.user_id !== currentUserId
-      ? findPartnerInfo(transaction.user_id)
-      : null;
+    // Transfers created from a charge can have a shared source account, which
+    // the personal-only Select would render blank — show it read-only instead.
+    accountsLoaded && transaction.type === "transfer" && sourceAccount?.user_connection
+      ? buildSharedAccountInfo(sourceAccount)
+      : accountsLoaded && !ownsSourceAccount && transaction.user_id !== currentUserId
+        ? findPartnerInfo(transaction.user_id)
+        : null;
 
   const linkedTx = transaction.linked_transactions?.[0];
   const lockedDestinationAccount =
@@ -207,6 +237,20 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           isUpdate={isRecurring}
           lockedSourceAccount={lockedSourceAccount ?? undefined}
           lockedDestinationAccount={lockedDestinationAccount ?? undefined}
+          lockTransactionType={transaction.charge_id != null}
+          hideRecurrence={transaction.charge_id != null}
+          headerContent={
+            transaction.charge_id != null ? (
+              <Alert
+                color="blue"
+                variant="light"
+                icon={<IconInfoCircle size={18} />}
+                data-testid={TransactionsTestIds.AlertChargeInfo}
+              >
+                Esta transferência foi gerada por uma cobrança.
+              </Alert>
+            ) : undefined
+          }
           extraContent={
             isRecurring ? (
               <Stack gap="md" mt="md">

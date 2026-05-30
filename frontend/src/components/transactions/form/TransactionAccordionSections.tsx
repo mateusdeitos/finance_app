@@ -22,6 +22,8 @@ interface Props {
   splitApplicable: boolean;
   /** Forwarded to RecurrenceFields — disables the current installment input on updates. */
   isUpdate: boolean;
+  /** Hides the "Recorrência" panel entirely (e.g. charge-generated transfers). */
+  hideRecurrence?: boolean;
 }
 
 function formatCents(cents: number): string {
@@ -135,6 +137,7 @@ export function TransactionAccordionSections({
   forceOpen,
   splitApplicable,
   isUpdate,
+  hideRecurrence = false,
 }: Props) {
   const {
     control,
@@ -183,38 +186,40 @@ export function TransactionAccordionSections({
       chevronPosition="left"
       data-testid={TransactionsTestIds.SegmentedExtraSections}
     >
-      <Accordion.Item value="recurrence">
-        <Accordion.Control>
-          <Group justify="space-between" wrap="nowrap" gap="sm">
-            <HeaderTitle
-              title="Recorrência"
-              panel="recurrence"
-              count={recurrenceEnabled ? 1 : 0}
-              hasError={recurrenceError}
-            />
-            <HeaderSummary>
-              <RecurrenceSummary />
-            </HeaderSummary>
-          </Group>
-        </Accordion.Control>
-        <Accordion.Panel>
-          <Stack gap="sm">
-            <Controller
-              control={control}
-              name="recurrenceEnabled"
-              render={({ field }) => (
-                <Switch
-                  label="Recorrência"
-                  checked={!!field.value}
-                  onChange={(e) => field.onChange(e.currentTarget.checked)}
-                  data-testid={TransactionsTestIds.SwitchRecurrenceEnabled}
-                />
-              )}
-            />
-            {recurrenceEnabled && <RecurrenceFields disableCurrentInstallment={isUpdate} />}
-          </Stack>
-        </Accordion.Panel>
-      </Accordion.Item>
+      {!hideRecurrence && (
+        <Accordion.Item value="recurrence">
+          <Accordion.Control>
+            <Group justify="space-between" wrap="nowrap" gap="sm">
+              <HeaderTitle
+                title="Recorrência"
+                panel="recurrence"
+                count={recurrenceEnabled ? 1 : 0}
+                hasError={recurrenceError}
+              />
+              <HeaderSummary>
+                <RecurrenceSummary />
+              </HeaderSummary>
+            </Group>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="sm">
+              <Controller
+                control={control}
+                name="recurrenceEnabled"
+                render={({ field }) => (
+                  <Switch
+                    label="Recorrência"
+                    checked={!!field.value}
+                    onChange={(e) => field.onChange(e.currentTarget.checked)}
+                    data-testid={TransactionsTestIds.SwitchRecurrenceEnabled}
+                  />
+                )}
+              />
+              {recurrenceEnabled && <RecurrenceFields disableCurrentInstallment={isUpdate} />}
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+      )}
 
       {splitVisible && (
         <Accordion.Item value="split">

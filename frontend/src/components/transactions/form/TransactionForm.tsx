@@ -17,6 +17,7 @@ import {
   SimpleGrid,
   Group,
   Text,
+  TextInput,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
@@ -97,6 +98,12 @@ const TYPE_ICON: Record<TransactionType, ReactNode> = {
   transfer: <IconArrowRight size={14} />,
 };
 
+const TYPE_LABEL: Record<TransactionType, string> = {
+  expense: "Despesa",
+  income: "Receita",
+  transfer: "Transferência",
+};
+
 interface Props {
   /** Field to focus on mount. 'split_settings.0.amount' focuses the first split input. */
   focusField?: FocusField;
@@ -106,6 +113,8 @@ interface Props {
   submitError?: string;
   /** Extra content rendered between the form fields and the sticky submit button. */
   extraContent?: ReactNode;
+  /** Content rendered at the very top of the form (e.g. an info alert). */
+  headerContent?: ReactNode;
   /** When true, disables the current installment input in RecurrenceFields. */
   isUpdate?: boolean;
   /**
@@ -122,6 +131,13 @@ interface Props {
   lockedSourceAccount?: LockedAccountInfo;
   /** Same as `lockedSourceAccount`, applied to `destination_account_id`. */
   lockedDestinationAccount?: LockedAccountInfo;
+  /**
+   * Renders the transaction-type control as read-only (disabled). Used for
+   * charge-generated transfers, whose type is structurally bound to the charge.
+   */
+  lockTransactionType?: boolean;
+  /** Hides the recurrence section entirely (e.g. charge-generated transfers). */
+  hideRecurrence?: boolean;
 }
 
 export interface LockedAccountInfo {
@@ -137,10 +153,13 @@ export const TransactionForm = ({
   isPending,
   submitError,
   extraContent,
+  headerContent,
   isUpdate = false,
   formId,
   lockedSourceAccount,
   lockedDestinationAccount,
+  lockTransactionType = false,
+  hideRecurrence = false,
 }: Props) => {
   const fallbackId = useId();
   const resolvedFormId = formId ?? fallbackId;
@@ -269,6 +288,7 @@ export const TransactionForm = ({
   return (
     <form id={resolvedFormId} onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
+        {headerContent}
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
             {generalError}
@@ -278,29 +298,39 @@ export const TransactionForm = ({
         <Controller
           control={control}
           name="transaction_type"
-          render={({ field }) => (
-            <SegmentedControl
-              color={typeColor}
-              data={(["expense", "income", "transfer"] as const).map((t) => ({
-                value: t,
-                label: (
-                  <Group gap={6} wrap="nowrap" justify="center">
-                    {TYPE_ICON[t]}
-                    <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
-                      {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
-                    </span>
-                  </Group>
-                ),
-              }))}
-              value={field.value}
-              onChange={(val) => {
-                field.onChange(val);
-                if (val === "transfer") setValue("split_settings", []);
-              }}
-              fullWidth
-              data-testid={TransactionsTestIds.SegmentedTransactionType}
-            />
-          )}
+          render={({ field }) =>
+            lockTransactionType ? (
+              <TextInput
+                label="Tipo"
+                value={TYPE_LABEL[field.value]}
+                disabled
+                readOnly
+                data-testid={TransactionsTestIds.InputTransactionType}
+              />
+            ) : (
+              <SegmentedControl
+                color={typeColor}
+                data={(["expense", "income", "transfer"] as const).map((t) => ({
+                  value: t,
+                  label: (
+                    <Group gap={6} wrap="nowrap" justify="center">
+                      {TYPE_ICON[t]}
+                      <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
+                        {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
+                      </span>
+                    </Group>
+                  ),
+                }))}
+                value={field.value}
+                onChange={(val) => {
+                  field.onChange(val);
+                  if (val === "transfer") setValue("split_settings", []);
+                }}
+                fullWidth
+                data-testid={TransactionsTestIds.SegmentedTransactionType}
+              />
+            )
+          }
         />
 
         <Controller
@@ -347,6 +377,7 @@ export const TransactionForm = ({
               avatarUrl={lockedSourceAccount.avatarUrl}
               name={lockedSourceAccount.name}
               description={lockedSourceAccount.description}
+              data-testid={TransactionsTestIds.ReadOnlyAccount}
             />
           ) : isTransfer ? (
             <Controller
@@ -431,6 +462,7 @@ export const TransactionForm = ({
               avatarUrl={lockedDestinationAccount.avatarUrl}
               name={lockedDestinationAccount.name}
               description={lockedDestinationAccount.description}
+              data-testid={TransactionsTestIds.ReadOnlyDestinationAccount}
             />
           ) : (
             <Controller
@@ -489,6 +521,7 @@ export const TransactionForm = ({
           forceOpen={panelsWithErrors}
           splitApplicable={splitApplicable}
           isUpdate={isUpdate}
+          hideRecurrence={hideRecurrence}
         />
       </Stack>
 
