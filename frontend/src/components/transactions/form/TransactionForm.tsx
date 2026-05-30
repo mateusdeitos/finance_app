@@ -106,6 +106,8 @@ interface Props {
   submitError?: string;
   /** Extra content rendered between the form fields and the sticky submit button. */
   extraContent?: ReactNode;
+  /** Content rendered at the very top of the form (e.g. an info alert). */
+  headerContent?: ReactNode;
   /** When true, disables the current installment input in RecurrenceFields. */
   isUpdate?: boolean;
   /**
@@ -137,6 +139,7 @@ export const TransactionForm = ({
   isPending,
   submitError,
   extraContent,
+  headerContent,
   isUpdate = false,
   formId,
   lockedSourceAccount,
@@ -269,6 +272,7 @@ export const TransactionForm = ({
   return (
     <form id={resolvedFormId} onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
+        {headerContent}
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
             {generalError}

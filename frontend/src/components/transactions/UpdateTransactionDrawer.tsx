@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
 import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Divider, Stack } from "@mantine/core";
+import { Alert, Divider, Stack } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -236,6 +237,18 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           isUpdate={isRecurring}
           lockedSourceAccount={lockedSourceAccount ?? undefined}
           lockedDestinationAccount={lockedDestinationAccount ?? undefined}
+          headerContent={
+            transaction.charge_id != null ? (
+              <Alert
+                color="blue"
+                variant="light"
+                icon={<IconInfoCircle size={18} />}
+                data-testid={TransactionsTestIds.AlertChargeInfo}
+              >
+                Esta transferência foi gerada por uma cobrança.
+              </Alert>
+            ) : undefined
+          }
           extraContent={
             isRecurring ? (
               <Stack gap="md" mt="md">
