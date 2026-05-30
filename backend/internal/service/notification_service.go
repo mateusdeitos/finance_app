@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/finance_app/backend/internal/config"
@@ -115,7 +116,7 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 			}
 			if resp != nil {
 				status := resp.StatusCode
-				resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
+				_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
 				if status == http.StatusNotFound || status == http.StatusGone {
 					if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
 						log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
@@ -154,7 +155,7 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 	case first.Type == domain.NotificationTypeSplitUpdated:
 		body = fmt.Sprintf("%s atualizou uma transação dividida (%s)", actorName, formatBRL(first.Amount))
 	default:
-		body = fmt.Sprintf("%s enviou uma notificação", actorName)
+		body = actorName + " enviou uma notificação"
 	}
 
 	// Per-type Portuguese title (D-24-2). The coalesced split_created case shares the same title.
@@ -192,14 +193,16 @@ func formatBRL(cents int64) string {
 	}
 	reais := cents / 100
 	centavos := cents % 100
-	reaisStr := fmt.Sprintf("%d", reais)
+	reaisStr := strconv.FormatInt(reais, 10)
 	n := len(reaisStr)
 	var result []byte
-	for i, c := range reaisStr {
+	// reaisStr is a base-10 integer string, so every element is an ASCII
+	// digit — index by byte (no rune→byte conversion, avoids gosec G115).
+	for i := range n {
 		if i > 0 && (n-i)%3 == 0 {
 			result = append(result, '.')
 		}
-		result = append(result, byte(c))
+		result = append(result, reaisStr[i])
 	}
 	return fmt.Sprintf("%sR$ %s,%02d", sign, string(result), centavos)
 }
