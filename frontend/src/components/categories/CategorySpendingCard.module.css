@@ -54,19 +54,6 @@
   margin-top: 1px;
 }
 
-.pct {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--cat-color);
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
-  background: light-dark(
-    color-mix(in srgb, var(--cat-color) 12%, transparent),
-    color-mix(in srgb, var(--cat-color) 20%, transparent)
-  );
-}
-
 .actions {
   display: flex;
   align-items: center;

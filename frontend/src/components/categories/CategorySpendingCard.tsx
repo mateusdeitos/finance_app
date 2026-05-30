@@ -21,8 +21,6 @@ interface Handlers {
 
 interface Props extends Handlers {
   node: CategorySpendingNode
-  /** Σ |net| across categories — denominator for the participation pill. */
-  gross: number
   /** Largest |net| among top-level categories — scales the participation bar. */
   maxAbs: number
   /** Amounts still loading: skeleton the figures, keep the category visible. */
@@ -52,7 +50,6 @@ function formatNet(value: number): string {
 
 export function CategorySpendingCard({
   node,
-  gross,
   maxAbs,
   valueLoading,
   defaultExpanded = true,
@@ -68,7 +65,6 @@ export function CategorySpendingCard({
   const [expanded, { toggle, open: forceExpand }] = useDisclosure(defaultExpanded)
   const rename = useInlineRename(category.name, (name) => onSaveName(category, name))
 
-  const pct = gross > 0 ? Math.round((Math.abs(total) / gross) * 100) : 0
   const barPct = maxAbs > 0 ? (Math.abs(total) / maxAbs) * 100 : 0
   const childMax = children.reduce((m, c) => Math.max(m, Math.abs(c.total)), 0)
   const isPendingChild = pendingParentId === category.id
@@ -137,12 +133,6 @@ export function CategorySpendingCard({
               </div>
             )}
           </div>
-
-          {valueLoading ? (
-            <Skeleton height={20} width={40} radius={999} />
-          ) : (
-            pct > 0 && <span className={classes.pct}>{pct}%</span>
-          )}
 
           <div className={classes.actions} onClick={stop}>
             <ActionIcon

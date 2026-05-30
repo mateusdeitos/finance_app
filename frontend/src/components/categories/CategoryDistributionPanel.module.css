@@ -92,8 +92,8 @@
   max-width: 11rem;
 }
 
-.legendPct {
-  font-size: 0.75rem;
+.legendValue {
+  font-size: 0.78rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

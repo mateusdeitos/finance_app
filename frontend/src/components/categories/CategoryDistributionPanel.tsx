@@ -1,4 +1,3 @@
-import { CSSProperties } from 'react'
 import { Skeleton } from '@mantine/core'
 import { CategorySpendingNode } from '@/hooks/useCategorySpending'
 import { formatSignedCents } from '@/utils/formatCents'
@@ -76,8 +75,8 @@ export function CategoryDistributionPanel({ nodes, net, gross, monthLabel, loadi
               <div key={n.category.id} className={classes.legendItem}>
                 <span className={classes.swatch} style={{ background: n.color }} />
                 <span className={classes.legendName}>{n.category.name}</span>
-                <span className={classes.legendPct} style={{ color: n.color } as CSSProperties}>
-                  {Math.round((Math.abs(n.total) / gross) * 100)}%
+                <span className={classes.legendValue} style={{ color: signColor(n.total) }}>
+                  {formatSignedCents(n.total)}
                 </span>
               </div>
             ))}

@@ -128,7 +128,6 @@ export function CategoriesPage() {
               <CategorySpendingCard
                 key={node.category.id}
                 node={node}
-                gross={gross}
                 maxAbs={maxAbs}
                 valueLoading={spendLoading}
                 pendingParentId={typeof pendingParentId === 'number' ? pendingParentId : null}
