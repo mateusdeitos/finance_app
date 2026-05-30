@@ -254,6 +254,7 @@ func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {
 	transactions.POST("", h.Create)
 	transactions.GET("/balance", h.GetBalance)
 	transactions.GET("/suggestions", h.Suggestions)
+	transactions.GET("/by-ids", h.ListByIDs) // must be registered before /:id to avoid shadowing
 	transactions.DELETE("/:id", h.Delete)
 	transactions.GET("/:id", h.GetByID)
 	transactions.PUT("/:id", h.Update)

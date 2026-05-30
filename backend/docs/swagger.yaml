@@ -1924,6 +1924,39 @@ paths:
       summary: Get balance for a period
       tags:
       - transactions
+  /api/transactions/by-ids:
+    get:
+      description: 'Returns the caller''s transactions for the given IDs across any
+        period (no month/year required). IDs the caller does not own are silently
+        absent — the frontend marks them as missing. Empty id[] returns 200 with an
+        empty array. Cap: ≤20 IDs recommended.'
+      parameters:
+      - collectionFormat: multi
+        description: Transaction IDs
+        in: query
+        items:
+          type: integer
+        name: id[]
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Transaction'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get transactions by IDs (cross-period batch)
+      tags:
+      - transactions
   /api/transactions/check-duplicates-bulk:
     post:
       consumes:

@@ -318,6 +318,43 @@ func (h *TransactionHandler) Delete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// ListByIDs godoc
+// @Summary      Get transactions by IDs (cross-period batch)
+// @Description  Returns the caller's transactions for the given IDs across any period (no month/year required). IDs the caller does not own are silently absent — the frontend marks them as missing. Empty id[] returns 200 with an empty array. Cap: ≤20 IDs recommended.
+// @Tags         transactions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id[]  query     []int  false  "Transaction IDs"  collectionFormat(multi)
+// @Success      200   {array}   domain.Transaction
+// @Failure      401   {object}  middleware.ErrorResponse
+// @Router       /api/transactions/by-ids [get]
+func (h *TransactionHandler) ListByIDs(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appcontext.GetUserIDFromContext(ctx)
+
+	var filter domain.TransactionFilter
+	if err := c.Bind(&filter); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid query parameters")
+	}
+
+	// Empty ids → return 200 with empty array (not 400)
+	if len(filter.IDs) == 0 {
+		return c.JSON(http.StatusOK, []domain.Transaction{})
+	}
+
+	// IDOR scope — must set UserID so the service does not return other users' transactions
+	filter.UserID = &userID
+	filter.WithSettlements = true
+
+	txs, err := h.transactionService.Search(ctx, userID, domain.Period{Month: 0, Year: 0}, filter)
+	if err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.JSON(http.StatusOK, txs)
+}
+
 // CheckDuplicatesBulk godoc
 // @Summary      Check rows for possible duplicates
 // @Description  Runs the duplicate check for one or more rows in a single request and returns the transaction and settlement matches per row_index. Matching considers the whole calendar month, an amount range of ±2 cents, and fuzzy description similarity. Income rows are also compared against credit settlements; expense rows against debit settlements.
