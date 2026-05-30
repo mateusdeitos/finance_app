@@ -121,10 +121,18 @@ type PushSubscriptionRepository interface {
 	DeleteByEndpoint(ctx context.Context, userID int, endpoint string) error
 	DeleteByEndpointAdmin(ctx context.Context, endpoint string) error
 	ExistsForUser(ctx context.Context, userID int, endpoint string) (bool, error)
+	// ListByUserID returns all active subscriptions for a recipient user.
+	// Called from the dispatch goroutine; no IDOR guard needed (internal call only).
+	ListByUserID(ctx context.Context, userID int) ([]*domain.PushSubscription, error)
 }
 
-// NotificationRepository — zero methods in Phase 22; Phase 23 adds methods.
-type NotificationRepository interface{}
+type NotificationRepository interface {
+	Create(ctx context.Context, notification *domain.Notification) (*domain.Notification, error)
+	List(ctx context.Context, filter domain.NotificationFilter) (*domain.NotificationListResult, error)
+	UnreadCount(ctx context.Context, userID int) (int64, error)
+	MarkRead(ctx context.Context, userID, notificationID int) error
+	MarkAllRead(ctx context.Context, userID int) error
+}
 
 // Repositories contains all repository interfaces
 type Repositories struct {
