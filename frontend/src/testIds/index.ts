@@ -35,3 +35,4 @@ export {
 export { RecurrenceTestIds, type RecurrenceType } from "./recurrence";
 export { OnboardingTestIds } from "./onboarding";
 export { MobileNavTestIds } from "./mobileNav";
+export { LoginTestIds } from "./login";
