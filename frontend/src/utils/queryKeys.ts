@@ -11,4 +11,5 @@ export const QueryKeys = {
   ChargesPendingCount: 'charges-pending-count',
   Onboarding: 'onboarding',
   CheckDuplicate: 'check-duplicate',
+  PushSubscription: 'push-subscription',
 } as const
