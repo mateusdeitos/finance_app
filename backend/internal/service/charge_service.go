@@ -164,7 +164,7 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	if created.Description != nil {
 		notifDescription = *created.Description
 	}
-	//nolint:gosec // G118: post-commit push dispatch must outlive request ctx (NOTIF-06)
+	//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
 	go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{{
 		RecipientUserID: otherPartyID,
 		ActorUserID:     callerUserID,

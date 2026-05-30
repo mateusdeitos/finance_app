@@ -1448,6 +1448,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 	}
 
 	if len(events) > 0 {
+		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
 		go s.services.Notification.Dispatch(context.Background(), events)
 	}
 }
