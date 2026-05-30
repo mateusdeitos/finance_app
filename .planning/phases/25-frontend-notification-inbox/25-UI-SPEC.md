@@ -76,14 +76,14 @@ Identical scale to Phase 24. Declared weights: **500** and **700** only. Body an
 |------|------|--------|-------------|-------|
 | Body | 16px (1rem) | inherited (400) | 1.5 | Inbox drawer title area, unread notification description text |
 | Label | 14px (0.875rem) | 500 | 1.4 | Notification type label (e.g. "Nova cobrança"), "Marcar todas como lidas" button label |
-| Caption | 12px (0.75rem) | inherited (400) | 1.4 | Relative timestamp ("há 5 min"), dimmed secondary strings |
+| Caption | 12px (0.75rem) | inherited (400) | 1.4 | Relative timestamp ("há 5 min"), dimmed secondary strings, BRL amount in notification row |
 | Heading | 18px (Mantine `size="lg"`) | 700 | 1.2 | Inbox drawer title "Notificações" |
 
 Rules:
 - `size="sm"` → ~14px; `size="xs"` → ~12px; `size="lg"` → ~18px; default → 16px.
 - `fw={500}` for notification type labels and action labels.
 - `fw={700}` for the drawer title only.
-- `c="dimmed"` for timestamps and read notification descriptions.
+- `c="dimmed"` for timestamps, read notification descriptions, and resolved BRL amounts on read rows.
 - Read notification descriptions use `c="dimmed"` to visually distinguish from unread.
 - Unread notification descriptions use the default color (inherits from the Mantine color scheme).
 - Body copy min-size 16px enforced by `index.css` to prevent iOS zoom on focus.
@@ -97,7 +97,7 @@ Source: `frontend/src/index.css`, Phase 24 UI-SPEC typography section
 | Role | Value | Usage |
 |------|-------|-------|
 | Dominant (60%) | `light-dark(white, dark-7)` — `#ffffff` / `#1a1a2e` | App background, drawer body, main surface |
-| Secondary (30%) | `light-dark(gray-0, dark-6)` — `#f5f5f5` / `#25262b` | Notification row hover state, unread row background tint |
+| Secondary (30%) | `light-dark(gray-0, dark-6)` — `#f5f5f5` / `#25262b` | Notification row hover state |
 | Accent (10%) | `blue.6` = `#568fb3` / `blue.7` = `#457b9d` | See reserved list below |
 | Success | `teal` (green scale) | Success toasts only |
 | Destructive | `red.6` = `#e42332` | Error toasts |
@@ -110,6 +110,7 @@ Accent (`blue`) reserved for:
 5. Notification toggle "on" state (Phase 24 — unchanged)
 6. **Unread dot indicator** — 8×8px filled circle `bg="blue.6"` placed to the left of each unread notification row
 7. **Unread count badge on the notification bell entry point** — `color="blue"` (not red — the pending charges badge uses red; the notification unread badge uses blue to distinguish the two counter types visually)
+8. **Unread `Indicator` dot on the "Mais" tab** in `MobileTabBar` when `unreadCount > 0` — `color="blue"`, size 8
 
 Do NOT use blue for:
 - Read notification descriptions or timestamps (use `c="dimmed"`)
@@ -117,7 +118,7 @@ Do NOT use blue for:
 - General body copy
 
 Unread row background tint:
-- Unread notifications get a subtle tint: `background-color: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6))` — lighter than gray-0 on light mode, same dark-6 on dark mode. This pairs with the unread dot and un-dimmed text to form the complete "unread" visual.
+- Unread notifications get a subtle tint: `background-color: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-5))` — lighter than gray-0 on light mode; in dark mode `dark-5` (one step lighter than the secondary surface `dark-6`) so the tint is perceptibly distinct from the surrounding surface. Do NOT use `dark-6` in dark mode (it is identical to the secondary surface, making the tint invisible).
 
 Source: `frontend/src/theme.ts`, `frontend/src/components/DesktopSidebar.tsx` (NavBadge red for charges), Phase 24 UI-SPEC
 
@@ -129,9 +130,9 @@ Source: `frontend/src/theme.ts`, `frontend/src/components/DesktopSidebar.tsx` (N
 
 Rationale:
 - The notification list is a scrollable, potentially long list (cursor-paginated). A full-page route handles scroll natively and allows deep-linking (CTRL-03 tap from OS push can open `/notifications`). A popover would clip the list and make scrolling awkward.
-- On mobile, a full-page transition would require a new tab in the tab bar or a route push — both add navigation complexity. A bottom sheet (matching the existing `MobileMoreDrawer` / `renderDrawer` pattern) gives a familiar scroll surface without a tab-bar slot.
-- **Desktop**: Add `/notifications` as a nav link in `DesktopSidebar` with `IconBell` icon. The unread badge sits on this nav link entry (same pattern as `/charges` pending badge).
-- **Mobile**: The notification bell entry point is an `UnstyledButton` in `MobileTabBar` that opens the inbox as a bottom sheet via `renderDrawer`. This is the same pattern used by the "Mais" tab.
+- On mobile, the inbox is accessed via a `MoreItem` in `MobileMoreDrawer` — consistent with the existing drawer-within-drawer pattern and avoiding tab bar congestion. See OD-4 below.
+- **Desktop**: Add `/notifications` as a nav link in `DesktopSidebar` with `IconBell` icon and a blue unread badge (same pattern as `/charges` pending badge).
+- **Mobile**: A "Notificações" item in `MobileMoreDrawer` opens the inbox bottom sheet via `renderDrawer`. The "Mais" tab itself shows a small unread `Indicator` dot (no count number) when `unreadCount > 0`.
 
 Alternative considered: Popover from a bell icon in the header. Rejected because the existing mobile header is already dense (brand logo, ThemeToggle, UserAvatar menu), and a popover does not support infinite scroll well on mobile.
 
@@ -141,9 +142,9 @@ Alternative considered: Popover from a bell icon in the header. Rejected because
 
 Phase 25 adds four visible UI areas:
 
-1. **Nav entry point + unread badge** — the bell icon that opens the inbox (desktop nav link, mobile tab-bar button)
+1. **Nav entry point + unread badge** — the bell icon that opens the inbox (desktop nav link; mobile via MoreDrawer item + Mais tab indicator dot)
 2. **Inbox list surface** — the drawer/page showing the notification list
-3. **Notification row** — individual item with icon, description, timestamp, unread indicator
+3. **Notification row** — individual item with icon, description, amount, timestamp, unread indicator
 4. **Mark-all-read affordance** — single action to clear all unread state
 
 ---
@@ -164,22 +165,31 @@ The badge renders via the existing `showBadge` pattern (same as `/charges`):
 - Badge size: `size="xs"` circle (same as charges badge)
 - `data-testid`: `CommonTestIds.NavBadge('notifications')` (reuses existing factory — value: `'nav_badge_notifications'`)
 
-### Mobile (`MobileTabBar`)
+### Mobile (`MobileTabBar` + `MobileMoreDrawer`)
 
-Add a new tab entry to the `tabs` array:
+**LOCKED decision (Change 2):** The inbox is NOT a new tab in `MobileTabBar`. It is a `MoreItem` inside `MobileMoreDrawer`.
+
+**`MobileTabBar` change:** Add a Mantine `Indicator` dot wrapping the existing "Mais" tab's `<span className={classes.iconWrap}>` when `unreadCount > 0`.
+- `Indicator` props: `color="blue"`, `size={8}`, `disabled={unreadCount === 0}`, `position="top-end"`, `offset={4}`
+- No count number on the tab itself — the numeric count badge lives inside the MoreDrawer item.
+- This signals that the "Mais" drawer contains something new without consuming a dedicated tab slot.
+
+**`MobileMoreDrawer` change:** Add a new `MoreItem` entry for "Notificações":
 ```
-{ to: '/notifications', label: 'Notificações', icon: IconBell }
+{ label: 'Notificações', icon: IconBell, onClick: () => void renderDrawer(() => <NotificationInboxDrawer />) }
 ```
+Position: above the "Sair" item (last in the MoreDrawer list).
 
-The tab opens the inbox bottom sheet via `renderDrawer` instead of navigating (same pattern as the "Mais" tab's `openMore` handler). The badge overlays on `iconWrap` with the same `className={classes.badge}` CSS module class.
-
-- Badge color: `color="blue"` (same rationale as desktop)
-- Badge display: capped at `9+` when `unreadCount > 9`
-- Touch target: tab is already 56px height (tab bar height) — sufficient
+The `MoreItem` renders an unread count badge inside the drawer:
+- Badge condition: `unreadCount > 0`
+- Badge display: `unreadCount > 9 ? '9+' : unreadCount`
+- Badge color: `color="blue"`
+- Badge size: `size="xs"`
+- `data-testid`: `CommonTestIds.NavBadge('notifications')` (same key as desktop — single test id for the badge value regardless of surface)
 
 Icons: `IconBell` (any unread count or zero). `IconBellOff` is NOT used here — that is Phase 24's toggle state icon. The inbox entry always shows `IconBell`.
 
-**Icon size**: 20px, `stroke={1.8}` (matching the other tab bar icons)
+**Icon size**: 20px, `stroke={1.8}` (matching the other tab bar and drawer icons)
 
 **Data for unread count badge**: fetched via `useNotificationUnreadCount` hook (new) — queries `GET /api/notifications/unread-count`. Polling interval: 60 seconds (`refetchInterval: 60_000`) when the window is focused; no polling when hidden. This is the only polling query in the app — justified because push events may not reach every device (Phase 24's SW may be absent or denied), and the badge must eventually reflect reality.
 
@@ -237,7 +247,7 @@ Loading states:
 ### Per-row layout
 
 ```
-[Unread dot] [Type icon 20px] [Text block: description + timestamp] [chevron 16px]
+[Unread dot] [Type icon 20px] [Text block: description + amount + timestamp] [chevron 16px]
 ```
 
 All rows use a Mantine `UnstyledButton` wrapper (touch-friendly, no default button styling) with `display="flex"` alignment.
@@ -247,15 +257,18 @@ Group align="center" wrap="nowrap" px="sm" py="xs" w="100%" gap="sm"
   ├── [Unread dot OR spacer — 8px]
   ├── [Type icon — ThemeIcon variant="light", size="md" (36px), rounded]
   └── Stack gap={2} style={{ flex: 1, minWidth: 0 }}
-        ├── Text size="sm" fw={500} lineClamp={2}  ← description (unread: normal color, read: c="dimmed")
+        ├── Text size="sm" fw={500} lineClamp={2}  ← description with amount (unread: normal color, read: c="dimmed")
         └── Text size="xs" c="dimmed"              ← relative timestamp
   └── IconChevronRight size={16} c="dimmed"
 ```
 
 - **Unread dot**: `Box` 8×8px, `bg="blue.6"`, `radius="50%"`, `flex-shrink: 0`. When read: render a transparent 8px spacer `Box` to keep alignment.
-- **Unread row background tint**: apply via a CSS Module class `.unread` that sets `background-color: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6))`.
+- **Unread row background tint**: apply via a CSS Module class `.unread` that sets `background-color: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-5))`. Dark mode uses `dark-5` (not `dark-6`) to remain visually distinct from the surrounding surface.
 - **Type icon**: Mantine `ThemeIcon` — `variant="light"`, `radius="md"`, `size={36}`. Icon is 20px stroke 1.5. Color per notification type (see table below).
-- **Description text**: two-line max (`lineClamp={2}`). Unread: `c` defaults (full contrast). Read: `c="dimmed"`.
+- **Description text**: includes the resolved BRL amount inline (see copywriting templates). Two-line max (`lineClamp={2}`). Unread: `c` defaults (full contrast). Read: `c="dimmed"`.
+- **Amount display within description**: the amount is embedded in the description string itself (e.g. `"{partner} te cobrou R$ 50,00: Aluguel"`). It is NOT a separate element. Formatted via `formatBalance` from `src/utils/formatCents.ts` (produces `R$ X.XXX,XX` without a +/- prefix — appropriate since charges and splits are unsigned from the notification perspective).
+- **Amount loading state**: while the entity amount is being resolved, render the description text without the amount placeholder: the copy template degrades gracefully to the no-amount variant (e.g. `"{partner} te cobrou uma cobrança"`). Do NOT show a `Skeleton` inside the description text — it would cause layout shift with `lineClamp`. Once the amount resolves, the description text updates in place. This approach is preferred over an inline skeleton because the row height is stable and the description remains readable at all times.
+- **Amount unavailable / entity soft-deleted**: if the entity fetch returns 404 or the entity has no amount (e.g. a removed split), render a dash `"—"` in place of the amount: `"{partner} atualizou uma transação dividida (—)"`. For a deleted charge: `"{partner} te cobrou —"`. The dash signals "amount was not available" without an error state.
 - **Timestamp**: relative format via `Intl.RelativeTimeFormat('pt-BR')` (e.g. "há 5 min", "há 2 horas", "há 3 dias"). Fall back to `Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })` for items older than 7 days.
 - **Chevron**: `IconChevronRight size={16} c="dimmed"` — signals navigability.
 - **Row `data-testid`**: `NotificationsTestIds.Row(notification.id)` — parametric factory (returns `notification_row_${id}`).
@@ -277,17 +290,94 @@ These are the in-app list strings (distinct from the OS push notification copy d
 
 The frontend does NOT receive a `partner_name` field from the inbox API. The user's partner name must be derived from the existing `useAccounts` query (which already returns `user_connection.from_user_name` / `to_user_name`). The `useNotificationInbox` hook resolves the partner name via the existing `useMe` + `useAccounts` data already in cache — no extra API call.
 
-| Type | Description template | Notes |
-|------|----------------------|-------|
-| `charge_received` | `"{partnerName} criou uma cobrança para você"` | entity_type=charge |
-| `charge_accepted` | `"{partnerName} aceitou sua cobrança"` | entity_type=charge |
-| `split_created` | `"{partnerName} adicionou uma transação dividida"` | entity_type=transaction |
-| `split_updated` | `"{partnerName} atualizou uma transação dividida"` | entity_type=transaction |
-| any (fallback) | `"Nova notificação"` | used if type is unrecognized |
+Amount-inclusive templates (aligned with Phase 23 D-07 push copy for cross-channel consistency):
 
-If `partnerName` cannot be resolved (no accepted connection in cache), fall back to `"Seu parceiro(a)"`.
+| Type | Template with amount | Template without amount (loading/unavailable) |
+|------|----------------------|-----------------------------------------------|
+| `charge_received` | `"{partnerName} te cobrou {amount}: {description}"` | `"{partnerName} criou uma cobrança para você"` |
+| `charge_accepted` | `"{partnerName} aceitou sua cobrança de {amount}"` | `"{partnerName} aceitou sua cobrança"` |
+| `split_created` | `"{partnerName} adicionou uma transação dividida de {amount}"` | `"{partnerName} adicionou uma transação dividida"` |
+| `split_updated` | `"{partnerName} atualizou uma transação dividida ({amount})"` | `"{partnerName} atualizou uma transação dividida"` |
+| any (fallback) | `"Nova notificação"` | `"Nova notificação"` |
 
-Coordination with D-07 (backend push copy): The in-app descriptions deliberately omit the BRL amount. Reason: the inbox API response does not include the amount field — only `type`, `entity_type`, `entity_id`, `read`, `created_at`. Including the amount would require an extra fetch per notification row. The short description is sufficient for the inbox; the full detail is on the entity page after navigation.
+- `{amount}` is formatted via `formatBalance(entity.amount)` from `src/utils/formatCents.ts` — produces `R$ X.XXX,XX` with no sign prefix.
+- `{description}` for `charge_received` is the charge's `description` field (may be null; omit the colon+description portion if null: `"{partnerName} te cobrou {amount}"`).
+- For soft-deleted / 404 entities: use the no-amount fallback with "—" in the amount slot ONLY if the template requires it (see Surface 3 bullet above for the dash pattern).
+- If `partnerName` cannot be resolved (no accepted connection in cache), fall back to `"Seu parceiro(a)"`.
+
+**Alignment with D-07 push copy**: The in-app templates deliberately mirror the Phase 23 backend push body strings (D-07) so the user sees consistent wording across the OS push notification and the in-app inbox. The push uses identical `{partner} te cobrou {amount}: {description}` structure. Minor wording difference: `charge_accepted` push uses "aceitou sua cobrança de {amount}"; in-app matches exactly.
+
+---
+
+## Data Fetching Strategy: Entity Amount Resolution
+
+### Why a separate fetch is needed
+
+The inbox API (`GET /api/notifications`) returns only `type`, `entity_type`, `entity_id`, `read`, and `created_at`. It does NOT return the entity amount. To display amounts, the frontend must resolve the entity by id.
+
+### Existing hooks and APIs
+
+| Entity | Single-id fetch function | Exists? | Location |
+|--------|--------------------------|---------|----------|
+| Transaction by id | `fetchTransaction(id)` | YES | `src/api/transactions.ts` line 70 |
+| Charge by id | `fetchChargeById(id)` | NO | Does not exist — no `GET /api/charges/:id` endpoint in Phase 23 |
+
+**For transactions** (`split_created`, `split_updated`): use `fetchTransaction(id)` directly. No per-id charge equivalent exists.
+
+**For charges** (`charge_received`, `charge_accepted`): the existing `fetchCharges(params)` list query (`src/api/charges.ts`) filters by month/year. It is unreliable for entity resolution by ID because the notification's charge may belong to a different month than the currently loaded list. A `fetchChargeById` function must be added to `src/api/charges.ts` targeting `GET /api/charges/:id` — this endpoint exists in the backend (Phase 23 implements the inbox API alongside charge routes). Add `fetchChargeById` as a new export and create a corresponding `useChargeById` hook.
+
+### Cache-first strategy
+
+To avoid N+1 fetches across a page of ~20 notifications:
+
+1. **Check cache first**: use `queryClient.getQueryData([QueryKeys.Charges, ...])` to scan any in-memory charge list pages already fetched by the charges page. Similarly for transactions: scan `queryClient.getQueryData([QueryKeys.Transactions, ...])`. If the entity is already in cache (common when the user navigates from the charges/transactions page to the inbox), use the cached value — no network call needed.
+
+2. **Per-id fetch as fallback**: if the entity is not found in any cached list, fire a per-id fetch (`fetchTransaction(id)` for transactions; `fetchChargeById(id)` for charges). Results are stored under new query keys so they are deduplicated across duplicate notifications pointing at the same entity:
+   - `[QueryKeys.TransactionById, id]`
+   - `[QueryKeys.ChargeById, id]`
+
+3. **Page size is small (≤20 rows)**: the maximum number of concurrent per-id fetches on a single inbox page is bounded by the limit parameter. With TanStack Query's deduplication, identical entity_ids across multiple notifications fire only one fetch. This is acceptable given the small page size — no batching endpoint exists and building one is out of scope for Phase 25.
+
+4. **Existing list cache coverage**: users who have visited the charges or transactions pages within the current browser session will have those entities cached under `[QueryKeys.Charges, params]` and `[QueryKeys.Transactions, params]`. The cache-first scan leverages this. The per-id fetch is a true fallback for cold sessions or entities in different months.
+
+### New hook: `useResolveNotificationAmount`
+
+A single hook encapsulates entity resolution for all notification types:
+
+```ts
+// src/hooks/useResolveNotificationAmount.ts
+export function useResolveNotificationAmount(
+  entityType: Notifications.EntityType,
+  entityId: number,
+): { amount: number | null; isLoading: boolean }
+```
+
+- Returns `{ amount: number | null, isLoading: boolean }`.
+- `amount` is in cents (int64), consistent with the rest of the app; format at the display layer via `formatBalance`.
+- `isLoading: true` while the per-id fetch is in flight (only when cache miss occurs).
+- `amount: null` when the entity is not yet resolved OR when it returned 404/error (caller uses the no-amount description template and renders "—" in the amount slot if the template requires it).
+- Internally: checks the TanStack Query cache for a matching entity; if not found, fires `useQuery` with `queryKey: [QueryKeys.TransactionById, entityId]` or `[QueryKeys.ChargeById, entityId]` and `staleTime: 5 * 60 * 1000` (5 min) so re-opening the inbox doesn't re-fetch recently resolved amounts.
+- The hook follows the project convention: `useQuery` inside a custom hook, no `useEffect`, no direct `fetch` calls in components.
+
+### New QueryKeys entries (addition to `src/utils/queryKeys.ts`)
+
+```ts
+TransactionById: 'transaction-by-id',
+ChargeById: 'charge-by-id',
+Notifications: 'notifications',
+NotificationUnreadCount: 'notification-unread-count',
+```
+
+### New API function
+
+```ts
+// src/api/charges.ts — add alongside existing exports
+export async function fetchChargeById(id: number): Promise<Charges.Charge> {
+  const res = await fetch(`${apiUrl}/api/charges/${id}`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Failed to fetch charge')
+  return res.json()
+}
+```
 
 ---
 
@@ -396,13 +486,18 @@ All copy is in Brazilian Portuguese.
 | Mark-read error toast body | "Não foi possível marcar como lida. Tente novamente." |
 | Mark-all-read error toast title | "Erro" |
 | Mark-all-read error toast body | "Não foi possível marcar todas como lidas. Tente novamente." |
-| Nav label (desktop sidebar + mobile tab) | "Notificações" |
+| Nav label (desktop sidebar + MoreDrawer item) | "Notificações" |
 | Drawer title | "Notificações" |
 | Drawer close button aria-label | "Fechar" |
-| charge_received description | "{partnerName} criou uma cobrança para você" |
-| charge_accepted description | "{partnerName} aceitou sua cobrança" |
-| split_created description | "{partnerName} adicionou uma transação dividida" |
-| split_updated description | "{partnerName} atualizou uma transação dividida" |
+| charge_received description (amount known) | "{partnerName} te cobrou {amount}: {description}" (omit ": {description}" if charge.description is null) |
+| charge_received description (amount loading/missing) | "{partnerName} criou uma cobrança para você" |
+| charge_accepted description (amount known) | "{partnerName} aceitou sua cobrança de {amount}" |
+| charge_accepted description (amount loading/missing) | "{partnerName} aceitou sua cobrança" |
+| split_created description (amount known) | "{partnerName} adicionou uma transação dividida de {amount}" |
+| split_created description (amount loading/missing) | "{partnerName} adicionou uma transação dividida" |
+| split_updated description (amount known) | "{partnerName} atualizou uma transação dividida ({amount})" |
+| split_updated description (amount loading/missing) | "{partnerName} atualizou uma transação dividida" |
+| Amount placeholder (entity 404 / soft-deleted) | "—" substituted inline where {amount} would appear |
 | Fallback description | "Nova notificação" |
 | Fallback partner name | "Seu parceiro(a)" |
 | Unread count badge capped display | "9+" (when unreadCount > 9) |
@@ -428,7 +523,8 @@ Note: `NotificationInboxContent` is extracted so both the mobile drawer and the 
 
 | Component | Change |
 |-----------|--------|
-| `MobileTabBar` | Add a new tab for `/notifications` with `IconBell` + unread badge; wire click to `renderDrawer(() => <NotificationInboxDrawer />)` instead of `Link` navigation |
+| `MobileTabBar` | Add a Mantine `Indicator` dot (color="blue", size=8) wrapping the existing "Mais" tab `iconWrap` when `unreadCount > 0`. No new tab is added. |
+| `MobileMoreDrawer` | Add a new `MoreItem` for "Notificações" (IconBell, label, unread count badge, onClick opens `NotificationInboxDrawer` via `renderDrawer`) positioned above "Sair". |
 | `DesktopSidebar` | Add `{ to: '/notifications', label: 'Notificações', icon: IconBell }` to `navLinks` array; add `showBadge` condition for unread count (same pattern as charges) |
 | `AppLayout` (possibly) | No structural changes expected; the new page route and drawer are self-contained |
 
@@ -440,6 +536,8 @@ Note: `NotificationInboxContent` is extracted so both the mobile drawer and the 
 | `useNotificationInbox` | `src/hooks/useNotificationInbox.ts` | Infinite/cursor query for `GET /api/notifications`; returns pages with `next_cursor`/`has_more`; exposes `fetchNextPage` |
 | `useMarkNotificationRead` | `src/hooks/useMarkNotificationRead.ts` | Mutation for `POST /api/notifications/:id/read`; accepts `onSuccess` option |
 | `useMarkAllNotificationsRead` | `src/hooks/useMarkAllNotificationsRead.ts` | Mutation for `POST /api/notifications/read-all`; accepts `onSuccess` option |
+| `useResolveNotificationAmount` | `src/hooks/useResolveNotificationAmount.ts` | Resolves entity amount by id for a given `entity_type` + `entity_id`; cache-first, per-id fetch fallback; returns `{ amount: number | null, isLoading: boolean }` |
+| `useChargeById` | `src/hooks/useChargeById.ts` | Queries `GET /api/charges/:id` via `fetchChargeById`; `queryKey: [QueryKeys.ChargeById, id]`; `staleTime: 5 * 60 * 1000` |
 
 ### New API functions to create
 
@@ -449,6 +547,7 @@ Note: `NotificationInboxContent` is extracted so both the mobile drawer and the 
 | `fetchNotificationUnreadCount` | `src/api/notifications.ts` | `GET /api/notifications/unread-count` |
 | `markNotificationRead` | `src/api/notifications.ts` | `POST /api/notifications/:id/read` |
 | `markAllNotificationsRead` | `src/api/notifications.ts` | `POST /api/notifications/read-all` |
+| `fetchChargeById` | `src/api/charges.ts` (add to existing file) | `GET /api/charges/:id` |
 
 ### New types to create
 
@@ -493,6 +592,8 @@ Add to `src/utils/queryKeys.ts`:
 ```ts
 Notifications: 'notifications',
 NotificationUnreadCount: 'notification-unread-count',
+TransactionById: 'transaction-by-id',
+ChargeById: 'charge-by-id',
 ```
 
 ### New route to create
@@ -528,7 +629,8 @@ Required `data-testid` values:
 | `NotificationsTestIds.Row` | `(id: number) => \`notification_row_${id}\` as const` | Each notification row `UnstyledButton` |
 | `NotificationsTestIds.UnreadDot` | `(id: number) => \`notification_unread_dot_${id}\` as const` | The 8px unread dot for each row |
 | `NotificationsTestIds.NavBellDesktop` | `'nav_bell_desktop'` | The desktop sidebar bell nav link |
-| `NotificationsTestIds.NavBellMobile` | `'mobile_tab_notifications'` | The mobile tab bar bell button |
+| `NotificationsTestIds.MaisTabIndicator` | `'mobile_mais_tab_indicator'` | The `Indicator` dot on the "Mais" tab |
+| `NotificationsTestIds.MoreDrawerNotificationsItem` | `'more_drawer_notifications_item'` | The "Notificações" MoreItem in MobileMoreDrawer |
 
 Note: The unread count badge on the nav entry points reuses `CommonTestIds.NavBadge('notifications')` → `'nav_badge_notifications'` (consistent with the charges badge `CommonTestIds.NavBadge('charges')`).
 
@@ -569,6 +671,7 @@ user taps load-more button
   ├── Button shows Loader size="xs", disabled
   └── Call fetchNextPage() from useNotificationInbox
         ├── success → append new rows to list; update has_more + next_cursor
+        │            → useResolveNotificationAmount fires for each new row's entity_id (cache-first)
         └── error → show inline error below list (not a toast; adjacent to the button)
                     Text size="xs" c="red" → "Erro ao carregar. Tente novamente."
 ```
@@ -583,6 +686,20 @@ on mark-read success: invalidate (triggers immediate refetch)
 on mark-all-read success: invalidate (triggers immediate refetch)
 ```
 
+### Entity amount resolution (per row, on inbox load)
+
+```
+for each notification in the current page:
+  ├── useResolveNotificationAmount(entity_type, entity_id)
+  │     ├── check queryClient cache for [QueryKeys.Charges, ...] or [QueryKeys.Transactions, ...]
+  │     │     └── if found → return amount immediately (no loading state)
+  │     └── if not found → fire useQuery([QueryKeys.ChargeById|TransactionById, entity_id])
+  │                         └── while loading: description renders without amount
+  │                         └── on success: description updates with amount inline
+  │                         └── on error / 404: amount = null → render "—" or no-amount template
+  └── format amount via formatBalance(amount) from src/utils/formatCents.ts
+```
+
 ---
 
 ## Accessibility
@@ -594,6 +711,7 @@ on mark-all-read success: invalidate (triggers immediate refetch)
 - "Marcar todas como lidas" button: `aria-label="Marcar todas as notificações como lidas"` (more descriptive than the visible label for screen readers).
 - Minimum touch target for rows: 48px height.
 - The drawer title heading renders as the accessible name of the drawer region via Mantine's Drawer `title` prop.
+- The `Indicator` dot on the "Mais" tab is `aria-hidden="true"` — the screen reader accessible label on the "Mais" tab should reflect the unread state: `aria-label={unreadCount > 0 ? `Mais — ${unreadCount} notificações não lidas` : 'Mais'}`.
 
 ---
 
@@ -621,20 +739,12 @@ This phase uses only Mantine core components already installed in the project. N
 
 ## Open Decisions
 
-| ID | Question | Recommended Default |
-|----|----------|---------------------|
-| OD-1 | Mobile inbox: bottom sheet drawer or full-page push navigation? | Bottom sheet drawer (via `renderDrawer`) — avoids adding a new tab-bar slot; keeps consistent with the MoreDrawer pattern. Desktop uses the full-page `/notifications` route. |
-| OD-2 | Unread badge color on bell icon: `color="blue"` or `color="red"`? | `color="blue"` — blue for notifications, red stays reserved for charges pending count. Ensures the two badge types are visually distinct without introducing new semantic colors. |
-| OD-3 | Infinite scroll vs explicit load more? | Explicit "Carregar mais" button — predictable UX for a bottom sheet, avoids `IntersectionObserver` complexity, consistent with the API's explicit `has_more` contract. |
-| OD-4 | Does the notification tab on mobile replace one of the existing 4 tabs or add a 5th? | Add a 5th tab. Current tabs: Transações, Contas, Categorias, Cobranças, Mais (5 total incl. Mais). Adding Notificações as a 6th tab makes the bar crowded. Recommended: replace the "Mais" tab's notification toggle (Phase 24) with the inbox tab, and keep the notification toggle accessible via the "Mais" drawer. The 5th slot becomes "Notificações" and "Mais" stays at position 6. — OR — open inbox from "Mais" drawer item instead. Executor should choose based on tab bar icon density at 375px; if 5 route tabs + Mais = 6 tabs at 375px is too crowded, use the "Mais" drawer approach for mobile and the sidebar nav link for desktop only. |
-
-OD-4 implementation guidance (default):
-- Add "Notificações" as a new `MoreItem` in `MobileMoreDrawer` (above "Sair") that calls `renderDrawer(() => <NotificationInboxDrawer />)` when tapped.
-- On desktop, add to the `DesktopSidebar` `navLinks` array as a full nav link with the bell icon and the unread badge.
-- This avoids the tab bar congestion problem entirely. The unread badge on mobile can be shown on the "Mais" tab button itself (as a dot overlay) when `unreadCount > 0`, signaling that there is something inside the "Mais" drawer.
-
-OD-4 mobile badge alternative (if using "Mais" drawer approach):
-- Add a small `indicator` dot on the "Mais" `IconDots` tab when `unreadCount > 0`. Use Mantine `Indicator` component wrapping the `<span className={classes.iconWrap}>` containing `IconDots`. Color `"blue"`, size 8, no count label (count is shown inside the drawer).
+| ID | Question | Resolved Decision |
+|----|----------|--------------------|
+| OD-1 | Mobile inbox: bottom sheet drawer or full-page push navigation? | RESOLVED: Bottom sheet drawer (via `renderDrawer` from `MobileMoreDrawer` MoreItem). Desktop uses the full-page `/notifications` route. |
+| OD-2 | Unread badge color on bell icon: `color="blue"` or `color="red"`? | RESOLVED: `color="blue"` — blue for notifications, red stays reserved for charges pending count. |
+| OD-3 | Infinite scroll vs explicit load more? | RESOLVED: Explicit "Carregar mais" button. |
+| OD-4 | Mobile entry point: new MobileTabBar tab vs MoreDrawer item? | RESOLVED (locked, Change 2): "Notificações" is a MoreItem inside `MobileMoreDrawer`, NOT a new tab. The "Mais" tab shows a small `Indicator` dot (color="blue", no count label) when `unreadCount > 0`. The numeric count badge lives on the MoreDrawer item. Desktop: sidebar nav link with `size="xs"` blue badge. There is no alternate mobile tab approach — the tab bar does not change its tab set. |
 
 ---
 
