@@ -33,5 +33,8 @@ func PushSubscriptionFromDomain(d *domain.PushSubscription) *PushSubscription {
 		Endpoint: d.Endpoint,
 		P256dh:   d.P256dh,
 		Auth:     d.Auth,
+		// CreatedAt is intentionally omitted: it is DB-generated (DEFAULT NOW()
+		// on insert) and preserved by the upsert — it must not be overwritten
+		// from the domain object.
 	}
 }
