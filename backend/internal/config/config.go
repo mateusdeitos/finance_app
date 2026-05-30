@@ -16,6 +16,7 @@ type Config struct {
 	JWT      JWTConfig
 	OAuth    OAuthConfig
 	App      AppConfig
+	VAPID    VAPIDConfig
 }
 
 type ServerConfig struct {
@@ -66,6 +67,12 @@ type AppConfig struct {
 	LogLevel       string
 }
 
+type VAPIDConfig struct {
+	PublicKey  string // VAPID_PUBLIC_KEY  — base64url-encoded uncompressed EC P-256 point
+	PrivateKey string // VAPID_PRIVATE_KEY — corresponding private scalar
+	Subject    string // VAPID_SUBJECT     — "mailto:..." per RFC 8292
+}
+
 func Load(files ...string) (*Config, error) {
 	// Try to load .env file, but don't fail if it doesn't exist
 	_ = godotenv.Load(files...)
@@ -106,6 +113,11 @@ func Load(files ...string) (*Config, error) {
 			AllowedOrigins: parseCSV(getEnv("ALLOWED_ORIGINS", "")),
 			Env:            getEnv("ENV", "development"),
 			LogLevel:       getEnv("LOG_LEVEL", "info"),
+		},
+		VAPID: VAPIDConfig{
+			PublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
+			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
+			Subject:    getEnv("VAPID_SUBJECT", ""),
 		},
 	}
 
