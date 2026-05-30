@@ -1,57 +1,247 @@
-.container {
+.root {
+  /* Design tokens — the login screen mirrors the design-system palette and is
+     the one surface where the brand gradient is allowed. Tokens are set here
+     and inherited by every child (including the colocated component modules). */
+  --login-surface: light-dark(#ffffff, #1f1f1f);
+  --login-border: light-dark(#e7e7e7, #2e2e2e);
+  --login-border-strong: light-dark(#cdcdcd, #3a3b3f);
+  --login-peek-border: light-dark(#e7ecf0, #2e2e2e);
+  --login-text: light-dark(#1a1a1a, #ffffff);
+  --login-text-2: light-dark(#4a4a4a, #cdcdcd);
+  --login-dimmed: #8b8b8b;
+  --login-blue-6: #568fb3;
+  --login-blue-7: light-dark(#457b9d, #95b8cf);
+  --login-blue-glow: rgba(86, 143, 179, 0.18);
+  --login-google-bg: light-dark(#ffffff, #26272a);
+  --login-google-border: light-dark(#dcdfe3, #3a3b3f);
+  --login-google-fg: light-dark(#1a1a1a, #ffffff);
+
+  --login-gradient: linear-gradient(
+    155deg,
+    light-dark(#4d86ab, #1d2733) 0%,
+    light-dark(#568fb3, #1a1b1e) 50%,
+    light-dark(#6ba2c2, #1a1b1e) 100%
+  );
+
   min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--login-surface);
+  font-family: var(--mantine-font-family);
+}
+
+/* ── Shared atoms ──────────────────────────────────────────────── */
+.brandRow {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  background: linear-gradient(
-    160deg,
-    light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-8)) 0%,
-    light-dark(var(--mantine-color-white), var(--mantine-color-dark-7)) 60%
-  );
+  gap: 0.6875rem;
 }
 
-.content {
-  width: 100%;
-  max-width: 24rem;
+.wordmark {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #fff;
 }
 
-.emoji {
-  font-size: 3.5rem;
-  line-height: 1;
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.title {
-  font-size: 2rem;
+/* ── Responsive switch between the two layouts ─────────────────── */
+.desktop {
+  display: none;
+}
+
+.mobile {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (min-width: 64em) {
+  .desktop {
+    display: flex;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .mobile {
+    display: none;
+  }
+}
+
+/* ── Desktop: marketing panel ──────────────────────────────────── */
+.marketing {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2.875rem 2.75rem;
+  color: #fff;
+  background: var(--login-gradient);
+}
+
+.glow {
+  position: absolute;
+  top: -5rem;
+  right: -3.75rem;
+  width: 17.5rem;
+  height: 17.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  filter: blur(10px);
+}
+
+.marketingBody {
+  position: relative;
+  z-index: 1;
+  margin: 1.75rem 0;
+}
+
+.headline {
+  margin: 0;
+  max-width: 26.25rem;
+  font-size: 2.125rem;
   font-weight: 800;
-  color: light-dark(var(--mantine-color-blue-8), var(--mantine-color-blue-2));
-  text-align: center;
+  letter-spacing: -0.6px;
+  line-height: 1.14;
 }
 
-.subtitle {
-  color: var(--mantine-color-dimmed);
-  text-align: center;
-  font-size: 1rem;
+.lede {
+  margin: 0.875rem 0 0;
+  max-width: 22.5rem;
+  font-size: 0.9375rem;
   line-height: 1.5;
-  max-width: 18rem;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.features {
+.peekWrap {
+  margin-top: 1.625rem;
+}
+
+.highlights {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.375rem;
+}
+
+.highlight {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-  width: 100%;
-  padding: 1.25rem 1.5rem;
-  background: light-dark(var(--mantine-color-white), var(--mantine-color-dark-6));
-  border-radius: var(--mantine-radius-md);
-  border: 1px solid light-dark(var(--mantine-color-grey-1), var(--mantine-color-dark-4));
+  font-size: 0.78125rem;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.googleButton {
-  min-height: 3rem;
-  font-size: 1rem;
-  font-weight: 500;
-  border-color: light-dark(var(--mantine-color-grey-2), var(--mantine-color-dark-4));
+.highlightDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffd700;
 }
 
-.googleButton:hover {
-  background-color: light-dark(var(--mantine-color-grey-0), var(--mantine-color-dark-5));
+/* ── Desktop: login card ───────────────────────────────────────── */
+.card {
+  width: 26.25rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem 2.875rem;
+  background: var(--login-surface);
+}
+
+.cardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.625rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--login-text);
+}
+
+.cardSub {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--login-text-2);
+}
+
+.terms {
+  margin: 0;
+  font-size: 0.71875rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--login-dimmed);
+}
+
+/* ── Mobile: hero band + card ──────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: var(--login-gradient);
+  padding: calc(4.875rem + env(safe-area-inset-top)) 1.625rem 1.875rem;
+}
+
+.glowSmall {
+  position: absolute;
+  top: -3.75rem;
+  right: -3.125rem;
+  width: 12.5rem;
+  height: 12.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  filter: blur(8px);
+}
+
+.heroHeadline {
+  position: relative;
+  z-index: 1;
+  margin: 1.125rem 0 0;
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.18;
+}
+
+.heroLede {
+  position: relative;
+  z-index: 1;
+  margin: 0.625rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.mobileCard {
+  flex: 1;
+  margin-top: -1rem;
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  background: var(--login-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem 1.625rem calc(2.5rem + env(safe-area-inset-bottom));
+}
+
+.spacer {
+  flex: 1;
+  min-height: 0.5rem;
 }

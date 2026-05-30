@@ -7,10 +7,6 @@ on:
         description: "PR number to deploy as preview"
         type: string
         required: true
-      expires:
-        description: "Preview channel TTL (e.g. 7d, 30d)"
-        type: string
-        default: "7d"
 
 permissions:
   contents: read
@@ -57,7 +53,7 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ vars.FIREBASE_PROJECT_ID }}
           channelId: pr-${{ inputs.pr_number }}
-          expires: ${{ inputs.expires }}
+          expires: 1d
           entryPoint: frontend
 
       - name: Comment preview URL on PR
@@ -65,9 +61,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ inputs.pr_number }}
           URLS: ${{ steps.deploy.outputs.urls }}
-          EXPIRES: ${{ inputs.expires }}
         run: |
           URL=$(echo "$URLS" | jq -r '.[0]')
           gh pr comment "$PR_NUMBER" --body "Preview frontend (apontando para o backend de prod): $URL
 
-          Channel: \`pr-$PR_NUMBER\` — expira em $EXPIRES."
+          Channel: \`pr-$PR_NUMBER\` — expira em 1d."
