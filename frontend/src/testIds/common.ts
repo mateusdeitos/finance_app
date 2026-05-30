@@ -25,6 +25,12 @@ export const CommonTestIds = {
   NavCreateConnection: 'nav_create_connection',
   NavConnection: (connectionId: number) => `nav_connection_${connectionId}` as const,
 
+  /* Edit connection drawer */
+  DrawerEditConnection: 'drawer_edit_connection',
+  EditConnectionNameInput: 'input_connection_name',
+  EditConnectionSave: 'btn_save_connection',
+  EditConnectionCancel: 'btn_cancel_connection',
+
   /* Invite drawer + accept-invite flow */
   InvitePartnerNameInput: 'input_invite_partner_name',
   InviteSplitChip: (pct: number) => `chip_invite_split_${pct}` as const,

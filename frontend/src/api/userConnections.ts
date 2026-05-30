@@ -35,6 +35,27 @@ export async function fetchUserConnections(): Promise<UserConnections.Connection
   return res.json()
 }
 
+export interface UpdateConnectionPayload {
+  account_name: string
+  default_split_percentage: number
+}
+
+export async function updateConnection(
+  id: number,
+  payload: UpdateConnectionPayload,
+): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/user-connections/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message ?? 'Failed to update connection')
+  }
+}
+
 export type AcceptInviteResult = {
   alreadyConnected: boolean
   connection: UserConnections.Connection

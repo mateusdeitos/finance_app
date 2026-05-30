@@ -17,6 +17,7 @@ import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { InviteDrawer } from "@/components/InviteDrawer";
+import { EditConnectionDrawer } from "@/components/connections/EditConnectionDrawer";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CommonTestIds } from "@/testIds";
 import { Transactions } from "@/types/transactions";
@@ -39,6 +40,8 @@ type Connection = {
   id: number;
   name: string;
   avatarUrl?: string;
+  /** The caller's own shared account for this connection (carries `user_connection`). */
+  account: Transactions.Account;
 };
 
 function selectAcceptedConnections(meId: number | undefined) {
@@ -55,6 +58,7 @@ function selectAcceptedConnections(meId: number | undefined) {
         id: c.id,
         name: (isFrom ? c.to_user_name : c.from_user_name) ?? "?",
         avatarUrl: isFrom ? c.to_user_avatar_url : c.from_user_avatar_url,
+        account: acc,
       });
     }
     return out;
@@ -75,6 +79,10 @@ export function DesktopSidebar() {
 
   const openInvite = () => {
     void renderDrawer(() => <InviteDrawer />).catch(() => {});
+  };
+
+  const openEditConnection = (account: Transactions.Account) => {
+    void renderDrawer(() => <EditConnectionDrawer account={account} />).catch(() => {});
   };
 
   return (
@@ -107,10 +115,16 @@ export function DesktopSidebar() {
       <div className={classes.sectionLabel}>Conexões</div>
       <div className={classes.navGroup}>
         {connections.map((c) => (
-          <div key={c.id} className={classes.connectionItem} data-testid={CommonTestIds.NavConnection(c.id)}>
+          <button
+            type="button"
+            key={c.id}
+            className={classes.connectionItem}
+            onClick={() => openEditConnection(c.account)}
+            data-testid={CommonTestIds.NavConnection(c.id)}
+          >
             <UserAvatar name={c.name} avatarUrl={c.avatarUrl} size="sm" />
             <span className={classes.connectionName}>{c.name}</span>
-          </div>
+          </button>
         ))}
         <button
           type="button"

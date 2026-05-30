@@ -82,6 +82,42 @@ func (h *UserConnectionHandler) UpdateStatus(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// UpdateSettings godoc
+// @Summary      Update connection settings (account name + default split)
+// @Tags         user-connections
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id       path  int                              true  "Connection ID"
+// @Param        request  body  UpdateConnectionSettingsRequest  true  "Connection settings"
+// @Success      200  {object}  domain.UserConnection
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      403  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/user-connections/{id} [put]
+func (h *UserConnectionHandler) UpdateSettings(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid user connection ID")
+	}
+
+	var req UpdateConnectionSettingsRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	conn, err := h.userConnectionService.UpdateSettings(c.Request().Context(), userID, id, req.AccountName, req.DefaultSplitPercentage)
+	if err != nil {
+		return HandleServiceError(err)
+	}
+
+	return c.JSON(http.StatusOK, conn)
+}
+
 // Delete godoc
 // @Summary      Delete user connection
 // @Tags         user-connections
@@ -195,4 +231,9 @@ func (h *UserConnectionHandler) AcceptInvite(c echo.Context) error {
 type AcceptInviteRequest struct {
 	ExternalID                 string `json:"external_id"`
 	FromDefaultSplitPercentage int    `json:"from_default_split_percentage"`
+}
+
+type UpdateConnectionSettingsRequest struct {
+	AccountName            string `json:"account_name"`
+	DefaultSplitPercentage int    `json:"default_split_percentage"`
 }
