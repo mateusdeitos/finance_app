@@ -335,6 +335,26 @@ Amount-inclusive templates (aligned with Phase 23 D-07 push copy for cross-chann
 
 ## Data Fetching Strategy: Entity Amount Resolution
 
+> ⚠️ **THIS ENTIRE SECTION (through line ~405) IS SUPERSEDED by `25-CONTEXT.md` D-25-1.**
+> It was written before the backend was verified and is WRONG on two counts:
+> (1) it describes a **per-id N+1** strategy; (2) it claims `GET /api/charges/:id`
+> exists — **it does NOT** (verified absent in `backend/cmd/server/main.go`).
+>
+> **Binding strategy instead (D-25-1, see `25-RESEARCH.md`):** resolve amounts in
+> **batched by-IDs** queries — at most **2 requests per inbox page** (≤1 charges,
+> ≤1 transactions), NOT one per row. Do **NOT** create `fetchChargeById`,
+> `useChargeById`, or `useResolveNotificationAmount` (singular). Build instead:
+> - BACKEND: add `IDs` to `ChargeSearchOptions` + `WHERE id IN` (exposed via the
+>   existing `GET /api/charges` List, IDOR-gated); add a thin
+>   `GET /api/transactions/by-ids` handler (reuses `Search` with `Period{0,0}`).
+> - FRONTEND: `useResolveNotificationAmounts(notifications[])` (plural) — collect
+>   distinct `entity_id`s per type, fire the two batched queries, map back per row,
+>   expose `{ amount, amountState: 'known'|'loading'|'missing' }` (`missing` = id
+>   requested but absent in response → render `—`).
+>
+> Everything ELSE in 25-UI-SPEC (visuals, copy, states, ThemeIcon tints, OD-4,
+> testIds, `describeNotification`) remains fully binding.
+
 ### Why a separate fetch is needed
 
 The inbox API (`GET /api/notifications`) returns only `type`, `entity_type`, `entity_id`, `read`, and `created_at`. It does NOT return the entity amount. To display amounts, the frontend must resolve the entity by id.

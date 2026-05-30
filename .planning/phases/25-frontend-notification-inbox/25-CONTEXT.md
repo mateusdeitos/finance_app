@@ -77,3 +77,21 @@ machinery that already exists for transactions.
 - Amount-inclusive pt-BR copy mirroring Phase 23 D-07 push templates.
 - Explicit mark-read only; cursor "Carregar mais"; "Você está em dia" end state.
 - INBOX-01..04 → the four success criteria.
+
+## D-25-2 — mark-read mutation invalidation placement (minor)
+
+Resolves the researcher's open decision against CLAUDE.md's "caller invalidates"
+rule. **Keep the optimistic `onMutate`/`onError`/`onSettled` INSIDE the mark-read
+and mark-all-read mutation hooks** — but scope the in-hook `onSettled` strictly to
+the **unread-count** reconcile-invalidate (the cross-cutting badge that every
+surface shares). **Expose an `onSuccess?` option** so the CALLER invalidates the
+**inbox list** query (per convention). Rationale: the optimistic row flip +
+unread-count decrement are tightly coupled correctness logic that must not be
+duplicated at every call site; the inbox-list refresh is caller-contextual
+(drawer vs page) and stays the caller's responsibility.
+
+## Note — 25-UI-SPEC "Data Fetching Strategy" superseded
+The UI-SPEC §"Data Fetching Strategy: Entity Amount Resolution" (~lines 336-405)
+is SUPERSEDED by D-25-1 and annotated inline. Do NOT implement `fetchChargeById`,
+`useChargeById`, or a singular `useResolveNotificationAmount`. Build the batched
+by-IDs design. All other UI-SPEC sections remain binding.
