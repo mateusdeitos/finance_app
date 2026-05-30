@@ -65,7 +65,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 ### Active
 
-- [ ] Web Push subscription lifecycle: register, store, and remove a per-device push subscription — v1.6
+- [ ] Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
 - [ ] Notify the charge recipient when the partner creates a new charge — v1.6
 - [ ] Notify the charge creator when the partner accepts their charge — v1.6
 - [ ] Notify the partner when a new split transaction is created on their side — v1.6

@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-30T02:36:12.920Z"
 last_activity: 2026-05-30
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,10 +15,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 22 — Backend Subscription Foundation (next)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-30 — Milestone v1.6 started
+Status: Roadmap defined; ready to plan Phase 22
+Last activity: 2026-05-30 — v1.6 roadmap created (Phases 22–25)
 
 ## Project Reference
 
@@ -46,6 +46,7 @@ See: .planning/PROJECT.md (updated 2026-05-30)
 - v1.3 shipped 2026-04-20 (partial — Phase 11 only). Archived: `.planning/milestones/v1.3-ROADMAP.md`. Phase 12 deferred to backlog.
 - v1.4 shipped 2026-05-05 (Phases 13–15). Archived: `.planning/milestones/v1.4-ROADMAP.md`. Phase dirs moved to `.planning/milestones/v1.4-phases/`.
 - v1.5 shipped 2026-05-07 (Phases 16–19, 21; Phase 20 skipped post-gate). Archived: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-RETROSPECTIVE.md`. Phase dirs moved to `.planning/milestones/v1.5-phases/`. Headline: description keystroke 761ms→3.5ms (218×); amount keystroke 929ms→5.6ms (166×). Open follow-up: issue #116 (duplicate-check fires on action flip duplicate→import).
+- v1.6 roadmap created 2026-05-30 — Web Push (VAPID) via 4 phases (22–25): backend subscription foundation, notification events + inbox API, frontend subscribe/SW, frontend inbox UI.
 
 ### Todos
 

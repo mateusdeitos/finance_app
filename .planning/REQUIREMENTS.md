@@ -14,6 +14,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **SUB-01**: User can grant browser notification permission and register a Web Push subscription for the current device
 - [ ] **SUB-02**: User can turn notifications off, which removes the current device's push subscription on the server
 - [ ] **SUB-03**: System persists push subscriptions per user + device (endpoint + keys) and prunes a subscription when the push service reports it expired/invalid (HTTP 404/410)
+- [ ] **SUB-04**: System can report whether the current device already has an active push subscription, so the frontend can show the correct enabled/disabled state
 
 ### Notification Events (NOTIF)
 
@@ -67,28 +68,29 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | TBD | Pending |
-| SUB-02 | TBD | Pending |
-| SUB-03 | TBD | Pending |
-| NOTIF-01 | TBD | Pending |
-| NOTIF-02 | TBD | Pending |
-| NOTIF-03 | TBD | Pending |
-| NOTIF-04 | TBD | Pending |
-| NOTIF-05 | TBD | Pending |
-| NOTIF-06 | TBD | Pending |
-| INBOX-01 | TBD | Pending |
-| INBOX-02 | TBD | Pending |
-| INBOX-03 | TBD | Pending |
-| INBOX-04 | TBD | Pending |
-| CTRL-01 | TBD | Pending |
-| CTRL-02 | TBD | Pending |
-| CTRL-03 | TBD | Pending |
+| SUB-01 | Phase 24 | Pending |
+| SUB-02 | Phase 24 | Pending |
+| SUB-03 | Phase 22 | Pending |
+| SUB-04 | Phase 22 | Pending |
+| NOTIF-01 | Phase 23 | Pending |
+| NOTIF-02 | Phase 23 | Pending |
+| NOTIF-03 | Phase 23 | Pending |
+| NOTIF-04 | Phase 23 | Pending |
+| NOTIF-05 | Phase 23 | Pending |
+| NOTIF-06 | Phase 23 | Pending |
+| INBOX-01 | Phase 25 | Pending |
+| INBOX-02 | Phase 25 | Pending |
+| INBOX-03 | Phase 25 | Pending |
+| INBOX-04 | Phase 25 | Pending |
+| CTRL-01 | Phase 24 | Pending |
+| CTRL-02 | Phase 24 | Pending |
+| CTRL-03 | Phase 24 | Pending |
 
 **Coverage:**
-- v1.6 requirements: 16 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 16 ⚠️ (resolved by roadmap step)
+- v1.6 requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 after initial definition*
+*Last updated: 2026-05-30 — traceability mapped (Phases 22–25)*
