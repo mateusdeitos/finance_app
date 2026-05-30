@@ -15,9 +15,9 @@ progress:
 
 ## Current Position
 
-Phase: 23 (backend-notification-events-inbox-api) — EXECUTING
-Plan: 3 of 3
-Status: Phase complete — ready for verification
+Phase: 24 (frontend-permission-subscribe-service-worker) — VERIFIED
+Plan: 5 of 5
+Status: PASS (code-complete, device-UAT-pending) — see 24-VERIFICATION.md + 24-HUMAN-UAT.md
 Last activity: 2026-05-30
 
 ## Project Reference

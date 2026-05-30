@@ -11,8 +11,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Push Subscription (SUB)
 
-- [ ] **SUB-01**: User can grant browser notification permission and register a Web Push subscription for the current device
-- [ ] **SUB-02**: User can turn notifications off, which removes the current device's push subscription on the server
+- [x] **SUB-01**: User can grant browser notification permission and register a Web Push subscription for the current device
+- [x] **SUB-02**: User can turn notifications off, which removes the current device's push subscription on the server
 - [x] **SUB-03**: System persists push subscriptions per user + device (endpoint + keys) and prunes a subscription when the push service reports it expired/invalid (HTTP 404/410)
 - [x] **SUB-04**: System can report whether the current device already has an active push subscription, so the frontend can show the correct enabled/disabled state
 
@@ -34,9 +34,9 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Permissions & Controls (CTRL)
 
-- [ ] **CTRL-01**: User is asked for notification permission contextually via an explicit in-app action (not automatically on first load)
-- [ ] **CTRL-02**: User can see and toggle the notification on/off state for the current device
-- [ ] **CTRL-03**: Clicking a delivered OS/browser push notification opens the app focused on the related entity
+- [x] **CTRL-01**: User is asked for notification permission contextually via an explicit in-app action (not automatically on first load)
+- [x] **CTRL-02**: User can see and toggle the notification on/off state for the current device
+- [x] **CTRL-03**: Clicking a delivered OS/browser push notification opens the app focused on the related entity
 
 ## Future Requirements
 
@@ -68,8 +68,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | Phase 24 | Pending |
-| SUB-02 | Phase 24 | Pending |
+| SUB-01 | Phase 24 | Complete (UAT pending) |
+| SUB-02 | Phase 24 | Complete (UAT pending) |
 | SUB-03 | Phase 22 | Complete |
 | SUB-04 | Phase 22 | Complete |
 | NOTIF-01 | Phase 23 | Complete |
@@ -82,9 +82,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | INBOX-02 | Phase 25 | Pending |
 | INBOX-03 | Phase 25 | Pending |
 | INBOX-04 | Phase 25 | Pending |
-| CTRL-01 | Phase 24 | Pending |
-| CTRL-02 | Phase 24 | Pending |
-| CTRL-03 | Phase 24 | Pending |
+| CTRL-01 | Phase 24 | Complete (UAT pending) |
+| CTRL-02 | Phase 24 | Complete (UAT pending) |
+| CTRL-03 | Phase 24 | Complete (UAT pending) |
 
 **Coverage:**
 - v1.6 requirements: 17 total
