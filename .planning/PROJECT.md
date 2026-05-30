@@ -69,6 +69,7 @@ Partners can accurately track shared finances, including in-progress installment
 - [ ] Notify the charge recipient when the partner creates a new charge — v1.6
 - [ ] Notify the charge creator when the partner accepts their charge — v1.6
 - [ ] Notify the partner when a new split transaction is created on their side — v1.6
+- [ ] Notify the partner when a split transaction is updated in a way that affects their side — v1.6
 - [ ] Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
 - [ ] In-app notification inbox with read/unread state and open-entity navigation — v1.6
 - [ ] Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
@@ -84,7 +85,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 **Target features:**
 - Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
-- Three event triggers (from issue #174): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner (notify partner)
+- Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
 - Persisted, context-aware notifications: each saved server-side with a deep-link to its entity (charge/transaction)
 - In-app notification inbox with read/unread state and "open entity" navigation to the related charge/transaction
 - Synchronous best-effort dispatch: push is sent after the DB commit (goroutine, no queue/retry); a failed send is tolerated, not retried
