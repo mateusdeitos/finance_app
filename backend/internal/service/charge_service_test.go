@@ -59,14 +59,14 @@ func (s *ChargeServiceTestSuite) seedTransaction(
 		txType = domain.TransactionTypeIncome
 	}
 	tx := &domain.Transaction{
-		UserID:        userID,
+		UserID:         userID,
 		OriginalUserID: &userID,
-		AccountID:     accountID,
-		Amount:        amount,
-		Type:          txType,
-		OperationType: opType,
-		Date:          date,
-		Description:   "test seed",
+		AccountID:      accountID,
+		Amount:         amount,
+		Type:           txType,
+		OperationType:  opType,
+		Date:           date,
+		Description:    "test seed",
 	}
 	_, err := s.Repos.Transaction.Create(ctx, tx)
 	s.Require().NoError(err)
@@ -142,6 +142,66 @@ func (s *ChargeServiceTestSuite) TestAccept_CreatesTransfers() {
 	// Exactly 4 transaction rows with charge_id == charge.ID (2 main + 2 linked)
 	count := s.countTransactionsByChargeID(ctx, charge.ID)
 	assert.Equal(s.T(), 4, count, "expected 4 transaction rows (2 mains + 2 linked)")
+}
+
+func (s *ChargeServiceTestSuite) TestAccept_SetsOriginalUserID() {
+	ctx := context.Background()
+
+	// Set up users and connection
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+
+	// Private accounts
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	// Seed a credit in charger's connection account so balance > 0 (no role swap)
+	periodMonth, periodYear := 3, 2026
+	conn.SwapIfNeeded(charger.ID)
+	chargerConnAccID := conn.FromAccountID
+	s.seedTransaction(ctx, charger.ID, chargerConnAccID, 10000, domain.OperationTypeCredit, periodMonth, periodYear)
+
+	// Create pending charge with charger's private account set, then accept as payer
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx,
+		charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID,
+		periodMonth, periodYear, chargeDate,
+	)
+
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
+		AccountID: payerPrivAcc.ID,
+		Date:      acceptDate,
+	})
+	s.Require().NoError(err)
+
+	// Regression: every settlement transaction must carry original_user_id, equal to its
+	// user_id (each transfer is an intra-user move). Charger and payer each own 2 rows.
+	var rows []struct {
+		UserID         int  `gorm:"column:user_id"`
+		OriginalUserID *int `gorm:"column:original_user_id"`
+	}
+	err = s.DB.WithContext(ctx).
+		Raw("SELECT user_id, original_user_id FROM transactions WHERE charge_id = ? AND deleted_at IS NULL", charge.ID).
+		Scan(&rows).Error
+	s.Require().NoError(err)
+	s.Require().Len(rows, 4)
+
+	ownerCount := map[int]int{}
+	for _, r := range rows {
+		s.Require().NotNil(r.OriginalUserID, "original_user_id must be set on charge settlement transactions")
+		assert.Equal(s.T(), r.UserID, *r.OriginalUserID, "original_user_id must equal user_id for intra-user charge transfers")
+		ownerCount[r.UserID]++
+	}
+	assert.Equal(s.T(), 2, ownerCount[charger.ID], "charger should own 2 settlement rows")
+	assert.Equal(s.T(), 2, ownerCount[payer.ID], "payer should own 2 settlement rows")
 }
 
 func (s *ChargeServiceTestSuite) TestAccept_Atomic() {
@@ -681,4 +741,181 @@ func (s *ChargeServiceTestSuite) TestAccept_NonPending() {
 		Date:      acceptDate,
 	})
 	s.Require().Error(err, "accept on cancelled charge should fail")
+}
+
+// chargeTxRow is a lightweight projection of a settlement transaction used to
+// assert the shape of the transfers created when a charge is accepted.
+type chargeTxRow struct {
+	UserID         int    `gorm:"column:user_id"`
+	OriginalUserID *int   `gorm:"column:original_user_id"`
+	AccountID      int    `gorm:"column:account_id"`
+	OperationType  string `gorm:"column:operation_type"`
+	Amount         int64  `gorm:"column:amount"`
+	Type           string `gorm:"column:type"`
+}
+
+func (s *ChargeServiceTestSuite) chargeTransactions(ctx context.Context, chargeID int) []chargeTxRow {
+	var rows []chargeTxRow
+	err := s.DB.WithContext(ctx).
+		Raw("SELECT user_id, original_user_id, account_id, operation_type, amount, type FROM transactions WHERE charge_id = ? AND deleted_at IS NULL", chargeID).
+		Scan(&rows).Error
+	s.Require().NoError(err)
+	return rows
+}
+
+func hasChargeTx(rows []chargeTxRow, userID, accountID int, op domain.OperationType) bool {
+	for _, r := range rows {
+		if r.UserID == userID && r.AccountID == accountID && r.OperationType == string(op) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *ChargeServiceTestSuite) accountBalance(ctx context.Context, userID, accountID, periodMonth, periodYear int) int64 {
+	res, err := s.Services.Transaction.GetBalance(ctx, userID, domain.Period{Month: periodMonth, Year: periodYear}, domain.BalanceFilter{
+		AccountIDs: []int{accountID},
+	})
+	s.Require().NoError(err)
+	return res.Balance
+}
+
+// TestAccept_RoleAndConnectionOrientation exercises charge create + accept across
+// the full matrix of {connection side} x {initiator role}. The connection has a
+// fixed orientation (from_user / to_user); each case verifies that whoever the
+// charger/payer turn out to be, every settlement transfer lands on that user's own
+// connection and private accounts, carries original_user_id == user_id, and levels
+// both connection-account balances to zero.
+//
+// The 4 cases below cover all the requested scenarios:
+//   - from_user cria como charger  / to_user aceita como payer
+//   - from_user cria como payer    / to_user aceita como charger
+//   - to_user   cria como charger  / from_user aceita como payer
+//   - to_user   cria como payer    / from_user aceita como charger
+func (s *ChargeServiceTestSuite) TestAccept_RoleAndConnectionOrientation() {
+	const amount int64 = 5000
+	periodMonth, periodYear := 4, 2026
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name          string
+		creatorIsFrom bool
+		creatorRole   domain.ChargeInitiatorRole
+	}{
+		{"from_user cria como charger / to_user aceita como payer", true, domain.ChargeInitiatorRoleCharger},
+		{"from_user cria como payer / to_user aceita como charger", true, domain.ChargeInitiatorRolePayer},
+		{"to_user cria como charger / from_user aceita como payer", false, domain.ChargeInitiatorRoleCharger},
+		{"to_user cria como payer / from_user aceita como charger", false, domain.ChargeInitiatorRolePayer},
+	}
+
+	for _, tc := range cases {
+		s.Run(tc.name, func() {
+			ctx := context.Background()
+
+			userFrom, err := s.createTestUser(ctx)
+			s.Require().NoError(err)
+			userTo, err := s.createTestUser(ctx)
+			s.Require().NoError(err)
+
+			conn, err := s.createAcceptedTestUserConnection(ctx, userFrom.ID, userTo.ID, 50)
+			s.Require().NoError(err)
+
+			fromPriv, err := s.createTestAccount(ctx, userFrom)
+			s.Require().NoError(err)
+			toPriv, err := s.createTestAccount(ctx, userTo)
+			s.Require().NoError(err)
+
+			// Resolve creator / accepter and their private accounts.
+			creator, accepter := userFrom, userTo
+			creatorPriv, accepterPriv := fromPriv, toPriv
+			if !tc.creatorIsFrom {
+				creator, accepter = userTo, userFrom
+				creatorPriv, accepterPriv = toPriv, fromPriv
+			}
+
+			// Resolve charger / payer from the initiator role.
+			var charger, payer *domain.User
+			var chargerPriv, payerPriv *domain.Account
+			if tc.creatorRole == domain.ChargeInitiatorRoleCharger {
+				charger, chargerPriv = creator, creatorPriv
+				payer, payerPriv = accepter, accepterPriv
+			} else {
+				payer, payerPriv = creator, creatorPriv
+				charger, chargerPriv = accepter, accepterPriv
+			}
+
+			// Each user's connection-account side (from_account belongs to userFrom).
+			chargerConnAcc := conn.FromAccountID
+			if charger.ID == userTo.ID {
+				chargerConnAcc = conn.ToAccountID
+			}
+			payerConnAcc := conn.FromAccountID
+			if payer.ID == userTo.ID {
+				payerConnAcc = conn.ToAccountID
+			}
+
+			// Seed connection balances: charger is owed (+amount), payer owes (-amount).
+			// Keeping the charger's connection balance >= 0 also avoids the accept-time
+			// role swap, so the stored charger/payer roles stay deterministic.
+			s.seedTransaction(ctx, charger.ID, chargerConnAcc, amount, domain.OperationTypeCredit, periodMonth, periodYear)
+			s.seedTransaction(ctx, payer.ID, payerConnAcc, amount, domain.OperationTypeDebit, periodMonth, periodYear)
+
+			// ---- Create ----
+			role := tc.creatorRole
+			amt := amount
+			created, err := s.Services.Charge.Create(ctx, creator.ID, &domain.CreateChargeRequest{
+				ConnectionID: conn.ID,
+				MyAccountID:  creatorPriv.ID,
+				PeriodMonth:  periodMonth,
+				PeriodYear:   periodYear,
+				Amount:       &amt,
+				Role:         &role,
+				Date:         chargeDate,
+			})
+			s.Require().NoError(err)
+
+			s.Equal(charger.ID, created.ChargerUserID, "charger user")
+			s.Equal(payer.ID, created.PayerUserID, "payer user")
+			s.Equal(domain.ChargeStatusPending, created.Status)
+			if tc.creatorRole == domain.ChargeInitiatorRoleCharger {
+				s.Require().NotNil(created.ChargerAccountID)
+				s.Equal(creatorPriv.ID, *created.ChargerAccountID)
+				s.Nil(created.PayerAccountID, "payer account filled only on accept")
+			} else {
+				s.Require().NotNil(created.PayerAccountID)
+				s.Equal(creatorPriv.ID, *created.PayerAccountID)
+				s.Nil(created.ChargerAccountID, "charger account filled only on accept")
+			}
+
+			// ---- Accept (by the non-initiating party) ----
+			err = s.Services.Charge.Accept(ctx, accepter.ID, created.ID, &domain.AcceptChargeRequest{
+				AccountID: accepterPriv.ID,
+				Date:      acceptDate,
+			})
+			s.Require().NoError(err)
+
+			// ---- Assert the 4 settlement transfers ----
+			rows := s.chargeTransactions(ctx, created.ID)
+			s.Require().Len(rows, 4, "expected 4 settlement rows")
+			for _, r := range rows {
+				s.Require().NotNil(r.OriginalUserID, "original_user_id must be set")
+				s.Equal(r.UserID, *r.OriginalUserID, "original_user_id == user_id")
+				s.Equal(string(domain.TransactionTypeTransfer), r.Type)
+				s.Equal(amount, r.Amount)
+			}
+			// Charger: connection account debited, private account credited.
+			s.True(hasChargeTx(rows, charger.ID, chargerConnAcc, domain.OperationTypeDebit), "charger conn debit")
+			s.True(hasChargeTx(rows, charger.ID, chargerPriv.ID, domain.OperationTypeCredit), "charger private credit")
+			// Payer: private account debited, connection account credited.
+			s.True(hasChargeTx(rows, payer.ID, payerPriv.ID, domain.OperationTypeDebit), "payer private debit")
+			s.True(hasChargeTx(rows, payer.ID, payerConnAcc, domain.OperationTypeCredit), "payer conn credit")
+
+			// ---- Assert balances leveled out ----
+			s.Equal(int64(0), s.accountBalance(ctx, charger.ID, chargerConnAcc, periodMonth, periodYear), "charger conn balance zeroed")
+			s.Equal(amount, s.accountBalance(ctx, charger.ID, chargerPriv.ID, periodMonth, periodYear), "charger received into private")
+			s.Equal(int64(0), s.accountBalance(ctx, payer.ID, payerConnAcc, periodMonth, periodYear), "payer conn balance zeroed")
+			s.Equal(-amount, s.accountBalance(ctx, payer.ID, payerPriv.ID, periodMonth, periodYear), "payer paid from private")
+		})
+	}
 }
