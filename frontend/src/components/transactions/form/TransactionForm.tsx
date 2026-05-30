@@ -17,6 +17,7 @@ import {
   SimpleGrid,
   Group,
   Text,
+  TextInput,
   ComboboxItemGroup,
   ComboboxItem,
 } from "@mantine/core";
@@ -95,6 +96,12 @@ const TYPE_ICON: Record<TransactionType, ReactNode> = {
   expense: <IconTrendingDown size={14} />,
   income: <IconTrendingUp size={14} />,
   transfer: <IconArrowRight size={14} />,
+};
+
+const TYPE_LABEL: Record<TransactionType, string> = {
+  expense: "Despesa",
+  income: "Receita",
+  transfer: "Transferência",
 };
 
 interface Props {
@@ -291,30 +298,39 @@ export const TransactionForm = ({
         <Controller
           control={control}
           name="transaction_type"
-          render={({ field }) => (
-            <SegmentedControl
-              color={typeColor}
-              data={(["expense", "income", "transfer"] as const).map((t) => ({
-                value: t,
-                label: (
-                  <Group gap={6} wrap="nowrap" justify="center">
-                    {TYPE_ICON[t]}
-                    <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
-                      {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
-                    </span>
-                  </Group>
-                ),
-              }))}
-              value={field.value}
-              onChange={(val) => {
-                field.onChange(val);
-                if (val === "transfer") setValue("split_settings", []);
-              }}
-              disabled={lockTransactionType}
-              fullWidth
-              data-testid={TransactionsTestIds.SegmentedTransactionType}
-            />
-          )}
+          render={({ field }) =>
+            lockTransactionType ? (
+              <TextInput
+                label="Tipo"
+                value={TYPE_LABEL[field.value]}
+                disabled
+                readOnly
+                data-testid={TransactionsTestIds.InputTransactionType}
+              />
+            ) : (
+              <SegmentedControl
+                color={typeColor}
+                data={(["expense", "income", "transfer"] as const).map((t) => ({
+                  value: t,
+                  label: (
+                    <Group gap={6} wrap="nowrap" justify="center">
+                      {TYPE_ICON[t]}
+                      <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
+                        {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
+                      </span>
+                    </Group>
+                  ),
+                }))}
+                value={field.value}
+                onChange={(val) => {
+                  field.onChange(val);
+                  if (val === "transfer") setValue("split_settings", []);
+                }}
+                fullWidth
+                data-testid={TransactionsTestIds.SegmentedTransactionType}
+              />
+            )
+          }
         />
 
         <Controller

@@ -38,6 +38,8 @@ export const TransactionsTestIds = {
   ReadOnlyAccount: 'readonly_account',
   ReadOnlyDestinationAccount: 'readonly_destination_account',
   SegmentedTransactionType: 'segmented_transaction_type',
+  // Read-only type display shown when the type can't be changed (charge transfers)
+  InputTransactionType: 'input_transaction_type',
 
   // Select options (renderOption testids — pass the entity id)
   OptionAccount: (accountId: number | string) => `option_account_${accountId}` as const,
