@@ -220,7 +220,15 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 	}
 
-	return s.dbTransaction.Commit(ctx)
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return err
+	}
+
+	// NOTIF-04: fire split_updated for partner-initiated edits that affect the
+	// linked side (amount / split add / split remove). Cosmetic edits (D-02) and
+	// self-edits (D-03) fire nothing — guarded inside the helper.
+	s.maybeDispatchSplitUpdatedNotification(ctx, userID, sourceIDs, data)
+	return nil
 }
 
 func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, data *transactionUpdateData) (updateChanges, error) {
@@ -1338,4 +1346,97 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	}
 
 	return errs
+}
+
+// maybeDispatchSplitUpdatedNotification fires split_updated notifications for
+// partner-initiated edits that affect the linked split side. It is called after
+// the DB transaction commits (NOTIF-04).
+//
+// Detection rules (D-01 through D-04):
+//   - D-01: fires only on AddedSplit / RemovedSplit / linked-side amount change.
+//   - D-02: cosmetic-only edits (category/description/date) hit no switch arm → no fire.
+//   - D-03: self-edit guard — the original author editing their own tx never notifies.
+//   - D-04: remove still notifies; entity_id points to the (soft-deleted) linked tx.
+func (s *transactionService) maybeDispatchSplitUpdatedNotification(
+	ctx context.Context,
+	callerUserID int,
+	sourceIDs []int,
+	data *transactionUpdateData,
+) {
+	changes := data.scenario
+	var events []domain.NotificationEvent
+
+	switch {
+	case changes.AddedSplit():
+		// D-03: only fire when partner-initiated (caller != original author)
+		if callerUserID == lo.FromPtr(data.previousTransaction.OriginalUserID) {
+			return
+		}
+		for _, ss := range data.req.SplitSettings {
+			if ss.UserConnection == nil {
+				continue
+			}
+			recipientID := ss.UserConnection.ToUserID
+			if recipientID == callerUserID {
+				recipientID = ss.UserConnection.FromUserID
+			}
+			if recipientID == callerUserID {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: recipientID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        data.previousTransaction.ID,
+				Amount:          lo.FromPtr(data.req.Amount),
+			})
+		}
+
+	case changes.RemovedSplit():
+		// D-03: only fire when partner-initiated; D-04: removal still notifies
+		if callerUserID == lo.FromPtr(data.previousTransaction.OriginalUserID) {
+			return
+		}
+		for _, lt := range data.previousTransaction.LinkedTransactions {
+			if lt.UserID == callerUserID {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: lt.UserID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        lt.ID, // deep-link to the (soft-deleted) linked tx
+				Amount:          lt.Amount,
+			})
+		}
+
+	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0:
+		// Caller IS the partner editing their linked tx amount.
+		// Recipient = source transaction owner.
+		for _, srcID := range sourceIDs {
+			sourceTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{
+				IDs: []int{srcID},
+			})
+			if err != nil || sourceTx == nil {
+				continue
+			}
+			if sourceTx.UserID == callerUserID {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: sourceTx.UserID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        srcID,
+				Amount:          *data.req.Amount,
+			})
+		}
+	}
+
+	if len(events) > 0 {
+		go s.services.Notification.Dispatch(context.Background(), events)
+	}
 }

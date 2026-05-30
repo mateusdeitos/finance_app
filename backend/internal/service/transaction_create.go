@@ -55,6 +55,44 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 		return 0, pkgErrors.Internal("failed to commit transaction", err)
 	}
 
+	// NOTIF-03: fire split_created for each partner after commit.
+	// Guard matches the settlement guard at createTransactions:252 — shared-account
+	// paths and transfers are excluded (Pitfall 4).
+	if transaction.SharedAccountConnection == nil &&
+		transaction.TransactionType != domain.TransactionTypeTransfer &&
+		len(transaction.SplitSettings) > 0 {
+		var events []domain.NotificationEvent
+		for _, ss := range transaction.SplitSettings {
+			if ss.UserConnection == nil {
+				continue
+			}
+			recipientID := ss.UserConnection.ToUserID
+			if recipientID == userID {
+				recipientID = ss.UserConnection.FromUserID
+			}
+			if recipientID == userID {
+				continue // skip self
+			}
+			var notifAmt int64
+			if ss.Amount != nil && *ss.Amount > 0 {
+				notifAmt = *ss.Amount
+			} else {
+				notifAmt = transaction.Amount
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: recipientID,
+				ActorUserID:     userID,
+				Type:            domain.NotificationTypeSplitCreated,
+				EntityType:      "transaction",
+				EntityID:        id,
+				Amount:          notifAmt,
+			})
+		}
+		if len(events) > 0 {
+			go s.services.Notification.Dispatch(context.Background(), events)
+		}
+	}
+
 	return id, nil
 }
 

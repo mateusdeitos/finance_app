@@ -151,7 +151,29 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 		charge.PayerAccountID = &myAccID
 	}
 
-	return s.chargeRepo.Create(ctx, charge)
+	// NOTIF-01: fire charge_received after the INSERT auto-commits.
+	created, err := s.chargeRepo.Create(ctx, charge)
+	if err != nil {
+		return nil, err
+	}
+	notifAmount := int64(0)
+	if created.Amount != nil {
+		notifAmount = *created.Amount
+	}
+	notifDescription := ""
+	if created.Description != nil {
+		notifDescription = *created.Description
+	}
+	go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{{
+		RecipientUserID: otherPartyID,
+		ActorUserID:     callerUserID,
+		Type:            domain.NotificationTypeChargeReceived,
+		EntityType:      "charge",
+		EntityID:        created.ID,
+		Amount:          notifAmount,
+		Description:     notifDescription,
+	}})
+	return created, nil
 }
 
 func (s *chargeService) Cancel(ctx context.Context, callerUserID, chargeID int) error {
