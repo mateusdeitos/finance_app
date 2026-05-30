@@ -79,28 +79,6 @@ func (suite *NotificationServiceWithDBSuite) countNotifications(ctx context.Cont
 	return len(result.Items)
 }
 
-// helper: create a split transaction for userID with a connection partner
-func (suite *NotificationServiceWithDBSuite) createSplitTransaction(ctx context.Context, userID int, conn *domain.UserConnection, amount int64) (int, error) {
-	cat, err := suite.createTestCategory(ctx, &domain.User{ID: userID})
-	if err != nil {
-		return 0, err
-	}
-	return suite.Services.Transaction.Create(ctx, userID, &domain.TransactionCreateRequest{
-		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID,
-		CategoryID:      cat.ID,
-		Amount:          amount,
-		Date:            domain.Date{Time: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)},
-		Description:     "Split test",
-		SplitSettings: []domain.SplitSettings{
-			{
-				ConnectionID: conn.ID,
-				Percentage:   intPtr(50),
-			},
-		},
-	})
-}
-
 func intPtr(i int) *int { return &i }
 
 // ---------------------------------------------------------------------------
