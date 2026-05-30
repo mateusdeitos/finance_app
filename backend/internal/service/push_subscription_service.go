@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
@@ -21,11 +22,29 @@ func NewPushSubscriptionService(repos *repository.Repositories, cfg *config.Conf
 	}
 }
 
+// validateEndpoint checks that the endpoint is a well-formed HTTPS URL with a
+// non-empty host.  This guards against SSRF at data-ingestion time: Phase 23
+// will issue HTTP requests to stored endpoints, so only https:// URLs with a
+// real host are accepted here.
+//
+// NOTE (Phase 23): delivery-time allowlisting (blocking private/link-local IP
+// ranges) should be added in Phase 23 when the send path is implemented.
+func validateEndpoint(endpoint string) error {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Scheme != "https" || u.Host == "" {
+		return pkgErrors.BadRequest("endpoint must be a valid HTTPS URL")
+	}
+	return nil
+}
+
 // Subscribe registers (or re-registers) a push subscription for the authenticated user.
 // SECURITY (T-22-IDOR): userID is the function argument from auth context — NEVER read from req.
 func (s *pushSubscriptionService) Subscribe(ctx context.Context, userID int, req *domain.SubscribePushRequest) error {
 	if req.Endpoint == "" {
 		return pkgErrors.BadRequest("endpoint is required")
+	}
+	if err := validateEndpoint(req.Endpoint); err != nil {
+		return err
 	}
 	if req.Keys.P256dh == "" {
 		return pkgErrors.BadRequest("keys.p256dh is required")
