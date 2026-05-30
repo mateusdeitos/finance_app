@@ -127,8 +127,13 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
   6. When a push delivery attempt returns HTTP 404 or 410 from the push service, the corresponding subscription row is deleted from the database automatically
 **Plans**: 3 plans
 Plans:
+**Wave 1**
 - [ ] 22-01-PLAN.md — webpush-go dependency, VAPID config, push_subscriptions + notifications migrations, domain/entity types
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 22-02-PLAN.md — repository interfaces + push subscription repo (upsert/delete/admin-prune/exists), notification stub, mocks, test suite wiring
+
+**Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 22-03-PLAN.md — service + 3-endpoint handler, main.go DI/routes/VAPID startup guard, swagger regen, integration tests
 
 ### Phase 23: Backend Notification Events & Inbox API

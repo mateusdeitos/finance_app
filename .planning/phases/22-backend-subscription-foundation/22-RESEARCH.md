@@ -677,7 +677,7 @@ return result.Error
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Startup behavior when VAPID keys are absent**
    - What we know: Config has empty-string defaults; nothing in the codebase today enforces required fields.
