@@ -20,7 +20,7 @@ func setupPushSubHandlerTest(t *testing.T) (*echo.Echo, *mocks.MockPushSubscript
 	t.Helper()
 	mockSvc := mocks.NewMockPushSubscriptionService(t)
 	services := &service.Services{PushSubscription: mockSvc}
-	h := NewPushSubscriptionHandler(services)
+	h := NewPushSubscriptionHandler(services, "test-vapid-public-key")
 	e := echo.New()
 	return e, mockSvc, h
 }

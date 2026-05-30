@@ -678,6 +678,11 @@ definitions:
     - UserConnectionStatusPending
     - UserConnectionStatusAccepted
     - UserConnectionStatusRejected
+  domain.VapidPublicKeyResponse:
+    properties:
+      key:
+        type: string
+    type: object
   handler.AcceptInviteRequest:
     properties:
       external_id:
@@ -1449,6 +1454,22 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Register a Web Push subscription
+      tags:
+      - push-subscriptions
+  /api/push-subscriptions/vapid-public-key:
+    get:
+      description: Returns the server's VAPID public key for client-side push subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.VapidPublicKeyResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get the VAPID public key
       tags:
       - push-subscriptions
   /api/settlements/{id}:

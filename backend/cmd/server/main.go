@@ -111,7 +111,7 @@ func main() {
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 	chargeHandler := handler.NewChargeHandler(services)
 	onboardingHandler := handler.NewOnboardingHandler(services)
-	pushSubHandler := handler.NewPushSubscriptionHandler(services)
+	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
 
 	// Setup Echo
@@ -208,6 +208,7 @@ func main() {
 	pushSubs := api.Group("/push-subscriptions")
 	pushSubs.POST("", pushSubHandler.Subscribe)
 	pushSubs.DELETE("", pushSubHandler.Unsubscribe)
+	pushSubs.GET("/vapid-public-key", pushSubHandler.VapidPublicKey)
 	pushSubs.GET("", pushSubHandler.Status)
 
 	// Notifications

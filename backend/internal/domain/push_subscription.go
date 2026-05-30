@@ -25,6 +25,10 @@ type PushSubscriptionStatusResponse struct {
 	Subscribed bool `json:"subscribed"`
 }
 
+type VapidPublicKeyResponse struct {
+	Key string `json:"key"`
+}
+
 type Notification struct {
 	ID         int        `json:"id"`
 	UserID     int        `json:"user_id"`

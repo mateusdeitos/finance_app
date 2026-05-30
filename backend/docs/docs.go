@@ -1220,6 +1220,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/push-subscriptions/vapid-public-key": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the server's VAPID public key for client-side push subscription",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Get the VAPID public key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.VapidPublicKeyResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/settlements/{id}": {
             "patch": {
                 "security": [
@@ -3610,6 +3638,14 @@ const docTemplate = `{
                 "UserConnectionStatusAccepted",
                 "UserConnectionStatusRejected"
             ]
+        },
+        "domain.VapidPublicKeyResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                }
+            }
         },
         "handler.AcceptInviteRequest": {
             "type": "object",

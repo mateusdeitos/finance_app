@@ -11,11 +11,13 @@ import (
 
 type PushSubscriptionHandler struct {
 	pushSubService service.PushSubscriptionService
+	vapidPublicKey string
 }
 
-func NewPushSubscriptionHandler(services *service.Services) *PushSubscriptionHandler {
+func NewPushSubscriptionHandler(services *service.Services, vapidPublicKey string) *PushSubscriptionHandler {
 	return &PushSubscriptionHandler{
 		pushSubService: services.PushSubscription,
+		vapidPublicKey: vapidPublicKey,
 	}
 }
 
@@ -66,6 +68,19 @@ func (h *PushSubscriptionHandler) Unsubscribe(c echo.Context) error {
 		return HandleServiceError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
+}
+
+// VapidPublicKey godoc
+// @Summary      Get the VAPID public key
+// @Description  Returns the server's VAPID public key for client-side push subscription
+// @Tags         push-subscriptions
+// @Produce      json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      200  {object}  domain.VapidPublicKeyResponse
+// @Router       /api/push-subscriptions/vapid-public-key [get]
+func (h *PushSubscriptionHandler) VapidPublicKey(c echo.Context) error {
+	return c.JSON(http.StatusOK, domain.VapidPublicKeyResponse{Key: h.vapidPublicKey})
 }
 
 // Status godoc
