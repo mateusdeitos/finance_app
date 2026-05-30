@@ -50,7 +50,8 @@ export function CategoryDistributionPanel({ nodes, net, gross, monthLabel, loadi
 
       {loading ? (
         <>
-          <Skeleton height={14} mt={16} radius={8} />
+          {/* Empty track instead of a skeleton so segments animate in on load. */}
+          <div className={classes.bar} />
           <div className={classes.legend}>
             {Array.from({ length: Math.max(3, nodes.length) }).map((_, i) => (
               <Skeleton key={i} height={14} width={110} />

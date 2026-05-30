@@ -175,7 +175,7 @@ export function CategorySpendingCard({
             </div>
           )}
           <div className={classes.valueBar}>
-            {valueLoading ? <Skeleton height={7} radius={7} /> : <ShareBar color={color} pct={barPct} height={7} />}
+            <ShareBar color={color} pct={valueLoading ? 0 : barPct} height={7} />
           </div>
         </div>
       </div>
@@ -269,7 +269,7 @@ function CategoryChildRow({ node, color, childMax, valueLoading, onDelete, onSav
         </div>
         <div className={classes.childBarLine}>
           <div className={classes.childBar}>
-            {valueLoading ? <Skeleton height={5} radius={5} /> : <ShareBar color={tintColor(color, 0.72)} pct={barPct} height={5} />}
+            <ShareBar color={tintColor(color, 0.72)} pct={valueLoading ? 0 : barPct} height={5} />
           </div>
           {!valueLoading && <span className={classes.childCount}>{count} lanç.</span>}
           <ActionIcon
