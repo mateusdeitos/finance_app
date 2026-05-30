@@ -2,6 +2,15 @@ import { Charges } from '@/types/charges'
 
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+export async function fetchChargesByIds(ids: number[]): Promise<Charges.ListResponse> {
+  if (ids.length === 0) return { charges: [] }
+  const url = new URL(`${apiUrl}/api/charges`, window.location.origin)
+  ids.forEach((id) => url.searchParams.append('id[]', String(id)))
+  const res = await fetch(url.toString(), { credentials: 'include' })
+  if (!res.ok) throw new Error('Failed to fetch charges by ids')
+  return res.json()
+}
+
 export async function fetchCharges(params: Charges.FetchParams): Promise<Charges.ListResponse> {
   const url = new URL(`${apiUrl}/api/charges`, window.location.origin)
   url.searchParams.set('month', String(params.month))

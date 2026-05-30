@@ -73,6 +73,15 @@ export async function fetchTransaction(id: number): Promise<Transactions.Transac
   return res.json();
 }
 
+export async function fetchTransactionsByIds(ids: number[]): Promise<Transactions.Transaction[]> {
+  if (ids.length === 0) return [];
+  const url = new URL(`${apiUrl}/api/transactions/by-ids`, window.location.origin);
+  ids.forEach((id) => url.searchParams.append("id[]", String(id)));
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch transactions by ids");
+  return res.json();
+}
+
 export async function fetchTransactionSuggestions(
   q: string,
   limit = 10,
