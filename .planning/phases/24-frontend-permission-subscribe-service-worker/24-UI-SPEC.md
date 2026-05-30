@@ -68,18 +68,21 @@ Source: `frontend/src/index.css`, `frontend/src/components/MobileTabBar.module.c
 
 ## Typography
 
+Declared weights: **500** and **700** only. Body and caption inherit Mantine's framework default (400) and are not counted as declared weights.
+
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 16px (1rem) | 400 | 1.5 | Body text, form field labels, drawer content |
+| Body | 16px (1rem) | inherited (400) | 1.5 | Body text, form field labels, drawer content |
 | Label | 14px (0.875rem) | 500 | 1.4 | Nav item labels, toggle labels, setting row descriptions |
-| Caption | 12px (0.75rem) | 400 | 1.4 | Helper text, timestamps, dimmed secondary strings |
-| Heading | 17px | 700 | 1.2 | Drawer titles (e.g. "Configurações"), brand wordmark |
+| Caption | 12px (0.75rem) | inherited (400) | 1.4 | Helper text, timestamps, dimmed secondary strings |
+| Heading | 18px (Mantine `size="lg"`) | 700 | 1.2 | Drawer titles (e.g. "Configurações"), brand wordmark, section heading emphasis |
+
+Size scale: 12 / 14 / 16 / 18px.
 
 Rules:
-- `size="sm"` in Mantine renders ~14px; `size="xs"` renders ~12px; default is 16px.
+- `size="sm"` in Mantine renders ~14px; `size="xs"` renders ~12px; `size="lg"` renders ~18px; default is 16px.
 - `fw={500}` is the standard label weight (see `MobileMoreDrawer`, `DesktopSidebar`).
-- `fw={600}` is used for section headings and emphasized labels.
-- `fw={700}` is reserved for the brand wordmark only.
+- `fw={700}` is used for drawer titles, section headings, and the brand wordmark.
 - `c="dimmed"` renders via `var(--mantine-color-dimmed)` — use for secondary helper text.
 - Body copy min-size: 16px enforced by `index.css` to prevent iOS zoom on focus.
 
