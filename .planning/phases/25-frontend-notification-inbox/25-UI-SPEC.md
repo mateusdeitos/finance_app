@@ -1,7 +1,7 @@
 ---
 phase: 25
 slug: frontend-notification-inbox
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-05-30
