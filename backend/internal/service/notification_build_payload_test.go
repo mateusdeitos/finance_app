@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/finance_app/backend/internal/config"
@@ -39,7 +38,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Nova cobrança",
-			wantBodyContains: fmt.Sprintf("%s te cobrou", actor),
+			wantBodyContains: actor + " te cobrou",
 		},
 		{
 			name: "charge_accepted",
@@ -52,7 +51,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Cobrança aceita",
-			wantBodyContains: fmt.Sprintf("%s aceitou", actor),
+			wantBodyContains: actor + " aceitou",
 		},
 		{
 			name: "split_created_single",
@@ -65,7 +64,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Nova transação dividida",
-			wantBodyContains: fmt.Sprintf("%s adicionou uma transação dividida", actor),
+			wantBodyContains: actor + " adicionou uma transação dividida",
 		},
 		{
 			name: "split_created_coalesced",
@@ -84,7 +83,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Nova transação dividida",
-			wantBodyContains: fmt.Sprintf("%s adicionou 2 transações divididas", actor),
+			wantBodyContains: actor + " adicionou 2 transações divididas",
 		},
 		{
 			name: "split_updated",
@@ -97,7 +96,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Transação dividida atualizada",
-			wantBodyContains: fmt.Sprintf("%s atualizou", actor),
+			wantBodyContains: actor + " atualizou",
 		},
 		{
 			name: "unknown_type_defaults_to_finance_app",
@@ -109,7 +108,7 @@ func TestBuildPayload_PerTypeTitle(t *testing.T) {
 				},
 			},
 			wantTitle:        "Finance App",
-			wantBodyContains: fmt.Sprintf("%s enviou uma notificação", actor),
+			wantBodyContains: actor + " enviou uma notificação",
 		},
 	}
 
