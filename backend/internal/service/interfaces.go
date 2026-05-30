@@ -88,16 +88,23 @@ type OnboardingService interface {
 	Complete(ctx context.Context, userID int, req *domain.OnboardingSetupRequest) error
 }
 
+type PushSubscriptionService interface {
+	Subscribe(ctx context.Context, userID int, req *domain.SubscribePushRequest) error
+	Unsubscribe(ctx context.Context, userID int, endpoint string) error
+	Status(ctx context.Context, userID int, endpoint string) (*domain.PushSubscriptionStatusResponse, error)
+}
+
 // Services contains all service interfaces
 type Services struct {
-	Auth           AuthService
-	User           UserService
-	Account        AccountService
-	Category       CategoryService
-	Tag            TagService
-	Transaction    TransactionService
-	UserConnection UserConnectionService
-	Settlement     SettlementService
-	Charge         ChargeService
-	Onboarding     OnboardingService
+	Auth             AuthService
+	User             UserService
+	Account          AccountService
+	Category         CategoryService
+	Tag              TagService
+	Transaction      TransactionService
+	UserConnection   UserConnectionService
+	Settlement       SettlementService
+	Charge           ChargeService
+	Onboarding       OnboardingService
+	PushSubscription PushSubscriptionService
 }

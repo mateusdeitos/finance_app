@@ -155,6 +155,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.Services.Transaction = transactionService
 	suite.Services.UserConnection = userConnectionService
 	suite.Services.Charge = NewChargeService(suite.Repos, suite.Services)
+	suite.Services.PushSubscription = NewPushSubscriptionService(suite.Repos, suite.Config)
 }
 
 func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domain.User, error) {
