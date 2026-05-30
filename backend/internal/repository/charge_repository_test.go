@@ -32,7 +32,7 @@ func TestChargeRepository_Search_IDsFilter(t *testing.T) {
 	connRepo := NewUserConnectionRepository(db.Db)
 
 	// Create two distinct users with random emails to avoid uniqueness collisions
-	suffix := rand.IntN(1_000_000)
+	suffix := rand.IntN(1_000_000) //nolint:gosec // test-only non-crypto random for unique fixture suffixes
 	userA, err := userRepo.Create(context.Background(), &domain.User{
 		Name:     fmt.Sprintf("UserA-%d", suffix),
 		Email:    fmt.Sprintf("userA-%d@charge-ids-test.example.com", suffix),
