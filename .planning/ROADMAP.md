@@ -125,7 +125,11 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
   4. A DELETE /api/push-subscriptions endpoint removes the authenticated user's subscription for the given endpoint
   5. A GET /api/push-subscriptions endpoint reports whether the authenticated user already has an active subscription for the given device endpoint, so the frontend can render the correct enabled/disabled state
   6. When a push delivery attempt returns HTTP 404 or 410 from the push service, the corresponding subscription row is deleted from the database automatically
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 22-01-PLAN.md — webpush-go dependency, VAPID config, push_subscriptions + notifications migrations, domain/entity types
+- [ ] 22-02-PLAN.md — repository interfaces + push subscription repo (upsert/delete/admin-prune/exists), notification stub, mocks, test suite wiring
+- [ ] 22-03-PLAN.md — service + 3-endpoint handler, main.go DI/routes/VAPID startup guard, swagger regen, integration tests
 
 ### Phase 23: Backend Notification Events & Inbox API
 **Goal**: The backend fires Web Push notifications for all four finance events, persists each notification with a deep-link reference, and exposes an inbox API for listing and marking notifications read
