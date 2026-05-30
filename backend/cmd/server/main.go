@@ -100,6 +100,7 @@ func main() {
 	services.Charge = service.NewChargeService(repos, services)
 	services.Onboarding = service.NewOnboardingService(repos)
 	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
+	services.Notification = service.NewNotificationService(repos, cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -111,6 +112,7 @@ func main() {
 	chargeHandler := handler.NewChargeHandler(services)
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services)
+	notifHandler := handler.NewNotificationHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -207,6 +209,13 @@ func main() {
 	pushSubs.POST("", pushSubHandler.Subscribe)
 	pushSubs.DELETE("", pushSubHandler.Unsubscribe)
 	pushSubs.GET("", pushSubHandler.Status)
+
+	// Notifications
+	notifications := api.Group("/notifications")
+	notifications.GET("", notifHandler.List)
+	notifications.GET("/unread-count", notifHandler.UnreadCount)
+	notifications.POST("/read-all", notifHandler.MarkAllRead)
+	notifications.POST("/:id/read", notifHandler.MarkRead)
 
 	// Settlements
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)

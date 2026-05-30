@@ -212,6 +212,39 @@ definitions:
     type: string
     x-enum-varnames:
     - ImportRowStatusPending
+  domain.Notification:
+    properties:
+      created_at:
+        type: string
+      entity_id:
+        type: integer
+      entity_type:
+        type: string
+      id:
+        type: integer
+      read:
+        type: boolean
+      type:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.NotificationListResult:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+      notifications:
+        items:
+          $ref: '#/definitions/domain.Notification'
+        type: array
+    type: object
+  domain.NotificationUnreadCountResponse:
+    properties:
+      count:
+        type: integer
+    type: object
   domain.OnboardingAccountInput:
     properties:
       avatar_background_color:
@@ -1197,6 +1230,95 @@ paths:
       summary: Count pending charges requiring caller's action
       tags:
       - charges
+  /api/notifications:
+    get:
+      description: Returns paginated notifications for the authenticated user, newest
+        first
+      parameters:
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Page size (default 20)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.NotificationListResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - notifications
+  /api/notifications/{id}/read:
+    post:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Mark a notification as read
+      tags:
+      - notifications
+  /api/notifications/read-all:
+    post:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+  /api/notifications/unread-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.NotificationUnreadCountResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get unread notification count
+      tags:
+      - notifications
   /api/onboarding/complete:
     post:
       consumes:
