@@ -175,6 +175,65 @@ func (_c *MockPushSubscriptionRepository_ExistsForUser_Call) RunAndReturn(run fu
 	return _c
 }
 
+// ListByUserID provides a mock function with given fields: ctx, userID
+func (_m *MockPushSubscriptionRepository) ListByUserID(ctx context.Context, userID int) ([]*domain.PushSubscription, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListByUserID")
+	}
+
+	var r0 []*domain.PushSubscription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]*domain.PushSubscription, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []*domain.PushSubscription); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.PushSubscription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockPushSubscriptionRepository_ListByUserID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListByUserID'
+type MockPushSubscriptionRepository_ListByUserID_Call struct {
+	*mock.Call
+}
+
+// ListByUserID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+func (_e *MockPushSubscriptionRepository_Expecter) ListByUserID(ctx interface{}, userID interface{}) *MockPushSubscriptionRepository_ListByUserID_Call {
+	return &MockPushSubscriptionRepository_ListByUserID_Call{Call: _e.mock.On("ListByUserID", ctx, userID)}
+}
+
+func (_c *MockPushSubscriptionRepository_ListByUserID_Call) Run(run func(ctx context.Context, userID int)) *MockPushSubscriptionRepository_ListByUserID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockPushSubscriptionRepository_ListByUserID_Call) Return(_a0 []*domain.PushSubscription, _a1 error) *MockPushSubscriptionRepository_ListByUserID_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockPushSubscriptionRepository_ListByUserID_Call) RunAndReturn(run func(context.Context, int) ([]*domain.PushSubscription, error)) *MockPushSubscriptionRepository_ListByUserID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Upsert provides a mock function with given fields: ctx, sub
 func (_m *MockPushSubscriptionRepository) Upsert(ctx context.Context, sub *domain.PushSubscription) error {
 	ret := _m.Called(ctx, sub)
