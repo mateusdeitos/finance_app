@@ -118,129 +118,130 @@ export function EditConnectionDrawer({ account }: Props) {
       data-testid={CommonTestIds.DrawerEditConnection}
       styles={{ body: { padding: 0 } }}
     >
-      <form onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
-        <Stack gap={0} style={{ minHeight: '100%' }}>
-          <Box
-            px="lg"
-            py="md"
-            style={{
-              borderBottom: '1px solid var(--mantine-color-default-border)',
-              background:
-                'linear-gradient(180deg, var(--mantine-color-blue-light) 0%, transparent 100%)',
-            }}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <Box style={{ display: 'flex', alignItems: 'center' }}>
-                <UserAvatar name={userName} avatarUrl={user?.avatar_url} size="md" color="blue" />
-                <ThemeIcon
-                  size={22}
-                  radius="xl"
-                  variant="filled"
-                  color="teal"
-                  style={{
-                    marginInline: -8,
-                    border: '2px solid var(--mantine-color-body)',
-                    zIndex: 1,
-                  }}
-                >
-                  <IconCheck size={12} />
-                </ThemeIcon>
-                <Avatar
-                  size="md"
-                  radius="xl"
-                  color="grape"
-                  variant="filled"
-                  src={partnerAvatarUrl}
-                >
-                  {partnerName.charAt(0).toUpperCase()}
-                </Avatar>
-              </Box>
-              <Box style={{ minWidth: 0 }}>
-                <Text fw={700} size="sm" truncate>
-                  Conectado com {partnerName}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  As alterações valem para as próximas transações
-                </Text>
-              </Box>
-            </Group>
+      <form
+        onSubmit={submit}
+        onKeyDown={handleFormKeyDown}
+        noValidate
+        style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}
+      >
+        {/* Identity banner — solid surface so it reads as its own section
+            directly under the drawer title, no gradient bleed. */}
+        <Group
+          gap="sm"
+          wrap="nowrap"
+          px="md"
+          py="sm"
+          style={{
+            background: 'var(--mantine-color-default-hover)',
+            borderBottom: '1px solid var(--mantine-color-default-border)',
+          }}
+        >
+          <Box style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <UserAvatar name={userName} avatarUrl={user?.avatar_url} size="md" color="blue" />
+            <ThemeIcon
+              size={20}
+              radius="xl"
+              variant="filled"
+              color="teal"
+              style={{
+                marginInline: -7,
+                border: '2px solid var(--mantine-color-body)',
+                zIndex: 1,
+              }}
+            >
+              <IconCheck size={11} />
+            </ThemeIcon>
+            <Avatar size="md" radius="xl" color="grape" variant="filled" src={partnerAvatarUrl}>
+              {partnerName.charAt(0).toUpperCase()}
+            </Avatar>
+          </Box>
+          <Box style={{ minWidth: 0 }}>
+            <Text fw={700} size="sm" truncate>
+              Conectado com {partnerName}
+            </Text>
+            <Text size="xs" c="dimmed" truncate>
+              Alterações valem para as próximas transações
+            </Text>
+          </Box>
+        </Group>
+
+        {/* Scrollable content — grows to fill, with bottom padding so the last
+            row never hides under the sticky footer. */}
+        <Stack gap="lg" p="md" pb={96} style={{ flex: 1 }}>
+          {mutation.error && (
+            <Alert color="red" title="Erro" variant="light">
+              {mutation.error.message}
+            </Alert>
+          )}
+
+          <Box>
+            <TextInput
+              label="Nome da conta da conexão"
+              required
+              {...register('account_name')}
+              error={errors.account_name?.message}
+              placeholder="Ex.: Amanda, conta do casal…"
+              maxLength={40}
+              data-testid={CommonTestIds.EditConnectionNameInput}
+            />
+            <Text size="xs" c="dimmed" mt={6}>
+              É assim que essa conta aparece nas suas transações e listas. Só muda
+              no seu app — não afeta o que {partnerName} vê.
+            </Text>
           </Box>
 
-          <Stack gap="lg" p="md">
-            {mutation.error && (
-              <Alert color="red" title="Erro" variant="light">
-                {mutation.error.message}
-              </Alert>
-            )}
+          <Divider />
 
-            <Box>
-              <TextInput
-                label="Nome da conta da conexão"
-                required
-                {...register('account_name')}
-                error={errors.account_name?.message}
-                placeholder="Ex.: Amanda, conta do casal…"
-                maxLength={40}
-                data-testid={CommonTestIds.EditConnectionNameInput}
-              />
-              <Text size="xs" c="dimmed" mt={6}>
-                É assim que essa conta aparece nas suas transações e listas. Só muda
-                no seu app — não afeta o que {partnerName} vê.
-              </Text>
-            </Box>
+          <SplitSelector
+            value={splitMode}
+            customValue={customValue}
+            userName={userName}
+            userAvatarUrl={user?.avatar_url}
+            partnerName={partnerName}
+            partnerHasName
+            onChange={setSplitMode}
+            onCustomChange={setCustomValue}
+          />
 
-            <Divider />
-
-            <SplitSelector
-              value={splitMode}
-              customValue={customValue}
-              userName={userName}
-              userAvatarUrl={user?.avatar_url}
-              partnerName={partnerName}
-              partnerHasName
-              onChange={setSplitMode}
-              onCustomChange={setCustomValue}
-            />
-
-            <SplitFlowDiagram
-              split={effectiveSplit}
-              userName={userName}
-              userAvatarUrl={user?.avatar_url}
-              partnerName={partnerName}
-              partnerHasName
-            />
-          </Stack>
-
-          <Box
-            mt="auto"
-            p="md"
-            style={{
-              borderTop: '1px solid var(--mantine-color-default-border)',
-              background: 'var(--mantine-color-body)',
-              position: 'sticky',
-              bottom: 0,
-            }}
-          >
-            <Group justify="space-between">
-              <Button
-                variant="default"
-                onClick={() => reject()}
-                data-testid={CommonTestIds.EditConnectionCancel}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                loading={mutation.isPending}
-                disabled={!dirty}
-                leftSection={<IconCheck size={16} />}
-                data-testid={CommonTestIds.EditConnectionSave}
-              >
-                Salvar alterações
-              </Button>
-            </Group>
-          </Box>
+          <SplitFlowDiagram
+            split={effectiveSplit}
+            userName={userName}
+            userAvatarUrl={user?.avatar_url}
+            partnerName={partnerName}
+            partnerHasName
+          />
         </Stack>
+
+        {/* Sticky footer — solid background, top border, safe-area aware. */}
+        <Group
+          justify="space-between"
+          px="md"
+          pt="md"
+          style={{
+            borderTop: '1px solid var(--mantine-color-default-border)',
+            background: 'var(--mantine-color-body)',
+            position: 'sticky',
+            bottom: 0,
+            paddingBottom: 'calc(var(--mantine-spacing-md) + env(safe-area-inset-bottom))',
+          }}
+        >
+          <Button
+            variant="default"
+            onClick={() => reject()}
+            data-testid={CommonTestIds.EditConnectionCancel}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            loading={mutation.isPending}
+            disabled={!dirty}
+            leftSection={<IconCheck size={16} />}
+            data-testid={CommonTestIds.EditConnectionSave}
+          >
+            Salvar alterações
+          </Button>
+        </Group>
       </form>
     </ResponsiveDrawer>
   )
