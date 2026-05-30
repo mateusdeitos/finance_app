@@ -123,7 +123,10 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		Notification:          suite.NotificationRepository,
 	}
 
-	// Create test config for AuthService
+	// Create test config for AuthService.
+	// VAPID is intentionally empty: Phase 22 tests do not exercise send paths.
+	// Phase 23 integration tests must supply valid VAPID keys via suite.Config.VAPID
+	// before running any test that calls the push-delivery logic.
 	suite.Config = &config.Config{
 		JWT: config.JWTConfig{
 			Secret:          "test-secret-key-for-testing-only",
