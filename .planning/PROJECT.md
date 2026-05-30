@@ -83,6 +83,8 @@ Partners can accurately track shared finances, including in-progress installment
 
 **Goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
 
+**Progress:** Phase 22 (Backend Subscription Foundation) complete — `push_subscriptions`/`notifications` tables, VAPID config + fail-fast startup, and POST/DELETE/GET `/api/push-subscriptions` with endpoint-only upsert and admin prune capability (SUB-03, SUB-04). Phase 24 UI design contract (UI-SPEC) approved. Next: Phase 23 (notification events + inbox API).
+
 **Target features:**
 - Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
 - Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
@@ -158,4 +160,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-05-30 — v1.5 shipped (Phases 16–21, Phase 20 skipped); v1.6 started (Push Notifications)_
+_Last updated: 2026-05-30 — v1.6 in progress: Phase 22 (Backend Subscription Foundation) complete, Phase 24 UI-SPEC approved_
