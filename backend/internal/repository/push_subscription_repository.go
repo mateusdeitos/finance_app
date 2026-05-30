@@ -77,3 +77,20 @@ func (r *pushSubscriptionRepository) ExistsForUser(ctx context.Context, userID i
 		Count(&count).Error
 	return count > 0, err
 }
+
+// ListByUserID returns all active push subscriptions for a user.
+// Called by the notification dispatch goroutine — no IDOR guard needed (internal).
+func (r *pushSubscriptionRepository) ListByUserID(ctx context.Context, userID int) ([]*domain.PushSubscription, error) {
+	var ents []entity.PushSubscription
+	if err := GetTxFromContext(ctx, r.db).
+		Where("user_id = ?", userID).
+		Find(&ents).Error; err != nil {
+		return nil, err
+	}
+	result := make([]*domain.PushSubscription, len(ents))
+	for i := range ents {
+		e := ents[i]
+		result[i] = e.ToDomain()
+	}
+	return result, nil
+}

@@ -1,11 +1,18 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"time"
+
+	"github.com/finance_app/backend/internal/domain"
+	"github.com/finance_app/backend/internal/entity"
+	pkgErrors "github.com/finance_app/backend/pkg/errors"
+	"gorm.io/gorm"
+)
 
 type notificationRepository struct {
-	// db is intentionally unused in Phase 22: NotificationRepository is an
-	// empty interface until Phase 23 adds write methods.  The field is kept
-	// so Phase 23 can add methods without re-wiring the constructor.
 	db *gorm.DB
 }
 
@@ -13,4 +20,102 @@ func NewNotificationRepository(db *gorm.DB) NotificationRepository {
 	return &notificationRepository{db: db}
 }
 
-// No methods in Phase 22 — added in Phase 23 when signatures are known.
+// notificationCursor lives in the repository package (opaque to all callers above).
+type notificationCursor struct {
+	CreatedAt time.Time `json:"ca"`
+	ID        int       `json:"id"`
+}
+
+func encodeCursor(createdAt time.Time, id int) string {
+	raw, _ := json.Marshal(notificationCursor{CreatedAt: createdAt, ID: id})
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
+
+func decodeCursor(token string) (*notificationCursor, error) {
+	b, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil {
+		return nil, err
+	}
+	var c notificationCursor
+	if err := json.Unmarshal(b, &c); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func (r *notificationRepository) Create(ctx context.Context, n *domain.Notification) (*domain.Notification, error) {
+	ent := entity.NotificationFromDomain(n)
+	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
+		return nil, err
+	}
+	return ent.ToDomain(), nil
+}
+
+func (r *notificationRepository) List(ctx context.Context, filter domain.NotificationFilter) (*domain.NotificationListResult, error) {
+	limit := filter.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	query := GetTxFromContext(ctx, r.db).
+		Model(&entity.Notification{}).
+		Where("user_id = ?", filter.UserID).
+		Order("created_at DESC, id DESC").
+		Limit(limit + 1) // fetch one extra to detect hasMore
+	if filter.Cursor != "" {
+		cur, err := decodeCursor(filter.Cursor)
+		if err != nil {
+			// T-23-03: malformed cursor → 400 (never 500, never leaks internals)
+			return nil, pkgErrors.BadRequest("invalid cursor")
+		}
+		query = query.Where("(created_at, id) < (?, ?)", cur.CreatedAt, cur.ID)
+	}
+	var ents []entity.Notification
+	if err := query.Find(&ents).Error; err != nil {
+		return nil, err
+	}
+	hasMore := len(ents) > limit
+	if hasMore {
+		ents = ents[:limit]
+	}
+	items := make([]*domain.Notification, len(ents))
+	for i := range ents {
+		e := ents[i]
+		items[i] = e.ToDomain()
+	}
+	var nextCursor string
+	if hasMore && len(ents) > 0 {
+		last := ents[len(ents)-1]
+		nextCursor = encodeCursor(*last.CreatedAt, last.ID)
+	}
+	return &domain.NotificationListResult{Items: items, NextCursor: nextCursor, HasMore: hasMore}, nil
+}
+
+func (r *notificationRepository) UnreadCount(ctx context.Context, userID int) (int64, error) {
+	var count int64
+	err := GetTxFromContext(ctx, r.db).
+		Model(&entity.Notification{}).
+		Where("user_id = ? AND read = false", userID).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *notificationRepository) MarkRead(ctx context.Context, userID, notificationID int) error {
+	result := GetTxFromContext(ctx, r.db).
+		Model(&entity.Notification{}).
+		Where("id = ? AND user_id = ?", notificationID, userID).
+		Update("read", true)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return pkgErrors.NotFound("notification")
+	}
+	return nil
+}
+
+func (r *notificationRepository) MarkAllRead(ctx context.Context, userID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Notification{}).
+		Where("user_id = ? AND read = false", userID).
+		Update("read", true).Error
+}
