@@ -147,7 +147,17 @@ Plans:
   4. When a split transaction is updated in a way that affects the partner's linked side, that partner receives a push notification and a notifications row is persisted with type "split_updated" and a reference to the linked transaction id
   5. Push dispatch runs in a goroutine that starts after the originating DB transaction commits; a push delivery failure (including network errors) does not cause the originating HTTP request to fail or its DB transaction to roll back
   6. GET /api/notifications returns the authenticated user's notifications newest-first; GET /api/notifications/unread-count returns the unread count; POST /api/notifications/:id/read and POST /api/notifications/read-all mark notifications as read
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+
+**Wave 1**
+- [ ] 23-01-PLAN.md — Notification data layer: repository methods (Create/List-cursor/UnreadCount/MarkRead/MarkAllRead), ListByUserID, domain types, cursor index migration, mocks
+
+**Wave 2** *(blocked on Wave 1)*
+- [ ] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + swagger
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 23-03-PLAN.md — Event-source hooks (NOTIF-01..04) + DB test-suite wiring + integration tests (NOTIF-01..06, inbox, IDOR, mock PushSender)
 
 ### Phase 24: Frontend Permission, Subscribe & Service Worker
 **Goal**: Users can grant or revoke browser notification permission from within the app, the frontend registers and removes Web Push subscriptions with the backend, and the service worker handles incoming pushes and routes a tap to the correct entity screen
@@ -200,7 +210,7 @@ Plans:
 | 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
-| 23. Backend Notification Events & Inbox API | v1.6 | 0/? | Not started | - |
+| 23. Backend Notification Events & Inbox API | v1.6 | 0/3 | Planned     | - |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/? | Not started | - |
 | 25. Frontend Notification Inbox | v1.6 | 0/? | Not started | - |
 
