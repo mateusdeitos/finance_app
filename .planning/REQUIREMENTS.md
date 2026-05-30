@@ -23,7 +23,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 - [ ] **NOTIF-03**: When the partner creates a new split transaction, the user whose side receives the linked transaction gets a push notification
 - [ ] **NOTIF-04**: When the partner updates a split transaction in a way that affects the user's linked side, the user receives a push notification
 - [x] **NOTIF-05**: Each notification is persisted server-side with its type and a deep-link reference to the related entity (charge or transaction)
-- [ ] **NOTIF-06**: Notifications are dispatched after the originating DB transaction commits; a delivery failure neither rolls back nor blocks the originating operation (best-effort)
+- [x] **NOTIF-06**: Notifications are dispatched after the originating DB transaction commits; a delivery failure neither rolls back nor blocks the originating operation (best-effort)
 
 ### Notification Inbox (INBOX)
 
@@ -77,7 +77,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | NOTIF-03 | Phase 23 | Pending |
 | NOTIF-04 | Phase 23 | Pending |
 | NOTIF-05 | Phase 23 | Complete |
-| NOTIF-06 | Phase 23 | Pending |
+| NOTIF-06 | Phase 23 | Complete |
 | INBOX-01 | Phase 25 | Pending |
 | INBOX-02 | Phase 25 | Pending |
 | INBOX-03 | Phase 25 | Pending |

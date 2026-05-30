@@ -154,7 +154,7 @@ Plans:
 - [x] 23-01-PLAN.md — Notification data layer: repository methods (Create/List-cursor/UnreadCount/MarkRead/MarkAllRead), ListByUserID, domain types, cursor index migration, mocks
 
 **Wave 2** *(blocked on Wave 1)*
-- [ ] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + swagger
+- [x] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + swagger
 
 **Wave 3** *(blocked on Wave 2)*
 - [ ] 23-03-PLAN.md — Event-source hooks (NOTIF-01..04) + DB test-suite wiring + integration tests (NOTIF-01..06, inbox, IDOR, mock PushSender)
@@ -210,7 +210,7 @@ Plans:
 | 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
-| 23. Backend Notification Events & Inbox API | v1.6 | 1/3 | In Progress|  |
+| 23. Backend Notification Events & Inbox API | v1.6 | 2/3 | In Progress|  |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/? | Not started | - |
 | 25. Frontend Notification Inbox | v1.6 | 0/? | Not started | - |
 
