@@ -65,7 +65,7 @@ export function useCategorySpending(month: number, year: number): CategorySpendi
       return { category, color, total, count, children }
     }
 
-    const nodes = cats.map((category, index) => build(category, getCategoryColor(index)))
+    const nodes = cats.map((category) => build(category, getCategoryColor(category)))
     const total = nodes.reduce((s, n) => s + n.total, 0)
     const maxTotal = nodes.reduce((m, n) => Math.max(m, n.total), 0)
     return { nodes, total, maxTotal }
