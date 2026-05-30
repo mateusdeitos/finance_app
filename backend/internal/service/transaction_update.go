@@ -227,7 +227,10 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// NOTIF-04: fire split_updated for partner-initiated edits that affect the
 	// linked side (amount / split add / split remove). Cosmetic edits (D-02) and
 	// self-edits (D-03) fire nothing — guarded inside the helper.
-	s.maybeDispatchSplitUpdatedNotification(ctx, userID, sourceIDs, data)
+	// Pass context.Background() to make the post-commit boundary explicit: the
+	// txCtx is spent after Commit and any future DB reads inside the helper must
+	// not silently use the completed transaction.
+	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
 	return nil
 }
 
@@ -1368,8 +1371,11 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 
 	switch {
 	case changes.AddedSplit():
-		// D-03: only fire when partner-initiated (caller != original author)
-		if callerUserID == lo.FromPtr(data.previousTransaction.OriginalUserID) {
+		// D-03: only fire when partner-initiated (caller != original author).
+		// Explicitly check for nil to avoid lo.FromPtr returning 0, which would
+		// cause the guard to never fire for legacy rows with nil OriginalUserID.
+		if data.previousTransaction.OriginalUserID != nil &&
+			callerUserID == *data.previousTransaction.OriginalUserID {
 			return
 		}
 		for _, ss := range data.req.SplitSettings {
@@ -1394,8 +1400,11 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		}
 
 	case changes.RemovedSplit():
-		// D-03: only fire when partner-initiated; D-04: removal still notifies
-		if callerUserID == lo.FromPtr(data.previousTransaction.OriginalUserID) {
+		// D-03: only fire when partner-initiated; D-04: removal still notifies.
+		// Explicitly check for nil to avoid lo.FromPtr returning 0, which would
+		// cause the guard to never fire for legacy rows with nil OriginalUserID.
+		if data.previousTransaction.OriginalUserID != nil &&
+			callerUserID == *data.previousTransaction.OriginalUserID {
 			return
 		}
 		for _, lt := range data.previousTransaction.LinkedTransactions {
