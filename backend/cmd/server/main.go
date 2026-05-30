@@ -151,75 +151,18 @@ func main() {
 	// Protected routes
 	api := e.Group("/api")
 	api.Use(middleware.NewAuthMiddleware(services).RequireAuth)
-
-	// Auth
-	api.GET("/auth/me", authHandler.Me)
-
-	// Accounts
-	accounts := api.Group("/accounts")
-	accounts.GET("", accountHandler.Search)
-	accounts.POST("", accountHandler.Create)
-	accounts.PUT("/:id", accountHandler.Update)
-	accounts.DELETE("/:id", accountHandler.Delete)
-	accounts.POST("/:id/activate", accountHandler.Activate)
-
-	// User connections
-	userConnections := api.Group("/user-connections")
-	userConnections.POST("", userConnectionHandler.Create)
-	userConnections.POST("/accept-invite", userConnectionHandler.AcceptInvite)
-	userConnections.GET("/invite-info/:external_id", userConnectionHandler.GetInviteInfo)
-	userConnections.PATCH("/:id/:status", userConnectionHandler.UpdateStatus)
-	userConnections.PUT("/:id", userConnectionHandler.UpdateSettings)
-	userConnections.DELETE("/:id", userConnectionHandler.Delete)
-	userConnections.GET("", userConnectionHandler.Search)
-
-	// Categories
-	categories := api.Group("/categories")
-	categories.GET("", categoryHandler.Search)
-	categories.POST("", categoryHandler.Create)
-	categories.PUT("/:id", categoryHandler.Update)
-	categories.DELETE("/:id", categoryHandler.Delete)
-
-	// Tags
-	tags := api.Group("/tags")
-	tags.GET("", tagHandler.Search)
-	tags.POST("", tagHandler.Create)
-	tags.PUT("/:id", tagHandler.Update)
-	tags.DELETE("/:id", tagHandler.Delete)
-
-	// Transactions
-	registerTransactionRoutes(api, transactionHandler)
-
-	// Onboarding
-	onboarding := api.Group("/onboarding")
-	onboarding.GET("/status", onboardingHandler.GetStatus)
-	onboarding.POST("/complete", onboardingHandler.Complete)
-
-	// Charges
-	charges := api.Group("/charges")
-	charges.GET("/pending-count", chargeHandler.PendingCount)
-	charges.POST("", chargeHandler.Create)
-	charges.GET("", chargeHandler.List)
-	charges.POST("/:id/cancel", chargeHandler.Cancel)
-	charges.POST("/:id/reject", chargeHandler.Reject)
-	charges.POST("/:id/accept", chargeHandler.Accept)
-
-	// Push subscriptions
-	pushSubs := api.Group("/push-subscriptions")
-	pushSubs.POST("", pushSubHandler.Subscribe)
-	pushSubs.DELETE("", pushSubHandler.Unsubscribe)
-	pushSubs.GET("/vapid-public-key", pushSubHandler.VapidPublicKey)
-	pushSubs.GET("", pushSubHandler.Status)
-
-	// Notifications
-	notifications := api.Group("/notifications")
-	notifications.GET("", notifHandler.List)
-	notifications.GET("/unread-count", notifHandler.UnreadCount)
-	notifications.POST("/read-all", notifHandler.MarkAllRead)
-	notifications.POST("/:id/read", notifHandler.MarkRead)
-
-	// Settlements
-	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
+	registerAPIRoutes(api, services, apiHandlers{
+		auth:           authHandler,
+		account:        accountHandler,
+		category:       categoryHandler,
+		tag:            tagHandler,
+		transaction:    transactionHandler,
+		userConnection: userConnectionHandler,
+		charge:         chargeHandler,
+		onboarding:     onboardingHandler,
+		pushSub:        pushSubHandler,
+		notification:   notifHandler,
+	})
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -246,6 +189,93 @@ func main() {
 	}
 
 	log.Println("Server exited")
+}
+
+// apiHandlers bundles the per-resource handlers so registerAPIRoutes can wire
+// the protected /api route tree without an unwieldy parameter list.
+type apiHandlers struct {
+	auth           *handler.AuthHandler
+	account        *handler.AccountHandler
+	category       *handler.CategoryHandler
+	tag            *handler.TagHandler
+	transaction    *handler.TransactionHandler
+	userConnection *handler.UserConnectionHandler
+	charge         *handler.ChargeHandler
+	onboarding     *handler.OnboardingHandler
+	pushSub        *handler.PushSubscriptionHandler
+	notification   *handler.NotificationHandler
+}
+
+// registerAPIRoutes wires every authenticated route group under the /api group.
+func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandlers) {
+	// Auth
+	api.GET("/auth/me", h.auth.Me)
+
+	// Accounts
+	accounts := api.Group("/accounts")
+	accounts.GET("", h.account.Search)
+	accounts.POST("", h.account.Create)
+	accounts.PUT("/:id", h.account.Update)
+	accounts.DELETE("/:id", h.account.Delete)
+	accounts.POST("/:id/activate", h.account.Activate)
+
+	// User connections
+	userConnections := api.Group("/user-connections")
+	userConnections.POST("", h.userConnection.Create)
+	userConnections.POST("/accept-invite", h.userConnection.AcceptInvite)
+	userConnections.GET("/invite-info/:external_id", h.userConnection.GetInviteInfo)
+	userConnections.PATCH("/:id/:status", h.userConnection.UpdateStatus)
+	userConnections.PUT("/:id", h.userConnection.UpdateSettings)
+	userConnections.DELETE("/:id", h.userConnection.Delete)
+	userConnections.GET("", h.userConnection.Search)
+
+	// Categories
+	categories := api.Group("/categories")
+	categories.GET("", h.category.Search)
+	categories.POST("", h.category.Create)
+	categories.PUT("/:id", h.category.Update)
+	categories.DELETE("/:id", h.category.Delete)
+
+	// Tags
+	tags := api.Group("/tags")
+	tags.GET("", h.tag.Search)
+	tags.POST("", h.tag.Create)
+	tags.PUT("/:id", h.tag.Update)
+	tags.DELETE("/:id", h.tag.Delete)
+
+	// Transactions
+	registerTransactionRoutes(api, h.transaction)
+
+	// Onboarding
+	onboarding := api.Group("/onboarding")
+	onboarding.GET("/status", h.onboarding.GetStatus)
+	onboarding.POST("/complete", h.onboarding.Complete)
+
+	// Charges
+	charges := api.Group("/charges")
+	charges.GET("/pending-count", h.charge.PendingCount)
+	charges.POST("", h.charge.Create)
+	charges.GET("", h.charge.List)
+	charges.POST("/:id/cancel", h.charge.Cancel)
+	charges.POST("/:id/reject", h.charge.Reject)
+	charges.POST("/:id/accept", h.charge.Accept)
+
+	// Push subscriptions
+	pushSubs := api.Group("/push-subscriptions")
+	pushSubs.POST("", h.pushSub.Subscribe)
+	pushSubs.DELETE("", h.pushSub.Unsubscribe)
+	pushSubs.GET("/vapid-public-key", h.pushSub.VapidPublicKey)
+	pushSubs.GET("", h.pushSub.Status)
+
+	// Notifications
+	notifications := api.Group("/notifications")
+	notifications.GET("", h.notification.List)
+	notifications.GET("/unread-count", h.notification.UnreadCount)
+	notifications.POST("/read-all", h.notification.MarkAllRead)
+	notifications.POST("/:id/read", h.notification.MarkRead)
+
+	// Settlements
+	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
 }
 
 func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {
