@@ -156,8 +156,24 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 	default:
 		body = fmt.Sprintf("%s enviou uma notificação", actorName)
 	}
+
+	// Per-type Portuguese title (D-24-2). The coalesced split_created case shares the same title.
+	var title string
+	switch first.Type {
+	case domain.NotificationTypeChargeReceived:
+		title = "Nova cobrança"
+	case domain.NotificationTypeChargeAccepted:
+		title = "Cobrança aceita"
+	case domain.NotificationTypeSplitCreated:
+		title = "Nova transação dividida"
+	case domain.NotificationTypeSplitUpdated:
+		title = "Transação dividida atualizada"
+	default:
+		title = "Finance App"
+	}
+
 	return pushPayload{
-		Title: "Finance App",
+		Title: title,
 		Body:  body,
 		Data: pushPayloadData{
 			Type:       first.Type,
