@@ -1,10 +1,11 @@
 ---
 phase: 24
 slug: frontend-permission-subscribe-service-worker
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-05-30
+reviewed_at: 2026-05-30
 ---
 
 # Phase 24 — UI Design Contract
