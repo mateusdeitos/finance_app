@@ -114,8 +114,9 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 				continue
 			}
 			if resp != nil {
-				defer resp.Body.Close()
-				if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
+				status := resp.StatusCode
+				resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
+				if status == http.StatusNotFound || status == http.StatusGone {
 					if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
 						log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
 					}
@@ -209,5 +210,8 @@ func (s *notificationService) MarkRead(ctx context.Context, userID, notification
 }
 
 func (s *notificationService) MarkAllRead(ctx context.Context, userID int) error {
-	return s.notifRepo.MarkAllRead(ctx, userID)
+	if err := s.notifRepo.MarkAllRead(ctx, userID); err != nil {
+		return pkgErrors.Internal("failed to mark all notifications as read", err)
+	}
+	return nil
 }
