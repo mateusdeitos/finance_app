@@ -230,6 +230,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// Pass context.Background() to make the post-commit boundary explicit: the
 	// txCtx is spent after Commit and any future DB reads inside the helper must
 	// not silently use the completed transaction.
+	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
 	return nil
 }
@@ -1425,6 +1426,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		// Caller IS the partner editing their linked tx amount.
 		// Recipient = source transaction owner.
 		for _, srcID := range sourceIDs {
+			//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 			sourceTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{
 				IDs: []int{srcID},
 			})

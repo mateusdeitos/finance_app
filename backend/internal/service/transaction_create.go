@@ -92,6 +92,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 			})
 		}
 		if len(events) > 0 {
+			//nolint:gosec // G118: post-commit push dispatch must outlive request ctx (NOTIF-06)
 			go s.services.Notification.Dispatch(context.Background(), events)
 		}
 	}
