@@ -1,6 +1,7 @@
 ---
 phase: 23-backend-notification-events-inbox-api
 reviewed: 2026-05-30T00:00:00Z
+fixed: 2026-05-30T00:00:00Z
 depth: standard
 files_reviewed: 15
 files_reviewed_list:
@@ -24,7 +25,18 @@ findings:
   warning: 4
   info: 3
   total: 9
-status: issues_found
+resolved:
+  - CR-01  # defer resp.Body.Close() in loop — fixed: immediate close
+  - CR-02  # wrong NOTIF-03 push amount for percentage splits — fixed
+  - WR-01  # txCtx passed to maybeDispatch — fixed: context.Background()
+  - WR-02  # nil OriginalUserID D-03 guard misfire — fixed
+  - WR-03  # MarkAllRead raw DB error — fixed: pkgErrors.Internal
+  - WR-04  # dead createSplitTransaction helper — fixed: removed
+deferred:
+  - IN-01  # handler limit upper bound — informational, not fixed
+  - IN-02  # cosmetic-edit test assertion quality — informational, not fixed
+  - IN-03  # migration CONCURRENT index — informational, not fixed
+status: partial_resolved
 ---
 
 # Phase 23: Code Review Report
