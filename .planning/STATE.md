@@ -3,29 +3,29 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Push Notifications
 status: executing
-last_updated: "2026-05-30T12:43:18.749Z"
-last_activity: 2026-05-30 -- Phase 22 planning complete
+last_updated: "2026-05-30T13:25:00.000Z"
+last_activity: 2026-05-30 -- Phase 22 Plan 01 complete (webpush-go dep, VAPIDConfig, migrations, domain+entity types)
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 33
 ---
 
 ## Current Position
 
-Phase: Phase 22 — Backend Subscription Foundation (next)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-30 -- Phase 22 planning complete
+Phase: 22 (Backend Subscription Foundation) — EXECUTING
+Plan: 2 of 3 (Plan 01 complete)
+Status: Executing Phase 22
+Last activity: 2026-05-30 -- Phase 22 Plan 01 complete
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-05-30)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** v1.6 — Push Notifications
+**Current focus:** Phase 22 — Backend Subscription Foundation
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ See: .planning/PROJECT.md (updated 2026-05-30)
 - v1.4 shipped 2026-05-05 (Phases 13–15). Archived: `.planning/milestones/v1.4-ROADMAP.md`. Phase dirs moved to `.planning/milestones/v1.4-phases/`.
 - v1.5 shipped 2026-05-07 (Phases 16–19, 21; Phase 20 skipped post-gate). Archived: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-RETROSPECTIVE.md`. Phase dirs moved to `.planning/milestones/v1.5-phases/`. Headline: description keystroke 761ms→3.5ms (218×); amount keystroke 929ms→5.6ms (166×). Open follow-up: issue #116 (duplicate-check fires on action flip duplicate→import).
 - v1.6 roadmap created 2026-05-30 — Web Push (VAPID) via 4 phases (22–25): backend subscription foundation, notification events + inbox API, frontend subscribe/SW, frontend inbox UI.
+- Phase 22 Plan 01 complete 2026-05-30 — webpush-go v1.4.0 added, VAPIDConfig wired from env, push_subscriptions+notifications migrations created, domain+entity types defined with round-trip conversion. UNIQUE constraint on endpoint alone (not composite); no gorm.Model on PushSubscription (hard deletes); empty-string VAPID defaults with Plan 03 startup validation.
 
 ### Todos
 
