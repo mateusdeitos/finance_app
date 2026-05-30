@@ -94,6 +94,19 @@
   gap: 10px;
   padding: 6px 12px;
   border-radius: 8px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease;
+}
+
+.connectionItem:hover {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-5));
 }
 
 .connectionName {

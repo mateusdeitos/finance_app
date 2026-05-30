@@ -157,6 +157,7 @@ func main() {
 	userConnections.POST("/accept-invite", userConnectionHandler.AcceptInvite)
 	userConnections.GET("/invite-info/:external_id", userConnectionHandler.GetInviteInfo)
 	userConnections.PATCH("/:id/:status", userConnectionHandler.UpdateStatus)
+	userConnections.PUT("/:id", userConnectionHandler.UpdateSettings)
 	userConnections.DELETE("/:id", userConnectionHandler.Delete)
 	userConnections.GET("", userConnectionHandler.Search)
 

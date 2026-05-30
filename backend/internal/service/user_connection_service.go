@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/repository"
@@ -15,6 +16,7 @@ type userConnectionService struct {
 	dbTransaction      repository.DBTransaction
 	userConnectionRepo repository.UserConnectionRepository
 	userRepo           repository.UserRepository
+	accountRepo        repository.AccountRepository
 	services           *Services
 }
 
@@ -23,6 +25,7 @@ func NewUserConnectionService(repos *repository.Repositories, services *Services
 		dbTransaction:      repos.DBTransaction,
 		userConnectionRepo: repos.UserConnection,
 		userRepo:           repos.User,
+		accountRepo:        repos.Account,
 		services:           services,
 	}
 }
@@ -189,6 +192,75 @@ func (s *userConnectionService) UpdateStatus(ctx context.Context, userID int, id
 	}
 
 	return nil
+}
+
+// UpdateSettings lets a participant edit, for their own side of the connection,
+// the name shown on their connection account and the default split percentage.
+// The split is stored complementarily (the other side becomes 100 - value).
+func (s *userConnectionService) UpdateSettings(ctx context.Context, userID, id int, accountName string, defaultSplitPercentage int) (*domain.UserConnection, error) {
+	if strings.TrimSpace(accountName) == "" {
+		return nil, apperrors.BadRequest("account name is required")
+	}
+	if defaultSplitPercentage < 0 || defaultSplitPercentage > 100 {
+		return nil, apperrors.BadRequest("default split percentage must be between 0 and 100")
+	}
+
+	ctx, err := s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return nil, apperrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
+	existing, err := s.userConnectionRepo.Search(ctx, domain.UserConnectionSearchOptions{
+		IDs: []int{id},
+	})
+	if err != nil {
+		return nil, apperrors.Internal("failed to search user connection", err)
+	}
+	if len(existing) == 0 {
+		return nil, apperrors.NotFound("user connection")
+	}
+
+	conn := existing[0]
+
+	// Resolve the caller's side of the connection. The default split is stored
+	// from the "from" user's perspective, so map the caller onto the right field.
+	var accountID int
+	switch userID {
+	case conn.FromUserID:
+		conn.FromDefaultSplitPercentage = defaultSplitPercentage
+		conn.ToDefaultSplitPercentage = 100 - defaultSplitPercentage
+		accountID = conn.FromAccountID
+	case conn.ToUserID:
+		conn.ToDefaultSplitPercentage = defaultSplitPercentage
+		conn.FromDefaultSplitPercentage = 100 - defaultSplitPercentage
+		accountID = conn.ToAccountID
+	default:
+		return nil, apperrors.Forbidden("only a participant can update this connection")
+	}
+
+	// Rename the caller's own connection account (only affects what they see).
+	account, err := s.accountRepo.GetByID(ctx, accountID)
+	if err != nil {
+		return nil, apperrors.Internal("failed to get connection account", err)
+	}
+	if account == nil {
+		return nil, apperrors.NotFound("connection account")
+	}
+	account.Name = accountName
+	if err := s.accountRepo.Update(ctx, account); err != nil {
+		return nil, apperrors.Internal("failed to update connection account", err)
+	}
+
+	if err := s.userConnectionRepo.Update(ctx, conn); err != nil {
+		return nil, apperrors.Internal("failed to update user connection", err)
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return nil, apperrors.Internal("failed to commit transaction", err)
+	}
+
+	return conn, nil
 }
 
 func (s *userConnectionService) Delete(ctx context.Context, userID, id int) error {

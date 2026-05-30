@@ -50,6 +50,12 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
             </ActionIcon>
           </Group>
         )}
+
+        {isShared && account.is_active && (
+          <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid={AccountsTestIds.BtnEdit}>
+            <IconPencil size={16} />
+          </ActionIcon>
+        )}
       </Group>
     </Card>
   )

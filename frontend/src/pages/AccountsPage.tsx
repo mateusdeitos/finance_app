@@ -6,6 +6,7 @@ import { useDeleteAccount } from '@/hooks/useDeleteAccount'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useHotkey } from '@/hooks/useHotkey'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
+import { EditConnectionDrawer } from '@/components/connections/EditConnectionDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
 import { Fab } from '@/components/Fab'
 import { PullToRefresh } from '@/components/PullToRefresh'
@@ -30,7 +31,11 @@ export function AccountsPage() {
   const { mutation: activateMutation } = useActivateAccount({ onSuccess: invalidate })
 
   function handleEdit(account: Transactions.Account) {
-    void renderDrawer(() => <AccountDrawer account={account} />)
+    if (account.user_connection) {
+      void renderDrawer(() => <EditConnectionDrawer account={account} />)
+    } else {
+      void renderDrawer(() => <AccountDrawer account={account} />)
+    }
   }
 
   function handleAdd() {
