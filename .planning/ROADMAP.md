@@ -169,7 +169,19 @@ Plans:
   3. After disabling notifications via the in-app toggle, the device's push subscription is removed from the backend and the toggle reflects the "off" state
   4. When the backend delivers a push notification, the browser shows an OS/browser-level notification with a title and body describing the event
   5. Tapping a delivered OS/browser notification opens (or focuses) the app and navigates directly to the related charge or transaction; no extra tap or search is required
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+
+**Wave 1**
+- [ ] 24-01-PLAN.md — Backend prerequisites: VAPID public-key endpoint (D-24-1) + per-type push title in buildPayload (D-24-2) + swagger regen
+- [ ] 24-02-PLAN.md — Test config widen + jsdom push stubs + pure helpers (urlBase64ToUint8Array, deriveDeepLink) + QueryKey + NotificationsTestIds
+
+**Wave 2** *(blocked on Wave 1)*
+- [ ] 24-03-PLAN.md — SW strategy switch (generateSW→injectManifest) + src/sw.ts (precache + preserved auth-boot cache + push + notificationclick)
+- [ ] 24-04-PLAN.md — Push API client + usePushSubscription 5-state machine + status query (SUB-01/02, CTRL-01/02)
+
+**Wave 3** *(blocked on Wave 2)*
+- [ ] 24-05-PLAN.md — NotificationToggleRow + mobile/desktop wiring + useServiceWorkerNavigation + e2e + human-verify checkpoint (CTRL-02/03)
 **UI hint**: yes
 
 ### Phase 25: Frontend Notification Inbox
@@ -211,7 +223,7 @@ Plans:
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
 | 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
-| 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/? | Not started | - |
+| 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/5 | Planned | - |
 | 25. Frontend Notification Inbox | v1.6 | 0/? | Not started | - |
 
 ---
