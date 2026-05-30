@@ -103,6 +103,20 @@ type ChargeRepository interface {
 	ConditionalAccept(ctx context.Context, id int) error
 }
 
+// PushSubscriptionRepository manages push subscription persistence.
+// DeleteByEndpoint is IDOR-scoped (user_id + endpoint); DeleteByEndpointAdmin
+// is intentionally unscoped and must only be called by internal server-side
+// pruning logic after a 404/410 response from the push service (Phase 23).
+type PushSubscriptionRepository interface {
+	Upsert(ctx context.Context, sub *domain.PushSubscription) error
+	DeleteByEndpoint(ctx context.Context, userID int, endpoint string) error
+	DeleteByEndpointAdmin(ctx context.Context, endpoint string) error
+	ExistsForUser(ctx context.Context, userID int, endpoint string) (bool, error)
+}
+
+// NotificationRepository — zero methods in Phase 22; Phase 23 adds methods.
+type NotificationRepository interface{}
+
 // Repositories contains all repository interfaces
 type Repositories struct {
 	DBTransaction         DBTransaction
@@ -117,4 +131,6 @@ type Repositories struct {
 	UserConnection        UserConnectionRepository
 	Settlement            SettlementRepository
 	Charge                ChargeRepository
+	PushSubscription      PushSubscriptionRepository
+	Notification          NotificationRepository
 }
