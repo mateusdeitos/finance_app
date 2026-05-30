@@ -59,19 +59,29 @@ test.describe("Charge-settlement transfer: shared source account edit", () => {
     });
     expect(acceptRes.ok, `accept failed: ${acceptRes.status} ${await acceptRes.text()}`).toBeTruthy();
 
-    // Find the primary user's charge transfer whose source is the shared account.
+    // Find the primary user's charge transfer whose source (debit side) is the
+    // shared connection account — this is the leg that renders the source field.
     const txs = await apiListTransactions(PERIOD_MONTH, PERIOD_YEAR, { token: pair.userToken });
     const chargerTransfer = txs.find(
-      (t) => t.type === "transfer" && t.account_id === pair.userConnAccountId,
+      (t) =>
+        t.type === "transfer" &&
+        t.operation_type === "debit" &&
+        t.account_id === pair.userConnAccountId &&
+        t.charge_id != null,
     );
     expect(chargerTransfer, "expected charger's shared-source transfer").toBeTruthy();
 
-    // Open the edit drawer for that transfer as the primary user.
+    // Open the edit drawer for that transfer as the primary user. The transfer
+    // row container has no click handler — only its cells do — so click the
+    // description text (the proven interaction for transfer rows).
     const page = await openAuthedPage(browser, pair.userToken);
     const transactionsPage = new TransactionsPage(page);
     await transactionsPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
 
-    await transactionsPage.clickTransactionRow(chargerTransfer!.id);
+    const row = page.locator(`[data-transaction-id="${chargerTransfer!.id}"]`);
+    await expect(row).toBeVisible({ timeout: 8000 });
+    await row.getByText("Charge settlement").click();
+    await transactionsPage.waitForUpdateDrawer();
 
     const drawer = transactionsPage.updateDrawer;
 
