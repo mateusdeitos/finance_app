@@ -61,6 +61,8 @@ type ServiceTestWithDBSuite struct {
 	UserConnectionRepository        repository.UserConnectionRepository
 	SettlementRepository            repository.SettlementRepository
 	ChargeRepository                repository.ChargeRepository
+	PushSubscriptionRepository      repository.PushSubscriptionRepository
+	NotificationRepository          repository.NotificationRepository
 }
 
 var initDb sync.Once
@@ -100,6 +102,8 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.UserConnectionRepository = repository.NewUserConnectionRepository(suite.DB)
 	suite.SettlementRepository = repository.NewSettlementRepository(suite.DB)
 	suite.ChargeRepository = repository.NewChargeRepository(suite.DB)
+	suite.PushSubscriptionRepository = repository.NewPushSubscriptionRepository(suite.DB)
+	suite.NotificationRepository = repository.NewNotificationRepository(suite.DB)
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -115,6 +119,8 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		UserConnection:        suite.UserConnectionRepository,
 		Settlement:            suite.SettlementRepository,
 		Charge:                suite.ChargeRepository,
+		PushSubscription:      suite.PushSubscriptionRepository,
+		Notification:          suite.NotificationRepository,
 	}
 
 	// Create test config for AuthService
