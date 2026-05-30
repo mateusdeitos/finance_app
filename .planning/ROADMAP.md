@@ -193,7 +193,20 @@ Plans:
   2. An unread count badge is visible in the navigation entry point when there are unread notifications; unread notifications are visually distinguished from read ones inside the inbox
   3. Tapping a notification navigates the user to the related charge or transaction screen and marks that notification as read
   4. A user can mark all notifications as read in a single action; after doing so the unread badge disappears and all notifications display as read
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+- [ ] 25-01-PLAN.md — Backend bulk get-by-IDs: ChargeSearchOptions.IDs + repo WHERE id IN (via existing List), new GET /api/transactions/by-ids handler, swagger, handler tests
+- [ ] 25-02-PLAN.md — FE data foundation: Notifications types, QueryKeys, api/notifications.ts, useNotificationInbox (cursor) + useNotificationUnreadCount (60s poll), inbox testIds, describeNotification + tests
+
+**Wave 2** *(blocked on 25-01, 25-02)*
+- [ ] 25-03-PLAN.md — Batch amount resolver (useResolveNotificationAmounts, D-25-1) + by-IDs api fns + optimistic mark-read/mark-all mutations (D-25-2) + tests
+
+**Wave 3** *(blocked on 25-02, 25-03)*
+- [ ] 25-04-PLAN.md — Inbox UI surfaces: NotificationRow, shared NotificationInboxContent, mobile NotificationInboxDrawer, desktop NotificationInboxPage, thin /notifications route
+
+**Wave 4** *(blocked on 25-02, 25-04)*
+- [ ] 25-05-PLAN.md — Nav wiring: DesktopSidebar link + blue badge, MobileTabBar Mais-tab dot, MobileMoreDrawer item; authored Playwright e2e spec
 **UI hint**: yes
 
 ## Progress
