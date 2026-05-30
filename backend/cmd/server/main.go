@@ -46,8 +46,8 @@ func main() {
 
 	// Fail fast when VAPID keys are absent — silently missing keys would cause
 	// push delivery to fail in production (T-22-STARTUP mitigation).
-	if cfg.VAPID.PublicKey == "" || cfg.VAPID.PrivateKey == "" {
-		log.Fatalf("VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required")
+	if cfg.VAPID.PublicKey == "" || cfg.VAPID.PrivateKey == "" || cfg.VAPID.Subject == "" {
+		log.Fatalf("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT are required")
 	}
 
 	loc, err := time.LoadLocation("UTC")
