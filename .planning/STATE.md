@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.6
-milestone_name: TBD
+milestone_name: Push Notifications
 status: planning
-last_updated: "2026-05-07T00:00:00.000Z"
-last_activity: 2026-05-07
+last_updated: "2026-05-30T02:36:12.920Z"
+last_activity: 2026-05-30
 progress:
   total_phases: 0
   completed_phases: 0
@@ -15,17 +15,17 @@ progress:
 
 ## Current Position
 
-Phase: Not started (v1.5 shipped; v1.6 scope TBD)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Defining requirements for v1.6
-Last activity: 2026-05-07 — v1.5 shipped + archived. Manual smoke ✓ (with issue #116 filed for follow-up).
+Status: Defining requirements
+Last activity: 2026-05-30 — Milestone v1.6 started
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-05)
+See: .planning/PROJECT.md (updated 2026-05-30)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** v1.6 — TBD
+**Current focus:** v1.6 — Push Notifications
 
 ## Performance Metrics
 
