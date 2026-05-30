@@ -27,10 +27,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Notification Inbox (INBOX)
 
-- [ ] **INBOX-01**: User can open an in-app notification inbox listing their notifications, newest first
-- [ ] **INBOX-02**: User can see an unread count indicator and distinguish unread notifications from read ones
-- [ ] **INBOX-03**: User can select a notification to navigate to its related charge or transaction
-- [ ] **INBOX-04**: User can mark notifications as read individually and all at once; opening a notification marks it read
+- [x] **INBOX-01**: User can open an in-app notification inbox listing their notifications, newest first
+- [x] **INBOX-02**: User can see an unread count indicator and distinguish unread notifications from read ones
+- [x] **INBOX-03**: User can select a notification to navigate to its related charge or transaction
+- [x] **INBOX-04**: User can mark notifications as read individually and all at once; opening a notification marks it read
 
 ### Permissions & Controls (CTRL)
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | NOTIF-04 | Phase 23 | Complete |
 | NOTIF-05 | Phase 23 | Complete |
 | NOTIF-06 | Phase 23 | Complete |
-| INBOX-01 | Phase 25 | Pending |
-| INBOX-02 | Phase 25 | Pending |
-| INBOX-03 | Phase 25 | Pending |
-| INBOX-04 | Phase 25 | Pending |
+| INBOX-01 | Phase 25 | Complete |
+| INBOX-02 | Phase 25 | Complete |
+| INBOX-03 | Phase 25 | Complete |
+| INBOX-04 | Phase 25 | Complete |
 | CTRL-01 | Phase 24 | Complete (UAT pending) |
 | CTRL-02 | Phase 24 | Complete (UAT pending) |
 | CTRL-03 | Phase 24 | Complete (UAT pending) |

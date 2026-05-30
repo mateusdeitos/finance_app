@@ -15,9 +15,9 @@ progress:
 
 ## Current Position
 
-Phase: 24 (frontend-permission-subscribe-service-worker) — VERIFIED
+Phase: 25 (frontend-notification-inbox) — VERIFIED — v1.6 milestone COMPLETE
 Plan: 5 of 5
-Status: PASS (code-complete, device-UAT-pending) — see 24-VERIFICATION.md + 24-HUMAN-UAT.md
+Status: PASS (code-complete, e2e-deferred-to-CI) — all v1.6 phases (22-25) verified
 Last activity: 2026-05-30
 
 ## Project Reference
