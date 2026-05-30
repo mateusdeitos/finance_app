@@ -31,6 +31,10 @@ export const TransactionsTestIds = {
   SelectAccount: 'select_account',
   SelectDestinationAccount: 'select_destination_account',
   SelectCategory: 'select_category',
+  // Read-only account display shown when the source/destination account can't
+  // be edited (partner-owned, or a shared account on a charge-settlement transfer).
+  ReadOnlyAccount: 'readonly_account',
+  ReadOnlyDestinationAccount: 'readonly_destination_account',
   SegmentedTransactionType: 'segmented_transaction_type',
 
   // Select options (renderOption testids — pass the entity id)

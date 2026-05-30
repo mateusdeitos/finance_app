@@ -347,6 +347,7 @@ export const TransactionForm = ({
               avatarUrl={lockedSourceAccount.avatarUrl}
               name={lockedSourceAccount.name}
               description={lockedSourceAccount.description}
+              data-testid={TransactionsTestIds.ReadOnlyAccount}
             />
           ) : isTransfer ? (
             <Controller
@@ -431,6 +432,7 @@ export const TransactionForm = ({
               avatarUrl={lockedDestinationAccount.avatarUrl}
               name={lockedDestinationAccount.name}
               description={lockedDestinationAccount.description}
+              data-testid={TransactionsTestIds.ReadOnlyDestinationAccount}
             />
           ) : (
             <Controller

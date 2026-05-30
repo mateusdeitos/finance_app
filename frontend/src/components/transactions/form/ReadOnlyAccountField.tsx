@@ -10,6 +10,7 @@ interface Props {
   name: string;
   /** Helper text rendered below the label (e.g. "Conta de outro usuário"). */
   description?: string;
+  "data-testid"?: string;
 }
 
 /**
@@ -18,10 +19,17 @@ interface Props {
  * can't be rendered as a Mantine `Select` value. Shows the partner's avatar
  * (resolved from the user connection) and a name.
  */
-export function ReadOnlyAccountField({ label, required, avatarUrl, name, description }: Props) {
+export function ReadOnlyAccountField({
+  label,
+  required,
+  avatarUrl,
+  name,
+  description,
+  "data-testid": dataTestId,
+}: Props) {
   return (
     <Input.Wrapper label={label} required={required} description={description}>
-      <div className={classes.field}>
+      <div className={classes.field} data-testid={dataTestId}>
         <Avatar
           size={22}
           src={avatarUrl}
