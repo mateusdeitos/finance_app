@@ -12,4 +12,8 @@ export const QueryKeys = {
   Onboarding: 'onboarding',
   CheckDuplicate: 'check-duplicate',
   PushSubscription: 'push-subscription',
+  Notifications: 'notifications',
+  NotificationUnreadCount: 'notification-unread-count',
+  NotificationChargesById: 'notification-charges-by-id',
+  NotificationTransactionsById: 'notification-transactions-by-id',
 } as const
