@@ -44,6 +44,12 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Fail fast when VAPID keys are absent — silently missing keys would cause
+	// push delivery to fail in production (T-22-STARTUP mitigation).
+	if cfg.VAPID.PublicKey == "" || cfg.VAPID.PrivateKey == "" {
+		log.Fatalf("VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required")
+	}
+
 	loc, err := time.LoadLocation("UTC")
 	if err != nil {
 		log.Fatalf("Failed to load UTC location: %v", err)
@@ -75,6 +81,8 @@ func main() {
 		Settlement:            repository.NewSettlementRepository(db),
 		Charge:                repository.NewChargeRepository(db),
 		UserSettings:          repository.NewUserSettingsRepository(db),
+		PushSubscription:      repository.NewPushSubscriptionRepository(db),
+		Notification:          repository.NewNotificationRepository(db),
 	}
 
 	// Initialize services
@@ -91,6 +99,7 @@ func main() {
 	services.Transaction = service.NewTransactionService(repos, services)
 	services.Charge = service.NewChargeService(repos, services)
 	services.Onboarding = service.NewOnboardingService(repos)
+	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -101,6 +110,7 @@ func main() {
 	userConnectionHandler := handler.NewUserConnectionHandler(services)
 	chargeHandler := handler.NewChargeHandler(services)
 	onboardingHandler := handler.NewOnboardingHandler(services)
+	pushSubHandler := handler.NewPushSubscriptionHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -191,6 +201,12 @@ func main() {
 	charges.POST("/:id/cancel", chargeHandler.Cancel)
 	charges.POST("/:id/reject", chargeHandler.Reject)
 	charges.POST("/:id/accept", chargeHandler.Accept)
+
+	// Push subscriptions
+	pushSubs := api.Group("/push-subscriptions")
+	pushSubs.POST("", pushSubHandler.Subscribe)
+	pushSubs.DELETE("", pushSubHandler.Unsubscribe)
+	pushSubs.GET("", pushSubHandler.Status)
 
 	// Settlements
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)

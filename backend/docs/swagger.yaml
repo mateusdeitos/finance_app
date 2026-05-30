@@ -298,6 +298,18 @@ definitions:
       type:
         $ref: '#/definitions/domain.TransactionType'
     type: object
+  domain.PushKeys:
+    properties:
+      auth:
+        type: string
+      p256dh:
+        type: string
+    type: object
+  domain.PushSubscriptionStatusResponse:
+    properties:
+      subscribed:
+        type: boolean
+    type: object
   domain.RecurrenceSettings:
     properties:
       current_installment:
@@ -397,6 +409,13 @@ definitions:
         type: integer
       userConnection:
         $ref: '#/definitions/domain.UserConnection'
+    type: object
+  domain.SubscribePushRequest:
+    properties:
+      endpoint:
+        type: string
+      keys:
+        $ref: '#/definitions/domain.PushKeys'
     type: object
   domain.Tag:
     properties:
@@ -631,6 +650,13 @@ definitions:
       external_id:
         type: string
       from_default_split_percentage:
+        type: integer
+    type: object
+  handler.UpdateConnectionSettingsRequest:
+    properties:
+      account_name:
+        type: string
+      default_split_percentage:
         type: integer
     type: object
   handler.testLoginRequest:
@@ -1218,6 +1244,91 @@ paths:
       summary: Get onboarding status
       tags:
       - onboarding
+  /api/push-subscriptions:
+    delete:
+      description: Removes the authenticated user's push subscription for the given
+        device endpoint
+      parameters:
+      - description: Endpoint URL (url-encoded)
+        in: query
+        name: endpoint
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Remove a Web Push subscription
+      tags:
+      - push-subscriptions
+    get:
+      description: Returns whether the authenticated user has an active push subscription
+        for the given endpoint
+      parameters:
+      - description: Endpoint URL (url-encoded)
+        in: query
+        name: endpoint
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PushSubscriptionStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Check if device has an active push subscription
+      tags:
+      - push-subscriptions
+    post:
+      consumes:
+      - application/json
+      description: Upserts a push subscription for the authenticated user's device
+      parameters:
+      - description: Push subscription
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SubscribePushRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Register a Web Push subscription
+      tags:
+      - push-subscriptions
   /api/settlements/{id}:
     patch:
       consumes:
@@ -1875,6 +1986,50 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Delete user connection
+      tags:
+      - user-connections
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Connection settings
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateConnectionSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserConnection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update connection settings (account name + default split)
       tags:
       - user-connections
   /api/user-connections/{id}/{status}:

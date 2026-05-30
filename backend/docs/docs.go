@@ -934,6 +934,142 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/push-subscriptions": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whether the authenticated user has an active push subscription for the given endpoint",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Check if device has an active push subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint URL (url-encoded)",
+                        "name": "endpoint",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PushSubscriptionStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upserts a push subscription for the authenticated user's device",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Register a Web Push subscription",
+                "parameters": [
+                    {
+                        "description": "Push subscription",
+                        "name": "subscription",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.SubscribePushRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the authenticated user's push subscription for the given device endpoint",
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Remove a Web Push subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint URL (url-encoded)",
+                        "name": "endpoint",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/settlements/{id}": {
             "patch": {
                 "security": [
@@ -2026,6 +2162,76 @@ const docTemplate = `{
             }
         },
         "/api/user-connections/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-connections"
+                ],
+                "summary": "Update connection settings (account name + default split)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Connection ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Connection settings",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateConnectionSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.UserConnection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -2704,6 +2910,25 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.PushKeys": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string"
+                },
+                "p256dh": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.PushSubscriptionStatusResponse": {
+            "type": "object",
+            "properties": {
+                "subscribed": {
+                    "type": "boolean"
+                }
+            }
+        },
         "domain.RecurrenceSettings": {
             "type": "object",
             "properties": {
@@ -2845,6 +3070,17 @@ const docTemplate = `{
                 },
                 "userConnection": {
                     "$ref": "#/definitions/domain.UserConnection"
+                }
+            }
+        },
+        "domain.SubscribePushRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "keys": {
+                    "$ref": "#/definitions/domain.PushKeys"
                 }
             }
         },
@@ -3181,6 +3417,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "from_default_split_percentage": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.UpdateConnectionSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "default_split_percentage": {
                     "type": "integer"
                 }
             }
