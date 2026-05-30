@@ -1,0 +1,8 @@
+.trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--login-dimmed);
+}

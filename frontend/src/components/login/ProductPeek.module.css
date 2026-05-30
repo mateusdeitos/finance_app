@@ -1,0 +1,156 @@
+.card {
+  width: 100%;
+  max-width: 20.625rem;
+  border-radius: 0.875rem;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  background: var(--login-surface);
+  border: 1px solid var(--login-peek-border);
+  box-shadow: light-dark(
+    0 16px 40px rgba(28, 60, 90, 0.16),
+    0 12px 30px rgba(0, 0, 0, 0.3)
+  );
+  transition: transform 120ms ease;
+}
+
+.card:active {
+  transform: scale(0.99);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6875rem 0.875rem;
+  border-bottom: 1px solid var(--login-border);
+}
+
+.period {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--login-dimmed);
+}
+
+.swap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--login-blue-7);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.8125rem 0.875rem;
+}
+
+.txRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.avatar {
+  width: 1.875rem;
+  height: 1.875rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #5b6cb0;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.txMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.txTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--login-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.txSub {
+  font-size: 0.71875rem;
+  color: var(--login-dimmed);
+}
+
+.txAmount {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--login-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.splitBar {
+  display: grid;
+  gap: 0.25rem;
+  height: 0.5rem;
+  transition: grid-template-columns 260ms ease;
+}
+
+.splitMine,
+.splitPartner {
+  border-radius: 0.25rem;
+}
+
+.splitMine {
+  background: var(--login-blue-6);
+}
+
+.splitPartner {
+  background: #9c6ade;
+}
+
+.shares {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--login-text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.shares b {
+  color: var(--login-text);
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.3125rem;
+  margin-top: 0.0625rem;
+}
+
+.dot,
+.dotActive {
+  height: 0.3125rem;
+  border-radius: 999px;
+  transition:
+    width 200ms ease,
+    background 200ms ease;
+}
+
+.dot {
+  width: 0.3125rem;
+  background: var(--login-border-strong);
+}
+
+.dotActive {
+  width: 1rem;
+  background: var(--login-blue-6);
+}
