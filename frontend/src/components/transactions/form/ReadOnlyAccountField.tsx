@@ -8,7 +8,7 @@ interface Props {
   avatarUrl?: string;
   /** Displayed name (typically the partner's). */
   name: string;
-  /** Helper text rendered below the label (e.g. "Conta de outro usuário"). */
+  /** Helper text rendered below the input (e.g. "Conta de outro usuário"). */
   description?: string;
   "data-testid"?: string;
 }
@@ -28,7 +28,12 @@ export function ReadOnlyAccountField({
   "data-testid": dataTestId,
 }: Props) {
   return (
-    <Input.Wrapper label={label} required={required} description={description}>
+    <Input.Wrapper
+      label={label}
+      required={required}
+      description={description}
+      inputWrapperOrder={["label", "input", "description", "error"]}
+    >
       <div className={classes.field} data-testid={dataTestId}>
         <Avatar
           size={22}
