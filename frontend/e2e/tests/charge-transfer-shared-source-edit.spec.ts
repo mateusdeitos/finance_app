@@ -90,6 +90,11 @@ test.describe("Charge-settlement transfer: shared source account edit", () => {
     await expect(drawer.getByTestId(TransactionsTestIds.ReadOnlyAccount)).toBeVisible();
     await expect(drawer.getByTestId(TransactionsTestIds.SelectAccount)).not.toBeVisible();
 
+    // A charge-generated transfer is structurally bound to the charge: the
+    // recurrence section is hidden entirely (type lock is enforced by the
+    // backend guard and the disabled control).
+    await expect(drawer.getByTestId(TransactionsTestIds.SegmentExtraSection("recurrence"))).toHaveCount(0);
+
     await page.close();
   });
 });

@@ -124,6 +124,13 @@ interface Props {
   lockedSourceAccount?: LockedAccountInfo;
   /** Same as `lockedSourceAccount`, applied to `destination_account_id`. */
   lockedDestinationAccount?: LockedAccountInfo;
+  /**
+   * Renders the transaction-type control as read-only (disabled). Used for
+   * charge-generated transfers, whose type is structurally bound to the charge.
+   */
+  lockTransactionType?: boolean;
+  /** Hides the recurrence section entirely (e.g. charge-generated transfers). */
+  hideRecurrence?: boolean;
 }
 
 export interface LockedAccountInfo {
@@ -144,6 +151,8 @@ export const TransactionForm = ({
   formId,
   lockedSourceAccount,
   lockedDestinationAccount,
+  lockTransactionType = false,
+  hideRecurrence = false,
 }: Props) => {
   const fallbackId = useId();
   const resolvedFormId = formId ?? fallbackId;
@@ -301,6 +310,7 @@ export const TransactionForm = ({
                 field.onChange(val);
                 if (val === "transfer") setValue("split_settings", []);
               }}
+              disabled={lockTransactionType}
               fullWidth
               data-testid={TransactionsTestIds.SegmentedTransactionType}
             />
@@ -495,6 +505,7 @@ export const TransactionForm = ({
           forceOpen={panelsWithErrors}
           splitApplicable={splitApplicable}
           isUpdate={isUpdate}
+          hideRecurrence={hideRecurrence}
         />
       </Stack>
 

@@ -61,6 +61,8 @@ const (
 	ErrorTagAccountCannotBeChangedForSharedTransactions              ErrorTag = "TRANSACTION.ACCOUNT_CANNOT_BE_CHANGED_FOR_SHARED_TRANSACTIONS"
 	ErrorTagChildTransactionCannotBeUpdated                          ErrorTag = "TRANSACTION.CHILD_TRANSACTION_CANNOT_BE_UPDATED"
 	ErrorTagLinkedTransactionDisallowedFieldChanged                  ErrorTag = "TRANSACTION.LINKED_TRANSACTION_DISALLOWED_FIELD_CHANGED"
+	ErrorTagChargeTransactionTypeCannotChange                        ErrorTag = "TRANSACTION.CHARGE_TYPE_CANNOT_CHANGE"
+	ErrorTagChargeTransactionRecurrenceNotAllowed                    ErrorTag = "TRANSACTION.CHARGE_RECURRENCE_NOT_ALLOWED"
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
@@ -134,6 +136,8 @@ var (
 	ErrAccountCannotBeChangedForSharedTransactions = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotBeChangedForSharedTransactions)}, "account cannot be changed for shared transactions")
 	ErrChildTransactionCannotBeUpdated             = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChildTransactionCannotBeUpdated)}, "child transaction cannot be updated")
 	ErrLinkedTransactionDisallowedFieldChanged     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
+	ErrChargeTransactionTypeCannotChange           = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionTypeCannotChange)}, "the type of a transaction linked to a charge cannot be changed")
+	ErrChargeTransactionRecurrenceNotAllowed       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionRecurrenceNotAllowed)}, "recurrence cannot be added to a transaction linked to a charge")
 	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 )

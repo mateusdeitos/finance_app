@@ -237,6 +237,8 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
           isUpdate={isRecurring}
           lockedSourceAccount={lockedSourceAccount ?? undefined}
           lockedDestinationAccount={lockedDestinationAccount ?? undefined}
+          lockTransactionType={transaction.charge_id != null}
+          hideRecurrence={transaction.charge_id != null}
           headerContent={
             transaction.charge_id != null ? (
               <Alert
