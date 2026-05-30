@@ -11,4 +11,8 @@ export const CategoriesTestIds = {
   DrawerEmojiPicker: (categoryId: number | string) =>
     `drawer_emoji_picker_${categoryId}` as const,
   EmojiOption: (emoji: string) => `emoji_${emoji}` as const,
+  // ── Spending distribution view ──────────────────────────────────────────
+  DistributionPanel: 'section_category_distribution',
+  Card: (categoryId: number | string) => `category_card_${categoryId}` as const,
+  BtnToggle: (categoryId: number | string) => `btn_toggle_category_${categoryId}` as const,
 } as const

@@ -4,14 +4,8 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { InlineNewCategory } from './InlineNewCategory'
+import { EMOJI_OPTIONS } from './emojiOptions'
 import { CategoriesTestIds } from '@/testIds'
-
-const EMOJI_OPTIONS = [
-  '🏠','🚗','🍔','🛒','💊','✈️','🎬','👕','📚','💡',
-  '🏋️','🎮','🐾','💰','🏦','📱','🎁','🌿','☕','🍺',
-  '🎵','🏥','⛽','🚌','🏫','💻','🍕','🍣','🧴','🛠️',
-  '🌟','❤️','🎂','🤝','🌊','🏔️','🎯','🧾','💳','🏷️',
-]
 
 interface Props {
   category: Transactions.Category
