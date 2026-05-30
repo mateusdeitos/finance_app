@@ -199,7 +199,7 @@ Plans:
 | 19. Scope & Debounce Duplicate Check | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
-| 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete   | 2026-05-30 |
+| 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
 | 23. Backend Notification Events & Inbox API | v1.6 | 0/? | Not started | - |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/? | Not started | - |
 | 25. Frontend Notification Inbox | v1.6 | 0/? | Not started | - |

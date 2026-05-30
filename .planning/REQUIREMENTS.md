@@ -13,8 +13,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 - [ ] **SUB-01**: User can grant browser notification permission and register a Web Push subscription for the current device
 - [ ] **SUB-02**: User can turn notifications off, which removes the current device's push subscription on the server
-- [ ] **SUB-03**: System persists push subscriptions per user + device (endpoint + keys) and prunes a subscription when the push service reports it expired/invalid (HTTP 404/410)
-- [ ] **SUB-04**: System can report whether the current device already has an active push subscription, so the frontend can show the correct enabled/disabled state
+- [x] **SUB-03**: System persists push subscriptions per user + device (endpoint + keys) and prunes a subscription when the push service reports it expired/invalid (HTTP 404/410)
+- [x] **SUB-04**: System can report whether the current device already has an active push subscription, so the frontend can show the correct enabled/disabled state
 
 ### Notification Events (NOTIF)
 
@@ -70,8 +70,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 |-------------|-------|--------|
 | SUB-01 | Phase 24 | Pending |
 | SUB-02 | Phase 24 | Pending |
-| SUB-03 | Phase 22 | Pending |
-| SUB-04 | Phase 22 | Pending |
+| SUB-03 | Phase 22 | Complete |
+| SUB-04 | Phase 22 | Complete |
 | NOTIF-01 | Phase 23 | Pending |
 | NOTIF-02 | Phase 23 | Pending |
 | NOTIF-03 | Phase 23 | Pending |
