@@ -26,9 +26,12 @@ type notificationCursor struct {
 	ID        int       `json:"id"`
 }
 
-func encodeCursor(createdAt time.Time, id int) string {
-	raw, _ := json.Marshal(notificationCursor{CreatedAt: createdAt, ID: id})
-	return base64.RawURLEncoding.EncodeToString(raw)
+func encodeCursor(createdAt time.Time, id int) (string, error) {
+	raw, err := json.Marshal(notificationCursor{CreatedAt: createdAt, ID: id})
+	if err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
 func decodeCursor(token string) (*notificationCursor, error) {
@@ -85,7 +88,11 @@ func (r *notificationRepository) List(ctx context.Context, filter domain.Notific
 	var nextCursor string
 	if hasMore && len(ents) > 0 {
 		last := ents[len(ents)-1]
-		nextCursor = encodeCursor(*last.CreatedAt, last.ID)
+		var encErr error
+		nextCursor, encErr = encodeCursor(*last.CreatedAt, last.ID)
+		if encErr != nil {
+			return nil, encErr
+		}
 	}
 	return &domain.NotificationListResult{Items: items, NextCursor: nextCursor, HasMore: hasMore}, nil
 }
