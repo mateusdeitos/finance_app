@@ -15,6 +15,30 @@ reviewed_at: ~
 
 ---
 
+## Design Reference (LOCKED visual contract)
+
+A high-fidelity design for this phase was produced in Claude Design and exported into this repo. It is the **pixel-level source of truth** for the executor — match its visual output (recreate in React + Mantine; do not copy the prototype's structure).
+
+| Artifact | Path |
+|----------|------|
+| Component prototype (JSX) | `design/notif-inbox-components.jsx` |
+| Design tokens (CSS vars) | `design/colors_and_type.css` |
+| Screenshot | `design/p25-overview.png` |
+
+The design **confirms** this spec end-to-end and locks these specifics:
+
+- **Mobile = bottom-sheet drawer** (`NotificationInboxDrawer`, `maxHeight: 88%`, safe-area bottom padding, drag handle, "Notificações" title `fw=700` 18px + close icon). **Desktop = full `/notifications` page** (`DesktopInboxPage`, max-width 620, heading `fw=700` 22px, list in a `radius=md` bordered surface).
+- **Entity-sourced amounts (the user's decision):** `describeNotification(n)` builds the pt-BR string with the amount embedded inline, with three `amountState`s: `known` → full copy with `R$`; `loading` → degrade to the no-amount sentence; `missing` (404 / soft-deleted) → `—`. Copy mirrors Phase 23 D-07 push templates (e.g. `"{partner} te cobrou {amount}: {description}"`, `"{partner} aceitou sua cobrança de {amount}"`, `"{partner} adicionou uma transação dividida de {amount}"`, `"{partner} atualizou uma transação dividida ({amount})"`). `fmtBRL` = `Intl.NumberFormat('pt-BR', {style:'currency',currency:'BRL'})` over cents/100 — i.e. the existing `formatBalance`.
+- **Per-type icon + ThemeIcon tint** (`NOTIF_TYPES`, Mantine `variant="light"` `radius=md` size 36): `charge_received` IconCreditCard blue (`#457b9d`), `charge_accepted` IconCircleCheck teal (`#0c8a7d`), `split_created` IconUsers grape (`#7048b8`), `split_updated` IconRefresh orange (`#d5660c`); unknown → grey fallback.
+- **Row:** 8px unread dot (`blue.6`) or transparent spacer for read; unread row tint `blue.0` (light); description `fw=500` 14px 2-line clamp (`text` if unread / `dimmed` if read); relative timestamp 12px dimmed; trailing `IconChevronRight` 16px. Hairline separators indented 56px. Min-height 48px.
+- **States:** 3 shimmer skeleton rows (loading); `EmptyState` (BellOff ThemeIcon + "Nenhuma notificação por enquanto" + body); `ErrorState` ("Não foi possível carregar as notificações." + "Tentar novamente"); `EndIndicator` "Você está em dia"; `LoadMoreBtn` outline "Carregar mais".
+- **Mark-all-read:** subtle `blue.7` "Marcar todas como lidas", shown only when unread exist (right-aligned in the drawer action row / next to the desktop page heading).
+- **OD-4 → LOCKED:** mobile entry is the **"Mais" tab unread dot** (`MobileTabBar`, 9px `blue.6` dot with 2px surface ring, no count) → opens inbox; desktop adds a **"Notificações" sidebar nav link** with a `blue.6` unread count badge (distinct from the red Cobranças badge). No new mobile tab.
+
+Treat the prototype's exact colors, spacing, and copy as binding wherever they are more specific than the prose below.
+
+---
+
 ## Design System
 
 | Property | Value |

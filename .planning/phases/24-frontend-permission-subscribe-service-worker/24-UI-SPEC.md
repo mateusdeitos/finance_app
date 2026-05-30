@@ -15,6 +15,30 @@ reviewed_at: 2026-05-30
 
 ---
 
+## Design Reference (LOCKED visual contract)
+
+A high-fidelity design for this phase was produced in Claude Design and exported into this repo. It is the **pixel-level source of truth** for the executor — match its visual output (recreate in React + Mantine, do not copy the prototype's structure).
+
+| Artifact | Path |
+|----------|------|
+| Component prototype (JSX) | `design/notif-components.jsx` |
+| Canvas / states wireframe (HTML) | `design/Notifications-Phase24.html` |
+| Design tokens (CSS vars) | `design/colors_and_type.css` |
+| Screenshots | `design/notif-overview.png`, `design/notif-mobile2.png`, `design/notif-desktop.png` |
+
+The design **confirms** this spec end-to-end and resolves the Open Decisions below to LOCKED:
+
+- **OD-1 → LOCKED:** `requesting` state replaces the icon column with a spinning `Loader size="xs"` in `blue.6` (see `NLoader` + `NotificationToggleRow` in the prototype).
+- **OD-2 → LOCKED:** desktop toggle lives inside the user `Menu.Dropdown`, immediately after the "Tema" row, above the divider before "Sair" (see `DesktopSidebarMenu`).
+- **OD-3 → LOCKED:** mobile uses the SHORT helper copy, desktop the FULL copy (see `N_HELP` map — values match the OD-3 table verbatim).
+- **Toggle visual:** Mantine `Switch size="md"`, track `blue.6` when on / `grey-2` when off; thumb white with `0 1px 2px rgba(0,0,0,0.25)`. Row min-height 44px, icon column 20px, `gap: 16`.
+- **Toast:** 4px left border in the tone color (teal/red), circular tone icon (check / x), title `fw=600` 14px, body `text2` 13px, top-right.
+- **OS push card:** brand mark 38px + "FINANCEAPP" uppercase dimmed label + "agora" + title `fw=600` 15px + body 14px. Tap target shown as the list route per type.
+
+Treat the prototype's exact colors, spacing, and copy as binding wherever they are more specific than the prose below.
+
+---
+
 ## Design System
 
 | Property | Value |

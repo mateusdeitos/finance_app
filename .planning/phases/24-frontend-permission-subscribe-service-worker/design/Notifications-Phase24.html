@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Notificações — Fase 24 (wireframe)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="colors_and_type.css" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #f0eee9; }
+  #root { width: 100%; height: 100vh; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  @keyframes nspin { to { transform: rotate(360deg); } }
+  .nspin { animation: nspin 0.8s linear infinite; transform-origin: 50% 50%; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="tx-shared.jsx"></script>
+<script type="text/babel" src="notif-components.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const DEVICE_W = 402;
+const DEVICE_H = 890;
+
+function PhoneStage({ children, palette }) {
+  const { IOSDevice } = window;
+  const p = palette || window.PALETTE_LIGHT;
+  return (
+    <IOSDevice width={DEVICE_W} height={DEVICE_H}>
+      <div style={{ width: '100%', height: '100%', background: p.page, position: 'relative' }}>
+        {children}
+      </div>
+    </IOSDevice>
+  );
+}
+
+// A light backdrop panel to sit toasts / push cards on, so they read as overlays.
+function Surface({ children, w, h }) {
+  return (
+    <div style={{ width: w, height: h, background: 'var(--fa-grey-0)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, boxSizing: 'border-box' }}>
+      {children}
+    </div>
+  );
+}
+
+function App() {
+  const { DesignCanvas, DCSection, DCArtboard } = window;
+  const { MobileMoreDrawer, DesktopSidebarMenu, Toast, OSPush, PALETTE_LIGHT } = window;
+  const { ChromeWindow } = window;
+  const L = PALETTE_LIGHT;
+
+  const states = [
+    { id: 'default',     label: 'default · nunca perguntou' },
+    { id: 'requesting',  label: 'requesting · aguardando prompt' },
+    { id: 'enabled',     label: 'enabled · inscrito' },
+    { id: 'denied',      label: 'denied · bloqueado no navegador' },
+    { id: 'unsupported', label: 'unsupported · sem Push API' },
+  ];
+
+  return (
+    <DesignCanvas>
+      {/* ───────── Mobile: drawer "Mais" ───────── */}
+      <DCSection
+        id="mobile"
+        title="Mobile · Drawer “Mais” — 5 estados do toggle"
+        subtitle="Surface 1 + 2 (CTRL-01/02). O toggle entra como nova linha no MobileMoreDrawer, acima de “Sair”. O próprio Switch é a ação explícita que dispara o prompt do navegador — sem banner/modal. Helper curto no mobile (OD-3). Requesting troca o ícone por loader (OD-1)."
+      >
+        {states.map(s => (
+          <DCArtboard key={s.id} id={'m-' + s.id} label={s.label} width={DEVICE_W} height={DEVICE_H}>
+            <PhoneStage palette={L}>
+              <MobileMoreDrawer state={s.id} palette={L}/>
+            </PhoneStage>
+          </DCArtboard>
+        ))}
+      </DCSection>
+
+      {/* ───────── Desktop: user menu dropdown ───────── */}
+      <DCSection
+        id="desktop"
+        title="Desktop · Menu do usuário — estados do toggle"
+        subtitle="No desktop o toggle vive dentro do Menu.Dropdown da sidebar, no mesmo padrão da linha “Tema”, acima do divisor antes de “Sair” (OD-2). Helper completo. Switch desabilitado nos estados denied / unsupported / requesting."
+      >
+        {states.map(s => (
+          <DCArtboard key={s.id} id={'d-' + s.id} label={s.label} width={1100} height={680}>
+            <ChromeWindow url="financeapp.app/transactions" tabs={[{ title: 'FinanceApp — Transações', active: true }]} activeIndex={0} width={1100} height={680}>
+              <DesktopSidebarMenu state={s.id} palette={L}/>
+            </ChromeWindow>
+          </DCArtboard>
+        ))}
+      </DCSection>
+
+      {/* ───────── Toasts ───────── */}
+      <DCSection
+        id="toasts"
+        title="Toasts de feedback (@mantine/notifications · top-right)"
+        subtitle="Surface 3. autoClose 3000ms. Sucesso = teal, erro = red. Não há toast quando o usuário nega a permissão — a transição para o estado “denied” + helper já é o feedback."
+      >
+        <DCArtboard id="t-sub-ok" label="Inscrição · sucesso" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <Toast tone="teal" title="Notificações ativadas" message="Você receberá notificações neste dispositivo." palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="t-unsub-ok" label="Cancelamento · sucesso" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <Toast tone="teal" title="Notificações desativadas" message="Notificações desativadas neste dispositivo." palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="t-sub-err" label="Inscrição · erro" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <Toast tone="red" title="Erro ao ativar" message="Não foi possível ativar as notificações. Tente novamente." palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="t-unsub-err" label="Cancelamento · erro" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <Toast tone="red" title="Erro ao desativar" message="Não foi possível desativar as notificações." palette={L}/>
+          </Surface>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ───────── OS push content ───────── */}
+      <DCSection
+        id="push"
+        title="Conteúdo da notificação push (SO / navegador)"
+        subtitle="Surface 4 (SC4, CTRL-03). Renderizada pelo SO via service worker. {partner_name} vem do payload (fallback “Seu parceiro(a)”). tag evita empilhamento duplicado. O toque leva à página de lista do tipo da entidade (sem deep-link de entidade nesta fase)."
+      >
+        <DCArtboard id="p-charge-recv" label="charge_received" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <OSPush title="Nova cobrança" body="Vic criou uma cobrança para você." target="/charges" palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="p-charge-acc" label="charge_accepted" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <OSPush title="Cobrança aceita" body="Vic aceitou sua cobrança." target="/charges" palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="p-split-new" label="split_created" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <OSPush title="Nova transação dividida" body="Vic adicionou uma transação dividida." target="/transactions" palette={L}/>
+          </Surface>
+        </DCArtboard>
+        <DCArtboard id="p-split-upd" label="split_updated" width={420} height={150}>
+          <Surface w={420} h={150}>
+            <OSPush title="Transação dividida atualizada" body="Vic atualizou uma transação dividida." target="/transactions" palette={L}/>
+          </Surface>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+</script>
+</body>
+</html>

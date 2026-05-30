@@ -1,0 +1,244 @@
+/* ============================================================
+   FinanceApp · Colors + Type
+   ------------------------------------------------------------
+   Maps the Mantine v9 theme used by mateusdeitos/finance_app
+   into raw CSS custom properties so designs built outside the
+   React app can stay on-brand.
+
+   Light theme uses Mantine's neutral white surface; dark theme
+   mirrors Mantine's `dark.7` background. The product itself
+   switches via Mantine's `light-dark()` CSS function; here we
+   expose both as separate selectors.
+   ============================================================ */
+
+:root {
+  /* ---------- BRAND ---------- */
+  --fa-brand-blue:   #568fb3;   /* primary (logo background + main accent) */
+  --fa-brand-gold:   #FFD700;   /* logo accent ring; used sparingly */
+
+  /* ---------- BLUE (primary) ---------- */
+  --fa-blue-0:  #e9f7ff;
+  --fa-blue-1:  #dbeaf3;
+  --fa-blue-2:  #bad2e1;
+  --fa-blue-3:  #95b8cf;
+  --fa-blue-4:  #77a3bf;
+  --fa-blue-5:  #6295b6;
+  --fa-blue-6:  #568fb3;        /* DEFAULT — Mantine `c="blue"` */
+  --fa-blue-7:  #457b9d;        /* logo / hero text */
+  --fa-blue-8:  #396e8e;
+  --fa-blue-9:  #265f7f;
+
+  /* ---------- GREEN (positive · income · "teal") ---------- */
+  --fa-green-0: #e8fcfa;
+  --fa-green-1: #daf5f2;
+  --fa-green-2: #b4e9e3;
+  --fa-green-3: #8cddd3;
+  --fa-green-4: #6bd3c6;
+  --fa-green-5: #56cdbe;
+  --fa-green-6: #49caba;        /* income amount color (Mantine `c="teal"`) */
+  --fa-green-7: #39b2a3;
+  --fa-green-8: #2a9d8f;
+  --fa-green-9: #0c8a7d;
+
+  /* ---------- RED (negative · expense · destructive) ---------- */
+  --fa-red-0:   #ffe9ec;
+  --fa-red-1:   #ffd3d6;
+  --fa-red-2:   #f6a6ac;
+  --fa-red-3:   #ef757e;
+  --fa-red-4:   #e84c58;
+  --fa-red-5:   #e63946;
+  --fa-red-6:   #e42332;        /* expense amount color (Mantine `c="red"`) */
+  --fa-red-7:   #cb1425;
+  --fa-red-8:   #b60c20;
+  --fa-red-9:   #a00019;
+
+  /* ---------- YELLOW / ORANGE (warning · highlight) ---------- */
+  --fa-yellow-0: #fff2e3;
+  --fa-yellow-1: #ffe4cf;
+  --fa-yellow-2: #f9c8a1;
+  --fa-yellow-3: #f4a261;       /* default account-avatar background */
+  --fa-yellow-4: #f19044;
+  --fa-yellow-5: #ef8029;
+  --fa-yellow-6: #ef7819;
+  --fa-yellow-7: #d5660c;
+  --fa-yellow-8: #be5906;
+  --fa-yellow-9: #a64b00;
+
+  /* ---------- GREY (neutral) ---------- */
+  --fa-grey-0:  #f5f5f5;
+  --fa-grey-1:  #e7e7e7;
+  --fa-grey-2:  #cdcdcd;
+  --fa-grey-3:  #b2b2b2;
+  --fa-grey-4:  #9a9a9a;
+  --fa-grey-5:  #8b8b8b;
+  --fa-grey-6:  #848484;
+  --fa-grey-7:  #717171;
+  --fa-grey-8:  #656565;
+  --fa-grey-9:  #1a1a1a;
+
+  /* Mantine's own `dark` scale — used for dark-mode surfaces */
+  --fa-dark-4:  #424242;        /* dark hover border */
+  --fa-dark-5:  #2e2e2e;        /* dark divider */
+  --fa-dark-6:  #1f1f1f;        /* dark elevated surface */
+  --fa-dark-7:  #1a1b1e;        /* dark page background (matches theme-color meta) */
+  --fa-dark-8:  #141517;
+
+  /* ---------- LIGHT-MODE SEMANTIC ---------- */
+  --fa-bg-page:        var(--fa-grey-0);
+  --fa-bg-surface:     #ffffff;          /* cards, list rows, drawers */
+  --fa-bg-subtle:      var(--fa-grey-0); /* hovered row, section header chip */
+  --fa-bg-selected:    var(--fa-blue-0); /* selected transaction row */
+  --fa-border:         var(--fa-grey-1);
+  --fa-border-strong:  var(--fa-grey-2);
+
+  --fa-fg-1:           var(--fa-grey-9); /* primary text */
+  --fa-fg-2:           var(--fa-grey-7); /* secondary */
+  --fa-fg-dimmed:      var(--fa-grey-5); /* Mantine `c="dimmed"` */
+  --fa-fg-on-brand:    #ffffff;
+
+  --fa-accent:         var(--fa-blue-6);
+  --fa-accent-strong:  var(--fa-blue-7);
+  --fa-positive:       var(--fa-green-6);
+  --fa-negative:       var(--fa-red-6);
+  --fa-warning:        var(--fa-yellow-5);
+
+  /* ---------- RADII (Mantine defaults) ---------- */
+  --fa-radius-xs: 2px;
+  --fa-radius-sm: 4px;
+  --fa-radius-md: 8px;
+  --fa-radius-lg: 16px;
+  --fa-radius-xl: 32px;
+  --fa-radius-pill: 9999px;
+
+  /* ---------- SPACING (Mantine defaults — rem-based) ---------- */
+  --fa-space-xs: 0.625rem;   /* 10 */
+  --fa-space-sm: 0.75rem;    /* 12 */
+  --fa-space-md: 1rem;       /* 16 */
+  --fa-space-lg: 1.25rem;    /* 20 */
+  --fa-space-xl: 2rem;       /* 32 */
+
+  /* ---------- SHADOWS (Mantine defaults + FAB custom) ---------- */
+  --fa-shadow-xs: 0 1px rgba(10, 13, 18, 0.075);
+  --fa-shadow-sm: 0 1px 3px rgba(10, 13, 18, 0.05), 0 10px 15px -5px rgba(10, 13, 18, 0.06);
+  --fa-shadow-md: 0 1px 3px rgba(10, 13, 18, 0.05), 0 20px 25px -5px rgba(10, 13, 18, 0.08);
+  --fa-shadow-fab: 0 6px 18px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.12);
+
+  /* ---------- TYPE ---------- */
+  /* Mantine v9 default font stack — system UI; no custom webfont shipped.
+     Tabular numbers used for monetary amounts so columns align. */
+  --fa-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                  "Helvetica Neue", Arial, sans-serif;
+  --fa-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco,
+                  Consolas, "Liberation Mono", monospace;
+
+  --fa-fs-xs:  0.75rem;   /* 12 — meta / dimmed labels */
+  --fa-fs-sm:  0.875rem;  /* 14 — list rows, body small */
+  --fa-fs-md:  1rem;      /* 16 — body / inputs */
+  --fa-fs-lg:  1.125rem;  /* 18 — page subtitle */
+  --fa-fs-xl:  1.25rem;   /* 20 — section header */
+  --fa-fs-h2:  1.5rem;    /* 24 */
+  --fa-fs-h1:  2rem;      /* 32 — login title */
+
+  --fa-fw-regular:  400;
+  --fa-fw-medium:   500;
+  --fa-fw-semibold: 600;
+  --fa-fw-bold:     700;
+  --fa-fw-extra:    800;  /* login title uses 800 */
+
+  --fa-lh-tight: 1.2;
+  --fa-lh-body:  1.5;
+}
+
+/* ---------- DARK-MODE SEMANTIC ---------- */
+:root[data-mantine-color-scheme="dark"],
+.dark {
+  --fa-bg-page:       var(--fa-dark-7);
+  --fa-bg-surface:    var(--fa-dark-6);
+  --fa-bg-subtle:     var(--fa-dark-6);
+  --fa-bg-selected:   var(--fa-dark-6);
+  --fa-border:        var(--fa-dark-5);
+  --fa-border-strong: var(--fa-dark-4);
+
+  --fa-fg-1:          #ffffff;
+  --fa-fg-2:          var(--fa-grey-2);
+  --fa-fg-dimmed:     var(--fa-grey-5);
+
+  --fa-accent:        var(--fa-blue-5);
+  --fa-accent-strong: var(--fa-blue-2);
+}
+
+/* ============================================================
+   SEMANTIC TYPE HELPERS
+   Tied to Mantine's Title / Text size mapping.
+   ============================================================ */
+
+.fa-h1 {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-h1);
+  font-weight: var(--fa-fw-extra);
+  line-height: var(--fa-lh-tight);
+  color: var(--fa-blue-7);
+}
+:root[data-mantine-color-scheme="dark"] .fa-h1 { color: var(--fa-blue-2); }
+
+.fa-h2 {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-h2);
+  font-weight: var(--fa-fw-bold);
+  line-height: var(--fa-lh-tight);
+  color: var(--fa-fg-1);
+}
+
+.fa-h3 {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-xl);
+  font-weight: var(--fa-fw-semibold);
+  line-height: var(--fa-lh-tight);
+  color: var(--fa-fg-1);
+}
+
+.fa-body {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-md);
+  font-weight: var(--fa-fw-regular);
+  line-height: var(--fa-lh-body);
+  color: var(--fa-fg-1);
+}
+
+.fa-body-sm {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-sm);
+  font-weight: var(--fa-fw-regular);
+  line-height: var(--fa-lh-body);
+  color: var(--fa-fg-1);
+}
+
+/* Section header chip used above transaction groups */
+.fa-section-label {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-xs);
+  font-weight: var(--fa-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fa-fg-dimmed);
+}
+
+.fa-dimmed {
+  color: var(--fa-fg-dimmed);
+}
+
+/* Monetary amounts — semibold, tabular figures, right-aligned in tables */
+.fa-amount {
+  font-family: var(--fa-font-sans);
+  font-size: var(--fa-fs-sm);
+  font-weight: var(--fa-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.fa-amount-positive { color: var(--fa-positive); }
+.fa-amount-negative { color: var(--fa-negative); }
+
+.fa-mono {
+  font-family: var(--fa-font-mono);
+  font-size: var(--fa-fs-sm);
+}
