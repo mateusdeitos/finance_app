@@ -94,6 +94,16 @@ type PushSubscriptionService interface {
 	Status(ctx context.Context, userID int, endpoint string) (*domain.PushSubscriptionStatusResponse, error)
 }
 
+type NotificationService interface {
+	// Dispatch persists inbox rows and sends push notifications best-effort.
+	// Always called in a goroutine with context.Background() — never the request ctx.
+	Dispatch(ctx context.Context, events []domain.NotificationEvent)
+	List(ctx context.Context, userID int, filter domain.NotificationFilter) (*domain.NotificationListResult, error)
+	UnreadCount(ctx context.Context, userID int) (int64, error)
+	MarkRead(ctx context.Context, userID, notificationID int) error
+	MarkAllRead(ctx context.Context, userID int) error
+}
+
 // Services contains all service interfaces
 type Services struct {
 	Auth             AuthService
@@ -107,4 +117,5 @@ type Services struct {
 	Charge           ChargeService
 	Onboarding       OnboardingService
 	PushSubscription PushSubscriptionService
+	Notification     NotificationService
 }
