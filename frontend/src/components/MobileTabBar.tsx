@@ -1,4 +1,4 @@
-import { Badge, UnstyledButton } from '@mantine/core'
+import { Badge, Indicator, UnstyledButton } from '@mantine/core'
 import {
   IconReceipt2,
   IconWallet,
@@ -10,10 +10,11 @@ import {
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useChargesPendingCount } from '@/hooks/useChargesPendingCount'
+import { useNotificationUnreadCount } from '@/hooks/useNotificationUnreadCount'
 import { renderDrawer } from '@/utils/renderDrawer'
 import { MobileMoreDrawer } from '@/components/MobileMoreDrawer'
 import { tapHaptic } from '@/utils/haptics'
-import { CommonTestIds, MobileNavTestIds } from '@/testIds'
+import { CommonTestIds, MobileNavTestIds, NotificationsTestIds } from '@/testIds'
 import classes from './MobileTabBar.module.css'
 
 type Tab = {
@@ -34,6 +35,9 @@ export function MobileTabBar() {
   const currentPath = routerState.location.pathname
   const { query: pendingQuery } = useChargesPendingCount()
   const pendingCount = pendingQuery.data?.count ?? 0
+
+  const { query: unreadQuery } = useNotificationUnreadCount((d) => d.count)
+  const unreadCount = unreadQuery.data ?? 0
 
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -80,11 +84,21 @@ export function MobileTabBar() {
         onClick={openMore}
         data-active={moreOpen ? '' : undefined}
         data-testid={MobileNavTestIds.MoreTab}
-        aria-label="Mais"
+        aria-label={unreadCount > 0 ? `Mais — ${unreadCount} notificações não lidas` : 'Mais'}
       >
-        <span className={classes.iconWrap}>
-          <IconDots size={20} stroke={1.8} />
-        </span>
+        <Indicator
+          disabled={unreadCount === 0}
+          color="blue"
+          size={8}
+          position="top-end"
+          offset={4}
+          data-testid={NotificationsTestIds.MaisTabIndicator}
+          aria-hidden
+        >
+          <span className={classes.iconWrap}>
+            <IconDots size={20} stroke={1.8} />
+          </span>
+        </Indicator>
         <span className={classes.label}>Mais</span>
       </UnstyledButton>
     </nav>
