@@ -1,0 +1,13 @@
+.unread {
+  background-color: light-dark(
+    var(--mantine-color-blue-0),
+    var(--mantine-color-dark-5)
+  );
+}
+
+.row {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
