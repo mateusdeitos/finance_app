@@ -146,7 +146,9 @@ export function CategorySpendingCard({
         </div>
 
         <div>
-          <div className={classes.value}>{formatBalance(total)}</div>
+          <div className={classes.value} data-testid={CategoriesTestIds.CardTotal(category.id)}>
+            {formatBalance(total)}
+          </div>
           <div className={classes.valueBar}>
             <ShareBar color={color} pct={barPct} height={7} />
           </div>

@@ -48,12 +48,24 @@ export function useCategorySpending(month: number, year: number): CategorySpendi
     const txns = transactions ?? []
 
     // Own (directly-assigned) spend per category id.
+    //
+    // A split/shared expense records the FULL amount on the payer's source
+    // transaction, plus a settlement (settlements_from_source) for the share
+    // the partner owes back: a `credit` settlement returns money to the payer
+    // (reduces their spend), a `debit` settlement increases it. Settlements
+    // carry no category of their own, so they are attributed to the source
+    // transaction's category — matching how the backend balance endpoint nets
+    // the settlement leg. This keeps the category total equal to the user's
+    // real out-of-pocket spend for the period.
     const own = new Map<number, { total: number; count: number }>()
     for (const t of txns) {
       if (t.type !== 'expense' || t.category_id == null) continue
       const acc = own.get(t.category_id) ?? { total: 0, count: 0 }
       acc.total += Math.abs(t.amount)
       acc.count += 1
+      for (const s of t.settlements_from_source ?? []) {
+        acc.total += s.type === 'credit' ? -s.amount : s.amount
+      }
       own.set(t.category_id, acc)
     }
 

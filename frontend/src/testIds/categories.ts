@@ -13,6 +13,8 @@ export const CategoriesTestIds = {
   EmojiOption: (emoji: string) => `emoji_${emoji}` as const,
   // ── Spending distribution view ──────────────────────────────────────────
   DistributionPanel: 'section_category_distribution',
+  DistributionTotal: 'text_category_distribution_total',
   Card: (categoryId: number | string) => `category_card_${categoryId}` as const,
+  CardTotal: (categoryId: number | string) => `text_category_total_${categoryId}` as const,
   BtnToggle: (categoryId: number | string) => `btn_toggle_category_${categoryId}` as const,
 } as const

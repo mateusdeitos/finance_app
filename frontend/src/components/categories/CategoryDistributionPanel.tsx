@@ -19,7 +19,9 @@ export function CategoryDistributionPanel({ nodes, total, monthLabel }: Props) {
       <div className={classes.head}>
         <div>
           <div className={classes.label}>Distribuição de {monthLabel}</div>
-          <div className={classes.total}>{formatBalance(total)}</div>
+          <div className={classes.total} data-testid={CategoriesTestIds.DistributionTotal}>
+            {formatBalance(total)}
+          </div>
         </div>
         <div className={classes.count}>
           {spent.length} {spent.length === 1 ? 'categoria' : 'categorias'}
