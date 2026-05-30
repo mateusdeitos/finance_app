@@ -18,10 +18,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Notification Events (NOTIF)
 
-- [ ] **NOTIF-01**: When the partner creates a new charge, the charge recipient receives a push notification
-- [ ] **NOTIF-02**: When the partner accepts a charge, the charge creator receives a push notification
-- [ ] **NOTIF-03**: When the partner creates a new split transaction, the user whose side receives the linked transaction gets a push notification
-- [ ] **NOTIF-04**: When the partner updates a split transaction in a way that affects the user's linked side, the user receives a push notification
+- [x] **NOTIF-01**: When the partner creates a new charge, the charge recipient receives a push notification
+- [x] **NOTIF-02**: When the partner accepts a charge, the charge creator receives a push notification
+- [x] **NOTIF-03**: When the partner creates a new split transaction, the user whose side receives the linked transaction gets a push notification
+- [x] **NOTIF-04**: When the partner updates a split transaction in a way that affects the user's linked side, the user receives a push notification
 - [x] **NOTIF-05**: Each notification is persisted server-side with its type and a deep-link reference to the related entity (charge or transaction)
 - [x] **NOTIF-06**: Notifications are dispatched after the originating DB transaction commits; a delivery failure neither rolls back nor blocks the originating operation (best-effort)
 
@@ -72,10 +72,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | SUB-02 | Phase 24 | Pending |
 | SUB-03 | Phase 22 | Complete |
 | SUB-04 | Phase 22 | Complete |
-| NOTIF-01 | Phase 23 | Pending |
-| NOTIF-02 | Phase 23 | Pending |
-| NOTIF-03 | Phase 23 | Pending |
-| NOTIF-04 | Phase 23 | Pending |
+| NOTIF-01 | Phase 23 | Complete |
+| NOTIF-02 | Phase 23 | Complete |
+| NOTIF-03 | Phase 23 | Complete |
+| NOTIF-04 | Phase 23 | Complete |
 | NOTIF-05 | Phase 23 | Complete |
 | NOTIF-06 | Phase 23 | Complete |
 | INBOX-01 | Phase 25 | Pending |

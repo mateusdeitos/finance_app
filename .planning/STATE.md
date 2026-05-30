@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Push Notifications
-status: executing
-last_updated: "2026-05-30T15:33:41.675Z"
+status: verifying
+last_updated: "2026-05-30T15:46:37.784Z"
 last_activity: 2026-05-30
 progress:
   total_phases: 9
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 ## Current Position
 
 Phase: 23 (backend-notification-events-inbox-api) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-30
 
 ## Project Reference
@@ -51,6 +51,7 @@ See: .planning/PROJECT.md (updated 2026-05-30)
 - Phase 22 Plan 02 complete 2026-05-30 — PushSubscriptionRepository + NotificationRepository interfaces registered in interfaces.go; push_subscription_repository.go implemented with ON CONFLICT upsert, IDOR-scoped DeleteByEndpoint + ExistsForUser, admin-prune DeleteByEndpointAdmin; notification_repository.go stub; mocks regenerated via mockery; ServiceTestWithDBSuite extended with both repo fields + SetupTest instantiation + Repos literal.
 - Phase 22 Plan 03 complete 2026-05-30 — PushSubscriptionService with input validation (endpoint/p256dh/auth) + IDOR-safe userID handling; integration test suite (8 test cases); PushSubscriptionHandler (POST/DELETE/GET with swagger annotations); VAPID startup guard in main.go; DI wiring + 3 authenticated routes; swagger regenerated with push-subscriptions paths. Integration tests compile-checked; Docker-deferred for execution.
 - Phase 23 Plan 02 complete 2026-05-30 — NotificationService (panic-safe Dispatch + D-08 coalescing + PushSender injectable + 404/410 prune + pt-BR D-07 copy) + NotificationHandler (4 IDOR-scoped inbox endpoints) + DI wiring + route registration (/unread-count, /read-all before /:id/read); MockNotificationService + MockPushSender regenerated; swagger regenerated with 4 /api/notifications paths; go build ./... + go vet green.
+- [Phase ?]: NOTIF-01..04 hooks use post-commit goroutine with context.Background(); D-02 cosmetic-silent, D-03 self-edit guard, D-04 remove-still-notifies in maybeDispatchSplitUpdatedNotification
 
 ### Todos
 
@@ -73,3 +74,4 @@ None
 | verification_gap | Phase 08: 08-VERIFICATION.md | human_needed |
 | verification_gap | Phase 09: 09-VERIFICATION.md | human_needed |
 | verification_gap | Phase 10: 10-VERIFICATION.md | human_needed |
+| Phase 23 P23-03 | 25 | - tasks | - files |

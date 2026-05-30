@@ -84,7 +84,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 ### v1.6 Push Notifications (Phases 22–25)
 
 - [x] **Phase 22: Backend Subscription Foundation** - DB schema, VAPID config, subscription register/remove/prune API (completed 2026-05-30)
-- [ ] **Phase 23: Backend Notification Events & Inbox API** - 4 event triggers, best-effort dispatch, inbox endpoints
+- [x] **Phase 23: Backend Notification Events & Inbox API** - 4 event triggers, best-effort dispatch, inbox endpoints (completed 2026-05-30)
 - [ ] **Phase 24: Frontend Permission, Subscribe & Service Worker** - permission prompt, subscribe/unsubscribe toggle, SW push handler, deep-link navigation
 - [ ] **Phase 25: Frontend Notification Inbox** - inbox UI, unread badge, open-entity navigation, mark-read actions
 
@@ -157,7 +157,7 @@ Plans:
 - [x] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + swagger
 
 **Wave 3** *(blocked on Wave 2)*
-- [ ] 23-03-PLAN.md — Event-source hooks (NOTIF-01..04) + DB test-suite wiring + integration tests (NOTIF-01..06, inbox, IDOR, mock PushSender)
+- [x] 23-03-PLAN.md — Event-source hooks (NOTIF-01..04) + DB test-suite wiring + integration tests (NOTIF-01..06, inbox, IDOR, mock PushSender)
 
 ### Phase 24: Frontend Permission, Subscribe & Service Worker
 **Goal**: Users can grant or revoke browser notification permission from within the app, the frontend registers and removes Web Push subscriptions with the backend, and the service worker handles incoming pushes and routes a tap to the correct entity screen
@@ -210,7 +210,7 @@ Plans:
 | 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
-| 23. Backend Notification Events & Inbox API | v1.6 | 2/3 | In Progress|  |
+| 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 0/? | Not started | - |
 | 25. Frontend Notification Inbox | v1.6 | 0/? | Not started | - |
 
