@@ -1,11 +1,11 @@
 import { CSSProperties } from 'react'
-import { ActionIcon, Loader, TextInput, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Loader, Skeleton, TextInput, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconChevronDown, IconPlus, IconTrash } from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { CategorySpendingNode } from '@/hooks/useCategorySpending'
 import { useInlineRename } from '@/hooks/useInlineRename'
-import { formatBalance } from '@/utils/formatCents'
+import { formatBalance, formatSignedCents } from '@/utils/formatCents'
 import { tintColor } from '@/utils/categoryColors'
 import { CategoriesTestIds } from '@/testIds'
 import { CategoryTile } from './CategoryTile'
@@ -21,8 +21,12 @@ interface Handlers {
 
 interface Props extends Handlers {
   node: CategorySpendingNode
-  grandTotal: number
-  maxTotal: number
+  /** Σ |net| across categories — denominator for the participation pill. */
+  gross: number
+  /** Largest |net| among top-level categories — scales the participation bar. */
+  maxAbs: number
+  /** Amounts still loading: skeleton the figures, keep the category visible. */
+  valueLoading?: boolean
   defaultExpanded?: boolean
   pendingParentId: number | null
   onAddChild: (parent: Transactions.Category) => void
@@ -34,10 +38,23 @@ function stop(e: React.MouseEvent) {
   e.stopPropagation()
 }
 
+/** Color a signed amount: income teal, expense red, zero neutral. */
+function signColor(value: number): string | undefined {
+  if (value > 0) return 'var(--mantine-color-teal-6)'
+  if (value < 0) return 'var(--mantine-color-red-6)'
+  return undefined
+}
+
+/** Signed amount with explicit +/−; plain "R$ 0,00" (no sign) for an empty period. */
+function formatNet(value: number): string {
+  return value === 0 ? formatBalance(0) : formatSignedCents(value)
+}
+
 export function CategorySpendingCard({
   node,
-  grandTotal,
-  maxTotal,
+  gross,
+  maxAbs,
+  valueLoading,
   defaultExpanded = true,
   pendingParentId,
   onAddChild,
@@ -51,9 +68,9 @@ export function CategorySpendingCard({
   const [expanded, { toggle, open: forceExpand }] = useDisclosure(defaultExpanded)
   const rename = useInlineRename(category.name, (name) => onSaveName(category, name))
 
-  const pct = grandTotal > 0 ? Math.round((total / grandTotal) * 100) : 0
-  const barPct = maxTotal > 0 ? (total / maxTotal) * 100 : 0
-  const childMax = children.reduce((m, c) => Math.max(m, c.total), 0)
+  const pct = gross > 0 ? Math.round((Math.abs(total) / gross) * 100) : 0
+  const barPct = maxAbs > 0 ? (Math.abs(total) / maxAbs) * 100 : 0
+  const childMax = children.reduce((m, c) => Math.max(m, Math.abs(c.total)), 0)
   const isPendingChild = pendingParentId === category.id
 
   function handleAddChild(e: React.MouseEvent) {
@@ -112,10 +129,20 @@ export function CategorySpendingCard({
                 <span className={classes.name}>{category.name}</span>
               </UnstyledButton>
             )}
-            <div className={classes.count}>{count} {count === 1 ? 'lançamento' : 'lançamentos'}</div>
+            {valueLoading ? (
+              <Skeleton height={11} width={84} mt={4} />
+            ) : (
+              <div className={classes.count}>
+                {count} {count === 1 ? 'lançamento' : 'lançamentos'}
+              </div>
+            )}
           </div>
 
-          {grandTotal > 0 && <span className={classes.pct}>{pct}%</span>}
+          {valueLoading ? (
+            <Skeleton height={20} width={40} radius={999} />
+          ) : (
+            pct > 0 && <span className={classes.pct}>{pct}%</span>
+          )}
 
           <div className={classes.actions} onClick={stop}>
             <ActionIcon
@@ -146,11 +173,19 @@ export function CategorySpendingCard({
         </div>
 
         <div>
-          <div className={classes.value} data-testid={CategoriesTestIds.CardTotal(category.id)}>
-            {formatBalance(total)}
-          </div>
+          {valueLoading ? (
+            <Skeleton height={24} width={140} />
+          ) : (
+            <div
+              className={classes.value}
+              style={{ color: signColor(total) }}
+              data-testid={CategoriesTestIds.CardTotal(category.id)}
+            >
+              {formatNet(total)}
+            </div>
+          )}
           <div className={classes.valueBar}>
-            <ShareBar color={color} pct={barPct} height={7} />
+            {valueLoading ? <Skeleton height={7} radius={7} /> : <ShareBar color={color} pct={barPct} height={7} />}
           </div>
         </div>
       </div>
@@ -166,6 +201,7 @@ export function CategorySpendingCard({
                   node={child}
                   color={color}
                   childMax={childMax}
+                  valueLoading={valueLoading}
                   onDelete={onDelete}
                   onSaveName={onSaveName}
                   onEditEmoji={onEditEmoji}
@@ -190,12 +226,13 @@ interface ChildProps extends Handlers {
   node: CategorySpendingNode
   color: string
   childMax: number
+  valueLoading?: boolean
 }
 
-function CategoryChildRow({ node, color, childMax, onDelete, onSaveName, onEditEmoji }: ChildProps) {
+function CategoryChildRow({ node, color, childMax, valueLoading, onDelete, onSaveName, onEditEmoji }: ChildProps) {
   const { category, total, count } = node
   const rename = useInlineRename(category.name, (name) => onSaveName(category, name))
-  const barPct = childMax > 0 ? (total / childMax) * 100 : 0
+  const barPct = childMax > 0 ? (Math.abs(total) / childMax) * 100 : 0
 
   return (
     <div className={classes.childRow} data-category-name={category.name}>
@@ -228,13 +265,23 @@ function CategoryChildRow({ node, color, childMax, onDelete, onSaveName, onEditE
               <span className={classes.childName}>{category.name}</span>
             </UnstyledButton>
           )}
-          <span className={classes.childValue}>{formatBalance(total)}</span>
+          {valueLoading ? (
+            <Skeleton height={13} width={72} />
+          ) : (
+            <span
+              className={classes.childValue}
+              style={{ color: signColor(total) }}
+              data-testid={CategoriesTestIds.CardTotal(category.id)}
+            >
+              {formatNet(total)}
+            </span>
+          )}
         </div>
         <div className={classes.childBarLine}>
           <div className={classes.childBar}>
-            <ShareBar color={tintColor(color, 0.72)} pct={barPct} height={5} />
+            {valueLoading ? <Skeleton height={5} radius={5} /> : <ShareBar color={tintColor(color, 0.72)} pct={barPct} height={5} />}
           </div>
-          <span className={classes.childCount}>{count} lanç.</span>
+          {!valueLoading && <span className={classes.childCount}>{count} lanç.</span>}
           <ActionIcon
             variant="subtle"
             color="red"

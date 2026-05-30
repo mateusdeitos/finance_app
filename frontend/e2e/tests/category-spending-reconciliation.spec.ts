@@ -5,11 +5,10 @@ import { CategoriesTestIds } from '@/testIds'
 import { Transactions } from '@/types/transactions'
 
 /**
- * Reconciliation: the Categories page spending totals for a period must equal
- * the expense balance derived from the transaction list for the same period,
- * INCLUDING settlements from split/shared transactions on both ends, and
- * DISREGARDING transfers. Income is present as a negative control (it is not
- * spending and must not appear in any category total).
+ * Reconciliation: the Categories page signed net per category for a period must
+ * equal the net balance derived from the transaction list for the same period —
+ * income (credit) positive, expense (debit) negative — INCLUDING settlements
+ * from split/shared transactions on both ends, and DISREGARDING transfers.
  *
  * A split/shared expense records the full amount on the payer's source
  * transaction plus a `credit` settlement for the partner's share coming back,
@@ -21,11 +20,13 @@ const MONTH = 5
 const YEAR = 2026
 const DATE = `${YEAR}-0${MONTH}-15` // 2026-05-15
 
-/** "R$ 1.234,56" → 123456 cents. */
+/** "+R$ 1.234,56" / "-R$ 300,00" → signed cents. */
 function parseBRLToCents(text: string): number {
+  const negative = text.trim().startsWith('-')
   const digits = text.replace(/[^\d,]/g, '')
   const [int, dec = ''] = digits.split(',')
-  return parseInt(int || '0', 10) * 100 + parseInt((dec + '00').slice(0, 2), 10)
+  const cents = parseInt(int || '0', 10) * 100 + parseInt((dec + '00').slice(0, 2), 10)
+  return negative ? -cents : cents
 }
 
 async function createCategory(token: string, name: string): Promise<number> {
@@ -70,7 +71,7 @@ test('Categories spending reconciles with the transaction-list expense balance f
     { transaction_type: 'expense', account_id: setup.userAccountId, category_id: restaurante, amount: 20000, date: DATE, description: 'Restaurante' },
     { token: setup.userToken },
   )
-  // Income — negative control: must not count as spend.
+  // Income — counts as a positive net on its category.
   await apiCreateTransaction(
     { transaction_type: 'income', account_id: setup.userAccountId, category_id: salario, amount: 100000, date: DATE, description: 'Salário' },
     { token: setup.userToken },
@@ -107,20 +108,20 @@ test('Categories spending reconciles with the transaction-list expense balance f
   const txns = (await listRes.json()) as Transactions.Transaction[]
   const expectedByCat = new Map<number, number>()
   for (const t of txns) {
-    if (t.type !== 'expense' || t.category_id == null) continue
-    let amount = Math.abs(t.amount)
+    if (t.type === 'transfer' || t.category_id == null) continue // disregard transfers
+    let amount = t.operation_type === 'credit' ? t.amount : -t.amount // income +, expense −
     for (const s of t.settlements_from_source ?? []) {
-      amount += s.type === 'credit' ? -s.amount : s.amount
+      amount += s.type === 'credit' ? s.amount : -s.amount
     }
     expectedByCat.set(t.category_id, (expectedByCat.get(t.category_id) ?? 0) + amount)
   }
-  const expectedTotal = [...expectedByCat.values()].reduce((sum, v) => sum + v, 0)
+  const expectedNet = [...expectedByCat.values()].reduce((sum, v) => sum + v, 0)
 
-  // Sanity-pin the scenario to hand-computed figures.
-  expect(expectedByCat.get(mercado) ?? 0).toBe(30000)
-  expect(expectedByCat.get(restaurante) ?? 0).toBe(40000) // 20000 normal + (40000 − 20000 settlement)
-  expect(expectedByCat.has(salario)).toBe(false) // income excluded
-  expect(expectedTotal).toBe(70000)
+  // Sanity-pin the scenario to hand-computed signed figures.
+  expect(expectedByCat.get(mercado) ?? 0).toBe(-30000) // expense
+  expect(expectedByCat.get(restaurante) ?? 0).toBe(-40000) // -20000 normal + (-40000 + 20000 settlement)
+  expect(expectedByCat.get(salario) ?? 0).toBe(100000) // income, positive
+  expect(expectedNet).toBe(30000) // 100000 − 30000 − 40000
 
   // ── Categories page (user A) must match the transaction-list reduction ────
   const page = await openAuthedPage(browser, setup.userToken)
@@ -129,18 +130,20 @@ test('Categories spending reconciles with the transaction-list expense balance f
     await page.waitForLoadState('networkidle')
     await expect(page.getByTestId(CategoriesTestIds.DistributionPanel)).toBeVisible()
 
+    // Headline = signed period balance (receitas − despesas), settlements netted.
     const totalText = await page.getByTestId(CategoriesTestIds.DistributionTotal).innerText()
-    expect(parseBRLToCents(totalText)).toBe(expectedTotal)
+    expect(parseBRLToCents(totalText)).toBe(expectedNet)
 
+    // Per-category cards show the signed net matching the transaction-list reduction.
     const mercadoText = await page.getByTestId(CategoriesTestIds.CardTotal(mercado)).innerText()
     expect(parseBRLToCents(mercadoText)).toBe(expectedByCat.get(mercado) ?? 0)
 
     const restauranteText = await page.getByTestId(CategoriesTestIds.CardTotal(restaurante)).innerText()
     expect(parseBRLToCents(restauranteText)).toBe(expectedByCat.get(restaurante) ?? 0)
 
-    // Income category renders but shows zero spend.
+    // Income category now shows its positive net.
     const salarioText = await page.getByTestId(CategoriesTestIds.CardTotal(salario)).innerText()
-    expect(parseBRLToCents(salarioText)).toBe(0)
+    expect(parseBRLToCents(salarioText)).toBe(expectedByCat.get(salario) ?? 0)
   } finally {
     await page.close()
   }

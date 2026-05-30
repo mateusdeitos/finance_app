@@ -31,7 +31,7 @@ export function CategoriesPage() {
   const { month, year } = useSearch({ from: '/_authenticated/categories' })
   const navigate = useNavigate({ from: '/categories' })
 
-  const { nodes, total, maxTotal, isLoading, invalidate } = useCategorySpending(month, year)
+  const { nodes, net, gross, maxAbs, categoriesLoading, spendLoading, invalidate } = useCategorySpending(month, year)
   const { mutation: updateMutation } = useUpdateCategory({ onSuccess: invalidate })
   const { mutation: createMutation } = useCreateCategory({
     onSuccess: () => {
@@ -95,7 +95,7 @@ export function CategoriesPage() {
           </Group>
         </Group>
 
-        {isLoading ? (
+        {categoriesLoading ? (
           <Stack gap="sm">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} height={92} radius={16} />
@@ -115,15 +115,22 @@ export function CategoriesPage() {
         ) : (
           <Stack gap={10}>
             {hasCategories && (
-              <CategoryDistributionPanel nodes={nodes} total={total} monthLabel={monthLabel(month, year)} />
+              <CategoryDistributionPanel
+                nodes={nodes}
+                net={net}
+                gross={gross}
+                monthLabel={monthLabel(month, year)}
+                loading={spendLoading}
+              />
             )}
 
             {nodes.map((node) => (
               <CategorySpendingCard
                 key={node.category.id}
                 node={node}
-                grandTotal={total}
-                maxTotal={maxTotal}
+                gross={gross}
+                maxAbs={maxAbs}
+                valueLoading={spendLoading}
                 pendingParentId={typeof pendingParentId === 'number' ? pendingParentId : null}
                 onAddChild={(parent) => setPendingParentId(parent.id)}
                 onCancelCreate={() => setPendingParentId(null)}

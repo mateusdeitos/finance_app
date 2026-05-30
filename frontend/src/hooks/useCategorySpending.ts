@@ -4,67 +4,71 @@ import { useTransactions } from './useTransactions'
 import { Transactions } from '@/types/transactions'
 import { getCategoryColor } from '@/utils/categoryColors'
 
-/** A category enriched with its monthly spend, transaction count and display color. */
+/** A category enriched with its signed monthly net, transaction count and display color. */
 export interface CategorySpendingNode {
   category: Transactions.Category
   /** Palette color for the category; subcategories inherit their parent's color. */
   color: string
-  /** Aggregated expense for the period in cents (own transactions + descendants). */
+  /**
+   * Signed net for the period in cents: income (credit) is positive, expense
+   * (debit) negative. Transfers are excluded; settlements carry no category of
+   * their own and are netted into their source transaction's category
+   * (credit adds back, debit subtracts), matching the backend balance endpoint.
+   * Aggregated over the category's own transactions plus all descendants.
+   */
   total: number
-  /** Aggregated number of expense transactions (own + descendants). */
+  /** Number of income/expense transactions directly assigned (own + descendants). */
   count: number
   children: CategorySpendingNode[]
 }
 
 export interface CategorySpending {
-  /** Top-level categories enriched with spend data, in API order. */
+  /** Top-level categories enriched with net data, in API order. */
   nodes: CategorySpendingNode[]
-  /** Sum of every category's aggregated spend for the period, in cents. */
-  total: number
-  /** Largest top-level aggregated spend, for scaling participation bars. */
-  maxTotal: number
-  isLoading: boolean
+  /** Σ of every category's signed net — the period balance (receitas − despesas). */
+  net: number
+  /** Σ of |net| across categories — denominator for participation %/bars. */
+  gross: number
+  /** Largest |net| among top-level categories, for scaling participation bars. */
+  maxAbs: number
+  /** The categories tree is still loading (nothing to render yet). */
+  categoriesLoading: boolean
+  /** Categories are known but the period's amounts are still loading. */
+  spendLoading: boolean
   isError: boolean
   invalidate: () => void
 }
 
 /**
- * Composes the categories tree with the period's transactions and computes
- * per-category spend totals, counts, participation and a stable color.
- *
- * Aggregation is frontend-only: it reuses the existing "transactions for a
- * period" endpoint (filtered to expenses) rather than a dedicated backend
- * endpoint. A transaction assigned to a subcategory rolls up into its parent.
+ * Composes the categories tree with the period's income + expense transactions
+ * and computes a signed net per category, plus the gross magnitude used for
+ * participation. Aggregation is frontend-only: it reuses the existing
+ * "transactions for a period" endpoint (expense + income, never transfers).
  */
 export function useCategorySpending(month: number, year: number): CategorySpending {
   const { query: categoriesQuery, invalidate } = useCategories()
-  const { query: transactionsQuery } = useTransactions({ month, year, types: ['expense'] })
+  const { query: transactionsQuery } = useTransactions({ month, year, types: ['expense', 'income'] })
 
   const categories = categoriesQuery.data
   const transactions = transactionsQuery.data
 
-  const { nodes, total, maxTotal } = useMemo(() => {
+  const { nodes, net, gross, maxAbs } = useMemo(() => {
     const cats = categories ?? []
     const txns = transactions ?? []
 
-    // Own (directly-assigned) spend per category id.
-    //
-    // A split/shared expense records the FULL amount on the payer's source
-    // transaction, plus a settlement (settlements_from_source) for the share
-    // the partner owes back: a `credit` settlement returns money to the payer
-    // (reduces their spend), a `debit` settlement increases it. Settlements
-    // carry no category of their own, so they are attributed to the source
-    // transaction's category — matching how the backend balance endpoint nets
-    // the settlement leg. This keeps the category total equal to the user's
-    // real out-of-pocket spend for the period.
+    // Signed net per category id. Credit (income / returned settlement) adds,
+    // debit (expense / owed settlement) subtracts. Transfers are filtered out;
+    // settlements have no category, so they net into the source transaction's
+    // category — matching how the backend balance endpoint nets the settlement
+    // leg.
     const own = new Map<number, { total: number; count: number }>()
     for (const t of txns) {
-      if (t.type !== 'expense' || t.category_id == null) continue
+      if (t.type === 'transfer' || t.category_id == null) continue
       const acc = own.get(t.category_id) ?? { total: 0, count: 0 }
-      acc.total += Math.abs(t.amount)
+      acc.total += t.operation_type === 'credit' ? t.amount : -t.amount
       acc.count += 1
       for (const s of t.settlements_from_source ?? []) {
-        acc.total += s.type === 'credit' ? -s.amount : s.amount
+        acc.total += s.type === 'credit' ? s.amount : -s.amount
       }
       own.set(t.category_id, acc)
     }
@@ -78,16 +82,19 @@ export function useCategorySpending(month: number, year: number): CategorySpendi
     }
 
     const nodes = cats.map((category) => build(category, getCategoryColor(category)))
-    const total = nodes.reduce((s, n) => s + n.total, 0)
-    const maxTotal = nodes.reduce((m, n) => Math.max(m, n.total), 0)
-    return { nodes, total, maxTotal }
+    const net = nodes.reduce((s, n) => s + n.total, 0)
+    const gross = nodes.reduce((s, n) => s + Math.abs(n.total), 0)
+    const maxAbs = nodes.reduce((m, n) => Math.max(m, Math.abs(n.total)), 0)
+    return { nodes, net, gross, maxAbs }
   }, [categories, transactions])
 
   return {
     nodes,
-    total,
-    maxTotal,
-    isLoading: categoriesQuery.isLoading || transactionsQuery.isLoading,
+    net,
+    gross,
+    maxAbs,
+    categoriesLoading: categoriesQuery.isLoading,
+    spendLoading: transactionsQuery.isLoading,
     isError: categoriesQuery.isError || transactionsQuery.isError,
     invalidate,
   }

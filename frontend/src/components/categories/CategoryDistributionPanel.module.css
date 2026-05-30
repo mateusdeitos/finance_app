@@ -64,22 +64,15 @@
 
 .legend {
   margin-top: 1rem;
-  display: grid;
-  gap: 0.5625rem 0.875rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (min-width: 48em) {
-  .legend {
-    gap: 0.625rem 1.125rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
 }
 
 .legendItem {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4375rem;
   min-width: 0;
 }
 
@@ -96,7 +89,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  max-width: 11rem;
 }
 
 .legendPct {
