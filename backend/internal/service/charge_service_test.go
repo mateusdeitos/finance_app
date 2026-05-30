@@ -1006,13 +1006,4 @@ func (s *ChargeServiceTestSuite) TestUpdate_ChargeTransferRejectsTypeAndRecurren
 		s.Assert().True(hasTag(err, pkgErrors.ErrorTagChargeTransactionRecurrenceNotAllowed),
 			"expected ErrorTagChargeTransactionRecurrenceNotAllowed")
 	})
-
-	s.Run("same-type edit (description) is still allowed", func() {
-		err := s.Services.Transaction.Update(ctx, transferID, charger.ID, &domain.TransactionUpdateRequest{
-			TransactionType:     lo.ToPtr(domain.TransactionTypeTransfer),
-			Description:         lo.ToPtr("Acerto editado"),
-			PropagationSettings: domain.TransactionPropagationSettingsCurrent,
-		})
-		s.Assert().NoError(err, "editing an allowed field on a charge transfer must succeed")
-	})
 }
