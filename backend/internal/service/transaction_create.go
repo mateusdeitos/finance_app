@@ -76,6 +76,9 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 			var notifAmt int64
 			if ss.Amount != nil && *ss.Amount > 0 {
 				notifAmt = *ss.Amount
+			} else if ss.Percentage != nil {
+				// Use the same formula as calculateAmount so the push amount matches the persisted linked transaction amount.
+				notifAmt = int64(float64(transaction.Amount) * float64(*ss.Percentage) / 100)
 			} else {
 				notifAmt = transaction.Amount
 			}
