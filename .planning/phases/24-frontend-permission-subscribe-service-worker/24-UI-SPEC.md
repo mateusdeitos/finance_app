@@ -221,6 +221,12 @@ Note: Do NOT show a toast when the user denies the browser permission prompt. Th
 
 ### Surface 4 — OS/Browser Push Notification Content (SC4, CTRL-03)
 
+> ⚠️ **SUPERSEDED by `24-CONTEXT.md` D-24-2.** The per-type title/body table below was written before the shipped Phase 23 payload was inspected. Binding contract now:
+> - **Title** comes from the **backend** push payload, per-type (`"Nova cobrança"` / `"Cobrança aceita"` / `"Nova transação dividida"` / `"Transação dividida atualizada"`; default `"Finance App"`) — added to `buildPayload` in Phase 23 code, NOT derived in the SW.
+> - **Body** is the server's existing rich pt-BR string **with amount included** (e.g. `"Vic te cobrou R$ 50,00: Aluguel"`), NOT the simpler `"{partner_name} criou uma cobrança para você."` shown below. `{partner_name}` is resolved server-side.
+> - The service worker renders `payload.title` / `payload.body` **as-is** — no per-type copy logic in `sw.ts`.
+> The `data` shape (`{ type, entity_type, entity_id }`), the `tag`/`icon`/`badge` options, the deep-link routing, and the `notificationclick` behavior below all REMAIN valid.
+
 The service worker's `push` event handler constructs an OS/browser notification. This is rendered by the OS — not by the app — but the title/body contract must be specified here so the executor knows what strings to use.
 
 #### Title + Body Copy Contract
