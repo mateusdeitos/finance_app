@@ -144,6 +144,7 @@ export function CategoriesPage() {
             {pendingParentId === 'root' && (
               <InlineNewCategory
                 depth={0}
+                variant="card"
                 onSave={(name) => handleCreateInline(name)}
                 onCancel={() => setPendingParentId(null)}
               />

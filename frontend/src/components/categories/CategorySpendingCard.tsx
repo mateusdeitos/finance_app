@@ -200,6 +200,8 @@ export function CategorySpendingCard({
               {isPendingChild && (
                 <InlineNewCategory
                   depth={1}
+                  variant="card"
+                  color={color}
                   onSave={(name) => onCreateChild(name, category.id)}
                   onCancel={onCancelCreate}
                 />
