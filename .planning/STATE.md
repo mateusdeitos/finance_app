@@ -3,22 +3,22 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Push Notifications
 status: executing
-last_updated: "2026-05-30T14:00:00.000Z"
-last_activity: 2026-05-30 -- Phase 22 Plan 02 complete (PushSubscriptionRepository + NotificationRepository interfaces, implementations, mocks, integration test suite wiring)
+last_updated: "2026-05-30T14:25:00.000Z"
+last_activity: 2026-05-30 -- Phase 22 Plan 03 complete (PushSubscriptionService + handler + main.go DI wiring + VAPID guard + swagger regenerated)
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 ## Current Position
 
-Phase: 22 (Backend Subscription Foundation) — EXECUTING
-Plan: 3 of 3 (Plans 01 + 02 complete)
-Status: Executing Phase 22
-Last activity: 2026-05-30 -- Phase 22 Plan 02 complete (repository layer)
+Phase: 22 (Backend Subscription Foundation) — COMPLETE
+Plan: 3 of 3 (all plans complete)
+Status: Phase 22 complete; ready for Phase 23
+Last activity: 2026-05-30 -- Phase 22 Plan 03 complete (service + handler + main.go wiring + VAPID guard + swagger)
 
 ## Project Reference
 
@@ -49,6 +49,7 @@ See: .planning/PROJECT.md (updated 2026-05-30)
 - v1.6 roadmap created 2026-05-30 — Web Push (VAPID) via 4 phases (22–25): backend subscription foundation, notification events + inbox API, frontend subscribe/SW, frontend inbox UI.
 - Phase 22 Plan 01 complete 2026-05-30 — webpush-go v1.4.0 added, VAPIDConfig wired from env, push_subscriptions+notifications migrations created, domain+entity types defined with round-trip conversion. UNIQUE constraint on endpoint alone (not composite); no gorm.Model on PushSubscription (hard deletes); empty-string VAPID defaults with Plan 03 startup validation.
 - Phase 22 Plan 02 complete 2026-05-30 — PushSubscriptionRepository + NotificationRepository interfaces registered in interfaces.go; push_subscription_repository.go implemented with ON CONFLICT upsert, IDOR-scoped DeleteByEndpoint + ExistsForUser, admin-prune DeleteByEndpointAdmin; notification_repository.go stub; mocks regenerated via mockery; ServiceTestWithDBSuite extended with both repo fields + SetupTest instantiation + Repos literal.
+- Phase 22 Plan 03 complete 2026-05-30 — PushSubscriptionService with input validation (endpoint/p256dh/auth) + IDOR-safe userID handling; integration test suite (8 test cases); PushSubscriptionHandler (POST/DELETE/GET with swagger annotations); VAPID startup guard in main.go; DI wiring + 3 authenticated routes; swagger regenerated with push-subscriptions paths. Integration tests compile-checked; Docker-deferred for execution.
 
 ### Todos
 
