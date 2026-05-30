@@ -55,9 +55,10 @@ func (h *ChargeHandler) Create(c echo.Context) error {
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        direction      query  string  false  "Filter direction"  Enums(sent, received)
-// @Param        status         query  string  false  "Filter status"     Enums(pending, paid, rejected, cancelled)
+// @Param        direction      query  string  false  "Filter direction"        Enums(sent, received)
+// @Param        status         query  string  false  "Filter status"           Enums(pending, paid, rejected, cancelled)
 // @Param        connection_id  query  int     false  "Filter by connection ID"
+// @Param        id[]           query  []int   false  "Filter by charge IDs"    collectionFormat(multi)
 // @Param        limit          query  int     false  "Limit"
 // @Param        offset         query  int     false  "Offset"
 // @Success      200  {object}  map[string][]domain.Charge

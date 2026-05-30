@@ -66,6 +66,7 @@ type ChargeSearchOptions struct {
 	Direction    string       `json:"direction"     query:"direction"`      // "sent" | "received" | "" (all)
 	Status       ChargeStatus `json:"status"        query:"status"`         // "" means no filter
 	ConnectionID int          `json:"connection_id" query:"connection_id"`  // 0 means no filter
+	IDs          []int        `json:"-"             query:"id[]"`           // filter by specific IDs; empty = no filter
 	Limit        int          `json:"limit"         query:"limit"`
 	Offset       int          `json:"offset"        query:"offset"`
 }

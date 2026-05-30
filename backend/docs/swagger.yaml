@@ -1033,6 +1033,13 @@ paths:
         in: query
         name: connection_id
         type: integer
+      - collectionFormat: multi
+        description: Filter by charge IDs
+        in: query
+        items:
+          type: integer
+        name: id[]
+        type: array
       - description: Limit
         in: query
         name: limit

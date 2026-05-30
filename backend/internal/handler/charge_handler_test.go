@@ -125,5 +125,41 @@ func TestChargeHandler_Accept_BadJSON(t *testing.T) {
 	mockSvc.AssertNotCalled(t, "Accept")
 }
 
+// TestChargeHandler_List_IDsFilter verifies that:
+// 1. id[] query params are bound into ChargeSearchOptions.IDs
+// 2. options.UserID is force-set to the authenticated user (IDOR gate)
+func TestChargeHandler_List_IDsFilter(t *testing.T) {
+	e, mockSvc, h := setupChargeHandlerTest(t)
+
+	const callerUserID = 42
+	expectedIDs := []int{10, 20}
+
+	mockSvc.EXPECT().
+		List(mock.Anything, mock.MatchedBy(func(opts domain.ChargeSearchOptions) bool {
+			if opts.UserID != callerUserID {
+				return false
+			}
+			if len(opts.IDs) != len(expectedIDs) {
+				return false
+			}
+			for i, id := range opts.IDs {
+				if id != expectedIDs[i] {
+					return false
+				}
+			}
+			return true
+		})).
+		Return([]*domain.Charge{}, nil).
+		Once()
+
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/charges?id[]=10&id[]=20", nil), callerUserID)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := h.List(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
 // compile-time guard: ensure domain import is used
 var _ = domain.AcceptChargeRequest{}

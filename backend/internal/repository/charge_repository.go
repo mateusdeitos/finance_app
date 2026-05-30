@@ -73,6 +73,10 @@ func (r *chargeRepository) Search(ctx context.Context, options domain.ChargeSear
 		query = query.Where("connection_id = ?", options.ConnectionID)
 	}
 
+	if len(options.IDs) > 0 {
+		query = query.Where("id IN ?", options.IDs)
+	}
+
 	query = query.Order("created_at DESC")
 
 	if err := query.Find(&ents).Error; err != nil {
