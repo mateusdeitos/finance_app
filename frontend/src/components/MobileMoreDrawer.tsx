@@ -5,6 +5,7 @@ import { useLogout } from '@/hooks/useLogout'
 import { UserAvatar } from '@/components/UserAvatar'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
+import { NotificationToggleRow } from '@/components/notifications/NotificationToggleRow'
 import { router } from '@/router'
 import { renderDrawer, useDrawerContext } from '@/utils/renderDrawer'
 import { MobileNavTestIds } from '@/testIds'
@@ -91,23 +92,45 @@ export function MobileMoreDrawer() {
         </>
       )}
       <Stack gap={0} py="xs">
-        {items.map((item) => {
-          const Icon = item.icon
-          return (
-            <UnstyledButton
-              key={item.key}
-              onClick={() => item.onSelect(() => close())}
-              className={classes.item}
-              data-danger={item.danger ? '' : undefined}
-              data-testid={MobileNavTestIds.MoreItem(item.key)}
-            >
-              <Icon size={20} />
-              <Text size="sm" fw={500}>
-                {item.label}
-              </Text>
-            </UnstyledButton>
-          )
-        })}
+        {items
+          .filter((item) => !item.danger)
+          .map((item) => {
+            const Icon = item.icon
+            return (
+              <UnstyledButton
+                key={item.key}
+                onClick={() => item.onSelect(() => close())}
+                className={classes.item}
+                data-testid={MobileNavTestIds.MoreItem(item.key)}
+              >
+                <Icon size={20} />
+                <Text size="sm" fw={500}>
+                  {item.label}
+                </Text>
+              </UnstyledButton>
+            )
+          })}
+        {/* Notification toggle row — above "Sair" (CTRL-02, OD-2) */}
+        <NotificationToggleRow variant="mobile" />
+        {items
+          .filter((item) => item.danger)
+          .map((item) => {
+            const Icon = item.icon
+            return (
+              <UnstyledButton
+                key={item.key}
+                onClick={() => item.onSelect(() => close())}
+                className={classes.item}
+                data-danger=""
+                data-testid={MobileNavTestIds.MoreItem(item.key)}
+              >
+                <Icon size={20} />
+                <Text size="sm" fw={500}>
+                  {item.label}
+                </Text>
+              </UnstyledButton>
+            )
+          })}
       </Stack>
     </ResponsiveDrawer>
   )

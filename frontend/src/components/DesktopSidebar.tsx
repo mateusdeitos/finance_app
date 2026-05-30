@@ -1,4 +1,5 @@
 import { Badge, Group, Menu, Text } from "@mantine/core";
+import { NotificationToggleRow } from "@/components/notifications/NotificationToggleRow";
 import {
   IconCreditCard,
   IconReceipt2,
@@ -160,6 +161,10 @@ export function DesktopSidebar() {
                 <Text size="sm">Tema</Text>
                 <ThemeToggle />
               </Group>
+            </div>
+            {/* Notification toggle — after Tema, above divider (OD-2 LOCKED) */}
+            <div className={classes.themeMenuItem}>
+              <NotificationToggleRow variant="desktop" />
             </div>
             <Menu.Divider />
             <Menu.Item
