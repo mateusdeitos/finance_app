@@ -69,75 +69,86 @@ const CHARGES_BY_IDS_RESP = {
     { id: 5002, amount: 3000, description: null, status: 'accepted', connection_id: 1 },
   ],
 }
-const TRANSACTIONS_BY_IDS_RESP = { transactions: [] }
+// fetchTransactionsByIds returns a BARE ARRAY (Transactions.Transaction[]), not
+// an object. The charge_received / charge_accepted rows resolve their amount
+// from /api/charges, so an empty transactions array is correct for these tests.
+const TRANSACTIONS_BY_IDS_RESP: unknown[] = []
 
 // ── Route-mock helpers ──────────────────────────────────────────────────────────
 
 /**
- * Install the standard notification API mocks:
- *  - GET /api/notifications/unread-count → { count }
- *  - GET /api/notifications (first page) → NOTIF_PAGE_1
- *  - GET /api/charges?ids=... → CHARGES_BY_IDS_RESP
- *  - GET /api/transactions/by-ids?... → TRANSACTIONS_BY_IDS_RESP
- *  - POST /api/notifications/:id/read → 204
- *  - POST /api/notifications/read-all → 204
+ * Install the standard notification API mocks.
+ *
+ * The real frontend requests carry query strings the old bare globs could not
+ * match (e.g. `GET /api/notifications?limit=20`, `&cursor=...` on page 2, and
+ * `/api/charges?id[]=…` URL-encoded as `id%5B%5D`). A bare glob like
+ * `**​/api/notifications` also greedily shadows the `/unread-count`,
+ * `/read-all`, and `/:id/read` sub-paths. To be robust we match on the URL
+ * **pathname** via predicate functions — never on globs/query strings:
+ *
+ *  - GET  /api/notifications/unread-count         → { count }
+ *  - POST /api/notifications/read-all             → 204
+ *  - POST /api/notifications/:id/read             → 204
+ *  - GET  /api/notifications  (page 1 vs page 2 by `cursor` searchParam)
+ *  - GET  /api/charges            (front filters by id[]; full set is fine)    → { charges }
+ *  - GET  /api/transactions/by-ids                → bare array []
  */
 async function installNotifMocks(page: Page, unreadCount = UNREAD_COUNT_2) {
-  let serveCount = 0
+  // Exact pathname matchers (no query-string coupling). Order is irrelevant
+  // because the predicates are mutually exclusive on pathname.
 
-  await page.route('**/api/notifications/unread-count', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(unreadCount),
-    }),
+  await page.route(
+    (url) => url.pathname === '/api/notifications/unread-count',
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(unreadCount),
+      }),
   )
 
-  await page.route('**/api/notifications', async (route) => {
-    const url = new URL(route.request().url())
-    const cursor = url.searchParams.get('cursor') ?? ''
+  await page.route(
+    (url) => url.pathname === '/api/notifications/read-all',
+    (route) => route.fulfill({ status: 204, body: '' }),
+  )
 
-    if (!cursor || cursor === '') {
-      serveCount++
-      // Second call with cursor → page 2
+  await page.route(
+    (url) => /^\/api\/notifications\/\d+\/read$/.test(url.pathname),
+    (route) => route.fulfill({ status: 204, body: '' }),
+  )
+
+  await page.route(
+    (url) => url.pathname === '/api/notifications',
+    async (route) => {
+      const url = new URL(route.request().url())
+      const cursor = url.searchParams.get('cursor') ?? ''
+      // First page request has no cursor; load-more sends the page-1 cursor.
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(NOTIF_PAGE_1),
+        body: JSON.stringify(cursor ? NOTIF_PAGE_2 : NOTIF_PAGE_1),
       })
-    } else {
-      await route.fulfill({
+    },
+  )
+
+  await page.route(
+    (url) => url.pathname === '/api/charges',
+    (route) =>
+      route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(NOTIF_PAGE_2),
-      })
-    }
-    // suppress unused-variable warning
-    void serveCount
-  })
-
-  await page.route('**/api/charges?**ids**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(CHARGES_BY_IDS_RESP),
-    }),
+        body: JSON.stringify(CHARGES_BY_IDS_RESP),
+      }),
   )
 
-  await page.route('**/api/transactions/by-ids**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(TRANSACTIONS_BY_IDS_RESP),
-    }),
-  )
-
-  await page.route('**/api/notifications/*/read', (route) =>
-    route.fulfill({ status: 204, body: '' }),
-  )
-
-  await page.route('**/api/notifications/read-all', (route) =>
-    route.fulfill({ status: 204, body: '' }),
+  await page.route(
+    (url) => url.pathname === '/api/transactions/by-ids',
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(TRANSACTIONS_BY_IDS_RESP),
+      }),
   )
 }
 
@@ -386,20 +397,28 @@ test.describe('Mark-all-read', () => {
     const { page } = await freshAuthedPage(browser)
     await installNotifMocks(page, UNREAD_COUNT_2)
 
-    // After mark-all-read, unread-count endpoint returns 0
+    // After mark-all-read, unread-count endpoint returns 0.
+    // These re-registrations take precedence over installNotifMocks because
+    // Playwright tries the most-recently-registered route first.
     let markAllCalled = false
-    await page.route('**/api/notifications/read-all', async (route) => {
-      markAllCalled = true
-      await route.fulfill({ status: 204, body: '' })
-    })
+    await page.route(
+      (url) => url.pathname === '/api/notifications/read-all',
+      async (route) => {
+        markAllCalled = true
+        await route.fulfill({ status: 204, body: '' })
+      },
+    )
     // Override unread-count to return 0 once mark-all is called
-    await page.route('**/api/notifications/unread-count', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(markAllCalled ? UNREAD_COUNT_0 : UNREAD_COUNT_2),
-      })
-    })
+    await page.route(
+      (url) => url.pathname === '/api/notifications/unread-count',
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(markAllCalled ? UNREAD_COUNT_0 : UNREAD_COUNT_2),
+        })
+      },
+    )
 
     await page.goto('/notifications')
     await page.waitForLoadState('networkidle')
@@ -453,20 +472,26 @@ test.describe('Empty state', () => {
   test('EmptyState visible when notifications list is empty', async ({ browser }) => {
     const { page } = await freshAuthedPage(browser)
 
-    // Mock empty notifications + 0 unread
-    await page.route('**/api/notifications/unread-count', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(UNREAD_COUNT_0),
-      }),
+    // Mock empty notifications + 0 unread (pathname predicates — the bare
+    // `/api/notifications` carries `?limit=20`, and the unread-count matcher
+    // must not be shadowed by the list matcher).
+    await page.route(
+      (url) => url.pathname === '/api/notifications/unread-count',
+      (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(UNREAD_COUNT_0),
+        }),
     )
-    await page.route('**/api/notifications', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(NOTIF_PAGE_EMPTY),
-      }),
+    await page.route(
+      (url) => url.pathname === '/api/notifications',
+      (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(NOTIF_PAGE_EMPTY),
+        }),
     )
 
     await page.goto('/notifications')
