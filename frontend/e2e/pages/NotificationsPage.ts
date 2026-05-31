@@ -26,8 +26,14 @@ export class NotificationsPage {
 
   /** Navigate to a page that renders the AppLayout (authenticated). */
   async goto(): Promise<void> {
-    await this.page.goto('/transactions')
-    await this.page.waitForLoadState('networkidle')
+    // NOTE: do NOT use waitForLoadState('networkidle') here. With a service
+    // worker present (or stubbed/absent, as in the unsupported + granted tests)
+    // and the useNotificationUnreadCount polling query, the network may never
+    // reach the 500ms-idle window, so networkidle hangs until timeout. Wait on
+    // DOM-ready instead; the downstream openDesktopMenu()/openMobileDrawer()
+    // calls auto-wait on a concrete authed-shell element (SidebarUserPill /
+    // MoreTab) before asserting, which is the real readiness signal.
+    await this.page.goto('/transactions', { waitUntil: 'domcontentloaded' })
   }
 
   // ── Desktop surface ───────────────────────────────────────────────────────

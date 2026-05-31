@@ -280,12 +280,41 @@ test.describe('Notification toggle — default state + CTRL-01 permission gate',
       // Stub subscribe to return a fake PushSubscription JSON, and stub
       // the POST /api/push-subscriptions endpoint to return 204 so the
       // hook's postSubscription() succeeds without a real push service.
+      //
+      // isBrowserSupported() in usePushSubscription requires BOTH
+      // `'serviceWorker' in navigator` AND `'PushManager' in window`. Headless
+      // Chromium does not reliably expose window.PushManager, so without an
+      // explicit stub the hook resolves to state='unsupported' → the Switch is
+      // disabled/unchecked from load (the observed failure). We therefore stub
+      // PushManager AND a granted Notification so the granted path drives the
+      // state machine default → requesting → enabled deterministically.
       await page.addInitScript(() => {
+        // Ensure the Push API is detected as supported.
+        if (!('PushManager' in window)) {
+          Object.defineProperty(window, 'PushManager', {
+            value: function PushManager() {},
+            writable: true,
+            configurable: true,
+          })
+        }
+
+        // Notification.permission must be 'granted' (and requestPermission must
+        // resolve 'granted') so usePushSubscription proceeds past the gate.
+        Object.defineProperty(globalThis, 'Notification', {
+          value: {
+            permission: 'granted' as NotificationPermission,
+            requestPermission: async () => 'granted' as NotificationPermission,
+          },
+          writable: true,
+          configurable: true,
+        })
+
         const fakeSub = {
           endpoint: 'https://push.example.com/fake-endpoint',
           expirationTime: null,
           keys: { p256dh: 'fake-p256dh', auth: 'fake-auth' },
           toJSON() { return this },
+          unsubscribe: async () => true,
         }
         // Stub navigator.serviceWorker.ready with a fake pushManager
         Object.defineProperty(navigator, 'serviceWorker', {
@@ -326,10 +355,12 @@ test.describe('Notification toggle — default state + CTRL-01 permission gate',
         }
       })
 
-      await page.goto('/transactions')
-      await page.waitForLoadState('networkidle')
-
+      // Use the page object goto (domcontentloaded, not networkidle) — the
+      // unread-count polling query keeps the network busy, so networkidle can
+      // hang. openDesktopMenu() auto-waits on the authed-shell pill anyway.
       const notifPage = new NotificationsPage(page)
+      await notifPage.goto()
+
       const dropdown = await notifPage.openDesktopMenu()
       const switchInput = dropdown.getByTestId(NotificationsTestIds.SwitchNotifications)
 
