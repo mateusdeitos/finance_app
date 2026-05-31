@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # required to dispatch the Deploy workflow after publishing
 
 jobs:
   publish:
@@ -52,7 +53,22 @@ jobs:
             });
 
             core.notice(`Published release ${published.tag_name}: ${published.html_url}`);
+
+            // Publishing with GITHUB_TOKEN does not trigger workflows listening on
+            // `release: published` (GitHub prevents recursive runs). Explicitly dispatch
+            // the Deploy workflow, which handles `release_tag` with release-style change detection.
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: "deploy.yml",
+              ref: context.payload.repository.default_branch,
+              inputs: { release_tag: published.tag_name },
+            });
+            core.notice(`Dispatched Deploy workflow for tag ${published.tag_name}.`);
+
             await core.summary
               .addHeading("Release published")
               .addRaw(`**${published.name || published.tag_name}** — ${published.html_url}`)
+              .addBreak()
+              .addRaw(`Deploy workflow dispatched for \`${published.tag_name}\`.`)
               .write();

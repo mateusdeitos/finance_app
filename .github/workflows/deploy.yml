@@ -17,6 +17,10 @@ on:
         description: "Skip pending migrations check (emergency use only)"
         type: boolean
         default: false
+      release_tag:
+        description: "Release tag to deploy (set by the Publish Release workflow; enables release-style change detection)"
+        type: string
+        default: ""
 
 jobs:
   detect-changes:
@@ -38,10 +42,10 @@ jobs:
           echo "frontend=${{ inputs.force_frontend || false }}" >> $GITHUB_OUTPUT
 
       - name: Get previous tag
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.release_tag != ''
         id: prev-tag
         run: |
-          CURRENT_TAG=${{ github.event.release.tag_name }}
+          CURRENT_TAG=${{ github.event.release.tag_name || inputs.release_tag }}
           PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
           echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
           echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
@@ -59,8 +63,10 @@ jobs:
             FORCE_FRONTEND=true
           fi
 
-          # On workflow_dispatch without force flags, deploy nothing (require explicit choice)
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          # Manual workflow_dispatch without a release tag: deploy nothing unless forced.
+          # When release_tag is provided (Publish Release workflow), fall through to
+          # release-style tag-based change detection below.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${{ inputs.release_tag }}" ]; then
             echo "backend=${FORCE_BACKEND:-false}" >> $GITHUB_OUTPUT
             echo "frontend=${FORCE_FRONTEND:-false}" >> $GITHUB_OUTPUT
             exit 0
@@ -104,6 +110,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -137,12 +145,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
 
       - name: Set image tag
         id: tag
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "value=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          RELEASE_TAG="${{ github.event.release.tag_name || inputs.release_tag }}"
+          if [ -n "$RELEASE_TAG" ]; then
+            echo "value=${RELEASE_TAG}" >> $GITHUB_OUTPUT
           else
             echo "value=manual-$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
           fi
@@ -187,6 +198,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
