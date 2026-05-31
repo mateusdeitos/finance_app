@@ -90,6 +90,25 @@ select {
   z-index: var(--mb-z-index);
 }
 
+/* ─── Notifications: notch clearance + readable message text ──────────── */
+/* Mantine positions the notifications container with `top: spacing-md` via a
+   zero-specificity `:where([data-position])` selector, so these plain-class
+   overrides win on cascade order (index.css loads after the package styles).
+
+   1. Push top-anchored toasts below the iOS notch/status bar in PWA standalone
+      mode — without this the title collides with the clock/battery row. No-op
+      on browsers where env(safe-area-inset-top) resolves to 0. */
+.mantine-Notifications-root[data-position^='top-'] {
+  top: calc(env(safe-area-inset-top) + var(--mantine-spacing-md));
+}
+
+/* 2. Mantine dims the message text to dark-2 when a title is present, which is
+      hard to read on the dark scheme. Raise it to full body-text contrast.
+      Matches the package's own specificity (0,3,0) and wins by load order. */
+.mantine-Notification-root[data-with-title] .mantine-Notification-description {
+  color: var(--mantine-color-text);
+}
+
 /* ─── GPU-composited active states ──────────────────────────────────────── */
 button:active,
 a:active,
