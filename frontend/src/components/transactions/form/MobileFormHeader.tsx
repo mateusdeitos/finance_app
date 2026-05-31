@@ -25,13 +25,15 @@ export function MobileFormHeader({ title, onCancel, formId, loading }: Props) {
       <Button variant="subtle" size="compact-sm" onClick={onCancel}>
         Cancelar
       </Button>
-      <Text fw={600} size="sm" truncate>
+      <Text fw={600} size="sm" truncate style={{ flex: 1, textAlign: "center" }}>
         {title}
       </Text>
       <Button
         type="submit"
         form={formId}
+        variant="subtle"
         size="compact-sm"
+        fw={700}
         loading={loading}
         data-testid={TransactionsTestIds.BtnSave}
       >
