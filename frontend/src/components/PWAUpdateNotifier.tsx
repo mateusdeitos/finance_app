@@ -42,12 +42,12 @@ export function PWAUpdateNotifier() {
       id: NOTIFICATION_ID,
       title: 'Nova versão disponível',
       message: (
-        <Stack gap="xs" mt={4}>
+        <Stack gap="sm" mt={4}>
           <Text size="sm">Atualize para ver as novidades.</Text>
-          <Group justify="flex-end">
+          <Group grow gap="sm">
             <Button
-              size="xs"
-              variant="subtle"
+              size="sm"
+              variant="default"
               onClick={() => {
                 notifications.hide(NOTIFICATION_ID)
                 setNeedRefresh(false)
@@ -56,7 +56,7 @@ export function PWAUpdateNotifier() {
               Depois
             </Button>
             <Button
-              size="xs"
+              size="sm"
               onClick={() => {
                 void updateServiceWorker(true)
               }}
