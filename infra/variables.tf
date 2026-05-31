@@ -99,12 +99,27 @@ variable "frontend_url" {
   type        = string
 }
 
+# ── Web Push (VAPID) ──────────────────────────────────────────────────────────
+#
+# VAPID_PRIVATE_KEY is sensitive → managed via Secret Manager (see secrets.tf),
+# NOT declared here. The public key and subject are non-sensitive.
+
+variable "vapid_public_key" {
+  description = "VAPID public key (base64url, EC P-256). Served to the frontend; non-secret. Generate the pair with `npx web-push generate-vapid-keys`."
+  type        = string
+}
+
+variable "vapid_subject" {
+  description = "VAPID subject — a contact URI per RFC 8292 (e.g. mailto:you@example.com or https://app.example.com)."
+  type        = string
+}
+
 # ── Firebase Hosting ──────────────────────────────────────────────────────────
 
 variable "firebase_site_id" {
   description = "Firebase Hosting site ID (must be globally unique; defaults to the GCP project ID)."
   type        = string
-  default     = ""  # quando vazio usa gcp_project_id
+  default     = "" # quando vazio usa gcp_project_id
 }
 
 # ── Frontend (for documentation purposes) ─────────────────────────────────────

@@ -6,9 +6,10 @@
 #   echo -n "VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
 #
 # Secrets obrigatórios (adicionar valor antes do primeiro deploy):
-#   backend-db-password
-#   backend-jwt-secret
-#   backend-oauth-session-secret
+#   DB_PASSWORD
+#   JWT_SECRET
+#   OAUTH_SESSION_SECRET
+#   VAPID_PRIVATE_KEY   (gere com: npx web-push generate-vapid-keys)
 #
 # Secrets opcionais (adicionar valor vazio "" se o provider não for usado):
 #   backend-google-client-secret
@@ -49,6 +50,13 @@ resource "google_secret_manager_secret" "allowed_origins" {
   }
 }
 
+resource "google_secret_manager_secret" "vapid_private_key" {
+  secret_id = "VAPID_PRIVATE_KEY"
+  replication {
+    auto {}
+  }
+}
+
 # ── IAM: Cloud Run SA pode ler todos os secrets ───────────────────────────────
 
 locals {
@@ -58,6 +66,7 @@ locals {
     "OAUTH_SESSION_SECRET",
     "GOOGLE_CLIENT_SECRET",
     "ALLOWED_ORIGINS",
+    "VAPID_PRIVATE_KEY",
   ])
 }
 
