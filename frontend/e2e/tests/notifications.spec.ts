@@ -74,12 +74,23 @@ test.describe('Notification toggle — unsupported state', () => {
   }) => {
     const { page } = await freshUser(browser)
 
-    // Stub: remove serviceWorker from navigator.
+    // Stub: simulate an unsupported browser. `isBrowserSupported()` checks
+    // `'serviceWorker' in navigator && 'PushManager' in window`, so the property
+    // must be genuinely ABSENT — a `get: () => undefined` override keeps the key
+    // present (`in` stays true), which leaves the app thinking push is supported
+    // and crashes the status query on `navigator.serviceWorker.ready`. Delete the
+    // prototype getter (and PushManager) so `in` is false → state = 'unsupported'.
     await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'serviceWorker', {
-        get: () => undefined,
-        configurable: true,
-      })
+      try {
+        delete (Navigator.prototype as unknown as Record<string, unknown>).serviceWorker
+      } catch {
+        /* engine may make it non-configurable; PushManager removal below still forces unsupported */
+      }
+      try {
+        delete (window as unknown as Record<string, unknown>).PushManager
+      } catch {
+        /* ignore */
+      }
     })
 
     const notifPage = new NotificationsPage(page)
