@@ -12,8 +12,10 @@ COPY . .
 # Build the server binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
 
-# Build goose for migrations
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+# Build goose for migrations (pinned to match deploy.yml; @latest re-resolves
+# every build and pulls goose's full driver dep tree, which made the e2e image
+# build flaky on transient proxy.golang.org stream errors).
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 
 FROM alpine:latest
 
