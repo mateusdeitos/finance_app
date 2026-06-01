@@ -28,7 +28,13 @@ export default defineConfig({
       registerType: "prompt",
       injectRegister: false,
       devOptions: {
-        enabled: false,
+        // Enable the service worker under `npm run dev` so the Web Push flow
+        // (subscribe → navigator.serviceWorker.ready) works locally. With this
+        // off, serviceWorker.ready never resolves and the toggle hangs on
+        // "Aguardando permissão...". `type: "module"` is required for an
+        // injectManifest TS service worker in dev.
+        enabled: true,
+        type: "module",
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
