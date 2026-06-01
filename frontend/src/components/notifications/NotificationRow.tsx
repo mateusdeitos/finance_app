@@ -4,6 +4,7 @@ import {
   IconCircleCheck,
   IconCreditCard,
   IconRefresh,
+  IconTransferIn,
   IconUsers,
 } from '@tabler/icons-react'
 import { router } from '@/router'
@@ -23,6 +24,7 @@ const NOTIF_TYPE_CONFIG: Record<
   charge_accepted: { Icon: IconCircleCheck, color: 'teal' },
   split_created: { Icon: IconUsers, color: 'violet' },
   split_updated: { Icon: IconRefresh, color: 'orange' },
+  transfer_received: { Icon: IconTransferIn, color: 'green' },
 }
 
 const FALLBACK_CONFIG = { Icon: IconCreditCard, color: 'gray' }

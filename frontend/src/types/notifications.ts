@@ -4,6 +4,7 @@ export namespace Notifications {
     | 'charge_accepted'
     | 'split_created'
     | 'split_updated'
+    | 'transfer_received'
 
   export type EntityType = 'charge' | 'transaction'
 

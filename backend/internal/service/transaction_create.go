@@ -121,6 +121,35 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 		}
 	}
 
+	// NOTIF-05: fire transfer_received when this is a cross-user transfer. A
+	// cross-user transfer injects a linked tx on the DESTINATION user's
+	// connection account (UserID != author); a same-user transfer between the
+	// author's own accounts injects a linked tx still owned by the author, so it
+	// is correctly skipped by the `lt.UserID != userID` filter below.
+	if transaction.TransactionType == domain.TransactionTypeTransfer {
+		var events []domain.NotificationEvent
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if authorTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{id}}); err == nil && authorTx != nil {
+			for _, lt := range authorTx.LinkedTransactions {
+				if lt.UserID == userID {
+					continue // author's own legs (e.g. the from-side credit) — not a recipient
+				}
+				events = append(events, domain.NotificationEvent{
+					RecipientUserID: lt.UserID,
+					ActorUserID:     userID,
+					Type:            domain.NotificationTypeTransferReceived,
+					EntityType:      "transaction",
+					EntityID:        lt.ID,
+					Amount:          lt.Amount,
+				})
+			}
+		}
+		if len(events) > 0 {
+			//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+			go s.services.Notification.Dispatch(context.Background(), events)
+		}
+	}
+
 	return id, nil
 }
 

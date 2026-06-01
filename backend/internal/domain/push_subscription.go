@@ -55,10 +55,11 @@ type NotificationEvent struct {
 }
 
 const (
-	NotificationTypeChargeReceived = "charge_received"
-	NotificationTypeChargeAccepted = "charge_accepted"
-	NotificationTypeSplitCreated   = "split_created"
-	NotificationTypeSplitUpdated   = "split_updated"
+	NotificationTypeChargeReceived  = "charge_received"
+	NotificationTypeChargeAccepted  = "charge_accepted"
+	NotificationTypeSplitCreated    = "split_created"
+	NotificationTypeSplitUpdated    = "split_updated"
+	NotificationTypeTransferReceived = "transfer_received"
 )
 
 // NotificationFilter is passed to NotificationRepository.List. Cursor is the opaque

@@ -167,6 +167,8 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 		body = fmt.Sprintf("%s dividiu uma %s de %s com você", actorName, splitNoun, formatBRL(first.Amount))
 	case first.Type == domain.NotificationTypeSplitUpdated:
 		body = fmt.Sprintf("%s atualizou uma %s dividida (%s)", actorName, splitNoun, formatBRL(first.Amount))
+	case first.Type == domain.NotificationTypeTransferReceived:
+		body = fmt.Sprintf("%s te transferiu %s", actorName, formatBRL(first.Amount))
 	default:
 		body = actorName + " enviou uma notificação"
 	}
@@ -182,6 +184,8 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 		title = fmt.Sprintf("Nova %s dividida", splitNoun)
 	case domain.NotificationTypeSplitUpdated:
 		title = capitalize(splitNoun) + " dividida atualizada"
+	case domain.NotificationTypeTransferReceived:
+		title = "Nova transferência"
 	default:
 		title = "Finance App"
 	}

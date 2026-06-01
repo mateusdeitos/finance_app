@@ -54,6 +54,10 @@ export function describeNotification(
       if (amountState === 'loading') return `${who} atualizou uma transação dividida`
       return `${who} atualizou uma transação dividida (${amountState === 'missing' ? DASH : amt})`
 
+    case 'transfer_received':
+      if (amountState === 'loading') return `${who} te transferiu um valor`
+      return `${who} te transferiu ${amountState === 'missing' ? DASH : amt}`
+
     default:
       return 'Nova notificação'
   }
