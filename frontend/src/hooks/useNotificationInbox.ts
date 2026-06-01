@@ -9,6 +9,7 @@ export function useNotificationInbox() {
     queryFn: ({ pageParam }) => fetchNotifications({ cursor: pageParam, limit: 20 }),
     initialPageParam: '' as string,
     getNextPageParam: (last) => (last.has_more ? last.next_cursor : undefined),
+    refetchOnWindowFocus: true,
   })
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [QueryKeys.Notifications] })
