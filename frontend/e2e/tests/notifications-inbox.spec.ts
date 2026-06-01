@@ -117,6 +117,39 @@ const TRANSACTIONS_BY_IDS_RESP: unknown[] = [
 async function installNotifMocks(page: Page, unreadCount = UNREAD_COUNT_2) {
   // Exact pathname matchers (no query-string coupling). Order is irrelevant
   // because the predicates are mutually exclusive on pathname.
+  //
+  // STATEFUL: the inbox uses optimistic mutations that, on success, invalidate
+  // and REFETCH GET /api/notifications. If the GET always returned the original
+  // list, the refetch would resurrect a just-deleted/just-read row and defeat
+  // the optimistic update. So the mutation handlers mutate a local copy of the
+  // pages and the GET serves from it — mirroring what the real server returns
+  // after the write.
+  // Deep-copy the notification objects so mutating `read` here never leaks into
+  // the shared module-level fixtures (which other tests reuse).
+  const page1 = {
+    ...NOTIF_PAGE_1,
+    notifications: NOTIF_PAGE_1.notifications.map((n) => ({ ...n })),
+  }
+  const page2 = {
+    ...NOTIF_PAGE_2,
+    notifications: NOTIF_PAGE_2.notifications.map((n) => ({ ...n })),
+  }
+  let count = { ...unreadCount }
+
+  const removeById = (id: number) => {
+    page1.notifications = page1.notifications.filter((n) => n.id !== id)
+    page2.notifications = page2.notifications.filter((n) => n.id !== id)
+  }
+  const markReadById = (id: number) => {
+    for (const p of [page1, page2]) {
+      const n = p.notifications.find((x) => x.id === id)
+      if (n) n.read = true
+    }
+  }
+  const removeAllRead = () => {
+    page1.notifications = page1.notifications.filter((n) => !n.read)
+    page2.notifications = page2.notifications.filter((n) => !n.read)
+  }
 
   await page.route(
     (url) => url.pathname === '/api/notifications/unread-count',
@@ -124,43 +157,58 @@ async function installNotifMocks(page: Page, unreadCount = UNREAD_COUNT_2) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(unreadCount),
+        body: JSON.stringify(count),
       }),
   )
 
   await page.route(
     (url) => url.pathname === '/api/notifications/read-all',
-    (route) => route.fulfill({ status: 204, body: '' }),
+    (route) => {
+      for (const p of [page1, page2]) p.notifications.forEach((n) => (n.read = true))
+      count = { count: 0 }
+      return route.fulfill({ status: 204, body: '' })
+    },
   )
 
   await page.route(
     (url) => /^\/api\/notifications\/\d+\/read$/.test(url.pathname),
-    (route) => route.fulfill({ status: 204, body: '' }),
+    (route) => {
+      const id = Number(new URL(route.request().url()).pathname.split('/')[3])
+      markReadById(id)
+      return route.fulfill({ status: 204, body: '' })
+    },
   )
 
   // DELETE /api/notifications/read (bulk delete read) — must be matched BEFORE
-  // the /:id matcher so "read" is not captured as an id. Both reply 204.
+  // the /:id matcher so "read" is not captured as an id. Removes read rows.
   await page.route(
     (url) => url.pathname === '/api/notifications/read',
-    (route) => route.fulfill({ status: 204, body: '' }),
+    (route) => {
+      removeAllRead()
+      return route.fulfill({ status: 204, body: '' })
+    },
   )
 
   // DELETE /api/notifications/:id (single hard delete) → 204.
   await page.route(
     (url) => /^\/api\/notifications\/\d+$/.test(url.pathname),
-    (route) => route.fulfill({ status: 204, body: '' }),
+    (route) => {
+      const id = Number(new URL(route.request().url()).pathname.split('/')[3])
+      removeById(id)
+      return route.fulfill({ status: 204, body: '' })
+    },
   )
 
   await page.route(
     (url) => url.pathname === '/api/notifications',
     async (route) => {
-      const url = new URL(route.request().url())
-      const cursor = url.searchParams.get('cursor') ?? ''
+      const reqUrl = new URL(route.request().url())
+      const cursor = reqUrl.searchParams.get('cursor') ?? ''
       // First page request has no cursor; load-more sends the page-1 cursor.
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(cursor ? NOTIF_PAGE_2 : NOTIF_PAGE_1),
+        body: JSON.stringify(cursor ? page2 : page1),
       })
     },
   )
