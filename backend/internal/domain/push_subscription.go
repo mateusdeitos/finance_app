@@ -49,6 +49,9 @@ type NotificationEvent struct {
 	EntityID        int
 	Amount          int64  // cents — for BRL copy formatting
 	Description     string // e.g. charge description
+	// TxKind is the underlying transaction type ("expense" | "income") for split
+	// events, so the copy can say "despesa"/"receita". Empty for non-split events.
+	TxKind string
 }
 
 const (

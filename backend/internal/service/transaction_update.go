@@ -1414,6 +1414,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 				EntityType:      "transaction",
 				EntityID:        entityID,
 				Amount:          lo.FromPtr(data.req.Amount),
+				TxKind:          string(data.previousTransaction.Type),
 			})
 		}
 

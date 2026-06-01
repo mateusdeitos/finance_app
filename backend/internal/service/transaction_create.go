@@ -112,6 +112,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 				EntityType:      "transaction",
 				EntityID:        entityID,
 				Amount:          notifAmt,
+				TxKind:          string(transaction.TransactionType),
 			})
 		}
 		if len(events) > 0 {

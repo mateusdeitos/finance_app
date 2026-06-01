@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"unicode"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/finance_app/backend/internal/config"
@@ -142,18 +143,30 @@ type pushPayloadData struct {
 
 func (s *notificationService) buildPayload(actorName string, evGroup []domain.NotificationEvent) pushPayload {
 	first := evGroup[0]
+
+	// splitKind returns the gendered pt-BR noun for the split's transaction type
+	// so the copy distinguishes a shared expense from a shared income. Falls back
+	// to the generic "transação" when TxKind is unknown.
+	splitNoun := "transação"
+	switch first.TxKind {
+	case string(domain.TransactionTypeExpense):
+		splitNoun = "despesa"
+	case string(domain.TransactionTypeIncome):
+		splitNoun = "receita"
+	}
+
 	var body string
 	switch {
 	case len(evGroup) > 1 && first.Type == domain.NotificationTypeSplitCreated:
-		body = fmt.Sprintf("%s adicionou %d transações divididas", actorName, len(evGroup))
+		body = fmt.Sprintf("%s dividiu %d %ss com você", actorName, len(evGroup), splitNoun)
 	case first.Type == domain.NotificationTypeChargeReceived:
 		body = fmt.Sprintf("%s te cobrou %s: %s", actorName, formatBRL(first.Amount), first.Description)
 	case first.Type == domain.NotificationTypeChargeAccepted:
 		body = fmt.Sprintf("%s aceitou sua cobrança de %s", actorName, formatBRL(first.Amount))
 	case first.Type == domain.NotificationTypeSplitCreated:
-		body = fmt.Sprintf("%s adicionou uma transação dividida de %s", actorName, formatBRL(first.Amount))
+		body = fmt.Sprintf("%s dividiu uma %s de %s com você", actorName, splitNoun, formatBRL(first.Amount))
 	case first.Type == domain.NotificationTypeSplitUpdated:
-		body = fmt.Sprintf("%s atualizou uma transação dividida (%s)", actorName, formatBRL(first.Amount))
+		body = fmt.Sprintf("%s atualizou uma %s dividida (%s)", actorName, splitNoun, formatBRL(first.Amount))
 	default:
 		body = actorName + " enviou uma notificação"
 	}
@@ -166,9 +179,9 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 	case domain.NotificationTypeChargeAccepted:
 		title = "Cobrança aceita"
 	case domain.NotificationTypeSplitCreated:
-		title = "Nova transação dividida"
+		title = fmt.Sprintf("Nova %s dividida", splitNoun)
 	case domain.NotificationTypeSplitUpdated:
-		title = "Transação dividida atualizada"
+		title = capitalize(splitNoun) + " dividida atualizada"
 	default:
 		title = "Finance App"
 	}
@@ -182,6 +195,17 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 			EntityID:   first.EntityID,
 		},
 	}
+}
+
+// capitalize upper-cases the first rune of s (used for sentence-start nouns
+// like "Despesa"/"Receita" in notification titles).
+func capitalize(s string) string {
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
 }
 
 // formatBRL converts cents int64 to "R$ 1.234,56" (pt-BR).
