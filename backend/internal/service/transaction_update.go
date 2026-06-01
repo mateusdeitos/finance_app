@@ -1379,6 +1379,19 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 			callerUserID == *data.previousTransaction.OriginalUserID {
 			return
 		}
+		// The recipient must deep-link to the linked tx THEY own (just created on
+		// their connection account), not the author's source tx — which the
+		// recipient can't fetch (inbox /by-ids returns empty). Re-fetch the source
+		// with its freshly-created linked transactions and map by UserID.
+		linkedTxIDByRecipient := make(map[int]int)
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if srcTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{data.previousTransaction.ID}}); err == nil && srcTx != nil {
+			for _, lt := range srcTx.LinkedTransactions {
+				if lt.UserID != callerUserID {
+					linkedTxIDByRecipient[lt.UserID] = lt.ID
+				}
+			}
+		}
 		for _, ss := range data.req.SplitSettings {
 			if ss.UserConnection == nil {
 				continue
@@ -1390,12 +1403,16 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 			if recipientID == callerUserID {
 				continue
 			}
+			entityID, ok := linkedTxIDByRecipient[recipientID]
+			if !ok {
+				continue
+			}
 			events = append(events, domain.NotificationEvent{
 				RecipientUserID: recipientID,
 				ActorUserID:     callerUserID,
 				Type:            domain.NotificationTypeSplitUpdated,
 				EntityType:      "transaction",
-				EntityID:        data.previousTransaction.ID,
+				EntityID:        entityID,
 				Amount:          lo.FromPtr(data.req.Amount),
 			})
 		}

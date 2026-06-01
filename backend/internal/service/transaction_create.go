@@ -61,6 +61,22 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 	if transaction.SharedAccountConnection == nil &&
 		transaction.TransactionType != domain.TransactionTypeTransfer &&
 		len(transaction.SplitSettings) > 0 {
+		// The recipient's notification must deep-link to the transaction the
+		// RECIPIENT owns — the linked tx injected on their connection account —
+		// not the author's private tx `id` (which the recipient can't fetch, so
+		// the inbox /by-ids resolution returns empty). Re-fetch the author tx
+		// with its linked transactions (IDs are populated post-Create) and map
+		// each partner's owned linked-tx id by UserID. Mirrors the update path.
+		linkedTxIDByRecipient := make(map[int]int)
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if authorTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{id}}); err == nil && authorTx != nil {
+			for _, lt := range authorTx.LinkedTransactions {
+				if lt.UserID != userID {
+					linkedTxIDByRecipient[lt.UserID] = lt.ID
+				}
+			}
+		}
+
 		var events []domain.NotificationEvent
 		for _, ss := range transaction.SplitSettings {
 			if ss.UserConnection == nil {
@@ -72,6 +88,12 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 			}
 			if recipientID == userID {
 				continue // skip self
+			}
+			entityID, ok := linkedTxIDByRecipient[recipientID]
+			if !ok {
+				// No linked tx owned by this recipient — skip rather than emit a
+				// notification pointing at a tx the recipient can't resolve.
+				continue
 			}
 			var notifAmt int64
 			switch {
@@ -88,7 +110,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 				ActorUserID:     userID,
 				Type:            domain.NotificationTypeSplitCreated,
 				EntityType:      "transaction",
-				EntityID:        id,
+				EntityID:        entityID,
 				Amount:          notifAmt,
 			})
 		}
