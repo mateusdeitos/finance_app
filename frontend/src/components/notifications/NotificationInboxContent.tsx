@@ -14,12 +14,16 @@ import { IconBellOff } from '@tabler/icons-react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useMarkAllNotificationsRead } from '@/hooks/useMarkAllNotificationsRead'
 import { useMarkNotificationRead } from '@/hooks/useMarkNotificationRead'
+import { useDeleteNotification } from '@/hooks/useDeleteNotification'
+import { useDeleteReadNotifications } from '@/hooks/useDeleteReadNotifications'
 import { useNotificationInbox } from '@/hooks/useNotificationInbox'
 import { useNotificationUnreadCount } from '@/hooks/useNotificationUnreadCount'
 import { useResolveNotificationAmounts } from '@/hooks/useResolveNotificationAmounts'
 import { useMe } from '@/hooks/useMe'
+import { renderDrawer } from '@/utils/renderDrawer'
 import { NotificationsTestIds } from '@/testIds'
 import { NotificationRow } from './NotificationRow'
+import { ConfirmActionDrawer } from './ConfirmActionDrawer'
 
 // ─── Partner name selector ────────────────────────────────────────────────────
 // Derive the partner's display name from the accepted user_connection in cached
@@ -81,8 +85,16 @@ export function NotificationInboxContent({ onRowTap }: NotificationInboxContentP
   const { mutation: markAll } = useMarkAllNotificationsRead({
     onSuccess: invalidateInbox,
   })
+  const { mutation: deleteOne } = useDeleteNotification({
+    onSuccess: invalidateInbox,
+  })
+  const { mutation: deleteRead } = useDeleteReadNotifications({
+    onSuccess: invalidateInbox,
+  })
 
   const unreadCount = unreadCountQuery.data ?? 0
+  // Derive whether the loaded list has at least one read row (drives "Remover lidas").
+  const hasReadNotifications = notifications.some((n) => n.read)
 
   // ── Tap handler wired into each row ─────────────────────────────────────────
   function handleMarkRead(id: number) {
@@ -105,6 +117,49 @@ export function NotificationInboxContent({ onRowTap }: NotificationInboxContentP
           color: 'red',
           title: 'Erro',
           message: 'Não foi possível marcar todas como lidas. Tente novamente.',
+          autoClose: 3000,
+        })
+      },
+    })
+  }
+
+  // Individual remove — fires directly (optimistic), no confirmation.
+  function handleDeleteOne(id: number) {
+    deleteOne.mutate(id, {
+      onError: () => {
+        mantineNotifications.show({
+          color: 'red',
+          title: 'Erro',
+          message: 'Não foi possível remover a notificação. Tente novamente.',
+          autoClose: 3000,
+        })
+      },
+    })
+  }
+
+  // Bulk remove of read notifications — requires confirmation (mass action).
+  async function handleDeleteRead() {
+    try {
+      await renderDrawer<void>(() => (
+        <ConfirmActionDrawer
+          title="Remover notificações lidas?"
+          message="Esta ação não pode ser desfeita."
+          confirmLabel="Remover"
+          drawerTestId={NotificationsTestIds.ConfirmDeleteReadDrawer}
+          confirmTestId={NotificationsTestIds.ConfirmDeleteReadConfirm}
+        />
+      ))
+    } catch {
+      // Dismissed without confirming — do nothing.
+      return
+    }
+
+    deleteRead.mutate(undefined, {
+      onError: () => {
+        mantineNotifications.show({
+          color: 'red',
+          title: 'Erro',
+          message: 'Não foi possível remover as notificações lidas. Tente novamente.',
           autoClose: 3000,
         })
       },
@@ -173,20 +228,36 @@ export function NotificationInboxContent({ onRowTap }: NotificationInboxContentP
   // Populated state
   return (
     <Box>
-      {/* Mark-all-read action row: shown only when unread > 0 */}
-      {unreadCount > 0 && (
-        <Group justify="flex-end" px="sm" pb="xs" pt="xs">
-          <Button
-            variant="subtle"
-            size="sm"
-            onClick={handleMarkAll}
-            disabled={markAll.isPending}
-            rightSection={markAll.isPending ? <Loader size="xs" /> : null}
-            data-testid={NotificationsTestIds.BtnMarkAllRead}
-            aria-label="Marcar todas as notificações como lidas"
-          >
-            Marcar todas como lidas
-          </Button>
+      {/* Action row: mark-all (when unread > 0) and remover-lidas (when read > 0) */}
+      {(unreadCount > 0 || hasReadNotifications) && (
+        <Group justify="flex-end" px="sm" pb="xs" pt="xs" gap="xs">
+          {hasReadNotifications && (
+            <Button
+              variant="subtle"
+              color="red"
+              size="sm"
+              onClick={() => void handleDeleteRead()}
+              disabled={deleteRead.isPending}
+              rightSection={deleteRead.isPending ? <Loader size="xs" /> : null}
+              data-testid={NotificationsTestIds.BtnDeleteRead}
+              aria-label="Remover notificações lidas"
+            >
+              Remover lidas
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={handleMarkAll}
+              disabled={markAll.isPending}
+              rightSection={markAll.isPending ? <Loader size="xs" /> : null}
+              data-testid={NotificationsTestIds.BtnMarkAllRead}
+              aria-label="Marcar todas as notificações como lidas"
+            >
+              Marcar todas como lidas
+            </Button>
+          )}
         </Group>
       )}
 
@@ -205,6 +276,7 @@ export function NotificationInboxContent({ onRowTap }: NotificationInboxContentP
               resolved={resolved}
               partnerName={partnerName}
               markRead={handleMarkRead}
+              deleteNotification={handleDeleteOne}
               onAfterTap={onRowTap}
             />
             {i < notifications.length - 1 && (

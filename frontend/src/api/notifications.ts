@@ -40,3 +40,19 @@ export async function markAllNotificationsRead(): Promise<void> {
   })
   if (!res.ok) throw new Error('Failed to mark all notifications as read')
 }
+
+export async function deleteNotification(id: number): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/notifications/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Failed to delete notification')
+}
+
+export async function deleteReadNotifications(): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/notifications/read`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Failed to delete read notifications')
+}

@@ -138,6 +138,19 @@ async function installNotifMocks(page: Page, unreadCount = UNREAD_COUNT_2) {
     (route) => route.fulfill({ status: 204, body: '' }),
   )
 
+  // DELETE /api/notifications/read (bulk delete read) — must be matched BEFORE
+  // the /:id matcher so "read" is not captured as an id. Both reply 204.
+  await page.route(
+    (url) => url.pathname === '/api/notifications/read',
+    (route) => route.fulfill({ status: 204, body: '' }),
+  )
+
+  // DELETE /api/notifications/:id (single hard delete) → 204.
+  await page.route(
+    (url) => /^\/api\/notifications\/\d+$/.test(url.pathname),
+    (route) => route.fulfill({ status: 204, body: '' }),
+  )
+
   await page.route(
     (url) => url.pathname === '/api/notifications',
     async (route) => {
@@ -553,6 +566,79 @@ test.describe('Empty state', () => {
     // Badge must not exist
     const badge = page.getByTestId(CommonTestIds.NavBadge('notifications'))
     await expect(badge).not.toBeVisible()
+
+    await page.close()
+  })
+})
+
+// ── 8. Delete actions: per-row delete, per-row mark-read, bulk "Remover lidas" ──
+
+test.describe('Delete actions', () => {
+  test('per-row delete (trash) removes the row without confirmation', async ({ browser }) => {
+    const { page } = await freshAuthedPage(browser)
+    await installNotifMocks(page)
+
+    await page.goto('/notifications')
+    await page.waitForLoadState('networkidle')
+
+    const row = page.getByTestId(NotificationsTestIds.Row(UNREAD_NOTIF_1.id))
+    await expect(row).toBeVisible()
+
+    // Click the per-row trash button → optimistic removal, no confirm drawer.
+    await page.getByTestId(NotificationsTestIds.RowBtnDelete(UNREAD_NOTIF_1.id)).click()
+
+    await expect(row).not.toBeVisible({ timeout: 5000 })
+
+    await page.close()
+  })
+
+  test('per-row "marcar como lida" flips the row to read (unread dot disappears)', async ({
+    browser,
+  }) => {
+    const { page } = await freshAuthedPage(browser)
+    await installNotifMocks(page)
+
+    await page.goto('/notifications')
+    await page.waitForLoadState('networkidle')
+
+    // The unread row shows its mark-read button and the unread dot.
+    const unreadDot = page.getByTestId(NotificationsTestIds.UnreadDot(UNREAD_NOTIF_1.id))
+    await expect(unreadDot).toBeVisible()
+
+    await page.getByTestId(NotificationsTestIds.RowBtnMarkRead(UNREAD_NOTIF_1.id)).click()
+
+    // Optimistic flip → row is read → unread dot and mark-read button gone.
+    await expect(unreadDot).not.toBeVisible({ timeout: 5000 })
+    await expect(
+      page.getByTestId(NotificationsTestIds.RowBtnMarkRead(UNREAD_NOTIF_1.id)),
+    ).not.toBeVisible({ timeout: 5000 })
+
+    await page.close()
+  })
+
+  test('"Remover lidas" requires confirmation, then removes read rows', async ({ browser }) => {
+    const { page } = await freshAuthedPage(browser)
+    await installNotifMocks(page)
+
+    await page.goto('/notifications')
+    await page.waitForLoadState('networkidle')
+
+    // A read row is present (id=1002) → "Remover lidas" is shown.
+    const readRow = page.getByTestId(NotificationsTestIds.Row(READ_NOTIF_2.id))
+    await expect(readRow).toBeVisible()
+
+    const btnDeleteRead = page.getByTestId(NotificationsTestIds.BtnDeleteRead)
+    await expect(btnDeleteRead).toBeVisible()
+    await btnDeleteRead.click()
+
+    // Confirmation drawer appears; confirm the mass action.
+    const confirmDrawer = page.getByTestId(NotificationsTestIds.ConfirmDeleteReadDrawer)
+    await expect(confirmDrawer).toBeVisible({ timeout: 5000 })
+    await page.getByTestId(NotificationsTestIds.ConfirmDeleteReadConfirm).click()
+
+    // Read row removed; the unread row remains.
+    await expect(readRow).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId(NotificationsTestIds.Row(UNREAD_NOTIF_1.id))).toBeVisible()
 
     await page.close()
   })

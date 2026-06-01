@@ -1,12 +1,15 @@
-import { Box, Group, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Box, Group, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core'
 import {
+  IconCheck,
   IconChevronRight,
   IconCircleCheck,
   IconCreditCard,
   IconRefresh,
   IconTransferIn,
+  IconTrash,
   IconUsers,
 } from '@tabler/icons-react'
+import type { MouseEvent } from 'react'
 import { router } from '@/router'
 import { Notifications } from '@/types/notifications'
 import { deriveDeepLink } from '@/utils/pushDeepLink'
@@ -73,6 +76,8 @@ export interface NotificationRowProps {
   onAfterTap?: () => void
   /** Fires mark-read mutation (parent owns the hook + onSuccess invalidation) */
   markRead: (id: number) => void
+  /** Hard-deletes this notification (parent owns the hook; no confirmation) */
+  deleteNotification: (id: number) => void
 }
 
 export function NotificationRow({
@@ -81,6 +86,7 @@ export function NotificationRow({
   partnerName,
   onAfterTap,
   markRead,
+  deleteNotification,
 }: NotificationRowProps) {
   const typeConfig =
     NOTIF_TYPE_CONFIG[notification.type as Notifications.NotificationType] ?? FALLBACK_CONFIG
@@ -126,6 +132,17 @@ export function NotificationRow({
 
     // 3. Let the mobile drawer close (if present)
     onAfterTap?.()
+  }
+
+  // Per-row action buttons must NOT trigger the row's tap-to-navigate.
+  function handleMarkReadClick(e: MouseEvent) {
+    e.stopPropagation()
+    markRead(notification.id)
+  }
+
+  function handleDeleteClick(e: MouseEvent) {
+    e.stopPropagation()
+    deleteNotification(notification.id)
   }
 
   const isUnread = !notification.read
@@ -174,6 +191,32 @@ export function NotificationRow({
             {timestamp}
           </Text>
         </Stack>
+
+        {/* Per-row actions — stopPropagation so they don't navigate */}
+        <Group gap={4} wrap="nowrap" style={{ flexShrink: 0 }}>
+          {isUnread && (
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="md"
+              onClick={handleMarkReadClick}
+              data-testid={NotificationsTestIds.RowBtnMarkRead(notification.id)}
+              aria-label="Marcar como lida"
+            >
+              <IconCheck size={18} stroke={1.5} />
+            </ActionIcon>
+          )}
+          <ActionIcon
+            variant="subtle"
+            color="red"
+            size="md"
+            onClick={handleDeleteClick}
+            data-testid={NotificationsTestIds.RowBtnDelete(notification.id)}
+            aria-label="Remover notificação"
+          >
+            <IconTrash size={18} stroke={1.5} />
+          </ActionIcon>
+        </Group>
 
         {/* Trailing chevron */}
         <IconChevronRight size={16} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0 }} />
