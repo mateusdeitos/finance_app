@@ -195,6 +195,8 @@ export function NotificationInboxContent({ onRowTap }: NotificationInboxContentP
         const resolved = amounts.get(`${n.entity_type}:${n.entity_id}`) ?? {
           amount: null,
           amountState: 'loading' as const,
+          date: null,
+          description: null,
         }
         return (
           <Box key={n.id}>

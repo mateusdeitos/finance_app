@@ -51,10 +51,18 @@ const NOTIF_PAGE_1 = {
   next_cursor: 'cursor_page_2',
   has_more: true,
 }
+const SPLIT_NOTIF_3 = {
+  id: 1003,
+  type: 'split_created' as const,
+  entity_type: 'transaction' as const,
+  entity_id: 6001,
+  read: true,
+  // Persisted description now flows back on the notification row (Part A).
+  description: 'Mercado',
+  created_at: now,
+}
 const NOTIF_PAGE_2 = {
-  notifications: [
-    { id: 1003, type: 'split_created' as const, entity_type: 'transaction' as const, entity_id: 6001, read: true, created_at: now },
-  ],
+  notifications: [SPLIT_NOTIF_3],
   next_cursor: '',
   has_more: false,
 }
@@ -71,8 +79,21 @@ const CHARGES_BY_IDS_RESP = {
 }
 // fetchTransactionsByIds returns a BARE ARRAY (Transactions.Transaction[]), not
 // an object. The charge_received / charge_accepted rows resolve their amount
-// from /api/charges, so an empty transactions array is correct for these tests.
-const TRANSACTIONS_BY_IDS_RESP: unknown[] = []
+// from /api/charges; the split_created row (entity_id 6001) resolves its
+// amount + date + description from this transactions response so the row-tap
+// test can assert the /transactions month/year/query filter.
+const TRANSACTIONS_BY_IDS_RESP: unknown[] = [
+  {
+    id: 6001,
+    user_id: 1,
+    type: 'expense',
+    account_id: 1,
+    amount: 4200,
+    operation_type: 'debit',
+    date: '2026-03-15T00:00:00-03:00',
+    description: 'Mercado',
+  },
+]
 
 // ── Route-mock helpers ──────────────────────────────────────────────────────────
 
@@ -385,6 +406,35 @@ test.describe('Inbox list: unread styling + row tap', () => {
     // Tap the unread charge_received row → should navigate to /charges
     await page.getByTestId(NotificationsTestIds.Row(UNREAD_NOTIF_1.id)).click()
     await page.waitForURL(/\/(charges|transactions)/, { timeout: 5000 })
+
+    await page.close()
+  })
+
+  test('tapping a transaction row navigates to /transactions filtered by its month/year/query', async ({
+    browser,
+  }) => {
+    const { page } = await freshAuthedPage(browser)
+    await installNotifMocks(page)
+
+    await page.goto('/notifications')
+    await page.waitForLoadState('networkidle')
+
+    // Reveal the page-2 split_created/transaction row (entity_id 6001).
+    await page.getByTestId(NotificationsTestIds.BtnLoadMore).click()
+    const splitRow = page.getByTestId(NotificationsTestIds.Row(SPLIT_NOTIF_3.id))
+    await expect(splitRow).toBeVisible({ timeout: 5000 })
+
+    // Tap it → /transactions filtered by the resolved transaction's date
+    // (2026-03-15 → month=3, year=2026) and description (query=Mercado).
+    await splitRow.click()
+    await page.waitForURL(
+      (url) =>
+        url.pathname === '/transactions' &&
+        url.searchParams.get('month') === '3' &&
+        url.searchParams.get('year') === '2026' &&
+        url.searchParams.get('query') === 'Mercado',
+      { timeout: 5000 },
+    )
 
     await page.close()
   })

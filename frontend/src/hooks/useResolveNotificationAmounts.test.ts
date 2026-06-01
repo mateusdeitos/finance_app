@@ -207,7 +207,12 @@ describe('useResolveNotificationAmounts', () => {
 
       await waitFor(() => {
         const entry = result.current.get('charge:42')
-        expect(entry).toEqual({ amount: 5000, amountState: 'known' })
+        expect(entry).toEqual({
+          amount: 5000,
+          amountState: 'known',
+          date: null,
+          description: null,
+        })
       })
     })
 
@@ -224,7 +229,12 @@ describe('useResolveNotificationAmounts', () => {
 
       await waitFor(() => {
         const entry = result.current.get('transaction:99')
-        expect(entry).toEqual({ amount: 15000, amountState: 'known' })
+        expect(entry).toEqual({
+          amount: 15000,
+          amountState: 'known',
+          date: '2026-05-30T00:00:00Z',
+          description: 'test',
+        })
       })
     })
   })
@@ -258,7 +268,12 @@ describe('useResolveNotificationAmounts', () => {
 
       await waitFor(() => {
         const entry = result.current.get('charge:11')
-        expect(entry).toEqual({ amount: null, amountState: 'missing' })
+        expect(entry).toEqual({
+          amount: null,
+          amountState: 'missing',
+          date: null,
+          description: null,
+        })
       })
     })
 

@@ -14,6 +14,8 @@ export namespace Notifications {
     entity_type: EntityType
     entity_id: number
     read: boolean
+    /** Persisted entity description (transaction/charge); omitted when null. */
+    description?: string
     created_at: string // ISO 8601
   }
 

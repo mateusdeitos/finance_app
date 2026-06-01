@@ -10,6 +10,7 @@ import {
 import { router } from '@/router'
 import { Notifications } from '@/types/notifications'
 import { deriveDeepLink } from '@/utils/pushDeepLink'
+import { buildTransactionSearchFromNotification } from '@/utils/notificationNavigation'
 import { describeNotification } from './describeNotification'
 import { type ResolvedAmount } from '@/hooks/useResolveNotificationAmounts'
 import { NotificationsTestIds } from '@/testIds'
@@ -84,15 +85,16 @@ export function NotificationRow({
   const typeConfig =
     NOTIF_TYPE_CONFIG[notification.type as Notifications.NotificationType] ?? FALLBACK_CONFIG
 
+  // The inbox API now persists the entity description on the notification row.
+  // Prefer it; fall back to the resolved entity's description when absent (older
+  // rows created before the column existed have no description).
+  const description = notification.description ?? resolved.description
+
   const desc = describeNotification(notification, {
     amount: resolved.amount,
     amountState: resolved.amountState,
     partnerName,
-    // description is not in the Notification type — charge_received copy with description
-    // is handled inside describeNotification when ctx.description is provided. Since the
-    // inbox API doesn't return a description field, we omit it here (produces the short
-    // "{who} te cobrou {amount}" variant, which is correct per UI-SPEC).
-    description: null,
+    description,
   })
 
   const timestamp = formatRelativeTime(notification.created_at)
@@ -102,7 +104,18 @@ export function NotificationRow({
     markRead(notification.id)
 
     // 2. Navigate to the related list page via the global router
-    //    (drawer roots lack RouterProvider — must use router directly)
+    //    (drawer roots lack RouterProvider — must use router directly).
+    //    For transaction entities, filter /transactions to the resolved
+    //    transaction's month/year and use its description as the text query.
+    if (notification.entity_type === 'transaction') {
+      const search = buildTransactionSearchFromNotification(resolved.date, description)
+      if (search != null) {
+        void router.navigate({ to: '/transactions', search })
+        onAfterTap?.()
+        return
+      }
+    }
+
     const to = deriveDeepLink({
       type: notification.type,
       entity_type: notification.entity_type,
