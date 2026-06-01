@@ -216,6 +216,8 @@ definitions:
     properties:
       created_at:
         type: string
+      description:
+        type: string
       entity_id:
         type: integer
       entity_type:

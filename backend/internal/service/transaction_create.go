@@ -112,6 +112,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 				EntityType:      "transaction",
 				EntityID:        entityID,
 				Amount:          notifAmt,
+				Description:     transaction.Description,
 				TxKind:          string(transaction.TransactionType),
 			})
 		}
@@ -141,6 +142,7 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 					EntityType:      "transaction",
 					EntityID:        lt.ID,
 					Amount:          lt.Amount,
+					Description:     transaction.Description,
 				})
 			}
 		}

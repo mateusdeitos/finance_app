@@ -241,6 +241,10 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	if callerUserID == chargerUserIDCopy {
 		recipientID = payerUserIDCopy
 	}
+	notifDescription := ""
+	if charge.Description != nil {
+		notifDescription = *charge.Description
+	}
 	//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
 	go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{{
 		RecipientUserID: recipientID,
@@ -249,6 +253,7 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 		EntityType:      "charge",
 		EntityID:        chargeID,
 		Amount:          amount,
+		Description:     notifDescription,
 	}})
 	return nil
 }

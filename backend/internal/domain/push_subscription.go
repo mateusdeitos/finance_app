@@ -30,13 +30,14 @@ type VapidPublicKeyResponse struct {
 }
 
 type Notification struct {
-	ID         int        `json:"id"`
-	UserID     int        `json:"user_id"`
-	Type       string     `json:"type"`
-	EntityType string     `json:"entity_type"`
-	EntityID   int        `json:"entity_id"`
-	Read       bool       `json:"read"`
-	CreatedAt  *time.Time `json:"created_at"`
+	ID          int        `json:"id"`
+	UserID      int        `json:"user_id"`
+	Type        string     `json:"type"`
+	EntityType  string     `json:"entity_type"`
+	EntityID    int        `json:"entity_id"`
+	Read        bool       `json:"read"`
+	Description *string    `json:"description,omitempty"`
+	CreatedAt   *time.Time `json:"created_at"`
 }
 
 // NotificationEvent is an in-memory struct populated by event sources and passed to

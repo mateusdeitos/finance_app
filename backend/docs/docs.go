@@ -3023,6 +3023,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "entity_id": {
                     "type": "integer"
                 },

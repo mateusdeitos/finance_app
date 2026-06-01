@@ -1414,6 +1414,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 				EntityType:      "transaction",
 				EntityID:        entityID,
 				Amount:          lo.FromPtr(data.req.Amount),
+				Description:     data.previousTransaction.Description,
 				TxKind:          string(data.previousTransaction.Type),
 			})
 		}
@@ -1437,6 +1438,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 				EntityType:      "transaction",
 				EntityID:        lt.ID, // deep-link to the (soft-deleted) linked tx
 				Amount:          lt.Amount,
+				Description:     data.previousTransaction.Description,
 			})
 		}
 
@@ -1461,6 +1463,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 				EntityType:      "transaction",
 				EntityID:        srcID,
 				Amount:          *data.req.Amount,
+				Description:     sourceTx.Description,
 			})
 		}
 	}

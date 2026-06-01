@@ -58,11 +58,19 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 
 	// 1. Persist all inbox rows first (always — even if no subscriptions exist).
 	for _, ev := range events {
+		// Persist the description so the inbox can render it. Store nil for empty
+		// descriptions to keep the column NULL rather than an empty string.
+		var description *string
+		if ev.Description != "" {
+			d := ev.Description
+			description = &d
+		}
 		_, err := s.notifRepo.Create(ctx, &domain.Notification{
-			UserID:     ev.RecipientUserID,
-			Type:       ev.Type,
-			EntityType: ev.EntityType,
-			EntityID:   ev.EntityID,
+			UserID:      ev.RecipientUserID,
+			Type:        ev.Type,
+			EntityType:  ev.EntityType,
+			EntityID:    ev.EntityID,
+			Description: description,
 		})
 		if err != nil {
 			log.Printf("[notification] failed to persist row: %v", err)
