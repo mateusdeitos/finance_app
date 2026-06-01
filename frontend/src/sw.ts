@@ -13,14 +13,25 @@ declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 // 1. Precache + cleanup outdated caches
 // ---------------------------------------------------------------------------
 cleanupOutdatedCaches();
-precacheAndRoute(self.__WB_MANIFEST);
+const manifest = self.__WB_MANIFEST;
+precacheAndRoute(manifest);
 
 // ---------------------------------------------------------------------------
 // 2. navigateFallback → /index.html
 //    Replaces the old generateSW `navigateFallback: "/index.html"` so
 //    deep-route hard refreshes still resolve the app shell.
+//
+//    Guarded: createHandlerBoundToURL("/index.html") THROWS when "/index.html"
+//    is not in the precache. In dev (`devOptions.enabled`) the injected
+//    manifest is empty, so registering this route unconditionally crashes the
+//    service worker on activation → navigator.serviceWorker.ready never
+//    resolves → the notification toggle hangs forever on "Aguardando...".
+//    Only register the navigation fallback when the precache is populated
+//    (i.e. production builds).
 // ---------------------------------------------------------------------------
-registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html")));
+if (manifest.length > 0) {
+  registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html")));
+}
 
 // ---------------------------------------------------------------------------
 // 3. Preserved auth-boot NetworkFirst cache
