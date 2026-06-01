@@ -126,3 +126,22 @@ func (r *notificationRepository) MarkAllRead(ctx context.Context, userID int) er
 		Where("user_id = ? AND read = false", userID).
 		Update("read", true).Error
 }
+
+func (r *notificationRepository) Delete(ctx context.Context, userID, notificationID int) error {
+	result := GetTxFromContext(ctx, r.db).
+		Where("id = ? AND user_id = ?", notificationID, userID).
+		Delete(&entity.Notification{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return pkgErrors.NotFound("notification")
+	}
+	return nil
+}
+
+func (r *notificationRepository) DeleteAllRead(ctx context.Context, userID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Where("user_id = ? AND read = true", userID).
+		Delete(&entity.Notification{}).Error
+}

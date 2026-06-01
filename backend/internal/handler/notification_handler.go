@@ -107,3 +107,43 @@ func (h *NotificationHandler) MarkAllRead(c echo.Context) error {
 	}
 	return c.NoContent(http.StatusNoContent)
 }
+
+// Delete godoc
+// @Summary      Delete a notification
+// @Description  Hard-deletes a single notification owned by the authenticated user
+// @Tags         notifications
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Notification ID"
+// @Success      204
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/notifications/{id} [delete]
+func (h *NotificationHandler) Delete(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid notification id")
+	}
+	if err := h.notifService.Delete(c.Request().Context(), userID, id); err != nil {
+		return HandleServiceError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// DeleteAllRead godoc
+// @Summary      Delete all read notifications
+// @Description  Hard-deletes every read notification owned by the authenticated user
+// @Tags         notifications
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      204
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/notifications/read [delete]
+func (h *NotificationHandler) DeleteAllRead(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+	if err := h.notifService.DeleteAllRead(c.Request().Context(), userID); err != nil {
+		return HandleServiceError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}

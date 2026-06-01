@@ -132,6 +132,8 @@ type NotificationRepository interface {
 	UnreadCount(ctx context.Context, userID int) (int64, error)
 	MarkRead(ctx context.Context, userID, notificationID int) error
 	MarkAllRead(ctx context.Context, userID int) error
+	Delete(ctx context.Context, userID, notificationID int) error
+	DeleteAllRead(ctx context.Context, userID int) error
 }
 
 // Repositories contains all repository interfaces

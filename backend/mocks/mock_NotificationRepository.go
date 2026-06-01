@@ -81,6 +81,101 @@ func (_c *MockNotificationRepository_Create_Call) RunAndReturn(run func(context.
 	return _c
 }
 
+// Delete provides a mock function with given fields: ctx, userID, notificationID
+func (_m *MockNotificationRepository) Delete(ctx context.Context, userID int, notificationID int) error {
+	ret := _m.Called(ctx, userID, notificationID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, userID, notificationID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNotificationRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockNotificationRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - notificationID int
+func (_e *MockNotificationRepository_Expecter) Delete(ctx interface{}, userID interface{}, notificationID interface{}) *MockNotificationRepository_Delete_Call {
+	return &MockNotificationRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, userID, notificationID)}
+}
+
+func (_c *MockNotificationRepository_Delete_Call) Run(run func(ctx context.Context, userID int, notificationID int)) *MockNotificationRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockNotificationRepository_Delete_Call) Return(_a0 error) *MockNotificationRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNotificationRepository_Delete_Call) RunAndReturn(run func(context.Context, int, int) error) *MockNotificationRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteAllRead provides a mock function with given fields: ctx, userID
+func (_m *MockNotificationRepository) DeleteAllRead(ctx context.Context, userID int) error {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteAllRead")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNotificationRepository_DeleteAllRead_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteAllRead'
+type MockNotificationRepository_DeleteAllRead_Call struct {
+	*mock.Call
+}
+
+// DeleteAllRead is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+func (_e *MockNotificationRepository_Expecter) DeleteAllRead(ctx interface{}, userID interface{}) *MockNotificationRepository_DeleteAllRead_Call {
+	return &MockNotificationRepository_DeleteAllRead_Call{Call: _e.mock.On("DeleteAllRead", ctx, userID)}
+}
+
+func (_c *MockNotificationRepository_DeleteAllRead_Call) Run(run func(ctx context.Context, userID int)) *MockNotificationRepository_DeleteAllRead_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockNotificationRepository_DeleteAllRead_Call) Return(_a0 error) *MockNotificationRepository_DeleteAllRead_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNotificationRepository_DeleteAllRead_Call) RunAndReturn(run func(context.Context, int) error) *MockNotificationRepository_DeleteAllRead_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx, filter
 func (_m *MockNotificationRepository) List(ctx context.Context, filter domain.NotificationFilter) (*domain.NotificationListResult, error) {
 	ret := _m.Called(ctx, filter)

@@ -1274,6 +1274,32 @@ paths:
       summary: List notifications
       tags:
       - notifications
+  /api/notifications/{id}:
+    delete:
+      description: Hard-deletes a single notification owned by the authenticated user
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete a notification
+      tags:
+      - notifications
   /api/notifications/{id}/read:
     post:
       parameters:
@@ -1297,6 +1323,23 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Mark a notification as read
+      tags:
+      - notifications
+  /api/notifications/read:
+    delete:
+      description: Hard-deletes every read notification owned by the authenticated
+        user
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete all read notifications
       tags:
       - notifications
   /api/notifications/read-all:

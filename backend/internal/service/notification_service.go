@@ -270,3 +270,14 @@ func (s *notificationService) MarkAllRead(ctx context.Context, userID int) error
 	}
 	return nil
 }
+
+func (s *notificationService) Delete(ctx context.Context, userID, notificationID int) error {
+	return s.notifRepo.Delete(ctx, userID, notificationID)
+}
+
+func (s *notificationService) DeleteAllRead(ctx context.Context, userID int) error {
+	if err := s.notifRepo.DeleteAllRead(ctx, userID); err != nil {
+		return pkgErrors.Internal("failed to delete read notifications", err)
+	}
+	return nil
+}

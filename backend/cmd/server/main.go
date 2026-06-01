@@ -273,6 +273,9 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandler
 	notifications.GET("/unread-count", h.notification.UnreadCount)
 	notifications.POST("/read-all", h.notification.MarkAllRead)
 	notifications.POST("/:id/read", h.notification.MarkRead)
+	// Static "/read" MUST be registered before "/:id" so "read" is not captured as :id.
+	notifications.DELETE("/read", h.notification.DeleteAllRead)
+	notifications.DELETE("/:id", h.notification.Delete)
 
 	// Settlements
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)

@@ -911,6 +911,181 @@ func (suite *NotificationServiceWithDBSuite) TestMarkAllRead() {
 }
 
 // ---------------------------------------------------------------------------
+// Inbox: TestDelete
+// ---------------------------------------------------------------------------
+
+func (suite *NotificationServiceWithDBSuite) TestDelete() {
+	ctx := context.Background()
+
+	actor, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	recipient, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	suite.Services.Notification.Dispatch(ctx, []domain.NotificationEvent{
+		{
+			RecipientUserID: recipient.ID,
+			ActorUserID:     actor.ID,
+			Type:            domain.NotificationTypeChargeReceived,
+			EntityType:      "charge",
+			EntityID:        500,
+		},
+	})
+
+	result, err := suite.Services.Notification.List(ctx, recipient.ID, domain.NotificationFilter{Limit: 10})
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(result.Items)
+
+	var notifID int
+	for _, n := range result.Items {
+		if n.EntityID == 500 {
+			notifID = n.ID
+			break
+		}
+	}
+	suite.Require().Greater(notifID, 0)
+
+	// Delete it
+	err = suite.Services.Notification.Delete(ctx, recipient.ID, notifID)
+	suite.Require().NoError(err)
+
+	// Row should be gone (hard delete)
+	result2, err := suite.Services.Notification.List(ctx, recipient.ID, domain.NotificationFilter{Limit: 10})
+	suite.Require().NoError(err)
+	for _, n := range result2.Items {
+		suite.NotEqual(notifID, n.ID, "deleted notification should not be returned")
+	}
+
+	// Deleting again should return NotFound (already gone)
+	err = suite.Services.Notification.Delete(ctx, recipient.ID, notifID)
+	suite.Require().Error(err)
+	suite.True(pkgErrors.IsNotFound(err), "deleting a missing notification should return NotFound, got: %v", err)
+}
+
+// ---------------------------------------------------------------------------
+// Inbox: TestDeleteIDOR
+// ---------------------------------------------------------------------------
+
+func (suite *NotificationServiceWithDBSuite) TestDeleteIDOR() {
+	ctx := context.Background()
+
+	actor, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	owner, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	attacker, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	suite.Services.Notification.Dispatch(ctx, []domain.NotificationEvent{
+		{
+			RecipientUserID: owner.ID,
+			ActorUserID:     actor.ID,
+			Type:            domain.NotificationTypeChargeReceived,
+			EntityType:      "charge",
+			EntityID:        510,
+		},
+	})
+
+	result, err := suite.Services.Notification.List(ctx, owner.ID, domain.NotificationFilter{Limit: 10})
+	suite.Require().NoError(err)
+	suite.Require().NotEmpty(result.Items)
+
+	var notifID int
+	for _, n := range result.Items {
+		if n.EntityID == 510 {
+			notifID = n.ID
+			break
+		}
+	}
+	suite.Require().Greater(notifID, 0)
+
+	// Attacker tries to delete owner's notification — should fail with NotFound
+	err = suite.Services.Notification.Delete(ctx, attacker.ID, notifID)
+	suite.Require().Error(err)
+	suite.True(pkgErrors.IsNotFound(err), "IDOR: attacker should get NotFound, got: %v", err)
+
+	// Owner's notification should still exist
+	result2, err := suite.Services.Notification.List(ctx, owner.ID, domain.NotificationFilter{Limit: 10})
+	suite.Require().NoError(err)
+	found := false
+	for _, n := range result2.Items {
+		if n.ID == notifID {
+			found = true
+			break
+		}
+	}
+	suite.True(found, "owner's notification should survive an IDOR delete attempt")
+}
+
+// ---------------------------------------------------------------------------
+// Inbox: TestDeleteAllRead
+// ---------------------------------------------------------------------------
+
+func (suite *NotificationServiceWithDBSuite) TestDeleteAllRead() {
+	ctx := context.Background()
+
+	actor, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userX, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userY, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	// Dispatch 3 notifications to userX
+	for i := 0; i < 3; i++ {
+		suite.Services.Notification.Dispatch(ctx, []domain.NotificationEvent{
+			{
+				RecipientUserID: userX.ID,
+				ActorUserID:     actor.ID,
+				Type:            domain.NotificationTypeChargeReceived,
+				EntityType:      "charge",
+				EntityID:        600 + i,
+			},
+		})
+	}
+
+	// Dispatch 1 notification to userY (control: must not be touched)
+	suite.Services.Notification.Dispatch(ctx, []domain.NotificationEvent{
+		{
+			RecipientUserID: userY.ID,
+			ActorUserID:     actor.ID,
+			Type:            domain.NotificationTypeChargeReceived,
+			EntityType:      "charge",
+			EntityID:        700,
+		},
+	})
+
+	resultX, err := suite.Services.Notification.List(ctx, userX.ID, domain.NotificationFilter{Limit: 100})
+	suite.Require().NoError(err)
+	suite.Require().GreaterOrEqual(len(resultX.Items), 3)
+
+	// Mark only one of userX's notifications as read
+	readID := resultX.Items[0].ID
+	err = suite.Services.Notification.MarkRead(ctx, userX.ID, readID)
+	suite.Require().NoError(err)
+
+	// DeleteAllRead for userX
+	err = suite.Services.Notification.DeleteAllRead(ctx, userX.ID)
+	suite.Require().NoError(err)
+
+	// The read row is gone; the unread rows remain
+	resultX2, err := suite.Services.Notification.List(ctx, userX.ID, domain.NotificationFilter{Limit: 100})
+	suite.Require().NoError(err)
+	for _, n := range resultX2.Items {
+		suite.NotEqual(readID, n.ID, "the read notification should have been deleted")
+		suite.False(n.Read, "only unread notifications should remain for userX")
+	}
+	suite.Len(resultX2.Items, len(resultX.Items)-1, "exactly one (read) notification should be removed")
+
+	// DeleteAllRead with zero read rows must not error (mirror MarkAllRead)
+	err = suite.Services.Notification.DeleteAllRead(ctx, userX.ID)
+	suite.Require().NoError(err)
+
+	// userY's notification must be untouched
+	suite.Equal(1, suite.countNotifications(ctx, userY.ID), "userY's notifications must be untouched")
+}
+
+// ---------------------------------------------------------------------------
 // Inbox: TestCursorPagination
 // ---------------------------------------------------------------------------
 
