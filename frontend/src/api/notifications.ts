@@ -25,6 +25,14 @@ export async function fetchNotificationUnreadCount(): Promise<Notifications.Unre
   return res.json()
 }
 
+export async function sendTestNotification(): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/notifications/test`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok) throw new Error('Failed to send test notification')
+}
+
 export async function markNotificationRead(id: number): Promise<void> {
   const res = await fetch(`${apiUrl}/api/notifications/${id}/read`, {
     method: 'POST',

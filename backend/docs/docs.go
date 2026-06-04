@@ -967,6 +967,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/notifications/test": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sends a sample push notification to the authenticated user's own subscriptions so they can preview how notifications render. Does not persist an inbox row.",
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Send a test notification",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/notifications/unread-count": {
             "get": {
                 "security": [

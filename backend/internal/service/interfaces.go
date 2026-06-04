@@ -98,6 +98,10 @@ type NotificationService interface {
 	// Dispatch persists inbox rows and sends push notifications best-effort.
 	// Always called in a goroutine with context.Background() — never the request ctx.
 	Dispatch(ctx context.Context, events []domain.NotificationEvent)
+	// SendTest delivers a sample push notification to the user's own
+	// subscriptions so they can preview how notifications render. Display-only:
+	// no inbox row is persisted.
+	SendTest(ctx context.Context, userID int) error
 	List(ctx context.Context, userID int, filter domain.NotificationFilter) (*domain.NotificationListResult, error)
 	UnreadCount(ctx context.Context, userID int) (int64, error)
 	MarkRead(ctx context.Context, userID, notificationID int) error

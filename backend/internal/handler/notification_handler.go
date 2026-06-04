@@ -70,6 +70,24 @@ func (h *NotificationHandler) UnreadCount(c echo.Context) error {
 	return c.JSON(http.StatusOK, domain.NotificationUnreadCountResponse{Count: count})
 }
 
+// SendTest godoc
+// @Summary      Send a test notification
+// @Description  Sends a sample push notification to the authenticated user's own subscriptions so they can preview how notifications render. Does not persist an inbox row.
+// @Tags         notifications
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/notifications/test [post]
+func (h *NotificationHandler) SendTest(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+	if err := h.notifService.SendTest(c.Request().Context(), userID); err != nil {
+		return HandleServiceError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // MarkRead godoc
 // @Summary      Mark a notification as read
 // @Tags         notifications

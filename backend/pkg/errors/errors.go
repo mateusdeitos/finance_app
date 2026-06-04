@@ -78,6 +78,8 @@ const (
 
 	ErrorTagSettlementForbidden      ErrorTag = "SETTLEMENT.FORBIDDEN"
 	ErrorTagSettlementDateIsRequired ErrorTag = "SETTLEMENT.DATE_IS_REQUIRED"
+
+	ErrorTagNoActivePushSubscription ErrorTag = "NOTIFICATION.NO_ACTIVE_PUSH_SUBSCRIPTION"
 )
 
 var (
@@ -140,6 +142,8 @@ var (
 	ErrChargeTransactionRecurrenceNotAllowed       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionRecurrenceNotAllowed)}, "recurrence cannot be added to a transaction linked to a charge")
 	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
+
+	ErrNoActivePushSubscription = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagNoActivePushSubscription)}, "no active push subscription for this user")
 )
 
 // ServiceError represents a service-level error with a code and message
