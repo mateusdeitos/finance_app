@@ -318,7 +318,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 		suite.Assert().Equal(user.ID, debitTransactions[i].UserID, fmt.Sprintf("debitTransactions[%d].UserID should be %d", i, user.ID))
 		suite.Assert().Equal(user.ID, lo.FromPtr(debitTransactions[i].OriginalUserID), fmt.Sprintf("debitTransactions[%d].OriginalUserID should be %d", i, user.ID))
 		suite.Assert().Equal(int64(100), int64(debitTransactions[i].Amount), fmt.Sprintf("debitTransactions[%d].Amount should be %d", i, 100))
-		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), debitTransactions[i].Date, fmt.Sprintf("debitTransactions[%d].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
+		expectedTxDate := clampToEndOfMonth(transaction.Date.Time, transaction.Date.Year(), transaction.Date.Month()+time.Month(i))
+		suite.Assert().Equal(expectedTxDate, debitTransactions[i].Date, fmt.Sprintf("debitTransactions[%d].Date should be %s", i, expectedTxDate))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, debitTransactions[i].Type, fmt.Sprintf("debitTransactions[%d].Type should be %s", i, domain.TransactionTypeTransfer))
 		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(debitTransactions[i].InstallmentNumber), fmt.Sprintf("debitTransactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
 		suite.Assert().Equal(account1.ID, debitTransactions[i].AccountID, fmt.Sprintf("debitTransactions[%d].AccountID should be %d", i, account1.ID))
@@ -327,7 +328,7 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringCreateTransfer() {
 
 		suite.Assert().Equal(account2.ID, debitTransactions[i].LinkedTransactions[0].AccountID, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].AccountID should be %d", i, account2.ID))
 		suite.Assert().Equal(int64(100), int64(debitTransactions[i].LinkedTransactions[0].Amount), fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Amount should be %d", i, 100))
-		suite.Assert().Equal(transaction.Date.AddDate(0, i, 0), debitTransactions[i].LinkedTransactions[0].Date, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Date should be %s", i, transaction.Date.AddDate(0, i, 0)))
+		suite.Assert().Equal(expectedTxDate, debitTransactions[i].LinkedTransactions[0].Date, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Date should be %s", i, expectedTxDate))
 		suite.Assert().Equal(transaction.Description, debitTransactions[i].LinkedTransactions[0].Description, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Description should be %s", i, transaction.Description))
 		suite.Assert().Equal(domain.TransactionTypeTransfer, debitTransactions[i].LinkedTransactions[0].Type, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].Type should be %s", i, domain.TransactionTypeTransfer))
 		suite.Assert().Equal(user.ID, debitTransactions[i].LinkedTransactions[0].UserID, fmt.Sprintf("debitTransactions[%d].LinkedTransactions[0].UserID should be %d", i, user.ID))
@@ -773,7 +774,6 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 	weeklyDate := d
 	weeklyInstallment := 1
 
-	monthlyDate := d
 	monthlyInstallment := 1
 
 	yearlyDate := d
@@ -807,9 +807,12 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseWithRep
 		}
 
 		if t.Description == "Test monthly expense" {
-			suite.Assert().Equal(t.Date, monthlyDate, "monthly date")
+			// Production computes each monthly occurrence as clampToEndOfMonth from
+			// the ORIGINAL base date (d), not incrementally — this avoids Go's
+			// AddDate end-of-month overflow (e.g. May 31 + 1mo → Jul 1). Mirror it.
+			expectedMonthly := clampToEndOfMonth(d, d.Year(), d.Month()+time.Month(monthlyInstallment-1))
+			suite.Assert().Equal(t.Date, expectedMonthly, "monthly date")
 			suite.Assert().Equal(lo.FromPtr(t.InstallmentNumber), monthlyInstallment, "monthly installment")
-			monthlyDate = monthlyDate.AddDate(0, 1, 0)
 			monthlyInstallment++
 			continue
 		}
@@ -1508,8 +1511,9 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom1of
 	for i := range 5 {
 		// TST-01: installments numbered 1 through 5
 		suite.Assert().Equal(i+1, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, i+1))
-		// TST-03: date of installment N = baseDate + (N - current_installment) * 1 month
-		expectedDate := baseDate.AddDate(0, i, 0)
+		// TST-03: date of installment N = baseDate + (N - current_installment) * 1 month,
+		// clamped to end-of-month like production (avoids AddDate overflow at month boundaries).
+		expectedDate := clampToEndOfMonth(baseDate, baseDate.Year(), baseDate.Month()+time.Month(i))
 		suite.Assert().Equal(expectedDate, transactions[i].Date, fmt.Sprintf("transactions[%d].Date should be %s (baseDate + %d months)", i, expectedDate, i))
 		// Each installment must have a recurrence ID
 		suite.Assert().NotNil(transactions[i].TransactionRecurrenceID, fmt.Sprintf("transactions[%d].TransactionRecurrenceID should not be nil", i))
@@ -1576,7 +1580,8 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom3of
 	for i := range 8 {
 		expectedInstallmentNumber := i + 3
 		suite.Assert().Equal(expectedInstallmentNumber, lo.FromPtr(transactions[i].InstallmentNumber), fmt.Sprintf("transactions[%d].InstallmentNumber should be %d", i, expectedInstallmentNumber))
-		expectedDate := baseDate.AddDate(0, i, 0)
+		// Clamp to end-of-month like production (avoids AddDate overflow at month boundaries).
+		expectedDate := clampToEndOfMonth(baseDate, baseDate.Year(), baseDate.Month()+time.Month(i))
 		suite.Assert().Equal(expectedDate, transactions[i].Date, fmt.Sprintf("transactions[%d].Date should be %s (baseDate + %d months)", i, expectedDate, i))
 		suite.Assert().NotNil(transactions[i].TransactionRecurrenceID, fmt.Sprintf("transactions[%d].TransactionRecurrenceID should not be nil", i))
 	}

@@ -32,14 +32,23 @@ microsoft_callback_url = "https://api.example.com/auth/microsoft/callback"
 app_url      = "https://api.finance-app.mateusdeitos.dev"
 frontend_url = "https://finance-app.mateusdeitos.dev"
 
+# ── Web Push / VAPID (public key + subject são NÃO-sensíveis) ─────────────────
+# Gere o par com:  npx web-push generate-vapid-keys
+# A pública entra aqui; a privada vai pro Secret Manager (ver abaixo).
+# ATENÇÃO: gere o par UMA vez e mantenha estável — trocar a pública invalida
+# todas as inscrições push já existentes dos usuários.
+vapid_public_key = "B..."                                  # public key (base64url, ~87 chars)
+vapid_subject    = "mailto:matdeitos@gmail.com"            # contato (mailto: ou https://) — RFC 8292
+
 # ── Secrets (gerenciados pelo Secret Manager, NÃO entram aqui) ────────────────
 #
 # Após rodar `terraform apply`, adicione os valores dos secrets com:
 #
-#   echo -n "VALUE" | gcloud secrets versions add backend-db-password        --data-file=-
-#   echo -n "VALUE" | gcloud secrets versions add backend-jwt-secret         --data-file=-
-#   echo -n "VALUE" | gcloud secrets versions add backend-oauth-session-secret --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add DB_PASSWORD          --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add JWT_SECRET           --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add OAUTH_SESSION_SECRET --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add VAPID_PRIVATE_KEY    --data-file=-
 #
 # OAuth (adicionar string vazia se o provider não for usado):
-#   echo -n "VALUE" | gcloud secrets versions add backend-google-client-secret    --data-file=-
-#   echo -n ""      | gcloud secrets versions add backend-microsoft-client-secret --data-file=-
+#   echo -n "VALUE" | gcloud secrets versions add GOOGLE_CLIENT_SECRET    --data-file=-
+#   echo -n ""      | gcloud secrets versions add MICROSOFT_CLIENT_SECRET --data-file=-

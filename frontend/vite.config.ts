@@ -22,32 +22,22 @@ export default defineConfig({
     tanstackRouter({ routesDirectory: "./src/routes", generatedRouteTree: "./src/routeTree.gen.ts" }),
     react(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "prompt",
       injectRegister: false,
       devOptions: {
-        enabled: false,
+        // Enable the service worker under `npm run dev` so the Web Push flow
+        // (subscribe → navigator.serviceWorker.ready) works locally. With this
+        // off, serviceWorker.ready never resolves and the toggle hangs on
+        // "Aguardando permissão...". `type: "module"` is required for an
+        // injectManifest TS service worker in dev.
+        enabled: true,
+        type: "module",
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        cleanupOutdatedCaches: true,
-        navigateFallback: "/index.html",
-        // Cache do boot de autenticação: serve a resposta anterior
-        // imediatamente se o backend (Cloud Run) demorar mais que 2s para
-        // responder, evitando tela branca durante cold start.
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) =>
-              url.pathname === "/api/auth/me" ||
-              url.pathname === "/api/onboarding/status",
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "auth-boot",
-              networkTimeoutSeconds: 2,
-              expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
       manifest: {
         name: "FinanceApp",

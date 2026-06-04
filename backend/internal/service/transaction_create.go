@@ -55,6 +55,103 @@ func (s *transactionService) Create(ctx context.Context, userID int, transaction
 		return 0, pkgErrors.Internal("failed to commit transaction", err)
 	}
 
+	// NOTIF-03: fire split_created for each partner after commit.
+	// Guard matches the settlement guard at createTransactions:252 — shared-account
+	// paths and transfers are excluded (Pitfall 4).
+	if transaction.SharedAccountConnection == nil &&
+		transaction.TransactionType != domain.TransactionTypeTransfer &&
+		len(transaction.SplitSettings) > 0 {
+		// The recipient's notification must deep-link to the transaction the
+		// RECIPIENT owns — the linked tx injected on their connection account —
+		// not the author's private tx `id` (which the recipient can't fetch, so
+		// the inbox /by-ids resolution returns empty). Re-fetch the author tx
+		// with its linked transactions (IDs are populated post-Create) and map
+		// each partner's owned linked-tx id by UserID. Mirrors the update path.
+		linkedTxIDByRecipient := make(map[int]int)
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if authorTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{id}}); err == nil && authorTx != nil {
+			for _, lt := range authorTx.LinkedTransactions {
+				if lt.UserID != userID {
+					linkedTxIDByRecipient[lt.UserID] = lt.ID
+				}
+			}
+		}
+
+		var events []domain.NotificationEvent
+		for _, ss := range transaction.SplitSettings {
+			if ss.UserConnection == nil {
+				continue
+			}
+			recipientID := ss.UserConnection.ToUserID
+			if recipientID == userID {
+				recipientID = ss.UserConnection.FromUserID
+			}
+			if recipientID == userID {
+				continue // skip self
+			}
+			entityID, ok := linkedTxIDByRecipient[recipientID]
+			if !ok {
+				// No linked tx owned by this recipient — skip rather than emit a
+				// notification pointing at a tx the recipient can't resolve.
+				continue
+			}
+			var notifAmt int64
+			switch {
+			case ss.Amount != nil && *ss.Amount > 0:
+				notifAmt = *ss.Amount
+			case ss.Percentage != nil:
+				// Use the same formula as calculateAmount so the push amount matches the persisted linked transaction amount.
+				notifAmt = int64(float64(transaction.Amount) * float64(*ss.Percentage) / 100)
+			default:
+				notifAmt = transaction.Amount
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: recipientID,
+				ActorUserID:     userID,
+				Type:            domain.NotificationTypeSplitCreated,
+				EntityType:      "transaction",
+				EntityID:        entityID,
+				Amount:          notifAmt,
+				Description:     transaction.Description,
+				TxKind:          string(transaction.TransactionType),
+			})
+		}
+		if len(events) > 0 {
+			//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+			go s.services.Notification.Dispatch(context.Background(), events)
+		}
+	}
+
+	// NOTIF-05: fire transfer_received when this is a cross-user transfer. A
+	// cross-user transfer injects a linked tx on the DESTINATION user's
+	// connection account (UserID != author); a same-user transfer between the
+	// author's own accounts injects a linked tx still owned by the author, so it
+	// is correctly skipped by the `lt.UserID != userID` filter below.
+	if transaction.TransactionType == domain.TransactionTypeTransfer {
+		var events []domain.NotificationEvent
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if authorTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{id}}); err == nil && authorTx != nil {
+			for _, lt := range authorTx.LinkedTransactions {
+				if lt.UserID == userID {
+					continue // author's own legs (e.g. the from-side credit) — not a recipient
+				}
+				events = append(events, domain.NotificationEvent{
+					RecipientUserID: lt.UserID,
+					ActorUserID:     userID,
+					Type:            domain.NotificationTypeTransferReceived,
+					EntityType:      "transaction",
+					EntityID:        lt.ID,
+					Amount:          lt.Amount,
+					Description:     transaction.Description,
+				})
+			}
+		}
+		if len(events) > 0 {
+			//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+			go s.services.Notification.Dispatch(context.Background(), events)
+		}
+	}
+
 	return id, nil
 }
 

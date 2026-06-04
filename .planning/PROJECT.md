@@ -57,33 +57,41 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ Payload contains only `connection_id` + `amount` (never `percentage`) — v1.4
 - ✓ Linked/unsplittable transactions silently skipped in bulk batch — v1.4
 - ✓ BulkProgressDrawer reused for sequential per-transaction updates — v1.4
+- ✓ Reproducible CSV fixtures (50/200/500 rows) + React DevTools Profiler baseline — v1.5
+- ✓ Page-level `useWatch({ name: 'rows' })` replaced by `compute`-scoped subscriptions — v1.5
+- ✓ `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
+- ✓ `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
+- ✓ Import e2e suite green after perf rework (keystroke 761ms→3.5ms / 929ms→5.6ms) — v1.5
 
 ### Active
 
-- [ ] Reproducible CSV fixtures (50/200/500 rows) and a documented React DevTools Profiler baseline — v1.5
-- [ ] Page-level `useWatch({ name: 'rows' })` replaced by `compute`-scoped subscriptions — v1.5
-- [ ] `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
-- [ ] `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
-- [ ] Import review table virtualized via `@tanstack/react-virtual` (CSS-grid layout) — v1.5
-- [ ] Validation-error scroll preserved across virtualization (`scrollToIndex` + ref scroll) — v1.5
-- [ ] Existing import e2e suite + new "edit after scroll" e2e on >100-row CSV pass — v1.5
+- [ ] Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
+- [ ] Notify the charge recipient when the partner creates a new charge — v1.6
+- [ ] Notify the charge creator when the partner accepts their charge — v1.6
+- [ ] Notify the partner when a new split transaction is created on their side — v1.6
+- [ ] Notify the partner when a split transaction is updated in a way that affects their side — v1.6
+- [ ] Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
+- [ ] In-app notification inbox with read/unread state and open-entity navigation — v1.6
+- [ ] Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
 
 ### Deferred (from v1.3)
 
 - [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
 - [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
 
-## Current Milestone: v1.5 Import Transactions Performance
+## Current Milestone: v1.6 Push Notifications
 
-**Goal:** Eliminate per-keystroke lag on the transaction import review screen and keep large CSVs (200+ rows) fluid via virtualization, while preserving every existing form behavior, popover, and validation flow.
+**Goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
+
+**Progress:** Phase 22 (Backend Subscription Foundation) complete — `push_subscriptions`/`notifications` tables, VAPID config + fail-fast startup, and POST/DELETE/GET `/api/push-subscriptions` with endpoint-only upsert and admin prune capability (SUB-03, SUB-04). Phase 24 UI design contract (UI-SPEC) approved. Next: Phase 23 (notification events + inbox API).
 
 **Target features:**
-- Baseline profiling: reproducible 50/200/500-row CSV fixtures + React DevTools Profiler measurements (numeric before/after evidence)
-- Granular form subscriptions: replace page-level `useWatch({ name: 'rows' })` with `compute`-scoped watchers; row-side stays unchanged
-- Stable Mantine `Select.data` references via TanStack Query `select` callbacks (`categoryOptions`/`accountOptions`/`sharedAccounts`)
-- Debounced + scoped `useDuplicateTransactionCheck` (no per-keystroke fan-out across hundreds of rows)
-- Virtualized import review table with `@tanstack/react-virtual` (CSS grid layout replacing `<Table>`); validation-error scroll, popovers/portals, and forwardRef behavior preserved
-- E2E coverage: existing import suite still green + new ">100-row edit-after-scroll" test that proves form state survives virtualization unmount/remount
+- Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
+- Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
+- Persisted, context-aware notifications: each saved server-side with a deep-link to its entity (charge/transaction)
+- In-app notification inbox with read/unread state and "open entity" navigation to the related charge/transaction
+- Synchronous best-effort dispatch: push is sent after the DB commit (goroutine, no queue/retry); a failed send is tolerated, not retried
+- Minimal user control: browser permission prompt + enable/disable notifications on the current device (no per-type toggles)
 
 ### Out of Scope
 
@@ -97,6 +105,11 @@ Partners can accurately track shared finances, including in-progress installment
 - Switching off `<table>` semantics globally — only the import review screen migrates to a CSS-grid virtualized layout
 - Replacing React Hook Form or Mantine — performance fixes work within the existing stack
 - Speculative micro-optimizations (manual `useMemo`/`useCallback` everywhere) — `babel-plugin-react-compiler` is already active; we only intervene where the compiler cannot help (subscriptions, query derivations, scaling)
+- Import review table virtualization (`@tanstack/react-virtual`) — Phase 20 skipped post-gate; perf goals were met without it (v1.5)
+- Queued / retried push delivery (e.g. Cloud Tasks) — v1.6 dispatches synchronously best-effort; durability deferred
+- Per-notification-type preference toggles — v1.6 ships minimal device-level enable/disable only
+- Charge reject / cancel notifications — only "received" and "accepted" are in scope per issue #174
+- Email / SMS / native FCM / APN delivery channels — v1.6 is Web Push (PWA) only
 
 ## Context
 
@@ -130,6 +143,10 @@ Partners can accurately track shared finances, including in-progress installment
 | Two-phase performance approach (root cause first, then virtualization) | Virtualization without fixing re-render cascade still pays cost on visible rows             | TBD |
 | CSS Grid layout for virtualized import table (not `<table>`)           | TanStack Virtual requires absolute-positioned rows; `<table>` semantics fight that          | TBD |
 | Defer per-row manual memoization in v1.5                               | `babel-plugin-react-compiler` already auto-memoizes; manual useMemo/useCallback adds noise  | TBD |
+| Web Push (VAPID) over native FCM/APN for v1.6                          | App is already a PWA (vite-plugin-pwa); web push reuses existing service worker, no native shells | TBD |
+| Synchronous best-effort push dispatch (goroutine after commit)         | No async/job infra exists; Cloud Run is stateless; avoids Cloud Tasks IAM setup for v1.6        | TBD |
+| Persist notifications with entity deep-link                            | User wants to navigate from a notification to the charge/transaction it refers to               | TBD |
+| Fire push only after DB commit succeeds                                | Guarantees the referenced entity exists before notifying; avoids notifying on rolled-back txns  | TBD |
 
 ## Constraints
 
@@ -143,4 +160,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-05-05 — v1.4 shipped (Phases 13–15); v1.5 started (Import Transactions Performance)_
+_Last updated: 2026-05-30 — v1.6 in progress: Phase 22 (Backend Subscription Foundation) complete, Phase 24 UI-SPEC approved_

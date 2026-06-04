@@ -220,7 +220,19 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		}
 	}
 
-	return s.dbTransaction.Commit(ctx)
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return err
+	}
+
+	// NOTIF-04: fire split_updated for partner-initiated edits that affect the
+	// linked side (amount / split add / split remove). Cosmetic edits (D-02) and
+	// self-edits (D-03) fire nothing — guarded inside the helper.
+	// Pass context.Background() to make the post-commit boundary explicit: the
+	// txCtx is spent after Commit and any future DB reads inside the helper must
+	// not silently use the completed transaction.
+	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
+	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
+	return nil
 }
 
 func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, data *transactionUpdateData) (updateChanges, error) {
@@ -1338,4 +1350,126 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 	}
 
 	return errs
+}
+
+// maybeDispatchSplitUpdatedNotification fires split_updated notifications for
+// partner-initiated edits that affect the linked split side. It is called after
+// the DB transaction commits (NOTIF-04).
+//
+// Detection rules (D-01 through D-04):
+//   - D-01: fires only on AddedSplit / RemovedSplit / linked-side amount change.
+//   - D-02: cosmetic-only edits (category/description/date) hit no switch arm → no fire.
+//   - D-03: self-edit guard — the original author editing their own tx never notifies.
+//   - D-04: remove still notifies; entity_id points to the (soft-deleted) linked tx.
+func (s *transactionService) maybeDispatchSplitUpdatedNotification(
+	ctx context.Context,
+	callerUserID int,
+	sourceIDs []int,
+	data *transactionUpdateData,
+) {
+	changes := data.scenario
+	var events []domain.NotificationEvent
+
+	switch {
+	case changes.AddedSplit():
+		// D-03: only fire when partner-initiated (caller != original author).
+		// Explicitly check for nil to avoid lo.FromPtr returning 0, which would
+		// cause the guard to never fire for legacy rows with nil OriginalUserID.
+		if data.previousTransaction.OriginalUserID != nil &&
+			callerUserID == *data.previousTransaction.OriginalUserID {
+			return
+		}
+		// The recipient must deep-link to the linked tx THEY own (just created on
+		// their connection account), not the author's source tx — which the
+		// recipient can't fetch (inbox /by-ids returns empty). Re-fetch the source
+		// with its freshly-created linked transactions and map by UserID.
+		linkedTxIDByRecipient := make(map[int]int)
+		//nolint:contextcheck // intentional detached context — runs post-commit, must use a fresh connection (NOTIF-06)
+		if srcTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{IDs: []int{data.previousTransaction.ID}}); err == nil && srcTx != nil {
+			for _, lt := range srcTx.LinkedTransactions {
+				if lt.UserID != callerUserID {
+					linkedTxIDByRecipient[lt.UserID] = lt.ID
+				}
+			}
+		}
+		for _, ss := range data.req.SplitSettings {
+			if ss.UserConnection == nil {
+				continue
+			}
+			recipientID := ss.UserConnection.ToUserID
+			if recipientID == callerUserID {
+				recipientID = ss.UserConnection.FromUserID
+			}
+			if recipientID == callerUserID {
+				continue
+			}
+			entityID, ok := linkedTxIDByRecipient[recipientID]
+			if !ok {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: recipientID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        entityID,
+				Amount:          lo.FromPtr(data.req.Amount),
+				Description:     data.previousTransaction.Description,
+				TxKind:          string(data.previousTransaction.Type),
+			})
+		}
+
+	case changes.RemovedSplit():
+		// D-03: only fire when partner-initiated; D-04: removal still notifies.
+		// Explicitly check for nil to avoid lo.FromPtr returning 0, which would
+		// cause the guard to never fire for legacy rows with nil OriginalUserID.
+		if data.previousTransaction.OriginalUserID != nil &&
+			callerUserID == *data.previousTransaction.OriginalUserID {
+			return
+		}
+		for _, lt := range data.previousTransaction.LinkedTransactions {
+			if lt.UserID == callerUserID {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: lt.UserID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        lt.ID, // deep-link to the (soft-deleted) linked tx
+				Amount:          lt.Amount,
+				Description:     data.previousTransaction.Description,
+			})
+		}
+
+	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0:
+		// Caller IS the partner editing their linked tx amount.
+		// Recipient = source transaction owner.
+		for _, srcID := range sourceIDs {
+			//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
+			sourceTx, err := s.transactionRepo.SearchOne(context.Background(), domain.TransactionFilter{
+				IDs: []int{srcID},
+			})
+			if err != nil || sourceTx == nil {
+				continue
+			}
+			if sourceTx.UserID == callerUserID {
+				continue
+			}
+			events = append(events, domain.NotificationEvent{
+				RecipientUserID: sourceTx.UserID,
+				ActorUserID:     callerUserID,
+				Type:            domain.NotificationTypeSplitUpdated,
+				EntityType:      "transaction",
+				EntityID:        srcID,
+				Amount:          *data.req.Amount,
+				Description:     sourceTx.Description,
+			})
+		}
+	}
+
+	if len(events) > 0 {
+		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+		go s.services.Notification.Dispatch(context.Background(), events)
+	}
 }

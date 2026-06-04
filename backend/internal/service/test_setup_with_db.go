@@ -61,6 +61,8 @@ type ServiceTestWithDBSuite struct {
 	UserConnectionRepository        repository.UserConnectionRepository
 	SettlementRepository            repository.SettlementRepository
 	ChargeRepository                repository.ChargeRepository
+	PushSubscriptionRepository      repository.PushSubscriptionRepository
+	NotificationRepository          repository.NotificationRepository
 }
 
 var initDb sync.Once
@@ -100,6 +102,8 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.UserConnectionRepository = repository.NewUserConnectionRepository(suite.DB)
 	suite.SettlementRepository = repository.NewSettlementRepository(suite.DB)
 	suite.ChargeRepository = repository.NewChargeRepository(suite.DB)
+	suite.PushSubscriptionRepository = repository.NewPushSubscriptionRepository(suite.DB)
+	suite.NotificationRepository = repository.NewNotificationRepository(suite.DB)
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -115,9 +119,14 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		UserConnection:        suite.UserConnectionRepository,
 		Settlement:            suite.SettlementRepository,
 		Charge:                suite.ChargeRepository,
+		PushSubscription:      suite.PushSubscriptionRepository,
+		Notification:          suite.NotificationRepository,
 	}
 
-	// Create test config for AuthService
+	// Create test config for AuthService.
+	// VAPID is intentionally empty: Phase 22 tests do not exercise send paths.
+	// Phase 23 integration tests must supply valid VAPID keys via suite.Config.VAPID
+	// before running any test that calls the push-delivery logic.
 	suite.Config = &config.Config{
 		JWT: config.JWTConfig{
 			Secret:          "test-secret-key-for-testing-only",
@@ -149,6 +158,8 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.Services.Transaction = transactionService
 	suite.Services.UserConnection = userConnectionService
 	suite.Services.Charge = NewChargeService(suite.Repos, suite.Services)
+	suite.Services.PushSubscription = NewPushSubscriptionService(suite.Repos, suite.Config)
+	suite.Services.Notification = NewNotificationService(suite.Repos, suite.Config)
 }
 
 func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domain.User, error) {

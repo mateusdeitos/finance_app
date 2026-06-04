@@ -198,6 +198,27 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+
+      # ── Web Push / VAPID ──────────────────────────────────────────────────
+      # Backend fails fast at startup if any of the three are missing.
+      # Public key + subject are non-sensitive; private key → Secret Manager.
+      env {
+        name  = "VAPID_PUBLIC_KEY"
+        value = var.vapid_public_key
+      }
+      env {
+        name  = "VAPID_SUBJECT"
+        value = var.vapid_subject
+      }
+      env {
+        name = "VAPID_PRIVATE_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.vapid_private_key.secret_id
+            version = "latest"
+          }
+        }
+      }
     }
   }
 

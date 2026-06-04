@@ -10,6 +10,7 @@ import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { useServiceWorkerNavigation } from "@/hooks/useServiceWorkerNavigation";
 import { renderDrawer } from "@/utils/renderDrawer";
 
 const MOBILE_HEADER_HEIGHT = 50;
@@ -20,6 +21,9 @@ export function AppLayout() {
   const user = meQuery.data;
   const { mutation: logoutMutation } = useLogout();
   const isMobile = useIsMobile();
+
+  // Mount the SW navigation listener once high in the authenticated tree (Plan 03 contract).
+  useServiceWorkerNavigation();
 
   return (
     <AppShell

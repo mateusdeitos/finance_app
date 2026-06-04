@@ -542,6 +542,16 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Filter by charge IDs",
+                        "name": "id[]",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Limit",
                         "name": "limit",
@@ -854,6 +864,227 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns paginated notifications for the authenticated user, newest first",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "List notifications",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.NotificationListResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifications/read": {
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hard-deletes every read notification owned by the authenticated user",
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Delete all read notifications",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifications/read-all": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark all notifications as read",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifications/unread-count": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Get unread notification count",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.NotificationUnreadCountResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifications/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Hard-deletes a single notification owned by the authenticated user",
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Delete a notification",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/notifications/{id}/read": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "notifications"
+                ],
+                "summary": "Mark a notification as read",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/onboarding/complete": {
             "post": {
                 "security": [
@@ -929,6 +1160,170 @@ const docTemplate = `{
                         "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/push-subscriptions": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whether the authenticated user has an active push subscription for the given endpoint",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Check if device has an active push subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint URL (url-encoded)",
+                        "name": "endpoint",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.PushSubscriptionStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Upserts a push subscription for the authenticated user's device",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Register a Web Push subscription",
+                "parameters": [
+                    {
+                        "description": "Push subscription",
+                        "name": "subscription",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.SubscribePushRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the authenticated user's push subscription for the given device endpoint",
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Remove a Web Push subscription",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Endpoint URL (url-encoded)",
+                        "name": "endpoint",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/push-subscriptions/vapid-public-key": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the server's VAPID public key for client-side push subscription",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "push-subscriptions"
+                ],
+                "summary": "Get the VAPID public key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.VapidPublicKeyResponse"
                         }
                     }
                 }
@@ -1454,6 +1849,55 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/by-ids": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the caller's transactions for the given IDs across any period (no month/year required). IDs the caller does not own are silently absent — the frontend marks them as missing. Empty id[] returns 200 with an empty array. Cap: ≤20 IDs recommended.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Get transactions by IDs (cross-period batch)",
+                "parameters": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Transaction IDs",
+                        "name": "id[]",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Transaction"
+                            }
                         }
                     },
                     "401": {
@@ -2026,6 +2470,76 @@ const docTemplate = `{
             }
         },
         "/api/user-connections/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-connections"
+                ],
+                "summary": "Update connection settings (account name + default split)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Connection ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Connection settings",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateConnectionSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.UserConnection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -2574,6 +3088,60 @@ const docTemplate = `{
                 "ImportRowStatusPending"
             ]
         },
+        "domain.Notification": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "entity_id": {
+                    "type": "integer"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "read": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.NotificationListResult": {
+            "type": "object",
+            "properties": {
+                "has_more": {
+                    "type": "boolean"
+                },
+                "next_cursor": {
+                    "type": "string"
+                },
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Notification"
+                    }
+                }
+            }
+        },
+        "domain.NotificationUnreadCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.OnboardingAccountInput": {
             "type": "object",
             "properties": {
@@ -2701,6 +3269,25 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/domain.TransactionType"
+                }
+            }
+        },
+        "domain.PushKeys": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string"
+                },
+                "p256dh": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.PushSubscriptionStatusResponse": {
+            "type": "object",
+            "properties": {
+                "subscribed": {
+                    "type": "boolean"
                 }
             }
         },
@@ -2845,6 +3432,17 @@ const docTemplate = `{
                 },
                 "userConnection": {
                     "$ref": "#/definitions/domain.UserConnection"
+                }
+            }
+        },
+        "domain.SubscribePushRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "keys": {
+                    "$ref": "#/definitions/domain.PushKeys"
                 }
             }
         },
@@ -3174,6 +3772,14 @@ const docTemplate = `{
                 "UserConnectionStatusRejected"
             ]
         },
+        "domain.VapidPublicKeyResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.AcceptInviteRequest": {
             "type": "object",
             "properties": {
@@ -3181,6 +3787,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "from_default_split_percentage": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.UpdateConnectionSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string"
+                },
+                "default_split_percentage": {
                     "type": "integer"
                 }
             }

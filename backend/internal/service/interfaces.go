@@ -88,16 +88,36 @@ type OnboardingService interface {
 	Complete(ctx context.Context, userID int, req *domain.OnboardingSetupRequest) error
 }
 
+type PushSubscriptionService interface {
+	Subscribe(ctx context.Context, userID int, req *domain.SubscribePushRequest) error
+	Unsubscribe(ctx context.Context, userID int, endpoint string) error
+	Status(ctx context.Context, userID int, endpoint string) (*domain.PushSubscriptionStatusResponse, error)
+}
+
+type NotificationService interface {
+	// Dispatch persists inbox rows and sends push notifications best-effort.
+	// Always called in a goroutine with context.Background() — never the request ctx.
+	Dispatch(ctx context.Context, events []domain.NotificationEvent)
+	List(ctx context.Context, userID int, filter domain.NotificationFilter) (*domain.NotificationListResult, error)
+	UnreadCount(ctx context.Context, userID int) (int64, error)
+	MarkRead(ctx context.Context, userID, notificationID int) error
+	MarkAllRead(ctx context.Context, userID int) error
+	Delete(ctx context.Context, userID, notificationID int) error
+	DeleteAllRead(ctx context.Context, userID int) error
+}
+
 // Services contains all service interfaces
 type Services struct {
-	Auth           AuthService
-	User           UserService
-	Account        AccountService
-	Category       CategoryService
-	Tag            TagService
-	Transaction    TransactionService
-	UserConnection UserConnectionService
-	Settlement     SettlementService
-	Charge         ChargeService
-	Onboarding     OnboardingService
+	Auth             AuthService
+	User             UserService
+	Account          AccountService
+	Category         CategoryService
+	Tag              TagService
+	Transaction      TransactionService
+	UserConnection   UserConnectionService
+	Settlement       SettlementService
+	Charge           ChargeService
+	Onboarding       OnboardingService
+	PushSubscription PushSubscriptionService
+	Notification     NotificationService
 }

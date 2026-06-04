@@ -1,13 +1,16 @@
-import { Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
-import { IconUsers, IconLogout, IconTableImport } from '@tabler/icons-react'
+import { Badge, Stack, Text, UnstyledButton, Group, Divider } from '@mantine/core'
+import { IconBell, IconUsers, IconLogout, IconTableImport } from '@tabler/icons-react'
 import { useMe } from '@/hooks/useMe'
 import { useLogout } from '@/hooks/useLogout'
+import { useNotificationUnreadCount } from '@/hooks/useNotificationUnreadCount'
 import { UserAvatar } from '@/components/UserAvatar'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
+import { NotificationToggleRow } from '@/components/notifications/NotificationToggleRow'
+import { openNotificationInboxDrawer } from '@/components/notifications/NotificationInboxDrawer'
 import { router } from '@/router'
 import { renderDrawer, useDrawerContext } from '@/utils/renderDrawer'
-import { MobileNavTestIds } from '@/testIds'
+import { CommonTestIds, MobileNavTestIds, NotificationsTestIds } from '@/testIds'
 import classes from './MobileMoreDrawer.module.css'
 
 type MoreItem = {
@@ -23,6 +26,8 @@ export function MobileMoreDrawer() {
   const { query: meQuery } = useMe()
   const user = meQuery.data
   const { mutation: logoutMutation } = useLogout()
+  const { query: unreadQuery } = useNotificationUnreadCount((d) => d.count)
+  const unreadCount = unreadQuery.data ?? 0
 
   const items: MoreItem[] = [
     {
@@ -54,6 +59,11 @@ export function MobileMoreDrawer() {
       onSelect: () => logoutMutation.mutate(),
     },
   ]
+
+  function openNotificationsInbox() {
+    close()
+    openNotificationInboxDrawer()
+  }
 
   return (
     <ResponsiveDrawer
@@ -91,23 +101,65 @@ export function MobileMoreDrawer() {
         </>
       )}
       <Stack gap={0} py="xs">
-        {items.map((item) => {
-          const Icon = item.icon
-          return (
-            <UnstyledButton
-              key={item.key}
-              onClick={() => item.onSelect(() => close())}
-              className={classes.item}
-              data-danger={item.danger ? '' : undefined}
-              data-testid={MobileNavTestIds.MoreItem(item.key)}
+        {items
+          .filter((item) => !item.danger)
+          .map((item) => {
+            const Icon = item.icon
+            return (
+              <UnstyledButton
+                key={item.key}
+                onClick={() => item.onSelect(() => close())}
+                className={classes.item}
+                data-testid={MobileNavTestIds.MoreItem(item.key)}
+              >
+                <Icon size={20} />
+                <Text size="sm" fw={500}>
+                  {item.label}
+                </Text>
+              </UnstyledButton>
+            )
+          })}
+        {/* Notificações inbox item — above NotificationToggleRow and "Sair" (INBOX-01, OD-4) */}
+        <UnstyledButton
+          onClick={openNotificationsInbox}
+          className={classes.item}
+          data-testid={NotificationsTestIds.MoreDrawerNotificationsItem}
+        >
+          <IconBell size={20} />
+          <Text size="sm" fw={500} style={{ flex: 1 }}>
+            Notificações
+          </Text>
+          {unreadCount > 0 && (
+            <Badge
+              size="xs"
+              color="blue"
+              data-testid={CommonTestIds.NavBadge('notifications')}
             >
-              <Icon size={20} />
-              <Text size="sm" fw={500}>
-                {item.label}
-              </Text>
-            </UnstyledButton>
-          )
-        })}
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Badge>
+          )}
+        </UnstyledButton>
+        {/* Notification toggle row — above "Sair" (CTRL-02, OD-2) */}
+        <NotificationToggleRow variant="mobile" />
+        {items
+          .filter((item) => item.danger)
+          .map((item) => {
+            const Icon = item.icon
+            return (
+              <UnstyledButton
+                key={item.key}
+                onClick={() => item.onSelect(() => close())}
+                className={classes.item}
+                data-danger=""
+                data-testid={MobileNavTestIds.MoreItem(item.key)}
+              >
+                <Icon size={20} />
+                <Text size="sm" fw={500}>
+                  {item.label}
+                </Text>
+              </UnstyledButton>
+            )
+          })}
       </Stack>
     </ResponsiveDrawer>
   )

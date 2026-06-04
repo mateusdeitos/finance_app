@@ -234,5 +234,26 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	if err := s.dbTransaction.Commit(txCtx); err != nil {
 		return pkgErrors.Internal("failed to commit accept", err)
 	}
+
+	// NOTIF-02: notify the non-caller (the charge initiator). Use the pre-swap
+	// copies (chargerUserIDCopy / payerUserIDCopy) to be robust against role swap.
+	recipientID := chargerUserIDCopy
+	if callerUserID == chargerUserIDCopy {
+		recipientID = payerUserIDCopy
+	}
+	notifDescription := ""
+	if charge.Description != nil {
+		notifDescription = *charge.Description
+	}
+	//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+	go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{{
+		RecipientUserID: recipientID,
+		ActorUserID:     callerUserID,
+		Type:            domain.NotificationTypeChargeAccepted,
+		EntityType:      "charge",
+		EntityID:        chargeID,
+		Amount:          amount,
+		Description:     notifDescription,
+	}})
 	return nil
 }

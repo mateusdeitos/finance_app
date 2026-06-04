@@ -1,0 +1,16 @@
+/* NotificationToggleRow — 44px min-height touch target (accessibility requirement) */
+
+.row {
+  min-height: 44px;
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+  box-sizing: border-box;
+}
+
+/* Icon column — fixed 20px wide so text always aligns to the same indent */
+.iconCol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+}

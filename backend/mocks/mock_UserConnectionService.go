@@ -310,6 +310,68 @@ func (_c *MockUserConnectionService_SearchOne_Call) RunAndReturn(run func(contex
 	return _c
 }
 
+// UpdateSettings provides a mock function with given fields: ctx, userID, id, accountName, defaultSplitPercentage
+func (_m *MockUserConnectionService) UpdateSettings(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int) (*domain.UserConnection, error) {
+	ret := _m.Called(ctx, userID, id, accountName, defaultSplitPercentage)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSettings")
+	}
+
+	var r0 *domain.UserConnection
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int) (*domain.UserConnection, error)); ok {
+		return rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int) *domain.UserConnection); ok {
+		r0 = rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.UserConnection)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, string, int) error); ok {
+		r1 = rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserConnectionService_UpdateSettings_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSettings'
+type MockUserConnectionService_UpdateSettings_Call struct {
+	*mock.Call
+}
+
+// UpdateSettings is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+//   - accountName string
+//   - defaultSplitPercentage int
+func (_e *MockUserConnectionService_Expecter) UpdateSettings(ctx interface{}, userID interface{}, id interface{}, accountName interface{}, defaultSplitPercentage interface{}) *MockUserConnectionService_UpdateSettings_Call {
+	return &MockUserConnectionService_UpdateSettings_Call{Call: _e.mock.On("UpdateSettings", ctx, userID, id, accountName, defaultSplitPercentage)}
+}
+
+func (_c *MockUserConnectionService_UpdateSettings_Call) Run(run func(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int)) *MockUserConnectionService_UpdateSettings_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(string), args[4].(int))
+	})
+	return _c
+}
+
+func (_c *MockUserConnectionService_UpdateSettings_Call) Return(_a0 *domain.UserConnection, _a1 error) *MockUserConnectionService_UpdateSettings_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserConnectionService_UpdateSettings_Call) RunAndReturn(run func(context.Context, int, int, string, int) (*domain.UserConnection, error)) *MockUserConnectionService_UpdateSettings_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateStatus provides a mock function with given fields: ctx, userID, id, status
 func (_m *MockUserConnectionService) UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error {
 	ret := _m.Called(ctx, userID, id, status)

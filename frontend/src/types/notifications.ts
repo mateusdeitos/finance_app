@@ -1,0 +1,31 @@
+export namespace Notifications {
+  export type NotificationType =
+    | 'charge_received'
+    | 'charge_accepted'
+    | 'split_created'
+    | 'split_updated'
+    | 'transfer_received'
+
+  export type EntityType = 'charge' | 'transaction'
+
+  export type Notification = {
+    id: number
+    type: NotificationType
+    entity_type: EntityType
+    entity_id: number
+    read: boolean
+    /** Persisted entity description (transaction/charge); omitted when null. */
+    description?: string
+    created_at: string // ISO 8601
+  }
+
+  export type NotificationListResponse = {
+    notifications: Notification[]
+    next_cursor: string
+    has_more: boolean
+  }
+
+  export type UnreadCountResponse = {
+    count: number
+  }
+}

@@ -29,6 +29,13 @@ services:
       JWT_SECRET: e2e-test-secret-do-not-use-in-production
       FRONTEND_URL: http://localhost:3100
       APP_URL: http://localhost:8090
+      # Test-only VAPID keypair (non-secret, disposable). The server fails fast
+      # without these three (T-22-STARTUP); the e2e compose was added in Phase 22
+      # before that guard, so it omitted them. Generated via
+      # webpush.GenerateVAPIDKeys — valid base64url EC P-256.
+      VAPID_PUBLIC_KEY: BLWIYM6I0xrLpGSlrzeZl36jFRiA60uAM-SNKE2cDwiVf0AoZulItJEV7QDt9elXtja-pd68DtHBT1ZdoqrO420
+      VAPID_PRIVATE_KEY: JkRGTQmB1vn6I_ksGS1u6eAZ8NhnGARwYXWilUu5cvk
+      VAPID_SUBJECT: mailto:e2e@financeapp.local
     depends_on:
       postgres:
         condition: service_healthy

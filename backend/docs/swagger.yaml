@@ -212,6 +212,41 @@ definitions:
     type: string
     x-enum-varnames:
     - ImportRowStatusPending
+  domain.Notification:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      entity_id:
+        type: integer
+      entity_type:
+        type: string
+      id:
+        type: integer
+      read:
+        type: boolean
+      type:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.NotificationListResult:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+      notifications:
+        items:
+          $ref: '#/definitions/domain.Notification'
+        type: array
+    type: object
+  domain.NotificationUnreadCountResponse:
+    properties:
+      count:
+        type: integer
+    type: object
   domain.OnboardingAccountInput:
     properties:
       avatar_background_color:
@@ -297,6 +332,18 @@ definitions:
         $ref: '#/definitions/domain.ImportRowStatus'
       type:
         $ref: '#/definitions/domain.TransactionType'
+    type: object
+  domain.PushKeys:
+    properties:
+      auth:
+        type: string
+      p256dh:
+        type: string
+    type: object
+  domain.PushSubscriptionStatusResponse:
+    properties:
+      subscribed:
+        type: boolean
     type: object
   domain.RecurrenceSettings:
     properties:
@@ -397,6 +444,13 @@ definitions:
         type: integer
       userConnection:
         $ref: '#/definitions/domain.UserConnection'
+    type: object
+  domain.SubscribePushRequest:
+    properties:
+      endpoint:
+        type: string
+      keys:
+        $ref: '#/definitions/domain.PushKeys'
     type: object
   domain.Tag:
     properties:
@@ -626,11 +680,23 @@ definitions:
     - UserConnectionStatusPending
     - UserConnectionStatusAccepted
     - UserConnectionStatusRejected
+  domain.VapidPublicKeyResponse:
+    properties:
+      key:
+        type: string
+    type: object
   handler.AcceptInviteRequest:
     properties:
       external_id:
         type: string
       from_default_split_percentage:
+        type: integer
+    type: object
+  handler.UpdateConnectionSettingsRequest:
+    properties:
+      account_name:
+        type: string
+      default_split_percentage:
         type: integer
     type: object
   handler.testLoginRequest:
@@ -969,6 +1035,13 @@ paths:
         in: query
         name: connection_id
         type: integer
+      - collectionFormat: multi
+        description: Filter by charge IDs
+        in: query
+        items:
+          type: integer
+        name: id[]
+        type: array
       - description: Limit
         in: query
         name: limit
@@ -1171,6 +1244,138 @@ paths:
       summary: Count pending charges requiring caller's action
       tags:
       - charges
+  /api/notifications:
+    get:
+      description: Returns paginated notifications for the authenticated user, newest
+        first
+      parameters:
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      - description: Page size (default 20)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.NotificationListResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List notifications
+      tags:
+      - notifications
+  /api/notifications/{id}:
+    delete:
+      description: Hard-deletes a single notification owned by the authenticated user
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete a notification
+      tags:
+      - notifications
+  /api/notifications/{id}/read:
+    post:
+      parameters:
+      - description: Notification ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Mark a notification as read
+      tags:
+      - notifications
+  /api/notifications/read:
+    delete:
+      description: Hard-deletes every read notification owned by the authenticated
+        user
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete all read notifications
+      tags:
+      - notifications
+  /api/notifications/read-all:
+    post:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+  /api/notifications/unread-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.NotificationUnreadCountResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get unread notification count
+      tags:
+      - notifications
   /api/onboarding/complete:
     post:
       consumes:
@@ -1218,6 +1423,107 @@ paths:
       summary: Get onboarding status
       tags:
       - onboarding
+  /api/push-subscriptions:
+    delete:
+      description: Removes the authenticated user's push subscription for the given
+        device endpoint
+      parameters:
+      - description: Endpoint URL (url-encoded)
+        in: query
+        name: endpoint
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Remove a Web Push subscription
+      tags:
+      - push-subscriptions
+    get:
+      description: Returns whether the authenticated user has an active push subscription
+        for the given endpoint
+      parameters:
+      - description: Endpoint URL (url-encoded)
+        in: query
+        name: endpoint
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.PushSubscriptionStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Check if device has an active push subscription
+      tags:
+      - push-subscriptions
+    post:
+      consumes:
+      - application/json
+      description: Upserts a push subscription for the authenticated user's device
+      parameters:
+      - description: Push subscription
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SubscribePushRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Register a Web Push subscription
+      tags:
+      - push-subscriptions
+  /api/push-subscriptions/vapid-public-key:
+    get:
+      description: Returns the server's VAPID public key for client-side push subscription
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.VapidPublicKeyResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get the VAPID public key
+      tags:
+      - push-subscriptions
   /api/settlements/{id}:
     patch:
       consumes:
@@ -1663,6 +1969,39 @@ paths:
       summary: Get balance for a period
       tags:
       - transactions
+  /api/transactions/by-ids:
+    get:
+      description: 'Returns the caller''s transactions for the given IDs across any
+        period (no month/year required). IDs the caller does not own are silently
+        absent — the frontend marks them as missing. Empty id[] returns 200 with an
+        empty array. Cap: ≤20 IDs recommended.'
+      parameters:
+      - collectionFormat: multi
+        description: Transaction IDs
+        in: query
+        items:
+          type: integer
+        name: id[]
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Transaction'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get transactions by IDs (cross-period batch)
+      tags:
+      - transactions
   /api/transactions/check-duplicates-bulk:
     post:
       consumes:
@@ -1875,6 +2214,50 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Delete user connection
+      tags:
+      - user-connections
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Connection ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Connection settings
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateConnectionSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.UserConnection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update connection settings (account name + default split)
       tags:
       - user-connections
   /api/user-connections/{id}/{status}:
