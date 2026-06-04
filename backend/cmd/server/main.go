@@ -271,6 +271,7 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandler
 	notifications := api.Group("/notifications")
 	notifications.GET("", h.notification.List)
 	notifications.GET("/unread-count", h.notification.UnreadCount)
+	notifications.POST("/test", h.notification.SendTest)
 	notifications.POST("/read-all", h.notification.MarkAllRead)
 	notifications.POST("/:id/read", h.notification.MarkRead)
 	// Static "/read" MUST be registered before "/:id" so "read" is not captured as :id.

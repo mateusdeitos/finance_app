@@ -1179,6 +1179,76 @@ func (suite *NotificationServiceWithDBSuite) TestPush410PrunesSubscription() {
 }
 
 // ---------------------------------------------------------------------------
+// SendTest: delivers a sample push to the user's own subscriptions
+// ---------------------------------------------------------------------------
+
+func (suite *NotificationServiceWithDBSuite) TestSendTestDeliversToSubscriptions() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	// Subscribe the user on two devices.
+	ep1 := suite.subscribeUser(ctx, user.ID)
+	ep2 := suite.subscribeUser(ctx, user.ID)
+
+	// Inject a mock sender that accepts (201 Created).
+	mockSender := &mockPushSender{status: http.StatusCreated}
+	restore := injectMockSender(suite.Services.Notification, mockSender)
+	defer restore()
+
+	err = suite.Services.Notification.SendTest(ctx, user.ID)
+	suite.Require().NoError(err)
+
+	// The push must have been sent to both endpoints.
+	suite.ElementsMatch([]string{ep1, ep2}, mockSender.calls, "test push should reach every subscription")
+
+	// SendTest is display-only — it must NOT persist an inbox row.
+	suite.Equal(0, suite.countNotifications(ctx, user.ID), "SendTest must not persist an inbox row")
+}
+
+func (suite *NotificationServiceWithDBSuite) TestSendTestNoSubscriptionReturnsTaggedError() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	// Guard: even if a stray sender were invoked, this records it.
+	mockSender := &mockPushSender{status: http.StatusCreated}
+	restore := injectMockSender(suite.Services.Notification, mockSender)
+	defer restore()
+
+	err = suite.Services.Notification.SendTest(ctx, user.ID)
+	suite.Require().Error(err, "SendTest must error when the user has no subscription")
+
+	svcErr, ok := pkgErrors.AsServiceError(err)
+	suite.Require().True(ok, "error should be a *ServiceError, got: %v", err)
+	suite.Contains(svcErr.Tags, string(pkgErrors.ErrorTagNoActivePushSubscription))
+	suite.Empty(mockSender.calls, "no push should be attempted without a subscription")
+}
+
+func (suite *NotificationServiceWithDBSuite) TestSendTestPrunesStaleSubscription() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	endpoint := suite.subscribeUser(ctx, user.ID)
+
+	// Mock sender reports the endpoint as gone (410).
+	mockSender := &mockPushSender{status: http.StatusGone}
+	restore := injectMockSender(suite.Services.Notification, mockSender)
+	defer restore()
+
+	err = suite.Services.Notification.SendTest(ctx, user.ID)
+	suite.Require().NoError(err)
+
+	status, err := suite.Services.PushSubscription.Status(ctx, user.ID, endpoint)
+	suite.Require().NoError(err)
+	suite.False(status.Subscribed, "stale subscription should be pruned after a 410 from a test push")
+}
+
+// ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 

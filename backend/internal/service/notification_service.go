@@ -109,31 +109,70 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 			continue
 		}
 
-		for _, sub := range subs {
-			resp, sendErr := s.sender.Send(rawPayload, &webpush.Subscription{
-				Endpoint: sub.Endpoint,
-				Keys:     webpush.Keys{Auth: sub.Auth, P256dh: sub.P256dh},
-			}, &webpush.Options{
-				Subscriber:      s.vapid.Subject,
-				VAPIDPublicKey:  s.vapid.PublicKey,
-				VAPIDPrivateKey: s.vapid.PrivateKey,
-				TTL:             30,
-			})
-			if sendErr != nil {
-				log.Printf("[notification] push send error endpoint=%s err=%v", sub.Endpoint, sendErr)
-				continue
-			}
-			if resp != nil {
-				status := resp.StatusCode
-				_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
-				if status == http.StatusNotFound || status == http.StatusGone {
-					if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
-						log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
-					}
+		s.pushToSubscriptions(ctx, subs, rawPayload)
+	}
+}
+
+// pushToSubscriptions delivers rawPayload to each of the given subscriptions
+// best-effort, logging send errors and pruning any subscription the push
+// service reports as gone (404/410). Shared by Dispatch and SendTest.
+func (s *notificationService) pushToSubscriptions(ctx context.Context, subs []*domain.PushSubscription, rawPayload []byte) {
+	for _, sub := range subs {
+		resp, sendErr := s.sender.Send(rawPayload, &webpush.Subscription{
+			Endpoint: sub.Endpoint,
+			Keys:     webpush.Keys{Auth: sub.Auth, P256dh: sub.P256dh},
+		}, &webpush.Options{
+			Subscriber:      s.vapid.Subject,
+			VAPIDPublicKey:  s.vapid.PublicKey,
+			VAPIDPrivateKey: s.vapid.PrivateKey,
+			TTL:             30,
+		})
+		if sendErr != nil {
+			log.Printf("[notification] push send error endpoint=%s err=%v", sub.Endpoint, sendErr)
+			continue
+		}
+		if resp != nil {
+			status := resp.StatusCode
+			_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
+			if status == http.StatusNotFound || status == http.StatusGone {
+				if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
+					log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
 				}
 			}
 		}
 	}
+}
+
+// SendTest delivers a sample push notification to every push subscription the
+// authenticated user owns, so they can preview how a real notification renders
+// on their device. It is display-only: no inbox row is persisted. Returns a
+// tagged validation error (NOTIFICATION.NO_ACTIVE_PUSH_SUBSCRIPTION) when the
+// user has not enabled push on any device, so the frontend can prompt them.
+func (s *notificationService) SendTest(ctx context.Context, userID int) error {
+	subs, err := s.pushSubRepo.ListByUserID(ctx, userID)
+	if err != nil {
+		return pkgErrors.Internal("failed to list push subscriptions", err)
+	}
+	if len(subs) == 0 {
+		return pkgErrors.ErrNoActivePushSubscription
+	}
+
+	payload := pushPayload{
+		Title: "Notificação de teste",
+		Body:  "Tudo certo! É assim que as notificações vão aparecer no seu dispositivo. 🎉",
+		Data: pushPayloadData{
+			Type:       "test",
+			EntityType: "transaction",
+			EntityID:   0,
+		},
+	}
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		return pkgErrors.Internal("failed to marshal test notification payload", err)
+	}
+
+	s.pushToSubscriptions(ctx, subs, rawPayload)
+	return nil
 }
 
 // pushPayload is the JSON structure sent to the browser push service.

@@ -1,6 +1,8 @@
-import { Group, Loader, Stack, Switch, Text } from '@mantine/core'
-import { IconBell, IconBellOff } from '@tabler/icons-react'
+import { Button, Group, Loader, Stack, Switch, Text } from '@mantine/core'
+import { IconBell, IconBellOff, IconSend } from '@tabler/icons-react'
+import { notifications } from '@mantine/notifications'
 import { usePushSubscription } from '@/hooks/usePushSubscription'
+import { useSendTestNotification } from '@/hooks/useSendTestNotification'
 import { NotificationsTestIds } from '@/testIds'
 import classes from './NotificationToggleRow.module.css'
 
@@ -27,6 +29,22 @@ const helperId = 'notification-helper-text'
  */
 export function NotificationToggleRow({ variant }: NotificationToggleRowProps) {
   const { state, onToggle, helperText } = usePushSubscription()
+  const { mutation: testMutation } = useSendTestNotification({
+    onSuccess: () =>
+      notifications.show({
+        color: 'teal',
+        title: 'Notificação de teste enviada',
+        message: 'Veja como ela aparece no seu dispositivo.',
+        autoClose: 3000,
+      }),
+    onError: () =>
+      notifications.show({
+        color: 'red',
+        title: 'Erro ao enviar',
+        message: 'Não foi possível enviar a notificação de teste. Tente novamente.',
+        autoClose: 3000,
+      }),
+  })
 
   const isChecked = state === 'enabled'
   const isDisabled = state === 'requesting' || state === 'denied' || state === 'unsupported'
@@ -56,43 +74,61 @@ export function NotificationToggleRow({ variant }: NotificationToggleRowProps) {
   })()
 
   return (
-    <Group
-      justify="space-between"
-      align="center"
-      wrap="nowrap"
-      gap="md"
-      className={classes.row}
-      data-testid={NotificationsTestIds.RowNotifications}
-    >
-      {/* Left: icon column (fixed 20px width) */}
-      <div className={classes.iconCol}>{leftIcon}</div>
+    <Stack gap="xs">
+      <Group
+        justify="space-between"
+        align="center"
+        wrap="nowrap"
+        gap="md"
+        className={classes.row}
+        data-testid={NotificationsTestIds.RowNotifications}
+      >
+        {/* Left: icon column (fixed 20px width) */}
+        <div className={classes.iconCol}>{leftIcon}</div>
 
-      {/* Centre: label + helper */}
-      <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
-        <Text size="sm" fw={500}>
-          Notificações
-        </Text>
-        <Text
+        {/* Centre: label + helper */}
+        <Stack gap={1} style={{ flex: 1, minWidth: 0 }}>
+          <Text size="sm" fw={500}>
+            Notificações
+          </Text>
+          <Text
+            size="xs"
+            c={helperColor}
+            id={helperId}
+            data-testid={NotificationsTestIds.HelperNotifications}
+          >
+            {helperText(variant)}
+          </Text>
+        </Stack>
+
+        {/* Right: Switch */}
+        <Switch
+          size="md"
+          checked={isChecked}
+          disabled={isDisabled}
+          onChange={() => onToggle()}
+          color="blue"
+          aria-label={isChecked ? 'Desativar notificações' : 'Ativar notificações'}
+          aria-describedby={helperId}
+          data-testid={NotificationsTestIds.SwitchNotifications}
+        />
+      </Group>
+
+      {/* Test-notification trigger — only when push is enabled on this device.
+          Round-trips through the backend so the preview matches a real push. */}
+      {isChecked && (
+        <Button
+          variant="light"
+          color="blue"
           size="xs"
-          c={helperColor}
-          id={helperId}
-          data-testid={NotificationsTestIds.HelperNotifications}
+          leftSection={<IconSend size={16} stroke={1.8} />}
+          loading={testMutation.isPending}
+          onClick={() => testMutation.mutate()}
+          data-testid={NotificationsTestIds.BtnSendTest}
         >
-          {helperText(variant)}
-        </Text>
-      </Stack>
-
-      {/* Right: Switch */}
-      <Switch
-        size="md"
-        checked={isChecked}
-        disabled={isDisabled}
-        onChange={() => onToggle()}
-        color="blue"
-        aria-label={isChecked ? 'Desativar notificações' : 'Ativar notificações'}
-        aria-describedby={helperId}
-        data-testid={NotificationsTestIds.SwitchNotifications}
-      />
-    </Group>
+          Enviar notificação de teste
+        </Button>
+      )}
+    </Stack>
   )
 }

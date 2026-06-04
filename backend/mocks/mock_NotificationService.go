@@ -306,6 +306,53 @@ func (_c *MockNotificationService_MarkRead_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// SendTest provides a mock function with given fields: ctx, userID
+func (_m *MockNotificationService) SendTest(ctx context.Context, userID int) error {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendTest")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockNotificationService_SendTest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendTest'
+type MockNotificationService_SendTest_Call struct {
+	*mock.Call
+}
+
+// SendTest is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+func (_e *MockNotificationService_Expecter) SendTest(ctx interface{}, userID interface{}) *MockNotificationService_SendTest_Call {
+	return &MockNotificationService_SendTest_Call{Call: _e.mock.On("SendTest", ctx, userID)}
+}
+
+func (_c *MockNotificationService_SendTest_Call) Run(run func(ctx context.Context, userID int)) *MockNotificationService_SendTest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockNotificationService_SendTest_Call) Return(_a0 error) *MockNotificationService_SendTest_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockNotificationService_SendTest_Call) RunAndReturn(run func(context.Context, int) error) *MockNotificationService_SendTest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UnreadCount provides a mock function with given fields: ctx, userID
 func (_m *MockNotificationService) UnreadCount(ctx context.Context, userID int) (int64, error) {
 	ret := _m.Called(ctx, userID)

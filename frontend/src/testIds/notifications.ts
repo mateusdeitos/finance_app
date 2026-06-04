@@ -2,6 +2,7 @@ export const NotificationsTestIds = {
   SwitchNotifications: 'switch_notifications',
   RowNotifications: 'row_notifications',
   HelperNotifications: 'text_notifications_helper',
+  BtnSendTest: 'btn_send_test_notification',
   Drawer: 'drawer_notifications',
   DrawerClose: 'btn_notifications_close',
   BtnMarkAllRead: 'btn_mark_all_read',

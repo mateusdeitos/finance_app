@@ -1357,6 +1357,28 @@ paths:
       summary: Mark all notifications as read
       tags:
       - notifications
+  /api/notifications/test:
+    post:
+      description: Sends a sample push notification to the authenticated user's own
+        subscriptions so they can preview how notifications render. Does not persist
+        an inbox row.
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Send a test notification
+      tags:
+      - notifications
   /api/notifications/unread-count:
     get:
       produces:
