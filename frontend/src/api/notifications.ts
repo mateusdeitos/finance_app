@@ -30,7 +30,15 @@ export async function sendTestNotification(): Promise<void> {
     method: 'POST',
     credentials: 'include',
   })
-  if (!res.ok) throw new Error('Failed to send test notification')
+  if (!res.ok) {
+    // Surface the backend's reason (e.g. upstream push status) so the toast is
+    // diagnostic instead of generic — this endpoint exists to debug delivery.
+    const message = await res
+      .json()
+      .then((body: { message?: string }) => body?.message)
+      .catch(() => undefined)
+    throw new Error(message ?? 'Failed to send test notification')
+  }
 }
 
 export async function markNotificationRead(id: number): Promise<void> {

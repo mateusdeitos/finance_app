@@ -1227,7 +1227,7 @@ func (suite *NotificationServiceWithDBSuite) TestSendTestNoSubscriptionReturnsTa
 	suite.Empty(mockSender.calls, "no push should be attempted without a subscription")
 }
 
-func (suite *NotificationServiceWithDBSuite) TestSendTestPrunesStaleSubscription() {
+func (suite *NotificationServiceWithDBSuite) TestSendTestPrunesStaleSubscriptionAndReportsFailure() {
 	ctx := context.Background()
 
 	user, err := suite.createTestUser(ctx)
@@ -1240,12 +1240,39 @@ func (suite *NotificationServiceWithDBSuite) TestSendTestPrunesStaleSubscription
 	restore := injectMockSender(suite.Services.Notification, mockSender)
 	defer restore()
 
+	// The only subscription was gone, so nothing was delivered — SendTest must
+	// report the failure rather than claim success.
 	err = suite.Services.Notification.SendTest(ctx, user.ID)
-	suite.Require().NoError(err)
+	suite.Require().Error(err, "SendTest must error when no subscription accepted the push")
+	svcErr, ok := pkgErrors.AsServiceError(err)
+	suite.Require().True(ok, "error should be a *ServiceError, got: %v", err)
+	suite.Contains(svcErr.Tags, string(pkgErrors.ErrorTagPushDeliveryFailed))
 
+	// ...and the stale subscription must still have been pruned.
 	status, err := suite.Services.PushSubscription.Status(ctx, user.ID, endpoint)
 	suite.Require().NoError(err)
 	suite.False(status.Subscribed, "stale subscription should be pruned after a 410 from a test push")
+}
+
+func (suite *NotificationServiceWithDBSuite) TestSendTestReportsUpstreamRejection() {
+	ctx := context.Background()
+
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	suite.subscribeUser(ctx, user.ID)
+
+	// Apple Push rejecting a malformed VAPID JWT looks like a 403 — SendTest must
+	// surface it instead of silently reporting success.
+	mockSender := &mockPushSender{status: http.StatusForbidden}
+	restore := injectMockSender(suite.Services.Notification, mockSender)
+	defer restore()
+
+	err = suite.Services.Notification.SendTest(ctx, user.ID)
+	suite.Require().Error(err, "SendTest must error when the push service rejects the message")
+	svcErr, ok := pkgErrors.AsServiceError(err)
+	suite.Require().True(ok, "error should be a *ServiceError, got: %v", err)
+	suite.Contains(svcErr.Tags, string(pkgErrors.ErrorTagPushDeliveryFailed))
 }
 
 // ---------------------------------------------------------------------------

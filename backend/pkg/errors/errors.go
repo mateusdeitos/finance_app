@@ -80,6 +80,7 @@ const (
 	ErrorTagSettlementDateIsRequired ErrorTag = "SETTLEMENT.DATE_IS_REQUIRED"
 
 	ErrorTagNoActivePushSubscription ErrorTag = "NOTIFICATION.NO_ACTIVE_PUSH_SUBSCRIPTION"
+	ErrorTagPushDeliveryFailed       ErrorTag = "NOTIFICATION.PUSH_DELIVERY_FAILED"
 )
 
 var (
@@ -144,6 +145,9 @@ var (
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 
 	ErrNoActivePushSubscription = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagNoActivePushSubscription)}, "no active push subscription for this user")
+	ErrPushDeliveryFailed       = func(status int) *ServiceError {
+		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, fmt.Sprintf("push delivery failed (upstream status %d)", status))
+	}
 )
 
 // ServiceError represents a service-level error with a code and message
