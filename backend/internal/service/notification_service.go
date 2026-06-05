@@ -134,6 +134,18 @@ func (r pushResult) delivered() bool {
 	return r.err == nil && r.status >= 200 && r.status < 300
 }
 
+// webpushSubscriber normalizes the VAPID subject for webpush-go's JWT builder,
+// which prepends "mailto:" to any value that does not already start with
+// "https:". Passing an already "mailto:"-prefixed subject (the RFC 8292 /
+// operator-friendly form, and the one our startup guard enforces) would produce
+// a double "mailto:mailto:..." `sub` claim that Apple Push rejects with
+// BadJwtToken — silently, since Chrome/FCM ignore `sub`. Strip a leading
+// "mailto:" so webpush-go re-adds exactly one; "https:" subjects pass through
+// untouched.
+func webpushSubscriber(subject string) string {
+	return strings.TrimPrefix(subject, "mailto:")
+}
+
 // sendOne delivers rawPayload to a single subscription and reports the outcome.
 // It prunes the subscription when the push service reports it as gone (404/410)
 // and logs any non-2xx status, so a misconfiguration (e.g. a VAPID subject that
@@ -143,7 +155,7 @@ func (s *notificationService) sendOne(ctx context.Context, sub *domain.PushSubsc
 		Endpoint: sub.Endpoint,
 		Keys:     webpush.Keys{Auth: sub.Auth, P256dh: sub.P256dh},
 	}, &webpush.Options{
-		Subscriber:      s.vapid.Subject,
+		Subscriber:      webpushSubscriber(s.vapid.Subject),
 		VAPIDPublicKey:  s.vapid.PublicKey,
 		VAPIDPrivateKey: s.vapid.PrivateKey,
 		TTL:             pushTTLSeconds,
