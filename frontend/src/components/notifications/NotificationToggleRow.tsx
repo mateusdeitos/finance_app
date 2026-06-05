@@ -37,12 +37,12 @@ export function NotificationToggleRow({ variant }: NotificationToggleRowProps) {
         message: 'Veja como ela aparece no seu dispositivo.',
         autoClose: 3000,
       }),
-    onError: () =>
+    onError: (error: Error) =>
       notifications.show({
         color: 'red',
         title: 'Erro ao enviar',
-        message: 'Não foi possível enviar a notificação de teste. Tente novamente.',
-        autoClose: 3000,
+        message: error.message || 'Não foi possível enviar a notificação de teste. Tente novamente.',
+        autoClose: 5000,
       }),
   })
 

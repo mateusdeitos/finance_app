@@ -113,34 +113,70 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 	}
 }
 
-// pushToSubscriptions delivers rawPayload to each of the given subscriptions
-// best-effort, logging send errors and pruning any subscription the push
-// service reports as gone (404/410). Shared by Dispatch and SendTest.
-func (s *notificationService) pushToSubscriptions(ctx context.Context, subs []*domain.PushSubscription, rawPayload []byte) {
-	for _, sub := range subs {
-		resp, sendErr := s.sender.Send(rawPayload, &webpush.Subscription{
-			Endpoint: sub.Endpoint,
-			Keys:     webpush.Keys{Auth: sub.Auth, P256dh: sub.P256dh},
-		}, &webpush.Options{
-			Subscriber:      s.vapid.Subject,
-			VAPIDPublicKey:  s.vapid.PublicKey,
-			VAPIDPrivateKey: s.vapid.PrivateKey,
-			TTL:             30,
-		})
-		if sendErr != nil {
-			log.Printf("[notification] push send error endpoint=%s err=%v", sub.Endpoint, sendErr)
-			continue
-		}
-		if resp != nil {
-			status := resp.StatusCode
-			_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
-			if status == http.StatusNotFound || status == http.StatusGone {
-				if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
-					log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
-				}
-			}
-		}
+// pushTTLSeconds is the TTL the push service keeps a message queued for offline
+// devices. Kept modest but above the old 30s so a briefly-locked phone (a common
+// iOS case) still receives the notification when it wakes.
+const pushTTLSeconds = 60
+
+// pushResult captures the outcome of a single push send for diagnostics and for
+// SendTest to report a real delivery result back to the user.
+type pushResult struct {
+	endpoint string
+	status   int   // HTTP status from the push service (0 if the send errored before a response)
+	err      error // transport error, if any
+}
+
+// delivered reports whether the push service accepted the message (2xx).
+func (r pushResult) delivered() bool {
+	return r.err == nil && r.status >= 200 && r.status < 300
+}
+
+// sendOne delivers rawPayload to a single subscription and reports the outcome.
+// It prunes the subscription when the push service reports it as gone (404/410)
+// and logs any non-2xx status, so a misconfiguration (e.g. a VAPID subject that
+// Apple Push rejects with 400/403) is visible instead of being silently dropped.
+func (s *notificationService) sendOne(ctx context.Context, sub *domain.PushSubscription, rawPayload []byte) pushResult {
+	resp, sendErr := s.sender.Send(rawPayload, &webpush.Subscription{
+		Endpoint: sub.Endpoint,
+		Keys:     webpush.Keys{Auth: sub.Auth, P256dh: sub.P256dh},
+	}, &webpush.Options{
+		Subscriber:      s.vapid.Subject,
+		VAPIDPublicKey:  s.vapid.PublicKey,
+		VAPIDPrivateKey: s.vapid.PrivateKey,
+		TTL:             pushTTLSeconds,
+		// User-visible notifications must reach the device even on low battery;
+		// without an explicit Urgency, Apple Push may deprioritise/drop them.
+		Urgency: webpush.UrgencyHigh,
+	})
+	if sendErr != nil {
+		log.Printf("[notification] push send error endpoint=%s err=%v", sub.Endpoint, sendErr)
+		return pushResult{endpoint: sub.Endpoint, err: sendErr}
 	}
+	if resp == nil {
+		return pushResult{endpoint: sub.Endpoint}
+	}
+	status := resp.StatusCode
+	_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
+	switch {
+	case status == http.StatusNotFound || status == http.StatusGone:
+		if pruneErr := s.pushSubRepo.DeleteByEndpointAdmin(ctx, sub.Endpoint); pruneErr != nil {
+			log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
+		}
+	case status < 200 || status >= 300:
+		log.Printf("[notification] push rejected endpoint=%s status=%d", sub.Endpoint, status)
+	}
+	return pushResult{endpoint: sub.Endpoint, status: status}
+}
+
+// pushToSubscriptions delivers rawPayload to each of the given subscriptions
+// best-effort and returns a per-subscription outcome. Shared by Dispatch (which
+// ignores the results) and SendTest (which reports them to the user).
+func (s *notificationService) pushToSubscriptions(ctx context.Context, subs []*domain.PushSubscription, rawPayload []byte) []pushResult {
+	results := make([]pushResult, 0, len(subs))
+	for _, sub := range subs {
+		results = append(results, s.sendOne(ctx, sub, rawPayload))
+	}
+	return results
 }
 
 // SendTest delivers a sample push notification to every push subscription the
@@ -171,7 +207,22 @@ func (s *notificationService) SendTest(ctx context.Context, userID int) error {
 		return pkgErrors.Internal("failed to marshal test notification payload", err)
 	}
 
-	s.pushToSubscriptions(ctx, subs, rawPayload)
+	// Unlike Dispatch (best-effort), SendTest is a diagnostic: surface whether the
+	// push service actually accepted the message so the user isn't told "sent" when
+	// Apple/FCM rejected it. Report the last non-2xx upstream status to aid debugging.
+	results := s.pushToSubscriptions(ctx, subs, rawPayload)
+	delivered := 0
+	lastStatus := 0
+	for _, r := range results {
+		if r.delivered() {
+			delivered++
+		} else if r.status != 0 {
+			lastStatus = r.status
+		}
+	}
+	if delivered == 0 {
+		return pkgErrors.ErrPushDeliveryFailed(lastStatus)
+	}
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/finance_app/backend/internal/config"
@@ -48,6 +49,13 @@ func main() {
 	// push delivery to fail in production (T-22-STARTUP mitigation).
 	if cfg.VAPID.PublicKey == "" || cfg.VAPID.PrivateKey == "" || cfg.VAPID.Subject == "" {
 		log.Fatalf("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT are required")
+	}
+	// Per RFC 8292 the VAPID JWT `sub` claim must be a "mailto:" or "https:" URI.
+	// Chrome/FCM tolerates a malformed subject, but Apple Push rejects the request
+	// with 400/403 — the classic "works on Android, silent on iPhone" failure.
+	// Fail fast so the misconfiguration is caught at deploy time, not at send time.
+	if !strings.HasPrefix(cfg.VAPID.Subject, "mailto:") && !strings.HasPrefix(cfg.VAPID.Subject, "https://") {
+		log.Fatalf("VAPID_SUBJECT must be a \"mailto:\" or \"https://\" URI (RFC 8292), got %q", cfg.VAPID.Subject)
 	}
 
 	loc, err := time.LoadLocation("UTC")

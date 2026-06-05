@@ -16,12 +16,12 @@ import { sendTestNotification } from '@/api/notifications'
  */
 export function useSendTestNotification(options?: {
   onSuccess?: () => void
-  onError?: () => void
+  onError?: (error: Error) => void
 }) {
   const mutation = useMutation({
     mutationFn: () => sendTestNotification(),
     onSuccess: options?.onSuccess,
-    onError: options?.onError,
+    onError: (error: Error) => options?.onError?.(error),
   })
 
   return { mutation }
