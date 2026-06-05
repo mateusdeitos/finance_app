@@ -145,8 +145,12 @@ var (
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 
 	ErrNoActivePushSubscription = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagNoActivePushSubscription)}, "no active push subscription for this user")
-	ErrPushDeliveryFailed       = func(status int) *ServiceError {
-		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, fmt.Sprintf("push delivery failed (upstream status %d)", status))
+	ErrPushDeliveryFailed       = func(status int, reason string) *ServiceError {
+		msg := fmt.Sprintf("push delivery failed (upstream status %d)", status)
+		if reason != "" {
+			msg = fmt.Sprintf("%s: %s", msg, reason)
+		}
+		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, msg)
 	}
 )
 

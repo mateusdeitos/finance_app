@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"unicode"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -122,8 +124,9 @@ const pushTTLSeconds = 60
 // SendTest to report a real delivery result back to the user.
 type pushResult struct {
 	endpoint string
-	status   int   // HTTP status from the push service (0 if the send errored before a response)
-	err      error // transport error, if any
+	status   int    // HTTP status from the push service (0 if the send errored before a response)
+	body     string // truncated response body on non-2xx (push services return a machine-readable reason)
+	err      error  // transport error, if any
 }
 
 // delivered reports whether the push service accepted the message (2xx).
@@ -156,6 +159,14 @@ func (s *notificationService) sendOne(ctx context.Context, sub *domain.PushSubsc
 		return pushResult{endpoint: sub.Endpoint}
 	}
 	status := resp.StatusCode
+	// On any non-2xx, read a snippet of the push service's response body. Apple and
+	// FCM return a machine-readable reason (e.g. {"reason":"BadJwtToken"}) that is
+	// the only way to tell *why* a 403/400 happened — status alone is ambiguous.
+	var reason string
+	if status < 200 || status >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		reason = strings.TrimSpace(string(b))
+	}
 	_ = resp.Body.Close() // close immediately, not deferred — defer is function-scoped and would accumulate across loop iterations
 	switch {
 	case status == http.StatusNotFound || status == http.StatusGone:
@@ -163,9 +174,9 @@ func (s *notificationService) sendOne(ctx context.Context, sub *domain.PushSubsc
 			log.Printf("[notification] failed to prune stale subscription endpoint=%s err=%v", sub.Endpoint, pruneErr)
 		}
 	case status < 200 || status >= 300:
-		log.Printf("[notification] push rejected endpoint=%s status=%d", sub.Endpoint, status)
+		log.Printf("[notification] push rejected endpoint=%s status=%d reason=%q", sub.Endpoint, status, reason)
 	}
-	return pushResult{endpoint: sub.Endpoint, status: status}
+	return pushResult{endpoint: sub.Endpoint, status: status, body: reason}
 }
 
 // pushToSubscriptions delivers rawPayload to each of the given subscriptions
@@ -213,15 +224,17 @@ func (s *notificationService) SendTest(ctx context.Context, userID int) error {
 	results := s.pushToSubscriptions(ctx, subs, rawPayload)
 	delivered := 0
 	lastStatus := 0
+	lastReason := ""
 	for _, r := range results {
 		if r.delivered() {
 			delivered++
 		} else if r.status != 0 {
 			lastStatus = r.status
+			lastReason = r.body
 		}
 	}
 	if delivered == 0 {
-		return pkgErrors.ErrPushDeliveryFailed(lastStatus)
+		return pkgErrors.ErrPushDeliveryFailed(lastStatus, lastReason)
 	}
 	return nil
 }
