@@ -132,6 +132,10 @@ export function CreateTransactionDrawer() {
       }
       withCloseButton={!isMobile}
       size="lg"
+      // On mobile the header bar (MobileFormHeader) must span the full width so
+      // "Salvar" sits flush right; Mantine's Drawer.Title otherwise shrinks to
+      // its content. flex:1 lets it fill the header row.
+      styles={isMobile ? { title: { flex: 1 } } : undefined}
       data-testid={TransactionsTestIds.DrawerCreate}
     >
       <FormProvider {...methods}>
