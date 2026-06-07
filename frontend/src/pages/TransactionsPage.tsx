@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useHotkey } from "@/hooks/useHotkey";
+import { useCreateTransactionShortcut } from "@/hooks/useCreateTransactionShortcut";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
@@ -503,6 +504,9 @@ export function TransactionsPage() {
     void renderDrawer(() => <CreateTransactionDrawer />);
   }, []);
   useHotkey("n", openCreateTransaction, { enabled: !isSelecting });
+
+  // Open the create drawer from a PWA app-shortcut deep link (?new=<type>).
+  useCreateTransactionShortcut();
 
   async function handleSwipeDelete(tx: Transactions.Transaction) {
     try {
