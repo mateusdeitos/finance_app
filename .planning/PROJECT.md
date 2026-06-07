@@ -82,16 +82,17 @@ _v1.7 requirements being defined — see `.planning/REQUIREMENTS.md`._
 
 ## Current Milestone: v1.7 Budgets (Orçamentos)
 
-**Goal:** Couples can set monthly per-category spending caps — configurable as shared (connection) or private — track actual spend ("realizado") against the cap, and receive configurable alerts as a budget nears or exceeds its limit.
+**Goal:** A user can maintain a single monthly budget made up of per-category spending caps, track actual spend ("realizado") per category against each cap, and receive configurable alerts as a category nears or exceeds its cap.
+
+**Scope:** Private budgets only — a single budget per user, composed of per-category caps. Shared (connection-level) budgets, the category equivalence mapping they require, and multiple budgets per user are deferred to a future milestone.
 
 **Target features:**
-- **Category equivalence mapping** between connected users — a user-defined bridge ("category X of A ≡ category Y of B"), since categories are per-user; prerequisite for shared budgets
-- **Budget CRUD** — per-category monthly cap, no rollover, scope configurable as shared (tied to a UserConnection) or private (single user)
-- **Actual-spend tracking** — "realizado" vs. cap, reusing the existing `GetBalance` logic: shared budget counts the full amount paid by the connection's members; private budget counts only the author's net portion (transaction − settlements)
-- **Configurable alerts** — per budget, the user can enable/configure threshold(s) (e.g. 80%, 100%) that fire a push notification, reusing the v1.6 Web Push infrastructure
-- **Frontend** — manage budgets, visualize spend-vs-cap progress per category, and configure the category mapping
+- **Budget with per-category caps** — one budget per user; the user adds their own categories, each with a monthly cap (int64 cents); at most one cap per category
+- **Per-category actual-spend tracking** — "realizado" vs. cap for the current month, reusing the existing `GetBalance` logic (owner's net portion: transaction − settlements); a split transaction counts only the part the owner paid
+- **Configurable per-category alerts** — the user enables/configures threshold(s) (e.g. 80%, 100%) per category cap that fire a push notification to the owner, reusing the v1.6 Web Push infrastructure; each threshold fires once per month and the latch is set only after a successful delivery
+- **Frontend** — manage category caps, visualize spend-vs-cap progress per category, and open the budget from an alert notification
 
-**Key decisions (from explore session 2026-06-05, see `.planning/notes/shared-budget-design-decisions.md`):** monthly with no rollover; split semantics mirror the `GetBalance` settlement rule; category mapping lives at the connection level and is a hard prerequisite.
+**Key decisions (from explore session 2026-06-05, see `.planning/notes/shared-budget-design-decisions.md`; refined during v1.7 requirements):** monthly with no rollover; realizado reuses `GetBalance` (never new aggregation SQL); alerts fire on transaction writes (not cap edits); shared budgets and category mapping deferred.
 
 ### Out of Scope
 
@@ -110,9 +111,10 @@ _v1.7 requirements being defined — see `.planning/REQUIREMENTS.md`._
 - Per-notification-type preference toggles — v1.6 ships minimal device-level enable/disable only
 - Charge reject / cancel notifications — only "received" and "accepted" are in scope per issue #174
 - Email / SMS / native FCM / APN delivery channels — v1.6 is Web Push (PWA) only
-- N-way splits across more than 2 people in a budget — connection model is pairwise today; deferred (v1.7)
+- Shared / connection-level budgets and the category equivalence mapping they require — deferred from v1.7; this milestone is private budgets only (SHARED-F1..F5)
+- Multiple budgets per user — v1.7 ships a single budget per user composed of per-category caps (BUD-F1)
+- N-way splits across more than 2 people in a budget — connection model is pairwise today; deferred
 - Rollover / envelope-style budgets (leftover or overspend carrying to next month) — v1.7 is monthly with no rollover; requires per-period history
-- Shared (connection-owned) categories as a replacement for the per-user category model — too large a structural change; v1.7 bridges via an equivalence map instead
 
 ## Context
 
