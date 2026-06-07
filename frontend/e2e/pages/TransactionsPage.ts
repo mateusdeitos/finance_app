@@ -35,6 +35,23 @@ export class TransactionsPage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  /**
+   * Navigate via a PWA app-shortcut deep link (`?new=<type>`), which should open
+   * the create-transaction drawer pre-set to that type. Waits for the drawer.
+   */
+  async gotoCreateShortcut(type: TransactionType) {
+    await this.page.goto(`/transactions?new=${type}`);
+    await expect(this.formDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Assert the create drawer's type SegmentedControl has `type` selected. */
+  async assertCreateTypeSelected(type: TransactionType) {
+    const segmented = this.formDrawer.getByTestId(
+      TransactionsTestIds.SegmentedTransactionType,
+    );
+    await expect(segmented.locator("input:checked")).toHaveValue(type);
+  }
+
   async openAdvancedFilters() {
     await this.page.getByTestId(TransactionsTestIds.BtnOpenAdvancedFilters).click();
   }

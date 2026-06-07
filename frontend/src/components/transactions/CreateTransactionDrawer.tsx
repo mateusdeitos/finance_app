@@ -27,7 +27,16 @@ const TYPE_LABELS: Record<Transactions.TransactionType, string> = {
   transfer: "Nova Transferência",
 };
 
-export function CreateTransactionDrawer() {
+interface CreateTransactionDrawerProps {
+  /**
+   * Transaction type the form opens with. Defaults to "expense". Set by the
+   * PWA app shortcuts (long-press the installed icon) so "Nova Despesa",
+   * "Nova Receita" and "Nova Transferência" each land on the right type.
+   */
+  initialType?: Transactions.TransactionType;
+}
+
+export function CreateTransactionDrawer({ initialType = "expense" }: CreateTransactionDrawerProps = {}) {
   const { opened, close } = useDrawerContext<void>();
   const [submitError, setSubmitError] = useState<string | undefined>();
   const isMobile = useIsMobile();
@@ -51,7 +60,7 @@ export function CreateTransactionDrawer() {
   const methods = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
-      transaction_type: "expense",
+      transaction_type: initialType,
       date: prefill.date ? localDateStr(parseDate(prefill.date)) : localDateStr(new Date()),
       description: "",
       amount: 0,
