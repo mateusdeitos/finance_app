@@ -9,6 +9,7 @@ import {
   Button,
   Divider,
   Group,
+  NumberInput,
   Stack,
   Text,
   TextInput,
@@ -58,12 +59,19 @@ export function EditConnectionDrawer({ account }: Props) {
     ? connection?.to_user_avatar_url
     : connection?.from_user_avatar_url
 
+  // The day-of-month preference is stored per side; show the caller's own side.
+  const currentDay =
+    (isFrom
+      ? connection?.from_linked_transaction_day_of_month
+      : connection?.to_linked_transaction_day_of_month) ?? null
+
   const [splitMode, setSplitMode] = useState<number | 'custom'>(
     PRESETS.includes(currentSplit) ? currentSplit : 'custom',
   )
   const [customValue, setCustomValue] = useState(
     PRESETS.includes(currentSplit) ? 65 : currentSplit,
   )
+  const [dayOfMonth, setDayOfMonth] = useState<number | ''>(currentDay ?? '')
   const effectiveSplit = splitMode === 'custom' ? customValue : splitMode
 
   const {
@@ -88,7 +96,9 @@ export function EditConnectionDrawer({ account }: Props) {
   })
 
   const dirty =
-    nameValue.trim() !== account.name || effectiveSplit !== currentSplit
+    nameValue.trim() !== account.name ||
+    effectiveSplit !== currentSplit ||
+    (dayOfMonth === '' ? null : dayOfMonth) !== currentDay
 
   function onSubmit(values: EditConnectionFormValues) {
     if (!connection) return
@@ -97,6 +107,7 @@ export function EditConnectionDrawer({ account }: Props) {
       payload: {
         account_name: values.account_name.trim(),
         default_split_percentage: effectiveSplit,
+        linked_transaction_day_of_month: dayOfMonth === '' ? null : dayOfMonth,
       },
     })
   }
@@ -210,6 +221,30 @@ export function EditConnectionDrawer({ account }: Props) {
             partnerName={partnerName}
             partnerHasName
           />
+
+          <Divider />
+
+          <Box>
+            <NumberInput
+              label="Dia do mês para suas transações"
+              placeholder="Manter a data original"
+              min={1}
+              max={31}
+              clampBehavior="strict"
+              allowDecimal={false}
+              allowNegative={false}
+              value={dayOfMonth}
+              onChange={(value) =>
+                setDayOfMonth(typeof value === 'number' ? value : '')
+              }
+              data-testid={CommonTestIds.EditConnectionDayInput}
+            />
+            <Text size="xs" c="dimmed" mt={6}>
+              Quando {partnerName} dividir uma despesa com você, sua parte será
+              criada nesse dia do mês. Deixe em branco para usar a data original
+              da transação.
+            </Text>
+          </Box>
         </Stack>
 
         {/* Sticky footer — solid background, top border, safe-area aware. */}

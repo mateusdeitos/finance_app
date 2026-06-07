@@ -27,6 +27,10 @@ export namespace Transactions {
     from_user_name?: string;
     to_user_avatar_url?: string;
     to_user_name?: string;
+    /** Day of month (1–31) on which the From side's linked transactions are created. */
+    from_linked_transaction_day_of_month?: number | null;
+    /** Day of month (1–31) on which the To side's linked transactions are created. */
+    to_linked_transaction_day_of_month?: number | null;
   }
 
   export interface Account {
