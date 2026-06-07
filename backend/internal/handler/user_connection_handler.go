@@ -83,7 +83,7 @@ func (h *UserConnectionHandler) UpdateStatus(c echo.Context) error {
 }
 
 // UpdateSettings godoc
-// @Summary      Update connection settings (account name + default split)
+// @Summary      Update connection settings (account name + default split + linked tx day)
 // @Tags         user-connections
 // @Accept       json
 // @Produce      json
@@ -110,7 +110,7 @@ func (h *UserConnectionHandler) UpdateSettings(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 
-	conn, err := h.userConnectionService.UpdateSettings(c.Request().Context(), userID, id, req.AccountName, req.DefaultSplitPercentage)
+	conn, err := h.userConnectionService.UpdateSettings(c.Request().Context(), userID, id, req.AccountName, req.DefaultSplitPercentage, req.LinkedTransactionDayOfMonth)
 	if err != nil {
 		return HandleServiceError(err)
 	}
@@ -236,4 +236,8 @@ type AcceptInviteRequest struct {
 type UpdateConnectionSettingsRequest struct {
 	AccountName            string `json:"account_name"`
 	DefaultSplitPercentage int    `json:"default_split_percentage"`
+	// Optional day-of-month (1–31) on which the caller's linked transactions are
+	// created when the other participant splits a transaction with them. nil clears
+	// the preference (the linked transaction inherits the source transaction date).
+	LinkedTransactionDayOfMonth *int `json:"linked_transaction_day_of_month"`
 }

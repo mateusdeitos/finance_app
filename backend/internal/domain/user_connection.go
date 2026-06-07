@@ -29,6 +29,11 @@ type UserConnection struct {
 	FromUserName               *string                  `json:"from_user_name,omitempty"`
 	ToUserAvatarURL            *string                  `json:"to_user_avatar_url,omitempty"`
 	ToUserName                 *string                  `json:"to_user_name,omitempty"`
+	// Optional day-of-month (1–31) on which each side wants their linked transaction
+	// to be created when the other participant splits a transaction with them. nil
+	// means "no preference" — the linked transaction inherits the source date.
+	FromLinkedTransactionDayOfMonth *int `json:"from_linked_transaction_day_of_month,omitempty"`
+	ToLinkedTransactionDayOfMonth   *int `json:"to_linked_transaction_day_of_month,omitempty"`
 }
 
 // inverte os ids da connection para que o user atual sempre seja o from
@@ -36,6 +41,9 @@ type UserConnection struct {
 func (c *UserConnection) SwapIfNeeded(currentUserID int) {
 	if c.ToUserID == currentUserID {
 		c.FromUserID, c.FromAccountID, c.ToUserID, c.ToAccountID = c.ToUserID, c.ToAccountID, c.FromUserID, c.FromAccountID
+		// Keep the day-of-month preference attached to its side so the partner's
+		// preference always lands on the To* side (where their linked tx is created).
+		c.FromLinkedTransactionDayOfMonth, c.ToLinkedTransactionDayOfMonth = c.ToLinkedTransactionDayOfMonth, c.FromLinkedTransactionDayOfMonth
 	}
 }
 

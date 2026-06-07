@@ -666,8 +666,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer",
-                                "format": "int64"
+                                "type": "integer"
                             }
                         }
                     },
@@ -2522,7 +2521,7 @@ const docTemplate = `{
                 "tags": [
                     "user-connections"
                 ],
-                "summary": "Update connection settings (account name + default split)",
+                "summary": "Update connection settings (account name + default split + linked tx day)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3761,6 +3760,10 @@ const docTemplate = `{
                 "from_default_split_percentage": {
                     "type": "integer"
                 },
+                "from_linked_transaction_day_of_month": {
+                    "description": "Optional day-of-month (1–31) on which each side wants their linked transaction\nto be created when the other participant splits a transaction with them. nil\nmeans \"no preference\" — the linked transaction inherits the source date.",
+                    "type": "integer"
+                },
                 "from_user_avatar_url": {
                     "type": "string"
                 },
@@ -3777,6 +3780,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "to_default_split_percentage": {
+                    "type": "integer"
+                },
+                "to_linked_transaction_day_of_month": {
                     "type": "integer"
                 },
                 "to_user_avatar_url": {
@@ -3832,6 +3838,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "default_split_percentage": {
+                    "type": "integer"
+                },
+                "linked_transaction_day_of_month": {
+                    "description": "Optional day-of-month (1–31) on which the caller's linked transactions are\ncreated when the other participant splits a transaction with them. nil clears\nthe preference (the linked transaction inherits the source transaction date).",
                     "type": "integer"
                 }
             }

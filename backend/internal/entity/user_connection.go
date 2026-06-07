@@ -22,39 +22,46 @@ type UserConnection struct {
 	FromUserName               *string                         `gorm:"-"                             json:"from_user_name"`
 	ToUserAvatarURL            *string                         `gorm:"-"                             json:"to_user_avatar_url"`
 	ToUserName                 *string                         `gorm:"-"                             json:"to_user_name"`
+
+	FromLinkedTransactionDayOfMonth *int `json:"from_linked_transaction_day_of_month"`
+	ToLinkedTransactionDayOfMonth   *int `json:"to_linked_transaction_day_of_month"`
 }
 
 func (a *UserConnection) ToDomain() *domain.UserConnection {
 	return &domain.UserConnection{
-		ID:                         a.ID,
-		FromUserID:                 a.FromUserID,
-		FromAccountID:              a.FromAccountID,
-		FromDefaultSplitPercentage: a.FromDefaultSplitPercentage,
-		ToUserID:                   a.ToUserID,
-		ToAccountID:                a.ToAccountID,
-		ToDefaultSplitPercentage:   a.ToDefaultSplitPercentage,
-		ConnectionStatus:           a.ConnectionStatus,
-		CreatedAt:                  a.CreatedAt,
-		UpdatedAt:                  a.UpdatedAt,
-		FromUserAvatarURL:          a.FromUserAvatarURL,
-		FromUserName:               a.FromUserName,
-		ToUserAvatarURL:            a.ToUserAvatarURL,
-		ToUserName:                 a.ToUserName,
+		ID:                              a.ID,
+		FromUserID:                      a.FromUserID,
+		FromAccountID:                   a.FromAccountID,
+		FromDefaultSplitPercentage:      a.FromDefaultSplitPercentage,
+		ToUserID:                        a.ToUserID,
+		ToAccountID:                     a.ToAccountID,
+		ToDefaultSplitPercentage:        a.ToDefaultSplitPercentage,
+		ConnectionStatus:                a.ConnectionStatus,
+		CreatedAt:                       a.CreatedAt,
+		UpdatedAt:                       a.UpdatedAt,
+		FromUserAvatarURL:               a.FromUserAvatarURL,
+		FromUserName:                    a.FromUserName,
+		ToUserAvatarURL:                 a.ToUserAvatarURL,
+		ToUserName:                      a.ToUserName,
+		FromLinkedTransactionDayOfMonth: a.FromLinkedTransactionDayOfMonth,
+		ToLinkedTransactionDayOfMonth:   a.ToLinkedTransactionDayOfMonth,
 	}
 }
 
 func UserConnectionFromDomain(d *domain.UserConnection) *UserConnection {
 	return &UserConnection{
-		ID:                         d.ID,
-		FromUserID:                 d.FromUserID,
-		FromAccountID:              d.FromAccountID,
-		FromDefaultSplitPercentage: d.FromDefaultSplitPercentage,
-		ToUserID:                   d.ToUserID,
-		ToAccountID:                d.ToAccountID,
-		ToDefaultSplitPercentage:   d.ToDefaultSplitPercentage,
-		ConnectionStatus:           d.ConnectionStatus,
-		CreatedAt:                  d.CreatedAt,
-		UpdatedAt:                  d.UpdatedAt,
+		ID:                              d.ID,
+		FromUserID:                      d.FromUserID,
+		FromAccountID:                   d.FromAccountID,
+		FromDefaultSplitPercentage:      d.FromDefaultSplitPercentage,
+		ToUserID:                        d.ToUserID,
+		ToAccountID:                     d.ToAccountID,
+		ToDefaultSplitPercentage:        d.ToDefaultSplitPercentage,
+		ConnectionStatus:                d.ConnectionStatus,
+		CreatedAt:                       d.CreatedAt,
+		UpdatedAt:                       d.UpdatedAt,
+		FromLinkedTransactionDayOfMonth: d.FromLinkedTransactionDayOfMonth,
+		ToLinkedTransactionDayOfMonth:   d.ToLinkedTransactionDayOfMonth,
 	}
 }
 

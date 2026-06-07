@@ -310,9 +310,9 @@ func (_c *MockUserConnectionService_SearchOne_Call) RunAndReturn(run func(contex
 	return _c
 }
 
-// UpdateSettings provides a mock function with given fields: ctx, userID, id, accountName, defaultSplitPercentage
-func (_m *MockUserConnectionService) UpdateSettings(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int) (*domain.UserConnection, error) {
-	ret := _m.Called(ctx, userID, id, accountName, defaultSplitPercentage)
+// UpdateSettings provides a mock function with given fields: ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth
+func (_m *MockUserConnectionService) UpdateSettings(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int, linkedTransactionDayOfMonth *int) (*domain.UserConnection, error) {
+	ret := _m.Called(ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateSettings")
@@ -320,19 +320,19 @@ func (_m *MockUserConnectionService) UpdateSettings(ctx context.Context, userID 
 
 	var r0 *domain.UserConnection
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int) (*domain.UserConnection, error)); ok {
-		return rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int, *int) (*domain.UserConnection, error)); ok {
+		return rf(ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int) *domain.UserConnection); ok {
-		r0 = rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, string, int, *int) *domain.UserConnection); ok {
+		r0 = rf(ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*domain.UserConnection)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, int, string, int) error); ok {
-		r1 = rf(ctx, userID, id, accountName, defaultSplitPercentage)
+	if rf, ok := ret.Get(1).(func(context.Context, int, int, string, int, *int) error); ok {
+		r1 = rf(ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -351,13 +351,18 @@ type MockUserConnectionService_UpdateSettings_Call struct {
 //   - id int
 //   - accountName string
 //   - defaultSplitPercentage int
-func (_e *MockUserConnectionService_Expecter) UpdateSettings(ctx interface{}, userID interface{}, id interface{}, accountName interface{}, defaultSplitPercentage interface{}) *MockUserConnectionService_UpdateSettings_Call {
-	return &MockUserConnectionService_UpdateSettings_Call{Call: _e.mock.On("UpdateSettings", ctx, userID, id, accountName, defaultSplitPercentage)}
+//   - linkedTransactionDayOfMonth *int
+func (_e *MockUserConnectionService_Expecter) UpdateSettings(ctx interface{}, userID interface{}, id interface{}, accountName interface{}, defaultSplitPercentage interface{}, linkedTransactionDayOfMonth interface{}) *MockUserConnectionService_UpdateSettings_Call {
+	return &MockUserConnectionService_UpdateSettings_Call{Call: _e.mock.On("UpdateSettings", ctx, userID, id, accountName, defaultSplitPercentage, linkedTransactionDayOfMonth)}
 }
 
-func (_c *MockUserConnectionService_UpdateSettings_Call) Run(run func(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int)) *MockUserConnectionService_UpdateSettings_Call {
+func (_c *MockUserConnectionService_UpdateSettings_Call) Run(run func(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int, linkedTransactionDayOfMonth *int)) *MockUserConnectionService_UpdateSettings_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(string), args[4].(int))
+		var _p5 *int
+		if args[5] != nil {
+			_p5 = args[5].(*int)
+		}
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(string), args[4].(int), _p5)
 	})
 	return _c
 }
@@ -367,7 +372,7 @@ func (_c *MockUserConnectionService_UpdateSettings_Call) Return(_a0 *domain.User
 	return _c
 }
 
-func (_c *MockUserConnectionService_UpdateSettings_Call) RunAndReturn(run func(context.Context, int, int, string, int) (*domain.UserConnection, error)) *MockUserConnectionService_UpdateSettings_Call {
+func (_c *MockUserConnectionService_UpdateSettings_Call) RunAndReturn(run func(context.Context, int, int, string, int, *int) (*domain.UserConnection, error)) *MockUserConnectionService_UpdateSettings_Call {
 	_c.Call.Return(run)
 	return _c
 }

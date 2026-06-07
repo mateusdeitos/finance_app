@@ -59,7 +59,7 @@ type UserConnectionService interface {
 	Create(ctx context.Context, fromUserID, toUserID, fromDefaultSplitPercentage int) (*domain.UserConnection, error)
 	AcceptInviteByExternalID(ctx context.Context, currentUserID int, inviterExternalID string, fromDefaultSplitPercentage int) (*domain.UserConnection, error)
 	UpdateStatus(ctx context.Context, userID int, id int, status domain.UserConnectionStatusEnum) error
-	UpdateSettings(ctx context.Context, userID, id int, accountName string, defaultSplitPercentage int) (*domain.UserConnection, error)
+	UpdateSettings(ctx context.Context, userID, id int, accountName string, defaultSplitPercentage int, linkedTransactionDayOfMonth *int) (*domain.UserConnection, error)
 	Delete(ctx context.Context, userID, id int) error
 	Search(ctx context.Context, options domain.UserConnectionSearchOptions) ([]*domain.UserConnection, error)
 	SearchOne(ctx context.Context, options domain.UserConnectionSearchOptions) (*domain.UserConnection, error)

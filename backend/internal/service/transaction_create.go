@@ -466,7 +466,7 @@ func (s *transactionService) injectLinkedTransactions(
 		linkedTx := domain.Transaction{
 			ID:                      0,
 			InstallmentNumber:       transaction.InstallmentNumber,
-			Date:                    transaction.Date,
+			Date:                    adjustLinkedTransactionDay(transaction.Date, conn.ToLinkedTransactionDayOfMonth),
 			Description:             transaction.Description,
 			UserID:                  conn.ToUserID,
 			OriginalUserID:          &userID,
@@ -582,7 +582,7 @@ func (s *transactionService) injectLinkedTransactions(
 				OriginalUserID:          &userID,
 				Type:                    transaction.Type,
 				OperationType:           transaction.OperationType.Invert(),
-				AccountID:              connection.FromAccountID,
+				AccountID:               connection.FromAccountID,
 				CategoryID:              nil,
 				Amount:                  amount,
 				Tags:                    nil,
@@ -594,10 +594,18 @@ func (s *transactionService) injectLinkedTransactions(
 			transaction.LinkedTransactions = append(transaction.LinkedTransactions, fromTransaction)
 		}
 
+		// For shared expenses/income, honor the partner's configured day-of-month for
+		// their linked transaction. Transfers represent real money movement on a
+		// specific date, so they keep the source date verbatim.
+		toDate := transaction.Date
+		if req.TransactionType != domain.TransactionTypeTransfer {
+			toDate = adjustLinkedTransactionDay(transaction.Date, connection.ToLinkedTransactionDayOfMonth)
+		}
+
 		toTransaction := domain.Transaction{
 			ID:                0,
 			InstallmentNumber: transaction.InstallmentNumber,
-			Date:              transaction.Date,
+			Date:              toDate,
 			Description:       transaction.Description,
 			UserID:            connection.ToUserID,
 			OriginalUserID:    &userID,
@@ -666,6 +674,20 @@ func (s *transactionService) incrementInstallmentDate(baseDate time.Time, recurr
 		return clampToEndOfMonth(baseDate, baseDate.Year()+increment, baseDate.Month())
 	}
 	return baseDate
+}
+
+// adjustLinkedTransactionDay returns baseDate with its day-of-month replaced by the
+// participant's configured dayOfMonth, clamped to the last day of baseDate's month.
+// When dayOfMonth is nil (no preference) baseDate is returned unchanged. Only the day
+// changes — the year/month (and the per-installment date for recurrences) are preserved.
+func adjustLinkedTransactionDay(baseDate time.Time, dayOfMonth *int) time.Time {
+	if dayOfMonth == nil {
+		return baseDate
+	}
+	lastDay := time.Date(baseDate.Year(), baseDate.Month()+1, 0, 0, 0, 0, 0, baseDate.Location()).Day()
+	day := min(*dayOfMonth, lastDay)
+	return time.Date(baseDate.Year(), baseDate.Month(), day,
+		baseDate.Hour(), baseDate.Minute(), baseDate.Second(), baseDate.Nanosecond(), baseDate.Location())
 }
 
 // clampToEndOfMonth builds a date in the target year/month using the original day from

@@ -649,6 +649,12 @@ definitions:
         type: integer
       from_default_split_percentage:
         type: integer
+      from_linked_transaction_day_of_month:
+        description: |-
+          Optional day-of-month (1–31) on which each side wants their linked transaction
+          to be created when the other participant splits a transaction with them. nil
+          means "no preference" — the linked transaction inherits the source date.
+        type: integer
       from_user_avatar_url:
         type: string
       from_user_id:
@@ -660,6 +666,8 @@ definitions:
       to_account_id:
         type: integer
       to_default_split_percentage:
+        type: integer
+      to_linked_transaction_day_of_month:
         type: integer
       to_user_avatar_url:
         type: string
@@ -697,6 +705,12 @@ definitions:
       account_name:
         type: string
       default_split_percentage:
+        type: integer
+      linked_transaction_day_of_month:
+        description: |-
+          Optional day-of-month (1–31) on which the caller's linked transactions are
+          created when the other participant splits a transaction with them. nil clears
+          the preference (the linked transaction inherits the source transaction date).
         type: integer
     type: object
   handler.testLoginRequest:
@@ -1231,7 +1245,6 @@ paths:
           description: OK
           schema:
             additionalProperties:
-              format: int64
               type: integer
             type: object
         "401":
@@ -2279,7 +2292,8 @@ paths:
       security:
       - CookieAuth: []
       - BearerAuth: []
-      summary: Update connection settings (account name + default split)
+      summary: Update connection settings (account name + default split + linked tx
+        day)
       tags:
       - user-connections
   /api/user-connections/{id}/{status}:

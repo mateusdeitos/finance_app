@@ -197,12 +197,15 @@ func (s *userConnectionService) UpdateStatus(ctx context.Context, userID int, id
 // UpdateSettings lets a participant edit, for their own side of the connection,
 // the name shown on their connection account and the default split percentage.
 // The split is stored complementarily (the other side becomes 100 - value).
-func (s *userConnectionService) UpdateSettings(ctx context.Context, userID, id int, accountName string, defaultSplitPercentage int) (*domain.UserConnection, error) {
+func (s *userConnectionService) UpdateSettings(ctx context.Context, userID, id int, accountName string, defaultSplitPercentage int, linkedTransactionDayOfMonth *int) (*domain.UserConnection, error) {
 	if strings.TrimSpace(accountName) == "" {
 		return nil, apperrors.BadRequest("account name is required")
 	}
 	if defaultSplitPercentage < 0 || defaultSplitPercentage > 100 {
 		return nil, apperrors.BadRequest("default split percentage must be between 0 and 100")
+	}
+	if linkedTransactionDayOfMonth != nil && (*linkedTransactionDayOfMonth < 1 || *linkedTransactionDayOfMonth > 31) {
+		return nil, apperrors.BadRequest("linked transaction day of month must be between 1 and 31")
 	}
 
 	ctx, err := s.dbTransaction.Begin(ctx)
@@ -230,10 +233,12 @@ func (s *userConnectionService) UpdateSettings(ctx context.Context, userID, id i
 	case conn.FromUserID:
 		conn.FromDefaultSplitPercentage = defaultSplitPercentage
 		conn.ToDefaultSplitPercentage = 100 - defaultSplitPercentage
+		conn.FromLinkedTransactionDayOfMonth = linkedTransactionDayOfMonth
 		accountID = conn.FromAccountID
 	case conn.ToUserID:
 		conn.ToDefaultSplitPercentage = defaultSplitPercentage
 		conn.FromDefaultSplitPercentage = 100 - defaultSplitPercentage
+		conn.ToLinkedTransactionDayOfMonth = linkedTransactionDayOfMonth
 		accountID = conn.ToAccountID
 	default:
 		return nil, apperrors.Forbidden("only a participant can update this connection")

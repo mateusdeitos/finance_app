@@ -1598,6 +1598,73 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateRecurringExpenseFrom3of
 	suite.Assert().Equal(10, recurrences[0].Installments, "TransactionRecurrence.Installments should be 10 (total_installments)")
 }
 
+// TestCreateSharedExpenseHonorsPartnerLinkedTransactionDay verifies that when the
+// partner (the To side of the connection) has configured a day-of-month, their linked
+// transaction is created on that day of the source month, while the author's own
+// transaction and the settlement keep the original date.
+func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseHonorsPartnerLinkedTransactionDay() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	// user2 (the To side) wants their linked transactions created on day 10
+	day10 := 10
+	_, err = suite.Services.UserConnection.UpdateSettings(ctx, user2.ID, conn.ID, "Parceiro", 50, &day10)
+	suite.Require().NoError(err)
+
+	baseDate := time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)
+	expectedLinkedDate := time.Date(2026, 7, 10, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "shared expense with partner day pref",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// author's own transaction keeps the original date
+	txUser1, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:          &user1.ID,
+		AccountIDs:      []int{account.ID},
+		WithSettlements: true,
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txUser1, 1)
+	suite.Assert().Equal(baseDate, txUser1[0].Date)
+
+	// the partner's linked transaction lands on the configured day
+	suite.Require().Len(txUser1[0].LinkedTransactions, 1)
+	suite.Assert().Equal(expectedLinkedDate, txUser1[0].LinkedTransactions[0].Date)
+	suite.Assert().Equal(user2.ID, txUser1[0].LinkedTransactions[0].UserID)
+
+	// the settlement (author's side) keeps the original date — only the partner's
+	// linked transaction is shifted
+	suite.Require().Len(txUser1[0].SettlementsFromSource, 1)
+	suite.Assert().Equal(baseDate, txUser1[0].SettlementsFromSource[0].Date)
+
+	// from user2's perspective the expense is dated on day 10
+	txUser2, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &user2.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(txUser2, 1)
+	suite.Assert().Equal(expectedLinkedDate, txUser2[0].Date)
+}
+
 func now() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
