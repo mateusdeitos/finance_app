@@ -1,407 +1,811 @@
-# Architecture Research: Charges
+# Architecture Research: Transaction Templates (v1.7)
 
-**Project:** Couples Finance App — v1.1 Charges Milestone
-**Researched:** 2026-04-14
-**Confidence:** HIGH — based on direct codebase inspection
+**Domain:** Personal transaction templates for a couples' finance app
+**Researched:** 2026-06-07
+**Confidence:** HIGH — based on direct codebase inspection across all layers
 
 ---
 
-## New Domain Components
+## System Overview
 
-### `ChargeStatus` enum
-
-```go
-type ChargeStatus string
-
-const (
-    ChargeStatusPending  ChargeStatus = "pending"
-    ChargeStatusAccepted ChargeStatus = "accepted"
-    ChargeStatusRejected ChargeStatus = "rejected"
-    ChargeStatusCanceled ChargeStatus = "canceled"
-)
 ```
-
-Mirrors the lifecycle of `UserConnectionStatusEnum` but adds `canceled` (only the creator can cancel a pending charge).
-
-### `Charge` domain struct
-
-```go
-type Charge struct {
-    ID               int          `json:"id"`
-    ConnectionID     int          `json:"connection_id"`
-    PayerUserID      int          `json:"payer_user_id"`      // user who owes / pays
-    ChargerUserID    int          `json:"charger_user_id"`    // user who is owed / requests
-    Amount           int64        `json:"amount"`              // cents
-    Description      string       `json:"description"`
-    Status           ChargeStatus `json:"status"`
-    // Populated on Accept — links back to the two transfer transactions created
-    DebitTransactionID  *int      `json:"debit_transaction_id,omitempty"`
-    CreditTransactionID *int      `json:"credit_transaction_id,omitempty"`
-    CreatedAt        *time.Time   `json:"created_at"`
-    UpdatedAt        *time.Time   `json:"updated_at"`
-}
-```
-
-**Key design decisions:**
-
-- `PayerUserID` / `ChargerUserID` are explicit (not derived) so the intent is preserved regardless of which user queries the charge. This avoids the need to call `SwapIfNeeded` the way `UserConnection` does.
-- `ConnectionID` (FK to `user_connections`) provides the account IDs needed to create transfers on acceptance without additional lookups. The connection also validates that the two users are actually connected and `accepted`.
-- `DebitTransactionID` / `CreditTransactionID` are nullable FKs to `transactions`. They are null while `status = pending|rejected|canceled` and are set atomically when `status` transitions to `accepted`. This provides an auditable link between a charge and the transfers it created.
-- Amount is in cents, consistent with `Transaction.Amount`.
-
-### `ChargeFilter` struct
-
-```go
-type ChargeFilter struct {
-    IDs          []int        `query:"id[]"`
-    ConnectionID *int         `query:"connection_id,omitempty"`
-    // Filter by either side of the charge without knowing direction
-    UserID       *int         `query:"user_id,omitempty"` // matches payer_user_id OR charger_user_id
-    Statuses     []ChargeStatus `query:"status[]"`
-    SortBy       *SortBy      `query:"sort_by,omitempty"`
-    Limit        *int         `query:"limit,omitempty"`
-    Offset       *int         `query:"offset,omitempty"`
-}
+Backend (Go/Echo/GORM/PostgreSQL)           Frontend (React 19/RHF/TanStack)
+─────────────────────────────────           ─────────────────────────────────
+HTTP Handler (Echo)                         TransactionForm
+   ↕                                           ↕ (reset() on chip click)
+TemplateService (business logic)            TemplateQuickChips (new, above form)
+   ↕                                           ↕
+TemplateRepository (CRUD + IDOR cap)        TemplatesManagementDrawer (new)
+   ↕                                           ↕
+PostgreSQL: transaction_templates table     TanStack Query hooks (new)
+  + template_tags join table                   ↕
+                                            src/api/templates.ts (new)
 ```
 
 ---
 
-## DB Schema
+## Backend Architecture
 
-### Migration: `charges` table
+### 1. Migration
+
+**File (new):** `backend/migrations/<timestamp>_create_transaction_templates_table.sql`
+
+Create with `just migrate-create create_transaction_templates_table`.
 
 ```sql
 -- +goose Up
-CREATE TYPE charge_status AS ENUM ('pending', 'accepted', 'rejected', 'canceled');
-
-CREATE TABLE charges (
-    id                      SERIAL PRIMARY KEY,
-    connection_id           INT NOT NULL REFERENCES user_connections(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    payer_user_id           INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    charger_user_id         INT NOT NULL REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    amount                  BIGINT NOT NULL CHECK (amount > 0),
-    description             TEXT NOT NULL,
-    status                  charge_status NOT NULL DEFAULT 'pending',
-    debit_transaction_id    INT REFERENCES transactions(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    credit_transaction_id   INT REFERENCES transactions(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    created_at              TIMESTAMP,
-    updated_at              TIMESTAMP,
-    -- Exactly one user is payer, the other is charger; they must differ
-    CHECK (payer_user_id != charger_user_id),
-    -- Both transaction IDs are set together or not at all
-    CHECK (
-        (debit_transaction_id IS NULL AND credit_transaction_id IS NULL)
-        OR
-        (debit_transaction_id IS NOT NULL AND credit_transaction_id IS NOT NULL)
-    )
+CREATE TABLE transaction_templates (
+    id          SERIAL PRIMARY KEY,
+    user_id     INT         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        TEXT        NOT NULL,
+    type        TEXT        NOT NULL CHECK (type IN ('expense', 'income', 'transfer')),
+    account_id  INT         REFERENCES accounts(id) ON DELETE SET NULL,
+    category_id INT         REFERENCES categories(id) ON DELETE SET NULL,
+    description TEXT        NOT NULL DEFAULT '',
+    split_settings JSONB    NOT NULL DEFAULT '[]',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_charges_connection_id    ON charges(connection_id);
-CREATE INDEX idx_charges_payer_user_id    ON charges(payer_user_id);
-CREATE INDEX idx_charges_charger_user_id  ON charges(charger_user_id);
-CREATE INDEX idx_charges_status           ON charges(status);
+CREATE INDEX idx_transaction_templates_user_id ON transaction_templates(user_id);
+
+CREATE TABLE template_tags (
+    template_id INT NOT NULL REFERENCES transaction_templates(id) ON DELETE CASCADE,
+    tag_id      INT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (template_id, tag_id)
+);
 
 -- +goose Down
-DROP TABLE IF EXISTS charges;
-DROP TYPE IF EXISTS charge_status;
+DROP TABLE IF EXISTS template_tags;
+DROP TABLE IF EXISTS transaction_templates;
 ```
 
-**ON DELETE RESTRICT on connection_id** prevents a connection from being deleted while a pending charge exists — this is intentional. Accepted/rejected/canceled charges are historical records; callers should cancel or reject pending charges before deleting a connection.
+**Rationale for each column:**
+- `name`: user-chosen label for the chip (e.g. "Netflix", "Feira"). Distinct from `description` which pre-fills the transaction's description field.
+- `type`: mirrors `transactions.type`; stored as TEXT with a CHECK (no separate enum type to keep migration simpler, following settlement pattern).
+- `account_id` / `category_id`: nullable FKs with SET NULL on delete — a deleted account/category becomes null on the template rather than cascading template deletion. The service surfaces this as a warning to the user.
+- `description`: pre-fills the transaction form's description field; empty string is valid.
+- `split_settings`: JSONB array; see split modeling section below. Default `'[]'` means no split.
+- No `amount`, no `date` columns — intentional per spec.
+- No `destination_account_id` — templates for transfers are out of scope for v1.7 (only expense/income make sense without a fixed amount, and the split semantics on transfers differ). If type=transfer is stored, destination is null; the form handles it gracefully since the validation only fires on submit.
 
-**ON DELETE SET NULL on transaction FKs** rather than CASCADE: if a transfer is manually deleted later the charge record should persist as a historical record (status remains `accepted`, transaction IDs become null).
+**Tags: separate join table, not JSONB.**
 
----
+Tags are a first-class entity with their own `tags` table and `tag_id` FK. Storing tag IDs in JSONB would break referential integrity and make tag deletion cascade impossible. The `template_tags` join table mirrors the `transaction_tags` pattern used by the `entity.Transaction` GORM model (`gorm:"many2many:transaction_tags;..."`). GORM's `Association("Tags").Replace(tags)` pattern used in `transactionRepository.Update` applies identically here.
 
-## Service Layer Design
+### 2. Domain Type
 
-### Interface
+**File (new):** `backend/internal/domain/transaction_template.go`
 
 ```go
-// in internal/service/interfaces.go
+package domain
 
-type ChargeService interface {
-    Create(ctx context.Context, chargerUserID int, req *domain.ChargeCreateRequest) (*domain.Charge, error)
-    Accept(ctx context.Context, payerUserID int, chargeID int) (*domain.Charge, error)
-    Reject(ctx context.Context, payerUserID int, chargeID int) error
-    Cancel(ctx context.Context, chargerUserID int, chargeID int) error
-    List(ctx context.Context, userID int, filter domain.ChargeFilter) ([]*domain.Charge, error)
+import "time"
+
+type TransactionTemplate struct {
+    ID            int             `json:"id"`
+    UserID        int             `json:"user_id"`
+    Name          string          `json:"name"`
+    Type          TransactionType `json:"type"`
+    AccountID     *int            `json:"account_id,omitempty"`
+    CategoryID    *int            `json:"category_id,omitempty"`
+    Description   string          `json:"description"`
+    SplitSettings []SplitSettings `json:"split_settings,omitempty"`
+    Tags          []Tag           `json:"tags,omitempty"`
+    CreatedAt     *time.Time      `json:"created_at"`
+    UpdatedAt     *time.Time      `json:"updated_at"`
+}
+
+type TransactionTemplateCreateRequest struct {
+    Name          string          `json:"name"`
+    Type          TransactionType `json:"transaction_type"`
+    AccountID     *int            `json:"account_id,omitempty"`
+    CategoryID    *int            `json:"category_id,omitempty"`
+    Description   string          `json:"description"`
+    SplitSettings []SplitSettings `json:"split_settings,omitempty"`
+    Tags          []Tag           `json:"tags,omitempty"`
+}
+
+type TransactionTemplateUpdateRequest struct {
+    Name          *string          `json:"name,omitempty"`
+    Type          *TransactionType `json:"transaction_type,omitempty"`
+    AccountID     *int             `json:"account_id,omitempty"`
+    CategoryID    *int             `json:"category_id,omitempty"`
+    Description   *string          `json:"description,omitempty"`
+    SplitSettings []SplitSettings  `json:"split_settings,omitempty"`
+    Tags          []Tag            `json:"tags,omitempty"`
+}
+
+type TransactionTemplateFilter struct {
+    IDs    []int `query:"id[]"`
+    UserID int   `query:"user_id"`
 }
 ```
 
-### `ChargeCreateRequest`
+**Reuse of `domain.SplitSettings`:** The existing `SplitSettings` struct (`internal/domain/transaction.go`) has `ConnectionID int`, `Percentage *int`, `Amount *int64`, and `Date *Date`. Only `ConnectionID` and `Percentage` are meaningful for a template (amount-less context); Amount and Date are ignored when applying a template. The struct is reused as-is — no new type needed. The service strips the `Amount` and `Date` fields when reading from JSONB for safety.
+
+**`domain.SplitSettings.UserConnection` field:** This is a non-serialized pointer (`UserConnection *UserConnection` with no `json` tag shown in source). It is safe to serialize/deserialize the struct to JSONB because GORM's JSON column scanning uses the json tags; the in-memory pointer is not persisted.
+
+### 3. Entity
+
+**File (new):** `backend/internal/entity/transaction_template.go`
 
 ```go
-type ChargeCreateRequest struct {
-    ConnectionID int    `json:"connection_id"`
-    PayerUserID  int    `json:"payer_user_id"`
-    Amount       int64  `json:"amount"`
-    Description  string `json:"description"`
+package entity
+
+import (
+    "encoding/json"
+    "time"
+
+    "github.com/finance_app/backend/internal/domain"
+    "github.com/samber/lo"
+)
+
+type TransactionTemplate struct {
+    ID            int                     `gorm:"primaryKey;autoIncrement"`
+    UserID        int                     `gorm:"not null"`
+    Name          string                  `gorm:"not null"`
+    Type          domain.TransactionType  `gorm:"not null"`
+    AccountID     *int
+    CategoryID    *int
+    Description   string
+    SplitSettings []byte                  `gorm:"type:jsonb;not null;default:'[]'"`
+    Tags          []Tag                   `gorm:"many2many:template_tags;joinForeignKey:template_id;joinReferences:tag_id"`
+    CreatedAt     *time.Time
+    UpdatedAt     *time.Time
+}
+
+func (t *TransactionTemplate) ToDomain() *domain.TransactionTemplate {
+    var splitSettings []domain.SplitSettings
+    if len(t.SplitSettings) > 0 {
+        _ = json.Unmarshal(t.SplitSettings, &splitSettings)
+    }
+    return &domain.TransactionTemplate{
+        ID:          t.ID,
+        UserID:      t.UserID,
+        Name:        t.Name,
+        Type:        t.Type,
+        AccountID:   t.AccountID,
+        CategoryID:  t.CategoryID,
+        Description: t.Description,
+        SplitSettings: splitSettings,
+        Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
+            return *tag.ToDomain()
+        }),
+        CreatedAt: t.CreatedAt,
+        UpdatedAt: t.UpdatedAt,
+    }
+}
+
+func TransactionTemplateFromDomain(d *domain.TransactionTemplate) *TransactionTemplate {
+    splitBytes, _ := json.Marshal(d.SplitSettings)
+    return &TransactionTemplate{
+        ID:          d.ID,
+        UserID:      d.UserID,
+        Name:        d.Name,
+        Type:        d.Type,
+        AccountID:   d.AccountID,
+        CategoryID:  d.CategoryID,
+        Description: d.Description,
+        SplitSettings: splitBytes,
+        Tags: lo.Map(d.Tags, func(tag domain.Tag, _ int) Tag {
+            return *TagFromDomain(&tag)
+        }),
+        CreatedAt: d.CreatedAt,
+        UpdatedAt: d.UpdatedAt,
+    }
 }
 ```
 
-The `ChargerUserID` is derived from the authenticated caller; it is never accepted from the request body.
+**JSONB encoding:** `[]byte` with `gorm:"type:jsonb"` is the standard GORM pattern for JSONB columns. `json.Marshal`/`json.Unmarshal` on `[]domain.SplitSettings` works because `SplitSettings` fields are all json-tagged. The `UserConnection *UserConnection` pointer inside `SplitSettings` has no json tag and will serialize to `null`/be ignored — safe.
 
-### Method responsibilities
+**Tags many2many:** Uses GORM `many2many` with explicit join table `template_tags`, `joinForeignKey:template_id`, `joinReferences:tag_id`. This mirrors the `transaction_tags` pattern in `entity.Transaction` exactly. `Association("Tags").Replace(tags)` can be called in the repository update method identically.
+
+### 4. Repository
+
+**File (new):** `backend/internal/repository/template_repository.go`
+
+**Interface added to** `backend/internal/repository/interfaces.go`:
+
+```go
+type TransactionTemplateRepository interface {
+    Create(ctx context.Context, template *domain.TransactionTemplate) (*domain.TransactionTemplate, error)
+    Update(ctx context.Context, template *domain.TransactionTemplate) error
+    Delete(ctx context.Context, userID, id int) error
+    Search(ctx context.Context, filter domain.TransactionTemplateFilter) ([]*domain.TransactionTemplate, error)
+    CountByUserID(ctx context.Context, userID int) (int64, error)
+}
+```
+
+The `Repositories` struct in `interfaces.go` gains field `TransactionTemplate TransactionTemplateRepository`.
+
+**Implementation notes:**
+
+- `Create`: `db.Create(ent)` then `db.Model(ent).Association("Tags").Replace(tags)` — same pattern as `transactionRepository.Update`. No DB transaction needed (single template + tags; association replace is atomic enough for this use).
+- `Update`: `db.Save(ent)` then `Association("Tags").Replace(tags)` — same pattern.
+- `Delete`: Scoped by `userID` AND `id` for IDOR: `db.Where("id = ? AND user_id = ?", id, userID).Delete(&entity.TransactionTemplate{})`. Cascade from `template_tags` handles tag join rows automatically.
+- `Search`: `db.Where("user_id = ?", filter.UserID).Preload("Tags").Find(&templates)`. Preload Tags so the domain object is fully populated.
+- `CountByUserID`: `db.Model(&entity.TransactionTemplate{}).Where("user_id = ?", userID).Count(&count)`. Used by service to enforce the 3-template cap.
+
+**IDOR note:** `Delete` is scoped at the repository level (user_id + id). `Search` always takes a `UserID` in the filter, which the service populates from the authenticated caller — never from the request body. `Update` similarly: the service loads the template first (verifying ownership via `Search`), then calls `repo.Update`.
+
+### 5. Service
+
+**File (new):** `backend/internal/service/template_service.go`
+
+**Interface added to** `backend/internal/service/interfaces.go`:
+
+```go
+type TransactionTemplateService interface {
+    Create(ctx context.Context, userID int, req *domain.TransactionTemplateCreateRequest) (*domain.TransactionTemplate, error)
+    Update(ctx context.Context, userID, id int, req *domain.TransactionTemplateUpdateRequest) (*domain.TransactionTemplate, error)
+    Delete(ctx context.Context, userID, id int) error
+    List(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error)
+}
+```
+
+The `Services` struct gains field `TransactionTemplate TransactionTemplateService`.
+
+**Method responsibilities:**
 
 **Create:**
-1. Validate: `Amount > 0`, `Description` not blank, `ConnectionID > 0`, `PayerUserID != chargerUserID`.
-2. Load the `UserConnection` — confirm it is `accepted`, and that both `chargerUserID` and `payerUserID` are members of the connection.
-3. Insert the `Charge` row with `status = pending`.
-4. Return the created charge.
-5. No DB transaction needed (single insert).
+1. Count existing templates for `userID` via `repo.CountByUserID`.
+2. If count >= 3, return `pkgErrors.Validation("max 3 templates per user")` with tag `TEMPLATE.LIMIT_REACHED`.
+3. Validate `Name` non-empty, `Type` is valid.
+4. Set `UserID` from authenticated caller (never from request).
+5. Call `repo.Create`.
 
-**Accept:**
-1. Load charge; assert `status == pending` and `payerUserID == charge.PayerUserID`.
-2. Load the `UserConnection` to get account IDs.
-3. Begin DB transaction.
-4. Create debit transfer for payer (see Atomic Transfer Creation below).
-5. Create credit transfer for charger.
-6. Update `charge.status = accepted`, set `debit_transaction_id`, `credit_transaction_id`.
-7. Commit. Rollback on any error.
+**Update:**
+1. Load template via `repo.Search({UserID: userID, IDs: [id]})`. If empty, return `pkgErrors.NotFound("template")`.
+2. Apply partial update fields from request onto the loaded domain object.
+3. Call `repo.Update`.
 
-**Reject:**
-1. Load charge; assert `status == pending` and `payerUserID == charge.PayerUserID`.
-2. Update `status = rejected`. Single update, no transaction needed.
-
-**Cancel:**
-1. Load charge; assert `status == pending` and `chargerUserID == charge.ChargerUserID`.
-2. Update `status = canceled`. Single update, no transaction needed.
+**Delete:**
+1. Call `repo.Delete(ctx, userID, id)` (repo is IDOR-scoped).
+2. Check rows affected: if 0, return `pkgErrors.NotFound("template")`.
 
 **List:**
-1. Apply `userID` filter (matches either side of charge) via `ChargeFilter.UserID`.
-2. Delegate directly to `ChargeRepository.Search`.
-3. No status defaulting — callers can filter by status explicitly; unfiltered returns all statuses.
+1. Call `repo.Search({UserID: userID})`. Return all (max 3).
 
-### Service struct
+**No DBTransaction needed:** All template operations are single-resource writes (create/update/delete one row + its tag associations). No multi-repo atomicity required.
 
+**Error tags to add to** `pkg/errors/errors.go`:
 ```go
-type chargeService struct {
-    dbTransaction repository.DBTransaction
-    chargeRepo    repository.ChargeRepository
-    services      *Services
-}
-
-func NewChargeService(repos *repository.Repositories, services *Services) ChargeService {
-    return &chargeService{
-        dbTransaction: repos.DBTransaction,
-        chargeRepo:    repos.Charge,
-        services:      services,
-    }
-}
+ErrorTagTemplateLimitReached ErrorTag = "TEMPLATE.LIMIT_REACHED"
+ErrorTagTemplateNotFound     ErrorTag = "TEMPLATE.NOT_FOUND"
+ErrorTagTemplateNameRequired ErrorTag = "TEMPLATE.NAME_REQUIRED"
+ErrorTagTemplateInvalidType  ErrorTag = "TEMPLATE.INVALID_TYPE"
 ```
 
-The service follows the same pattern as `transactionService` — it holds a reference to `*Services` for cross-service calls (specifically `UserConnection` and `Transaction`).
+### 6. Handler + Routes
 
-Because `ChargeService` depends on `Services`, it must be wired last in `main.go`, after `UserConnectionService` and `TransactionService` are assigned, matching the existing pattern for `UserConnection` and `Transaction`.
-
----
-
-## Atomic Transfer Creation
-
-### The problem
-
-When a charge is accepted, two transfer transactions must be created atomically:
-1. A debit transfer on the payer's account (money leaves).
-2. A credit transfer on the charger's account (money arrives).
-
-These are the same two rows that a cross-user transfer creates via `injectLinkedTransactions`. The acceptance path must reach the same result without duplicating that logic.
-
-### Recommended approach: call `TransactionService.Create` inside a shared DB transaction
-
-The existing `repository.DBTransaction` infrastructure propagates a GORM transaction through the `context.Context`. Both `chargeRepo.Update` and two `transactionService.Create` calls can share the same `ctx` once `dbTransaction.Begin` is called:
+**File (new):** `backend/internal/handler/template_handler.go`
 
 ```go
-func (s *chargeService) Accept(ctx context.Context, payerUserID int, chargeID int) (*domain.Charge, error) {
-    charge, err := s.chargeRepo.SearchOne(ctx, domain.ChargeFilter{IDs: []int{chargeID}})
-    // ... validate ownership and status ...
+type TemplateHandler struct {
+    templateService service.TransactionTemplateService
+}
 
-    conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
-        IDs: []int{charge.ConnectionID},
-    })
-    // ... validate conn is accepted ...
-
-    conn.SwapIfNeeded(payerUserID) // payer becomes FromUser, charger becomes ToUser
-
-    ctx, err = s.dbTransaction.Begin(ctx)
-    if err != nil { return nil, pkgErrors.Internal("begin tx", err) }
-    defer s.dbTransaction.Rollback(ctx)
-
-    // Create a single cross-user transfer from payer's account to charger's account.
-    // TransactionService.Create will produce two linked transactions (debit + credit)
-    // using the same conn-based logic used for normal cross-user transfers.
-    transferReq := &domain.TransactionCreateRequest{
-        TransactionType:      domain.TransactionTypeTransfer,
-        AccountID:            conn.FromAccountID, // payer's account
-        DestinationAccountID: &conn.ToAccountID,  // charger's account
-        Amount:               charge.Amount,
-        Date:                 time.Now().UTC(),
-        Description:          charge.Description,
-    }
-    firstID, err := s.services.Transaction.Create(ctx, payerUserID, transferReq)
-    if err != nil { return nil, err }
-
-    // Resolve the two transaction IDs: firstID is the debit (payer-side).
-    // The credit (charger-side) is its linked transaction.
-    debitTx, err := s.services.Transaction.SearchOne(ctx, payerUserID, domain.TransactionFilter{IDs: []int{firstID}})
-    if err != nil { return nil, err }
-    creditTxID := debitTx.LinkedTransactions[0].ID
-
-    charge.Status = domain.ChargeStatusAccepted
-    charge.DebitTransactionID = &firstID
-    charge.CreditTransactionID = &creditTxID
-    if err := s.chargeRepo.Update(ctx, charge); err != nil { return nil, err }
-
-    if err := s.dbTransaction.Commit(ctx); err != nil {
-        return nil, pkgErrors.Internal("commit tx", err)
-    }
-    return charge, nil
+func NewTemplateHandler(services *service.Services) *TemplateHandler {
+    return &TemplateHandler{templateService: services.TransactionTemplate}
 }
 ```
 
-**Why call `TransactionService.Create` rather than `TransactionRepository.Create` directly:**
-`TransactionService.Create` already handles the cross-user transfer split (via `injectLinkedTransactions`), `linked_transactions` join-table insertion, account ownership validation, and DB transaction propagation through context. Replicating this at the repository level would duplicate non-trivial logic and diverge when the transfer path evolves.
+**Routes registered in** `cmd/server/main.go` under `registerAPIRoutes`:
 
-**Note on nested DB transactions:** `transactionService.Create` calls `dbTransaction.Begin` internally. Calling `Begin` when a `tx` is already in context will create a new `*gorm.DB` transaction, which in PostgreSQL translates to a savepoint-like scope with GORM. This works correctly because GORM's `Begin` on an already-transacted connection creates a nested transaction (savepoint). The outer `chargeService` commit is what actually flushes to disk. Verify with a targeted integration test.
+```
+GET    /api/transaction-templates          → List
+POST   /api/transaction-templates          → Create
+PUT    /api/transaction-templates/:id      → Update
+DELETE /api/transaction-templates/:id      → Delete
+```
 
-**Alternative if nested transactions cause issues:** Extract a `createTransferTransactions(ctx, ...)` helper from `transactionService` that does not call `Begin`/`Commit` itself, and call it from both `transactionService.Create` and `chargeService.Accept`. This is a clean refactor that avoids nesting entirely.
+**Handler method pattern** (follows `ChargeHandler` / `TagHandler` exactly):
+1. Extract `userID` from context.
+2. Bind request DTO.
+3. Call service with authenticated `userID`.
+4. On error: `pkgErrors.ToHTTPError(err)`.
+5. On success: `c.JSON(status, result)` or `c.NoContent(204)`.
+
+**IDOR:** Handler never reads `user_id` from the request body. The service always uses the authenticated userID from context.
+
+**Swagger annotations:** Minimum set per `backend/CLAUDE.md`:
+- `@Tags transaction-templates`
+- `@Security CookieAuth` and `@Security BearerAuth`
+- `@Success` / `@Failure` with `middleware.ErrorResponse` for errors
+
+Run `just generate-docs` after adding annotations.
+
+### 7. Wiring in `cmd/server/main.go`
+
+**Modified:** `backend/cmd/server/main.go`
+
+In `repos` construction:
+```go
+TransactionTemplate: repository.NewTransactionTemplateRepository(db),
+```
+
+In `services` construction (no cross-service deps, so can be wired with the simple services):
+```go
+services.TransactionTemplate = service.NewTransactionTemplateService(repos)
+```
+
+In `apiHandlers` struct: add `template *handler.TemplateHandler`.
+
+In `registerAPIRoutes`: add `templates := api.Group("/transaction-templates")` with four routes.
+
+### 8. Mocks
+
+Run `just generate-mocks` after adding `TransactionTemplateRepository` and `TransactionTemplateService` interfaces. This produces:
+- `backend/mocks/mock_TransactionTemplateRepository.go` (new)
+- `backend/mocks/mock_TransactionTemplateService.go` (new)
 
 ---
 
-## Integration Points
+## Frontend Architecture
 
-### UserConnection
+### Form Integration: `TemplateQuickChips`
 
-- `ChargeService.Create` loads the connection to assert it is `accepted` and that both users are members. This prevents charges between non-connected or pending users.
-- `ChargeService.Accept` calls `conn.SwapIfNeeded(payerUserID)` to normalize account IDs before constructing the transfer request — the same pattern used in `transactionService.injectLinkedTransactions`.
-- The `charges.connection_id` FK enforces referential integrity at the DB level.
+**File (new):** `frontend/src/components/transactions/form/TemplateQuickChips.tsx`
 
-### Transaction / Transfer
+**Mount point in `TransactionForm.tsx`:** Insert the chip row immediately before the `<Controller name="transaction_type" ...>` block — the very first visible element inside `<Stack gap="md">` (after `{headerContent}` and the error `<Alert>`). This matches the DateQuickChips placement pattern: chips appear above the field they inform.
 
-- Acceptance delegates to `TransactionService.Create` with `TransactionType = transfer` and `DestinationAccountID = conn.ToAccountID`. This re-uses all existing cross-user transfer logic.
-- The created transfer pair is linked via `linked_transactions` exactly as regular transfers are.
-- `charges.debit_transaction_id` and `charges.credit_transaction_id` point back to those two rows, enabling the UI to deep-link from a charge to its resulting transactions.
+```tsx
+// Inside TransactionForm, at the top of <Stack gap="md">:
+{headerContent}
+{generalError && <Alert ...>{generalError}</Alert>}
+<TemplateQuickChips />   {/* NEW — reads templates, calls reset() */}
+<Controller name="transaction_type" ...>
+```
 
-### Auth / Middleware
+**Component design** (mirrors `DateQuickChips` pattern):
 
-- All charge endpoints are under `/api/` and therefore behind `AuthMiddleware.RequireAuth`.
-- `ChargerUserID` is always set to `appcontext.GetUserIDFromContext(ctx)` in the handler — never from the request body.
-- Ownership checks (`payerUserID == charge.PayerUserID`, `chargerUserID == charge.ChargerUserID`) happen in the service layer, returning `ErrCodeForbidden` on mismatch. These follow the existing pattern where `transactionService` checks `UserID` ownership before mutating.
+```tsx
+// TemplateQuickChips.tsx
+import { Group, UnstyledButton } from "@mantine/core";
+import { useFormContext } from "react-hook-form";
+import { useTemplates } from "@/hooks/useTemplates";
+import { TransactionFormValues } from "./transactionFormSchema";
+import { localDateStr } from "@/utils/parseDate";
 
-### Error handling
+export function TemplateQuickChips() {
+  const { reset, setFocus } = useFormContext<TransactionFormValues>();
+  const { query } = useTemplates();
+  const templates = query.data ?? [];
 
-New `ErrorTag` constants should be added to `pkg/errors/errors.go`:
+  if (templates.length === 0) return null;
 
-```go
-ErrorTagChargeNotFound              ErrorTag = "CHARGE.NOT_FOUND"
-ErrorTagChargeForbidden             ErrorTag = "CHARGE.FORBIDDEN"
-ErrorTagChargeAlreadyActioned       ErrorTag = "CHARGE.ALREADY_ACTIONED"
-ErrorTagChargeConnectionNotAccepted ErrorTag = "CHARGE.CONNECTION_NOT_ACCEPTED"
-ErrorTagChargeAmountRequired        ErrorTag = "CHARGE.AMOUNT_REQUIRED"
-ErrorTagChargeDescriptionRequired   ErrorTag = "CHARGE.DESCRIPTION_REQUIRED"
-ErrorTagChargeInvalidConnection     ErrorTag = "CHARGE.INVALID_CONNECTION"
-ErrorTagChargePayerNotInConnection  ErrorTag = "CHARGE.PAYER_NOT_IN_CONNECTION"
+  function applyTemplate(tpl: Templates.TransactionTemplate) {
+    reset({
+      transaction_type: tpl.transaction_type,
+      account_id: tpl.account_id ?? undefined,
+      category_id: tpl.category_id ?? null,
+      description: tpl.description,
+      tags: tpl.tags?.map((t) => t.name) ?? [],
+      split_settings: tpl.split_settings ?? [],
+      date: localDateStr(new Date()),  // today — never from template
+      amount: 0,                       // always blank
+      destination_account_id: null,
+      recurrenceEnabled: false,
+      recurrenceType: "monthly",
+      recurrenceCurrentInstallment: null,
+      recurrenceTotalInstallments: null,
+    });
+    // Focus amount after reset so user types the amount immediately.
+    // Must be called after reset() completes; a microtask delay is reliable.
+    setTimeout(() => setFocus("amount"), 0);
+  }
+
+  return (
+    <Group gap={6} wrap="wrap">
+      {templates.map((tpl) => (
+        <UnstyledButton
+          key={tpl.id}
+          type="button"
+          onClick={() => applyTemplate(tpl)}
+          className={classes.chip}
+          data-testid={TemplatesTestIds.TemplateChip(tpl.id)}
+        >
+          {tpl.name}
+        </UnstyledButton>
+      ))}
+    </Group>
+  );
+}
+```
+
+**Why `reset()` and not `setValue()` per field:** `reset()` replaces the entire form state in one operation, clearing dirty state flags and validation errors simultaneously. `setValue` per field would leave dirty flags set and could leave stale validation errors on fields not in the template. `reset()` is the correct RHF pattern for "load a preset" flows — confirmed by the existing `useResetFormOnChange` hook in `src/hooks/` which uses the same approach.
+
+**Amount blank + focus:** `amount: 0` in the reset payload. After `reset()`, call `setFocus("amount")` via `setTimeout(..., 0)` to let the DOM settle after RHF's state update. The `CurrencyInput` component clears its display value when its controlled value is 0 (verify against `CurrencyInput.tsx`). The `useFocusFieldOnMount` hook used by `TransactionForm` sets focus on `focusField` prop at mount — for subsequent chip clicks (not mount), `setFocus` called from the chip handler is the correct mechanism.
+
+**`useFormContext` availability:** `TemplateQuickChips` is rendered inside `TransactionForm`, which is always wrapped in `<FormProvider {...methods}>` by its parent (e.g. `CreateTransactionDrawer`). `useFormContext` is safe here. No prop-drilling needed.
+
+**CSS module:** `TemplateQuickChips.module.css` — can reuse the same `.chip` styles as `DateQuickChips.module.css` or import that file directly.
+
+### Zod Schema: no changes needed
+
+The template apply sets `amount: 0` and `date: localDateStr(new Date())`. The existing `transactionFormSchema` validates `amount: z.number().int().min(1, ...)` and `date: z.string().min(1, ...)`. Both are satisfied: `amount 0` will fail validation only on submit (correct — user must type an amount), and date is today. No schema changes.
+
+**The "blank amount" UX:** `amount: 0` renders as an empty-looking field in `CurrencyInput` (the component formats cents, so 0 shows as "0,00" or blank depending on implementation). The autofocus brings the user directly to this field. If `CurrencyInput` doesn't clear on focus, the user can type to replace — minor UX, not a blocker.
+
+### "Save as Template" Action
+
+**File (new):** `frontend/src/hooks/useCreateTemplate.ts` (mutation hook)
+
+**Called from:** `CreateTransactionDrawer` via an additional action button in `TransactionForm`'s `extraContent` prop, or as a menu item in `TransactionFormFooter`. The cleanest injection point is the `extraContent` prop that `TransactionForm` already accepts — it renders between the form fields and the sticky footer. The caller reads current form state via `methods.getValues()`.
+
+```tsx
+// Inside CreateTransactionDrawer, passed as extraContent:
+<SaveAsTemplateButton
+  getValues={methods.getValues}
+  existingTags={existingTags}
+/>
+```
+
+```tsx
+// SaveAsTemplateButton.tsx (new, small)
+function SaveAsTemplateButton({ getValues, existingTags }) {
+  const { mutation } = useCreateTemplate();
+  function handleSave() {
+    const values = getValues();
+    // Build template payload from form values (no amount/date/recurrence)
+    mutation.mutate({
+      name: values.description || "Template",
+      transaction_type: values.transaction_type,
+      account_id: values.account_id ?? undefined,
+      category_id: values.category_id ?? undefined,
+      description: values.description,
+      split_settings: values.split_settings,
+      tags: resolveTagPayload(values.tags, existingTags),
+    });
+  }
+  return (
+    <Button
+      variant="subtle"
+      size="xs"
+      onClick={handleSave}
+      loading={mutation.isPending}
+      data-testid={TemplatesTestIds.BtnSaveAsTemplate}
+    >
+      Salvar como template
+    </Button>
+  );
+}
+```
+
+`getValues()` (not `watch()` or `useWatch`) is correct here — it's a one-shot read at button click time, not a subscription. RHF's `getValues()` returns the current form state without causing re-renders.
+
+### Template Management Drawer
+
+**Files (new):**
+- `frontend/src/components/transactions/TemplatesManagementDrawer.tsx`
+- `frontend/src/components/transactions/TemplateForm.tsx` (create/edit form inside the drawer)
+
+**Opening pattern:** `renderDrawer(() => <TemplatesManagementDrawer />)` — follows the existing drawer convention exactly. No `useDisclosure`, no lifted state.
+
+**Drawer content:**
+- List of up to 3 templates (name, type badge, account name, category name)
+- "Novo template" button → inline form or nested drawer
+- Per-template Edit / Delete actions
+- Cap enforcement: "Novo template" is disabled when `templates.length >= 3` with a tooltip
+
+**Template form schema (new Zod schema):**
+
+```ts
+// src/components/transactions/form/templateFormSchema.ts (new)
+export const templateFormSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  transaction_type: z.enum(["expense", "income", "transfer"]),
+  account_id: z.number().int().nullable(),
+  category_id: z.number().int().nullable(),
+  description: z.string(),
+  split_settings: z.array(splitSettingSchema),  // reuse from transactionFormSchema
+  tags: z.array(z.string()),
+});
+export type TemplateFormValues = z.infer<typeof templateFormSchema>;
+```
+
+Note: no `amount`, no `date`, no `recurrenceEnabled`. The template form is a strict subset of the transaction form fields.
+
+**Route (optional):** Templates management can be accessed via a button in the transactions page header (next to "Nova transação") that calls `renderDrawer`. No new TanStack Router route is strictly required — a drawer is sufficient. If a dedicated route is desired, it would be `frontend/src/routes/_authenticated.transaction-templates.tsx` pointing to a `TransactionTemplatesPage`.
+
+### TanStack Query Hooks
+
+**File (new):** `frontend/src/hooks/useTemplates.ts`
+
+```ts
+export function useTemplates<T = Templates.TransactionTemplate[]>(
+  select?: (data: Templates.TransactionTemplate[]) => T
+) {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: [QueryKeys.TransactionTemplates],
+    queryFn: fetchTemplates,
+    select,
+  });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: [QueryKeys.TransactionTemplates] });
+  return { query, invalidate };
+}
+```
+
+**File (new):** `frontend/src/hooks/useCreateTemplate.ts`
+**File (new):** `frontend/src/hooks/useUpdateTemplate.ts`
+**File (new):** `frontend/src/hooks/useDeleteTemplate.ts`
+
+All follow the existing mutation hook pattern: `useMutation({ mutationFn: ... })`, return `{ mutation }`. Invalidation is caller's responsibility.
+
+**QueryKeys addition:** `TransactionTemplates: 'transaction-templates'` added to `src/utils/queryKeys.ts`.
+
+### API Client
+
+**File (new):** `frontend/src/api/templates.ts`
+
+```ts
+export async function fetchTemplates(): Promise<Templates.TransactionTemplate[]>
+export async function createTemplate(payload: Templates.CreateTemplatePayload): Promise<Templates.TransactionTemplate>
+export async function updateTemplate(id: number, payload: Templates.UpdateTemplatePayload): Promise<Templates.TransactionTemplate>
+export async function deleteTemplate(id: number): Promise<void>
+```
+
+Mirrors `src/api/tags.ts` pattern: raw `fetch` calls with `credentials: 'include'`, throw on `!res.ok`.
+
+### TypeScript Types
+
+**File (new or added to existing):** `frontend/src/types/templates.ts` (new namespace `Templates`)
+
+```ts
+export namespace Templates {
+  export interface TransactionTemplate {
+    id: number;
+    user_id: number;
+    name: string;
+    transaction_type: Transactions.TransactionType;
+    account_id?: number;
+    category_id?: number;
+    description: string;
+    split_settings?: Transactions.SplitSetting[];
+    tags?: Transactions.Tag[];
+    created_at?: string;
+    updated_at?: string;
+  }
+
+  export interface CreateTemplatePayload {
+    name: string;
+    transaction_type: Transactions.TransactionType;
+    account_id?: number;
+    category_id?: number;
+    description: string;
+    split_settings?: Transactions.SplitSetting[];
+    tags?: Array<{ id?: number; name: string }>;
+  }
+
+  export type UpdateTemplatePayload = Partial<CreateTemplatePayload>;
+}
+```
+
+`Transactions.SplitSetting` is reused from `src/types/transactions.ts` (already defined there).
+
+### Test IDs
+
+**File (new):** `frontend/src/testIds/templates.ts`
+
+```ts
+export const TemplatesTestIds = {
+  DrawerManage: 'drawer_manage_templates',
+  BtnOpenManage: 'btn_open_templates',
+  BtnNewTemplate: 'btn_new_template',
+  BtnSaveAsTemplate: 'btn_save_as_template',
+  TemplateChip: (id: number | string) => `chip_template_${id}` as const,
+  TemplateRow: (id: number | string) => `row_template_${id}` as const,
+  BtnEditTemplate: (id: number | string) => `btn_edit_template_${id}` as const,
+  BtnDeleteTemplate: (id: number | string) => `btn_delete_template_${id}` as const,
+  InputTemplateName: 'input_template_name',
+  BtnSaveTemplate: 'btn_save_template',
+} as const
+```
+
+Add export to `frontend/src/testIds/index.ts`.
+
+---
+
+## Data Flow
+
+### Flow 1: Apply Template (chip click)
+
+```
+User clicks chip in TemplateQuickChips
+  ↓
+TemplateQuickChips.applyTemplate(tpl)
+  ↓
+useFormContext().reset({ ...templateFields, date: today, amount: 0 })
+  ↓
+RHF replaces entire form state; all dirty flags cleared
+  ↓
+setTimeout(() => setFocus("amount"), 0)
+  ↓
+User sees form pre-filled; cursor in amount field; types amount → submits
+```
+
+No API call on apply. Templates are already loaded in cache via `useTemplates`.
+
+### Flow 2: Create Template (API)
+
+```
+User clicks "Salvar como template" in CreateTransactionDrawer
+  ↓
+SaveAsTemplateButton reads getValues() from form
+  ↓
+useCreateTemplate().mutation.mutate(payload)
+  ↓
+POST /api/transaction-templates (fetch in src/api/templates.ts)
+  ↓
+TemplateHandler.Create
+  ↓
+TemplateService.Create (validates cap, sets userID)
+  ↓
+TemplateRepository.Create (INSERT + tag association)
+  ↓
+200 response → invalidate QueryKeys.TransactionTemplates
+  ↓
+TemplateQuickChips re-renders with new chip
+```
+
+### Flow 3: Manage Templates (drawer)
+
+```
+User opens TemplatesManagementDrawer
+  ↓
+useTemplates() — already cached from chip row mount
+  ↓
+List renders; user edits/deletes
+  ↓
+useUpdateTemplate / useDeleteTemplate mutations fire
+  ↓
+PUT/DELETE /api/transaction-templates/:id
+  ↓
+Service verifies ownership; repo executes
+  ↓
+Response → invalidate QueryKeys.TransactionTemplates
+  ↓
+Chip row and management list both update from shared cache
 ```
 
 ---
 
-## New Files and Modified Files
+## New Files vs Modified Files
 
-### New files
+### New Backend Files
 
 | Path | Purpose |
 |------|---------|
-| `internal/domain/charge.go` | `Charge`, `ChargeStatus`, `ChargeCreateRequest`, `ChargeFilter` |
-| `internal/entity/charge.go` | GORM entity with `ToDomain()` / `ChargeFromDomain()` |
-| `internal/repository/charge_repository.go` | `chargeRepositoryImpl` implementing `ChargeRepository` |
-| `internal/service/charge_service.go` | `chargeService` implementing `ChargeService` |
-| `internal/handler/charge_handler.go` | Echo handlers: Create, Accept, Reject, Cancel, List |
-| `migrations/20260414000000_create_charges_table.sql` | Goose migration for `charges` table |
+| `backend/migrations/<ts>_create_transaction_templates_table.sql` | DB schema: `transaction_templates` + `template_tags` join table |
+| `backend/internal/domain/transaction_template.go` | Domain types: `TransactionTemplate`, `CreateRequest`, `UpdateRequest`, `Filter` |
+| `backend/internal/entity/transaction_template.go` | GORM entity with JSONB split, many2many tags, `ToDomain()` / `FromDomain()` |
+| `backend/internal/repository/template_repository.go` | `transactionTemplateRepository` implementing `TransactionTemplateRepository` |
+| `backend/internal/service/template_service.go` | `transactionTemplateService` with cap enforcement + IDOR |
+| `backend/internal/handler/template_handler.go` | Echo handlers: List, Create, Update, Delete + Swagger annotations |
 
-### Modified files
+### Modified Backend Files
 
 | Path | Change |
 |------|--------|
-| `internal/repository/interfaces.go` | Add `ChargeRepository` interface; add `Charge ChargeRepository` to `Repositories` struct |
-| `internal/service/interfaces.go` | Add `ChargeService` interface; add `Charge ChargeService` to `Services` struct |
-| `cmd/server/main.go` | Instantiate `repository.NewChargeRepository(db)`, wire `service.NewChargeService(repos, services)`, register charge routes |
-| `pkg/errors/errors.go` | Add charge-specific `ErrorTag` constants |
-| `mocks/` | Regenerate after adding `ChargeRepository` and `ChargeService` interfaces |
+| `backend/internal/repository/interfaces.go` | Add `TransactionTemplateRepository` interface; add `TransactionTemplate` field to `Repositories` struct |
+| `backend/internal/service/interfaces.go` | Add `TransactionTemplateService` interface; add `TransactionTemplate` field to `Services` struct |
+| `backend/cmd/server/main.go` | Instantiate repo + service; add handler to `apiHandlers`; register routes in `registerAPIRoutes` |
+| `backend/pkg/errors/errors.go` | Add `TEMPLATE.*` ErrorTag constants |
+| `backend/mocks/` | Regenerate after interface changes (`just generate-mocks`) |
 
-### `ChargeRepository` interface
+### New Frontend Files
 
-```go
-type ChargeRepository interface {
-    Create(ctx context.Context, charge *domain.Charge) (*domain.Charge, error)
-    Update(ctx context.Context, charge *domain.Charge) error
-    SearchOne(ctx context.Context, filter domain.ChargeFilter) (*domain.Charge, error)
-    Search(ctx context.Context, filter domain.ChargeFilter) ([]*domain.Charge, error)
-}
-```
+| Path | Purpose |
+|------|---------|
+| `frontend/src/api/templates.ts` | Raw fetch functions for all 4 CRUD operations |
+| `frontend/src/types/templates.ts` | `Templates` namespace with TS types |
+| `frontend/src/hooks/useTemplates.ts` | Query hook returning `{ query, invalidate }` |
+| `frontend/src/hooks/useCreateTemplate.ts` | Mutation hook |
+| `frontend/src/hooks/useUpdateTemplate.ts` | Mutation hook |
+| `frontend/src/hooks/useDeleteTemplate.ts` | Mutation hook |
+| `frontend/src/components/transactions/form/TemplateQuickChips.tsx` | Chip row component using `useFormContext` + `reset()` |
+| `frontend/src/components/transactions/form/TemplateQuickChips.module.css` | Chip styles (copy or import from DateQuickChips.module.css) |
+| `frontend/src/components/transactions/form/templateFormSchema.ts` | Zod schema for template create/edit form (no amount/date) |
+| `frontend/src/components/transactions/TemplatesManagementDrawer.tsx` | Drawer with list + create/edit/delete |
+| `frontend/src/components/transactions/TemplateForm.tsx` | RHF form for creating/editing a template |
+| `frontend/src/testIds/templates.ts` | All `data-testid` constants for template UI |
 
-No `Delete` — charges are never hard-deleted; status transitions to `canceled` or `rejected` are the terminal states.
+### Modified Frontend Files
+
+| Path | Change |
+|------|--------|
+| `frontend/src/components/transactions/form/TransactionForm.tsx` | Mount `<TemplateQuickChips />` at top of Stack; pass `extraContent` for Save-as-template button |
+| `frontend/src/components/transactions/CreateTransactionDrawer.tsx` | Add `SaveAsTemplateButton` via `extraContent` prop; wire `existingTags` |
+| `frontend/src/utils/queryKeys.ts` | Add `TransactionTemplates: 'transaction-templates'` |
+| `frontend/src/testIds/index.ts` | Re-export `TemplatesTestIds` from new `templates.ts` |
 
 ---
 
 ## Suggested Build Order
 
-### Phase 1: Domain + DB
+### Phase 1: Backend Foundation (migration + domain + entity)
 
-1. Write `internal/domain/charge.go` — all types, no logic.
-2. Write migration `create_charges_table.sql`.
-3. Run `just migrate-up` to verify schema.
-4. Write `internal/entity/charge.go` — GORM struct, `ToDomain()`, `ChargeFromDomain()`.
+1. `just migrate-create create_transaction_templates_table` → edit generated file with schema above
+2. `just migrate-up` to verify schema applies cleanly
+3. Write `backend/internal/domain/transaction_template.go`
+4. Write `backend/internal/entity/transaction_template.go`
 
-No dependencies on other new components. Can be reviewed and merged independently.
+No runtime dependencies; fully reviewable in isolation.
 
-### Phase 2: Repository
+### Phase 2: Backend Repository
 
-1. Add `ChargeRepository` interface to `internal/repository/interfaces.go` and add `Charge ChargeRepository` field to `Repositories`.
-2. Write `internal/repository/charge_repository.go`.
-3. Run `just generate-mocks` to produce `mocks/MockChargeRepository`.
-4. Write unit tests for repository search (filter by userID, status).
+1. Add `TransactionTemplateRepository` interface to `repository/interfaces.go`; add field to `Repositories` struct
+2. Write `backend/internal/repository/template_repository.go`
+3. `just generate-mocks` → produces `mock_TransactionTemplateRepository.go`
+4. Write unit tests using mock-free repo against real DB (follow `ServiceTestWithDBSuite` pattern)
 
-Dependency: Phase 1 (entity + domain types must exist).
+Depends on Phase 1 (entity must exist).
 
-### Phase 3: Service — Create, Reject, Cancel, List
+### Phase 3: Backend Service + Errors
 
-Implement the four operations that do not involve transfer creation. These have no dependency on the nested-transaction question.
+1. Add `TEMPLATE.*` ErrorTag constants to `pkg/errors/errors.go`
+2. Add `TransactionTemplateService` interface to `service/interfaces.go`; add field to `Services` struct
+3. Write `backend/internal/service/template_service.go` with cap enforcement
+4. `just generate-mocks` → produces `mock_TransactionTemplateService.go`
+5. Write unit tests for cap enforcement (Create when count=3 → error)
 
-1. Add `ChargeService` interface to `internal/service/interfaces.go` and add `Charge ChargeService` to `Services`.
-2. Write `internal/service/charge_service.go` with `Create`, `Reject`, `Cancel`, `List`.
-3. Add charge error tags to `pkg/errors/errors.go`.
-4. Wire in `main.go` (repository + service construction, not routes yet).
-5. Write integration tests using `ServiceTestWithDBSuite` for the four operations.
+Depends on Phase 2.
 
-Dependency: Phase 2.
+### Phase 4: Backend Handler + Wiring + Docs
 
-### Phase 4: Service — Accept (atomic transfer creation)
+1. Wire repo + service in `cmd/server/main.go`
+2. Write `backend/internal/handler/template_handler.go` with Swagger annotations
+3. Add handler + routes to `main.go`
+4. `just generate-docs`
+5. Smoke-test with `curl` or Swagger UI
 
-Implement `Accept` separately due to its atomicity complexity and dependency on `TransactionService`.
+Depends on Phase 3. The backend is now fully shippable.
 
-1. Implement `chargeService.Accept` with nested-transaction approach.
-2. Write integration test covering the full acceptance path: verify charge status, debit/credit transaction IDs, linked_transactions row, and both transaction balances.
-3. If nested-transaction issues arise, refactor `transactionService` to expose an internal `createTransfer(ctx, ...)` helper that skips its own `Begin`/`Commit`.
+### Phase 5: Frontend Apply Flow (chip row)
 
-Dependency: Phase 3. The integration test for Accept is the most complex test in the milestone — budget time for it.
+1. Add `TransactionTemplates` to `queryKeys.ts`
+2. Add `frontend/src/types/templates.ts`
+3. Write `frontend/src/api/templates.ts`
+4. Write `frontend/src/hooks/useTemplates.ts`
+5. Write `frontend/src/testIds/templates.ts`; export from `index.ts`
+6. Write `TemplateQuickChips.tsx` + `.module.css`
+7. Mount `<TemplateQuickChips />` in `TransactionForm.tsx`
 
-### Phase 5: Handler + Routes
+At this point the chip row renders (empty until templates exist) and the apply/reset flow is testable.
 
-1. Write `internal/handler/charge_handler.go` with Swagger annotations.
-2. Register routes in `main.go`:
-   ```
-   POST   /api/charges              → Create
-   GET    /api/charges              → List (query params from ChargeFilter)
-   POST   /api/charges/:id/accept   → Accept
-   POST   /api/charges/:id/reject   → Reject
-   POST   /api/charges/:id/cancel   → Cancel
-   ```
-3. Run `just generate-docs`.
+### Phase 6: Frontend Management UI
 
-Dependency: Phase 3 + 4 (service must be complete before wiring handlers).
+1. Write `templateFormSchema.ts`
+2. Write `TemplateForm.tsx` (RHF form, subset of transaction fields)
+3. Write `TemplatesManagementDrawer.tsx` (list + create/edit/delete)
+4. Write mutation hooks (`useCreateTemplate`, `useUpdateTemplate`, `useDeleteTemplate`)
+5. Add "Salvar como template" button to `CreateTransactionDrawer` via `extraContent`
 
-### Phase 6: Frontend (out of scope for this research, listed for completeness)
+### Phase 7: E2E tests
 
-Charges listing page, create/accept/reject/cancel forms, sidebar badge for pending charges.
+1. e2e: create template → verify chip appears in form
+2. e2e: click chip → verify form reset with amount blank and focused
+3. e2e: save-as-template from form → verify management drawer shows it
+4. e2e: cap enforcement → verify 4th create is blocked
+
+---
+
+## Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Separate `transaction_templates` table (not `is_template` flag on transactions) | Isolates templates from all balance/listing/charge/settlement queries — no risk of financial reads accidentally including templates. Confirmed in PROJECT.md Key Decisions. |
+| Tags via join table `template_tags`, not JSONB | Tags are a first-class entity with FK integrity. JSONB would make tag deletion non-cascading and tag rename non-propagating. Join table mirrors `transaction_tags` pattern. |
+| Split config via JSONB column | Split settings are not a first-class entity (no `split_settings` table). They are create-time input. JSONB on the template matches how the domain already treats them — as an opaque input struct — while keeping the column count low. Only `connection_id` + `percentage` fields are semantically meaningful in a template (no amount, no date); the service ignores amount/date on read. |
+| Reuse `domain.SplitSettings` for JSONB serialization | No new type needed. The existing struct's json tags serialize correctly. The non-json-tagged `UserConnection *UserConnection` field is a runtime pointer that does not appear in JSON output. |
+| `reset()` not `setValue()` for chip apply | `reset()` atomically replaces all form state and clears dirty/error state. `setValue()` leaves stale dirty flags and validation errors from prior user input. `reset()` is the canonical RHF "load a preset" pattern. |
+| `setTimeout(() => setFocus("amount"), 0)` after reset | RHF `reset()` updates state asynchronously via React state batching. A microtask delay ensures the DOM has re-rendered with the new values before `setFocus` runs. The `useFocusFieldOnMount` hook is only for mount — it does not fire on subsequent chip clicks. |
+| `getValues()` (not `watch`) for Save-as-template | One-shot read at button click. No subscription needed; no re-renders. |
+| 3-template cap enforced in service (not DB CHECK) | A DB CHECK would require a trigger or deferred constraint in PostgreSQL. Service-level validation with a clear error tag is simpler, testable, and consistent with how other domain limits are enforced (e.g. split percentage validation). |
+| `account_id` / `category_id` nullable with SET NULL on FK delete | A deleted account/category should not delete the template. The template becomes partially stale; the management UI can surface a warning. |
 
 ---
 
@@ -409,10 +813,11 @@ Charges listing page, create/accept/reject/cancel forms, sidebar badge for pendi
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Domain model | HIGH | Direct inspection of existing domain patterns |
-| DB schema | HIGH | Follows existing migration conventions; constraints verified against settlement and linked_transaction precedents |
-| Repository layer | HIGH | Mirrors SettlementRepository pattern exactly |
-| Service — Create/Reject/Cancel/List | HIGH | Straightforward; matches UserConnectionService patterns |
-| Service — Accept atomicity | MEDIUM | Nested GORM transaction behavior needs integration test to confirm; alternative refactor path documented |
-| Handler layer | HIGH | Follows TransactionHandler and UserConnectionHandler patterns exactly |
-| Wiring in main.go | HIGH | Pattern already established for services with cross-service deps |
+| Migration schema | HIGH | Directly modeled on `push_subscriptions` and `transaction_tags` migration patterns from codebase |
+| Domain / Entity layer | HIGH | Direct inspection; SplitSettings reuse confirmed from `transaction.go` |
+| Repository layer | HIGH | Mirrors `transactionRepository.Update` tag-association pattern exactly |
+| Service layer | HIGH | Cap enforcement is straightforward; IDOR pattern matches `chargeService` |
+| Handler + wiring | HIGH | Follows `tagHandler` + `chargeHandler` patterns exactly |
+| Frontend chip apply flow | HIGH | `useFormContext` + `reset()` + `setFocus` — all confirmed against existing codebase |
+| JSONB split serialization | MEDIUM | Standard GORM JSONB pattern; `json.Marshal`/`Unmarshal` on `[]domain.SplitSettings` — serialization correctness of the `UserConnection *UserConnection` pointer field should be verified with a unit test |
+| `CurrencyInput` blank-on-zero behavior | MEDIUM | Not verified — `CurrencyInput.tsx` was not read in full. If `amount: 0` does not visually clear the field, the service can reset to `undefined` instead and the Zod schema `z.number().int().min(1)` will still require the user to enter a value before submit. |
