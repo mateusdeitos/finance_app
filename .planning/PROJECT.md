@@ -62,36 +62,37 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
 - ✓ `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
 - ✓ Import e2e suite green after perf rework (keystroke 761ms→3.5ms / 929ms→5.6ms) — v1.5
+- ✓ Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
+- ✓ Notify the charge recipient when the partner creates a new charge — v1.6
+- ✓ Notify the charge creator when the partner accepts their charge — v1.6
+- ✓ Notify the partner when a new split transaction is created on their side — v1.6
+- ✓ Notify the partner when a split transaction is updated in a way that affects their side — v1.6
+- ✓ Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
+- ✓ In-app notification inbox with read/unread state and open-entity navigation — v1.6
+- ✓ Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
 
 ### Active
 
-- [ ] Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
-- [ ] Notify the charge recipient when the partner creates a new charge — v1.6
-- [ ] Notify the charge creator when the partner accepts their charge — v1.6
-- [ ] Notify the partner when a new split transaction is created on their side — v1.6
-- [ ] Notify the partner when a split transaction is updated in a way that affects their side — v1.6
-- [ ] Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
-- [ ] In-app notification inbox with read/unread state and open-entity navigation — v1.6
-- [ ] Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
+_v1.7 requirements being defined — see `.planning/REQUIREMENTS.md`._
 
 ### Deferred (from v1.3)
 
 - [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
 - [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
 
-## Current Milestone: v1.6 Push Notifications
+## Current Milestone: v1.7 Budgets (Orçamentos)
 
-**Goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
+**Goal:** A user can maintain a single monthly budget made up of per-category spending caps, track actual spend ("realizado") per category against each cap, and receive configurable alerts as a category nears or exceeds its cap.
 
-**Progress:** Phase 22 (Backend Subscription Foundation) complete — `push_subscriptions`/`notifications` tables, VAPID config + fail-fast startup, and POST/DELETE/GET `/api/push-subscriptions` with endpoint-only upsert and admin prune capability (SUB-03, SUB-04). Phase 24 UI design contract (UI-SPEC) approved. Next: Phase 23 (notification events + inbox API).
+**Scope:** Private budgets only — a single budget per user, composed of per-category caps. Shared (connection-level) budgets, the category equivalence mapping they require, and multiple budgets per user are deferred to a future milestone.
 
 **Target features:**
-- Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
-- Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
-- Persisted, context-aware notifications: each saved server-side with a deep-link to its entity (charge/transaction)
-- In-app notification inbox with read/unread state and "open entity" navigation to the related charge/transaction
-- Synchronous best-effort dispatch: push is sent after the DB commit (goroutine, no queue/retry); a failed send is tolerated, not retried
-- Minimal user control: browser permission prompt + enable/disable notifications on the current device (no per-type toggles)
+- **Budget with per-category caps** — one budget per user; the user adds their own categories, each with a monthly cap (int64 cents); at most one cap per category
+- **Per-category actual-spend tracking** — "realizado" vs. cap for the current month, reusing the existing `GetBalance` logic (owner's net portion: transaction − settlements); a split transaction counts only the part the owner paid
+- **Configurable per-category alerts** — the user enables/configures threshold(s) (e.g. 80%, 100%) per category cap that fire a push notification to the owner, reusing the v1.6 Web Push infrastructure; each threshold fires once per month and the latch is set only after a successful delivery
+- **Frontend** — manage category caps, visualize spend-vs-cap progress per category, and open the budget from an alert notification
+
+**Key decisions (from explore session 2026-06-05, see `.planning/notes/shared-budget-design-decisions.md`; refined during v1.7 requirements):** monthly with no rollover; realizado reuses `GetBalance` (never new aggregation SQL); alerts fire on transaction writes (not cap edits); shared budgets and category mapping deferred.
 
 ### Out of Scope
 
@@ -110,6 +111,10 @@ Partners can accurately track shared finances, including in-progress installment
 - Per-notification-type preference toggles — v1.6 ships minimal device-level enable/disable only
 - Charge reject / cancel notifications — only "received" and "accepted" are in scope per issue #174
 - Email / SMS / native FCM / APN delivery channels — v1.6 is Web Push (PWA) only
+- Shared / connection-level budgets and the category equivalence mapping they require — deferred from v1.7; this milestone is private budgets only (SHARED-F1..F5)
+- Multiple budgets per user — v1.7 ships a single budget per user composed of per-category caps (BUD-F1)
+- N-way splits across more than 2 people in a budget — connection model is pairwise today; deferred
+- Rollover / envelope-style budgets (leftover or overspend carrying to next month) — v1.7 is monthly with no rollover; requires per-period history
 
 ## Context
 
@@ -160,4 +165,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-05-30 — v1.6 in progress: Phase 22 (Backend Subscription Foundation) complete, Phase 24 UI-SPEC approved_
+_Last updated: 2026-06-06 — v1.7 Budgets started (v1.6 Push Notifications shipped, Phases 22–25)_
