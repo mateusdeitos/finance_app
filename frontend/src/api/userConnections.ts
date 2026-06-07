@@ -18,6 +18,8 @@ export namespace UserConnections {
     connection_status: 'pending' | 'accepted' | 'rejected'
     created_at: string
     updated_at: string
+    from_linked_transaction_day_of_month?: number | null
+    to_linked_transaction_day_of_month?: number | null
   }
 }
 
@@ -38,6 +40,8 @@ export async function fetchUserConnections(): Promise<UserConnections.Connection
 export interface UpdateConnectionPayload {
   account_name: string
   default_split_percentage: number
+  /** Day of month (1–31) for the caller's linked transactions; null clears the preference. */
+  linked_transaction_day_of_month: number | null
 }
 
 export async function updateConnection(

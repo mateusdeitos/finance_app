@@ -534,7 +534,7 @@ func (s *transactionService) rebuildTransactions(
 
 				lt := domain.Transaction{
 					ID:                0,
-					Date:              data.transactions[i].Date,
+					Date:              adjustLinkedTransactionDay(data.transactions[i].Date, conn.ToLinkedTransactionDayOfMonth),
 					Description:       data.transactions[i].Description,
 					UserID:            conn.ToUserID,
 					OriginalUserID:    &data.userID,
@@ -620,7 +620,7 @@ func (s *transactionService) rebuildTransactions(
 
 				data.transactions[i].LinkedTransactions = append(data.transactions[i].LinkedTransactions, domain.Transaction{
 					ID:             0,
-					Date:           data.transactions[i].Date,
+					Date:           adjustLinkedTransactionDay(data.transactions[i].Date, conn.ToLinkedTransactionDayOfMonth),
 					Description:    data.transactions[i].Description,
 					UserID:         conn.ToUserID,
 					OriginalUserID: &data.userID,

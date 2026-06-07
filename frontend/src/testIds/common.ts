@@ -28,6 +28,7 @@ export const CommonTestIds = {
   /* Edit connection drawer */
   DrawerEditConnection: 'drawer_edit_connection',
   EditConnectionNameInput: 'input_connection_name',
+  EditConnectionDayInput: 'input_connection_linked_tx_day',
   EditConnectionSave: 'btn_save_connection',
   EditConnectionCancel: 'btn_cancel_connection',
 
