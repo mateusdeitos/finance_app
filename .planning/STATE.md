@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Push Notifications
 status: verifying
-last_updated: "2026-05-30T16:53:02.540Z"
-last_activity: 2026-05-30
+last_updated: "2026-06-07T00:00:00.000Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 9
   completed_phases: 2
@@ -18,7 +18,13 @@ progress:
 Phase: 25 (frontend-notification-inbox) — VERIFIED — v1.6 milestone COMPLETE
 Plan: 5 of 5
 Status: PASS (code-complete, e2e-deferred-to-CI) — all v1.6 phases (22-25) verified
-Last activity: 2026-05-30
+Last activity: 2026-06-07 - Completed quick task 260607-001: configurable day-of-month for split linked transactions
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260607-001 | Configurable day-of-month for linked transactions on split | 2026-06-07 | ee27c80 | [260607-001-connection-linked-tx-day](./quick/260607-001-connection-linked-tx-day/) |
 
 ## Project Reference
 
