@@ -62,36 +62,36 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
 - ✓ `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
 - ✓ Import e2e suite green after perf rework (keystroke 761ms→3.5ms / 929ms→5.6ms) — v1.5
+- ✓ Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
+- ✓ Notify the charge recipient when the partner creates a new charge — v1.6
+- ✓ Notify the charge creator when the partner accepts their charge — v1.6
+- ✓ Notify the partner when a new split transaction is created on their side — v1.6
+- ✓ Notify the partner when a split transaction is updated in a way that affects their side — v1.6
+- ✓ Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
+- ✓ In-app notification inbox with read/unread state and open-entity navigation — v1.6
+- ✓ Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
 
 ### Active
 
-- [ ] Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
-- [ ] Notify the charge recipient when the partner creates a new charge — v1.6
-- [ ] Notify the charge creator when the partner accepts their charge — v1.6
-- [ ] Notify the partner when a new split transaction is created on their side — v1.6
-- [ ] Notify the partner when a split transaction is updated in a way that affects their side — v1.6
-- [ ] Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
-- [ ] In-app notification inbox with read/unread state and open-entity navigation — v1.6
-- [ ] Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
+_v1.7 requirements being defined — see `.planning/REQUIREMENTS.md`._
 
 ### Deferred (from v1.3)
 
 - [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
 - [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
 
-## Current Milestone: v1.6 Push Notifications
+## Current Milestone: v1.7 Budgets (Orçamentos)
 
-**Goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
-
-**Progress:** Phase 22 (Backend Subscription Foundation) complete — `push_subscriptions`/`notifications` tables, VAPID config + fail-fast startup, and POST/DELETE/GET `/api/push-subscriptions` with endpoint-only upsert and admin prune capability (SUB-03, SUB-04). Phase 24 UI design contract (UI-SPEC) approved. Next: Phase 23 (notification events + inbox API).
+**Goal:** Couples can set monthly per-category spending caps — configurable as shared (connection) or private — track actual spend ("realizado") against the cap, and receive configurable alerts as a budget nears or exceeds its limit.
 
 **Target features:**
-- Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
-- Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
-- Persisted, context-aware notifications: each saved server-side with a deep-link to its entity (charge/transaction)
-- In-app notification inbox with read/unread state and "open entity" navigation to the related charge/transaction
-- Synchronous best-effort dispatch: push is sent after the DB commit (goroutine, no queue/retry); a failed send is tolerated, not retried
-- Minimal user control: browser permission prompt + enable/disable notifications on the current device (no per-type toggles)
+- **Category equivalence mapping** between connected users — a user-defined bridge ("category X of A ≡ category Y of B"), since categories are per-user; prerequisite for shared budgets
+- **Budget CRUD** — per-category monthly cap, no rollover, scope configurable as shared (tied to a UserConnection) or private (single user)
+- **Actual-spend tracking** — "realizado" vs. cap, reusing the existing `GetBalance` logic: shared budget counts the full amount paid by the connection's members; private budget counts only the author's net portion (transaction − settlements)
+- **Configurable alerts** — per budget, the user can enable/configure threshold(s) (e.g. 80%, 100%) that fire a push notification, reusing the v1.6 Web Push infrastructure
+- **Frontend** — manage budgets, visualize spend-vs-cap progress per category, and configure the category mapping
+
+**Key decisions (from explore session 2026-06-05, see `.planning/notes/shared-budget-design-decisions.md`):** monthly with no rollover; split semantics mirror the `GetBalance` settlement rule; category mapping lives at the connection level and is a hard prerequisite.
 
 ### Out of Scope
 
@@ -110,6 +110,9 @@ Partners can accurately track shared finances, including in-progress installment
 - Per-notification-type preference toggles — v1.6 ships minimal device-level enable/disable only
 - Charge reject / cancel notifications — only "received" and "accepted" are in scope per issue #174
 - Email / SMS / native FCM / APN delivery channels — v1.6 is Web Push (PWA) only
+- N-way splits across more than 2 people in a budget — connection model is pairwise today; deferred (v1.7)
+- Rollover / envelope-style budgets (leftover or overspend carrying to next month) — v1.7 is monthly with no rollover; requires per-period history
+- Shared (connection-owned) categories as a replacement for the per-user category model — too large a structural change; v1.7 bridges via an equivalence map instead
 
 ## Context
 
@@ -160,4 +163,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-05-30 — v1.6 in progress: Phase 22 (Backend Subscription Foundation) complete, Phase 24 UI-SPEC approved_
+_Last updated: 2026-06-06 — v1.7 Budgets started (v1.6 Push Notifications shipped, Phases 22–25)_

@@ -1,24 +1,24 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Push Notifications
-status: verifying
-last_updated: "2026-05-30T16:53:02.540Z"
-last_activity: 2026-05-30
+milestone: v1.7
+milestone_name: Budgets
+status: planning
+last_updated: "2026-06-06T17:22:41.375Z"
+last_activity: 2026-06-06
 progress:
-  total_phases: 9
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 ## Current Position
 
-Phase: 25 (frontend-notification-inbox) — VERIFIED — v1.6 milestone COMPLETE
-Plan: 5 of 5
-Status: PASS (code-complete, e2e-deferred-to-CI) — all v1.6 phases (22-25) verified
-Last activity: 2026-05-30
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-06 — Milestone v1.7 started
 
 ## Project Reference
 
