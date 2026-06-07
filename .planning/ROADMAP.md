@@ -9,6 +9,7 @@
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
 - ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 - 🚧 **v1.6 Push Notifications** — Phases 22–25 (in progress)
+- 💡 **v1.7 Shared Budgets** — Phase 26+ (proposed — from explore session 2026-06-05)
 
 ## Phases
 
@@ -87,6 +88,13 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 23: Backend Notification Events & Inbox API** - 4 event triggers, best-effort dispatch, inbox endpoints (completed 2026-05-30)
 - [ ] **Phase 24: Frontend Permission, Subscribe & Service Worker** - permission prompt, subscribe/unsubscribe toggle, SW push handler, deep-link navigation
 - [ ] **Phase 25: Frontend Notification Inbox** - inbox UI, unread badge, open-entity navigation, mark-read actions
+
+### v1.7 Shared Budgets (Phase 26+) — PROPOSED
+
+- [ ] **Phase 26: Category Equivalence Mapping (prerequisite)** — let connected users define which of their per-user categories are equivalent, so a shared budget can aggregate spend across both sides
+
+> Captured from explore session 2026-06-05. Not yet planned/discussed. See
+> `.planning/notes/shared-budget-design-decisions.md` for the full design context.
 
 ## Phase Details
 
@@ -208,6 +216,17 @@ Plans:
 **Wave 4** *(blocked on 25-02, 25-04)*
 - [ ] 25-05-PLAN.md — Nav wiring: DesktopSidebar link + blue badge, MobileTabBar Mais-tab dot, MobileMoreDrawer item; authored Playwright e2e spec
 **UI hint**: yes
+
+### Phase 26: Category Equivalence Mapping (prerequisite)
+**Status**: PROPOSED — not yet planned/discussed (explore session 2026-06-05)
+**Goal**: Connected users can define an equivalence map between their per-user categories ("category X of A ≡ category Y of B"), so downstream features (starting with shared budgets) can aggregate spend across both sides of a connection
+**Depends on**: Existing UserConnection + per-user Category models
+**Why**: Categories are per-user (`domain.Category.UserID`); a shared budget "by category" cannot sum both partners' spend without a bridge. Name-matching is too fragile; shared categories are too large a structural change.
+**Success Criteria** (what must be TRUE):
+  1. A user in a connection can map one of their categories to the equivalent category owned by the other user, and view/edit existing mappings
+  2. The mapping is queryable per connection (given a category on one side, resolve the equivalent on the other side)
+  3. The mapping is reusable — not coupled to budgets specifically
+**Context**: `.planning/notes/shared-budget-design-decisions.md`
 
 ## Progress
 
