@@ -1,212 +1,308 @@
-# Features Research: Charges
+# Feature Research: Transaction Templates (v1.7)
 
-**Domain:** Debt-settlement / payment-request feature in a couples finance app
-**Researched:** 2026-04-14
-**Confidence:** HIGH (grounded in existing codebase + established patterns from Venmo, Splitwise, NuBank Pix)
-
----
-
-## Table Stakes (must have)
-
-These are behaviors every charge/payment-request system must have. Missing any of these makes the feature feel incomplete or broken.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Create a charge (creditor → debtor) | Core value proposition — one user is owed money by the other | Low | Needs: amount, description, optional due date |
-| Pending state on creation | Charge must wait for debtor's response; immediate execution would be wrong | Low | Status = `pending` |
-| Accept charge → auto-create transfer | The defining behavior of this feature; acceptance settles the debt | Medium | Must create linked transfer transactions for both users atomically |
-| Reject charge | Debtor disagrees with the amount or reason; must be able to decline | Low | Status = `rejected`; no transfers created |
-| Cancel charge | Creditor withdraws the request before it is acted on | Low | Status = `cancelled`; only creditor can cancel; only while pending |
-| List charges (sent + received) | Users need to see what they owe and what they are owed | Low | Filter by direction (sent/received) and status |
-| Pending badge / counter | User needs ambient awareness of charges awaiting action | Low | Frontend: sidebar badge; backend: count endpoint or include in list |
-| Immutability after resolution | Accepted/rejected/cancelled charges must not be editable | Low | Validation rule: status transitions are one-way |
-| Link charge to resulting transfer | Audit trail — user can trace which charge caused which transactions | Low | `charge.transfer_transaction_id` FK after acceptance |
-| Authorization: only parties can act | Debtor accepts/rejects; creditor cancels; no one else | Low | Validate `userID` against `creditor_user_id` / `debtor_user_id` |
+**Domain:** Personal transaction templates / saved payee quick-entry in a couples finance app
+**Researched:** 2026-06-07
+**Confidence:** HIGH (grounded in codebase inspection + established patterns from Quicken memorized payees, Bluecoins autocomplete, Actual Budget templates, DateQuickChips pattern already in this codebase)
 
 ---
 
-## Differentiators (valuable additions)
+## Context: What this feature IS (locked decisions, do not re-litigate)
 
-Features that improve UX or trust without being mandatory.
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Description field on charge | Clarity on what the debt is for ("dinner", "rent") reduces disputes | Low | Free text; maps naturally to transfer description |
-| Due date (optional) | Light social pressure; useful when timing matters | Low | `due_date *time.Time`; no enforcement needed for v1.1 |
-| Partial amount suggestion | Creditor can suggest paying only part of outstanding balance | Medium | Would require validation against Settlement balance; defer |
-| Notes / comment on rejection | Debtor can explain why they rejected | Low | `rejection_note string` optional; improves communication |
-| View linked transactions after acceptance | From the charge, jump to the created transfer | Low | Frontend only — the `transfer_transaction_id` FK enables this |
-| Created-from-settlement shortcut | Creditor sees outstanding Settlement balance and creates charge from it | Medium | Frontend UX; backend just needs the charge creation endpoint |
+- Personal templates per user — NOT shared on the connection
+- Template NEVER stores amount or date — amount always blank on apply, date defaults to today
+- Template stores: `type`, `account_id`, `category_id`, `tags[]`, `description`, `split_settings` (JSONB)
+- Max 3 templates per user
+- Management UI: dedicated drawer to create / edit / delete + "Save as template" from transaction form
+- Apply UX: a row of `UnstyledButton` chips above the form (mirror of `DateQuickChips` pattern), clicking `reset()`s the form to template values, leaving `amount` blank, and calls `setFocus('amount')`
 
 ---
 
-## Anti-features (avoid for v1.1)
+## Table Stakes (Users Expect These)
 
-Features that are out of scope, over-engineered, or actively harmful for this milestone.
+Features without which the template feature feels incomplete or broken.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| Balance validation on creation | Already explicitly out of scope per PROJECT.md; adds complexity without clear user benefit now | Trust the users; defer balance guardrails |
-| Partial settlement charges | Requires coordination with Settlement domain; increases edge cases significantly | Full-amount charges only for v1.1 |
-| Recurring charges | Adds recurrence machinery (already complex in transactions) to a new entity | Out of scope; re-evaluate if users request it |
-| Expiry / auto-cancellation | Automatic state transitions require background jobs or cron; adds infra complexity | Manual cancel only; user chooses when to give up |
-| Push/email notifications | Requires notification infrastructure not yet in the system | Frontend badge is sufficient for v1.1 |
-| Group charges (>2 users) | App is fundamentally two-user; groups break the user-connection model | Not applicable to this domain |
-| Charge countering / negotiation | "I'll pay you X instead of Y" flow | Too complex; reject + create new charge covers this |
-| Splitwise-style debt simplification | Multi-hop debt graph reduction; not needed for 2-person app | Settlement domain already tracks balances directly |
+| Feature | Why Expected | Complexity | Depends On |
+|---------|--------------|------------|------------|
+| Apply template → prefill all stored fields | Core value: no re-typing type/account/category/tags/description/split | LOW | Existing form `reset()` + `setFocus` already used in form |
+| Amount field blank after apply, immediately focused | Template's entire value proposition is "type the amount and go" — unfocused blank is friction | LOW | `useFocusFieldOnMount` hook already exists; call `setFocus('amount')` after `reset()` |
+| Chip label = template name (user-provided) | User must distinguish "Mercado" from "Farmácia" at a glance | LOW | Template entity needs a `name` field |
+| Active chip highlight when applied | User needs confirmation of which template is active (mirrors `data-active` on `DateQuickChips`) | LOW | CSS Module `data-active` attribute, same pattern as `DateQuickChips.module.css` |
+| Create template from scratch (management drawer) | Entry point when user hasn't just submitted a transaction | MEDIUM | New drawer + backend POST /api/templates |
+| "Save as template" from transaction form | Fastest create path — user is already looking at the right values | LOW | Button in `TransactionFormFooter` or as `extraContent`; POST with current form values minus amount |
+| Edit existing template (management drawer) | User's Mercado account changes; they need to update the account field | MEDIUM | Backend PUT /api/templates/:id |
+| Delete template | Removing templates no longer needed | LOW | Backend DELETE /api/templates/:id; confirm before delete |
+| List templates (chip row + management drawer) | Templates must be loadable; chip row renders them | LOW | Backend GET /api/templates; TanStack Query hook |
+| Cap enforcement at 3 (UI + API) | Locked product decision; chip row is designed for exactly 3 | LOW | Backend: 409 when at limit; UI: disable "Save as template" + "Create" when at limit |
+| IDOR scope: only owner can read/write | Templates are personal; partner must never see or modify them | LOW | Standard pattern already used for all entities in this codebase |
 
 ---
 
-## Charge Entity Design
+## Differentiators (Competitive Advantage)
 
-Recommended fields with rationale for each, designed to fit the existing codebase patterns.
+Features that make the template UX genuinely delightful rather than merely functional, given the small (max-3) set.
+
+| Feature | Value Proposition | Complexity | Depends On |
+|---------|-------------------|------------|------------|
+| Split config preserved and applied | Most finance apps don't save split — this app does because split is a first-class citizen | MEDIUM | Template stores `split_settings` JSONB; apply maps it into `split_settings` array on form |
+| Re-apply chip toggles off (second tap clears) | UX polish: if user mis-taps, tapping same chip again returns to blank form (no hard reset needed) | LOW | Track `activeTemplateId` in local state; on same-chip tap, `reset()` to default values and clear active |
+| Partial application of split: silently clear if split account deleted | Applied template with a deleted split partner account still fills all other fields; only the split row is omitted | MEDIUM | Requires stale-reference detection at apply time (see Edge Cases section) |
+| "Save as template" fills management form with current transaction's values | User gets a pre-filled create form, not a blank one | LOW | Pass current `TransactionFormValues` as `defaultValues` into template management drawer |
+| Chip row only shown when user has at least 1 template | No chip row rendered (no empty placeholder row) when zero templates exist | LOW | Conditional render in `TransactionForm`; avoids visual noise for new users |
+| Template name auto-suggested from description | When opening "Save as template", pre-fill `name` field with the transaction's `description` | LOW | UX convenience; user can override |
+
+---
+
+## Anti-Features (Commonly Requested, Often Problematic)
+
+| Anti-Feature | Why Requested | Why Problematic | What to Do Instead |
+|--------------|---------------|-----------------|--------------------|
+| Store amount on template | "I always pay R$49.90 for Netflix" | Breaks the mental model: templates are for structure, not for amounts that change. Storing amounts leads to stale amounts (price changes, promotions) and defeats the purpose of re-engagement with each entry | Keep amount always blank. If the user wants a fixed-amount shortcut, a recurring transaction is the right primitive |
+| Unlimited templates | "I have more than 3 payees" | With 3 chips, the row is scan-at-a-glance. With 10 chips it becomes a scrollable list requiring a different layout. The cap is a deliberate UX constraint for v1.7 | Enforce the 3-template cap. If demand is high for more, v2 can add a searchable template picker modal |
+| Shared / connection templates | "My partner and I always split Mercado the same way" | Templates are personal preferences. Partner's account list, split configuration, and naming conventions may differ. Sharing introduces sync complexity and consent ambiguity | Keep personal. The split config saved on a personal template already encodes the partner's split amount; that's sufficient |
+| Recurrence/installment settings on template | "Mercado Parcelado" always in 3 installments | Recurrence is contextual (number of remaining installments varies per purchase). Storing it on a template would almost always be wrong for the next use | Recurrence fields stay blank on apply; user fills them when relevant. Out of scope per PROJECT.md |
+| Auto-apply template based on description match | "When I type 'Mercado', auto-fill the template" | Creates invisible mutations to form state that confuse users; conflicts with `DescriptionAutocomplete` already doing suggestion-based fills | `DescriptionAutocomplete` already handles description-triggered suggestions. Chips are explicit user intent; don't automate them |
+| Template versioning / history | "Show me what this template looked like before I edited it" | Gross over-engineering for a 3-template personal list | Simple overwrite on edit is correct |
+| Apply template in bulk-create mode | "Apply template to 10 transactions at once" | Bulk creation is not a current feature; bulk actions operate on existing transactions | Out of scope per PROJECT.md |
+| Template ordering / drag-to-reorder | "I want Mercado first" | With max 3 chips, any ordering scheme adds management overhead for marginal benefit | Use creation-order or last-used-order; document the choice so users know what to expect |
+
+---
+
+## Feature Dependencies
 
 ```
-Charge {
-  id                    int           -- primary key
-  creditor_user_id      int           -- user who is owed money (created the charge)
-  debtor_user_id        int           -- user who owes money (must accept/reject)
-  connection_id         int           -- FK to user_connections; scopes the relationship; also used to resolve accounts
-  amount                int64         -- in cents, consistent with Transaction.Amount
-  description           string        -- what the debt is for; used as transfer description on acceptance
-  status                ChargeStatus  -- pending | accepted | rejected | cancelled
-  due_date              *time.Time    -- optional; informational only
-  rejection_note        *string       -- optional; set by debtor on rejection
-  transfer_transaction_id *int        -- FK to transactions; set when accepted; the creditor-side transfer
-  created_at            *time.Time
-  updated_at            *time.Time
-}
+Template CRUD API
+  └──requires──> transaction_templates DB table (migration)
+  └──requires──> Template domain type + entity + repository + service interfaces
+
+Template chip row (TransactionForm)
+  └──requires──> useTemplates() query hook (GET /api/templates)
+  └──requires──> Template apply logic (reset() + setFocus('amount'))
+  └──requires──> Stale-reference resolution at apply time
+
+"Save as template" button
+  └──requires──> Template CRUD API (POST /api/templates)
+  └──requires──> Template management drawer (can share the create form)
+
+Template management drawer (create/edit/delete)
+  └──requires──> Template CRUD API (all verbs)
+  └──requires──> Accounts query (account selector in template form)
+  └──requires──> Categories query (category selector in template form)
+  └──requires──> Tags query (tags input in template form)
+  └──requires──> SplitSettingsFields (reusable from TransactionForm — split config editor)
+
+Split on template apply
+  └──requires──> SplitSettingsFields reads from form state (already via useFormContext)
+  └──requires──> Stale split account detection (see Edge Cases)
 ```
 
-**Field rationale:**
+### Dependency Notes
 
-- `creditor_user_id` + `debtor_user_id`: explicit directionality avoids the SwapIfNeeded complexity of UserConnection. The charge has a fixed perspective.
-- `connection_id`: required because UserConnection holds the account IDs for both parties. On acceptance, the service calls `connection.FromAccountID` and `connection.ToAccountID` to build the transfer. This also enforces that only connected users can charge each other.
-- `amount` in cents: consistent with all other monetary fields in the domain.
-- `status` as a string enum: consistent with `UserConnectionStatusEnum`, `SettlementType`, `TransactionType` patterns in this codebase.
-- `transfer_transaction_id`: points to the creditor-side transaction (the `income` side of the transfer) as the canonical reference. The linked transfer pair can be traversed via `LinkedTransactions`.
-- `rejection_note`: nullable string; only meaningful when status = `rejected`.
-- `due_date`: nullable; informational only in v1.1; no enforcement logic needed.
-
-**Status transition rules (one-way finite state machine):**
-
-```
-pending → accepted   (debtor action)
-pending → rejected   (debtor action; rejection_note optionally set)
-pending → cancelled  (creditor action)
-
-accepted, rejected, cancelled → (terminal; no further transitions)
-```
+- **Template form reuses `SplitSettingsFields`:** The component reads from `useFormContext` and only needs a `splitApplicable` boolean. The template management drawer must provide `FormProvider` wrapping and the relevant account data. Complexity is MEDIUM because this form has no `amount` (split percentage mode requires a total to show % of — the template form will need to render split config without the amount validation).
+- **"Save as template" button depends on the management drawer:** The button opens the management drawer pre-filled with form values; it doesn't do a direct POST. This keeps the user in control and allows them to set or modify the template name before saving.
+- **Chip row is purely a read + apply surface:** It does not mutate templates. Management is always via the management drawer.
 
 ---
 
-## User Flow Analysis
+## Edge Cases That Must Become Explicit Requirements
 
-### Create flow (creditor)
+These are candidate acceptance criteria, not optional considerations.
 
-1. Creditor opens "New Charge" form.
-2. Selects the connected partner (resolved via `user_connections` — for a 2-person app this is implicit if only one connection exists).
-3. Enters amount and description. Optionally sets a due date.
-4. Submits → `POST /api/charges` → charge created with status = `pending`.
-5. Debtor sees a badge/notification indicator that a charge is waiting.
+### EC-1: Stale account reference (template account was deleted or deactivated)
 
-**Backend contract:**
-- Validate that a `UserConnection` with status = `accepted` exists between the two users.
-- Validate amount > 0.
-- Validate description is non-empty.
-- No balance check (explicitly out of scope).
-- Return the created charge with `id` and `status = pending`.
+**What happens:** User saved a template pointing to "Nubank Pessoal" (account_id: 42). Later they deactivated that account. When they click the chip, `reset()` sets `account_id: 42` but the account no longer appears in the account dropdown.
+
+**Expected behavior:** The chip apply still works. The account field renders blank (no pre-selected value) or shows an error state, but all other fields (type, category, tags, description, split) are populated correctly. The form is not blocked — user selects a different account and submits normally.
+
+**Implementation approach:** At apply time, check whether the resolved `account_id` exists in the current `useAccounts()` data. If not, apply all other fields but leave `account_id` null. Optionally show a one-time inline warning: "A conta do template não está disponível. Selecione uma conta."
+
+**Must-have:** Yes — applying a chip and getting a blank account with no explanation is confusing.
 
 ---
 
-### Accept flow (debtor)
+### EC-2: Stale category reference (template category was deleted)
 
-1. Debtor opens charges list, sees pending charge.
-2. Reviews amount and description.
-3. Taps "Accept".
-4. System shows confirmation ("This will create a transfer of R$X from your account to [partner]").
-5. Debtor confirms → `PATCH /api/charges/{id}/accept`.
-6. Backend (in a single DB transaction):
-   a. Validates charge is `pending` and caller is `debtor_user_id`.
-   b. Resolves accounts from `UserConnection` (debtor account = debtor side, creditor account = creditor side).
-   c. Calls `TransactionService.Create` to create the linked transfer pair (same pattern as existing cross-user transfers using `DestinationAccountID`).
-   d. Sets `charge.status = accepted`, sets `charge.transfer_transaction_id` to the created transaction ID.
-   e. Commits.
-7. Frontend navigates to transaction list or shows success state.
+**What happens:** Template has `category_id: 7` ("Alimentação"). User deleted that category. On apply, the category select shows blank with no selection.
 
-**Key dependency:** The `TransactionService.Create` for transfers already handles creating two linked `Transaction` rows (debit + credit). The ChargeService wraps this existing capability.
+**Expected behavior:** Same graceful degradation as EC-1 — all other fields populate; category field is blank. No error thrown. User picks a category.
 
-**Account resolution logic:**
-```
-connection.SwapIfNeeded(debtorUserID)
-debtorAccountID  = connection.FromAccountID
-creditorAccountID = connection.ToAccountID
-```
+**Implementation approach:** At apply time, validate `category_id` against the current `useFlattenCategories()` data. If not found, apply other fields and leave `category_id: null`.
 
-The transfer `TransactionCreateRequest` uses:
-- `AccountID = debtorAccountID` (source — money leaves here)
-- `DestinationAccountID = &creditorAccountID`
-- `Amount = charge.Amount`
-- `Description = charge.Description`
-- `TransactionType = transfer`
-- `Date = today`
+**Must-have:** Yes — silent failures are worse than explicit blanks.
 
 ---
 
-### Reject flow (debtor)
+### EC-3: Stale tag references (one or more template tags were deleted)
 
-1. Debtor opens pending charge.
-2. Taps "Reject". Optionally enters a note ("Amount is wrong, should be R$50").
-3. Submits → `PATCH /api/charges/{id}/reject` with optional `{ rejection_note: "..." }`.
-4. Backend validates charge is `pending` and caller is `debtor_user_id`.
-5. Sets `status = rejected`, stores `rejection_note`.
-6. No transfers created.
-7. Creditor can see the rejection (and note) in their sent charges list.
+**What happens:** Template has `tags: ["viagem", "necessidade"]`. User later deleted the "viagem" tag. On apply, "necessidade" should appear but "viagem" is gone.
 
----
+**Expected behavior:** Apply the subset of tags that still exist. Do not apply the deleted tag name (it would create a new tag with that name, which is probably not desired). If all tags are gone, `tags` field is empty array.
 
-### Cancel flow (creditor)
+**Implementation approach:** Tags on the form are stored as `string[]` (tag names). Check each tag name against the current tags list. Apply only names that match an existing tag. Dead names are silently dropped — no warning needed (less visible than account/category).
 
-1. Creditor opens sent charges list, sees a pending charge.
-2. Taps "Cancel".
-3. Confirms → `PATCH /api/charges/{id}/cancel`.
-4. Backend validates charge is `pending` and caller is `creditor_user_id`.
-5. Sets `status = cancelled`.
-6. No transfers created.
+**Must-have:** MEDIUM priority — silent drop of unknown tag names is acceptable behavior, but this must be explicitly decided rather than accidentally leaving stale names in.
 
 ---
 
-### List flow (both users)
+### EC-4: Stale split configuration (split partner's account in template no longer valid)
 
-- `GET /api/charges?direction=received&status=pending` — what I owe (debtor perspective)
-- `GET /api/charges?direction=sent&status=pending` — what I am owed (creditor perspective)
-- `GET /api/charges` — all charges involving the current user (both sides)
+**What happens:** Template stores `split_settings: [{ connection_id: 3, percentage: 50 }]`. Later the user dissolves the connection (or the connection account changes). On apply, `split_settings` is populated but the connection no longer exists.
 
-**Filter fields for `ChargeFilter`:**
-```
-status        []ChargeStatus
-direction     "sent" | "received"  (resolved to creditor_user_id / debtor_user_id filter)
-connection_id int
-limit, offset int
-```
+**Expected behavior:** At apply time, validate whether the `connection_id` in each split setting still corresponds to an active accepted connection. If not, apply all other fields but clear `split_settings` entirely. The form's own `splitApplicable` logic will hide the split section if no connection is active.
+
+**Implementation approach:** Check `connection_id` against the user's active connections. If stale, apply `split_settings: []`. This is the same silent-clear behavior used elsewhere in the codebase (e.g., selecting a shared account clears split settings automatically).
+
+**Must-have:** Yes — applying a template and having the form submit fail with a split validation error would be a bad experience.
 
 ---
 
-## Dependencies on Existing Features
+### EC-5: Template at capacity — "Save as template" button behavior
 
-| Dependency | How Used | Risk |
-|------------|----------|------|
-| `UserConnection` (accepted) | Validates relationship exists; provides account IDs for auto-transfer | LOW — already well-defined |
-| `TransactionService.Create` (transfer type) | Auto-creates the linked transfer pair on acceptance | LOW — existing capability, just called from ChargeService |
-| `LinkedTransactions` | The created transfer naturally links both sides; charge stores one FK | LOW — existing mechanism |
-| `appcontext.GetUserIDFromContext` | Authorization — caller must be creditor or debtor | LOW — standard pattern |
-| DB transaction (`dbTransaction.Begin`) | Accept must be atomic: create transfer + update charge in one transaction | LOW — pattern already used in TransactionService |
+**What happens:** User has 3 templates. They click "Save as template" from the transaction form.
+
+**Expected behavior:** The button is disabled (greyed out) with a tooltip like "Limite de 3 templates atingido". The management drawer still opens for editing/deleting existing templates. The backend also enforces the cap (409) as a safety net.
+
+**Must-have:** Yes — failing silently or showing a confusing API error is wrong.
 
 ---
 
-## Confidence Notes
+### EC-6: Template name uniqueness
 
-- Status lifecycle (pending/accepted/rejected/cancelled): HIGH confidence — this is the universal pattern across Venmo, NuBank Pix requests, and Splitwise's own historical accept/reject flow.
-- Auto-transfer on accept: HIGH confidence — stated as the core feature in PROJECT.md; maps cleanly to existing `TransactionService.Create` with transfer type.
-- Entity fields: HIGH confidence — derived directly from existing domain patterns in this codebase.
-- Splitwise removed accept/reject for settlements (MEDIUM confidence from community reports) — this app's design goes the opposite direction by design, which is appropriate since charges are explicit requests, not auto-recorded settlements.
+**What happens:** User creates two templates both named "Mercado".
+
+**Expected behavior:** Two templates with the same name is allowed. The name is purely a UI label for the chip, not a unique identifier. The backend should not enforce name uniqueness — it would be frustrating to enforce this on a personal 3-item list.
+
+**Must-have:** Decision must be explicit (allow duplicates) — backend must NOT add a unique constraint on `(user_id, name)`.
+
+---
+
+### EC-7: Chip row ordering
+
+**What happens:** User has templates created in order: "Mercado" (first), "Farmácia" (second), "Academia" (third). What order do chips appear?
+
+**Expected behavior:** Insertion order (by `created_at ASC`). This is deterministic, predictable, and requires no management UI. The 3-cap means the ordering never becomes overwhelming.
+
+**Alternative considered:** Last-used-first ordering. Rejected because it causes chips to reorder on every use, breaking muscle memory on a mobile touch target.
+
+**Must-have:** Document and implement creation-order. Do not leave ordering undefined.
+
+---
+
+### EC-8: Apply template when form is already dirty (user started typing)
+
+**What happens:** User partially fills out a form (typed an amount, selected an account), then clicks a chip.
+
+**Expected behavior:** The chip apply performs a full `reset()` with template values. The amount typed by the user is wiped. This is consistent with what `DateQuickChips` does — it unconditionally replaces the date value regardless of what the user typed. The user is explicitly clicking "use this template" — implicit merge would be more confusing.
+
+**Must-have:** The behavior must be explicit. Do not attempt smart merge; full reset is correct.
+
+---
+
+### EC-9: "Save as template" when form has split settings in percentage mode vs. amount mode
+
+**What happens:** The existing `SplitSettingsFields` component allows both percentage and fixed-amount modes. If a user saves from a fixed-amount split, the template stores `amount` in cents for the split. On the next use with a different transaction amount, the stored cents amount may be irrelevant.
+
+**Expected behavior:** Save whatever split config the form holds (percentage or amount). At apply time, apply as-is. This is consistent with how split works: the user sees the pre-filled split and can adjust before submitting. The form's split validation will catch any inconsistencies at submit time.
+
+**Must-have:** No special handling needed, but this edge case must be noted in implementation comments so future developers don't "fix" it.
+
+---
+
+### EC-10: Template apply on the Update transaction form
+
+**What happens:** The chip row would only be rendered on the Create form (new transaction). The Update form does not have template chips.
+
+**Expected behavior:** Template chips are only shown in the Create (`TransactionForm` used for new entries). The Update drawer (`UpdateTransactionDrawer`) does not render the chip row. This is correct behavior — applying a template over an existing transaction's data would be unexpected.
+
+**Must-have:** Must be explicitly scoped to the create form only. `TransactionForm` already accepts `headerContent` and `extraContent` props — template chips would be passed as one of these so the Update caller simply doesn't pass them.
+
+---
+
+## Field Mapping: Template → Form Apply
+
+Exact field correspondence between template entity and `TransactionFormValues`:
+
+| Template Field | Form Field | Apply Behavior |
+|----------------|------------|----------------|
+| `type` | `transaction_type` | Set directly |
+| `account_id` | `account_id` | Set if account still exists; null otherwise (EC-1) |
+| `category_id` | `category_id` | Set if category still exists; null otherwise (EC-2) |
+| `tags` | `tags` (string[]) | Set subset of names that still exist as tags (EC-3) |
+| `description` | `description` | Set directly |
+| `split_settings` | `split_settings` | Set if connection still active; `[]` otherwise (EC-4) |
+| _(not on template)_ | `amount` | Always left as `0` or blank; `setFocus('amount')` called after reset |
+| _(not on template)_ | `date` | Always today (form default is today anyway; reset() restores default) |
+| _(not on template)_ | `recurrenceEnabled` | Always `false` (form default) |
+| _(not on template)_ | `destination_account_id` | Always `null` (not stored on template; transfers can have templates but destination is left blank) |
+
+---
+
+## MVP Definition for v1.7
+
+### Must ship (table stakes that are also in scope)
+
+- [ ] `transaction_templates` table with CRUD API (POST, GET, PUT/:id, DELETE/:id) — personal, IDOR-scoped, max 3 cap
+- [ ] Template chip row in `TransactionForm` (create only), mirrors `DateQuickChips` structure
+- [ ] Apply: `reset()` to template values + `setFocus('amount')` + active chip highlight
+- [ ] Stale reference handling for account (EC-1), category (EC-2), split (EC-4) — silent field clear with optional inline warning for account
+- [ ] Template management drawer: create / edit / delete
+- [ ] "Save as template" button in transaction form (opens management drawer pre-filled; disabled when at cap — EC-5)
+- [ ] Cap enforcement: backend 409 + UI disables create path (EC-5)
+- [ ] Chip ordering: creation-order ascending (EC-7)
+- [ ] Full reset on chip tap (EC-8); second tap on active chip resets to blank form
+
+### Defer (out of scope per PROJECT.md)
+
+- [ ] Tag stale-reference warning UI (silent drop is sufficient — EC-3)
+- [ ] Template sharing across connection
+- [ ] More than 3 templates
+- [ ] Recurrence settings on templates
+- [ ] Template usage analytics / last-used ordering
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Chip row + apply (all fields) | HIGH | LOW | P1 |
+| Amount blank + focused on apply | HIGH | LOW | P1 |
+| Template management drawer | HIGH | MEDIUM | P1 |
+| "Save as template" from form | HIGH | LOW | P1 |
+| Split config preserved in template | HIGH | MEDIUM | P1 |
+| Stale account/category/split clear (EC-1,2,4) | HIGH | LOW | P1 |
+| Cap enforcement (EC-5) + disabled UI | MEDIUM | LOW | P1 |
+| Active chip state + re-tap to clear (EC-8) | MEDIUM | LOW | P1 |
+| Chip ordering = creation order (EC-7) | LOW | LOW | P1 — must be explicit |
+| Tag stale-reference silent drop (EC-3) | LOW | LOW | P2 |
+| Template name from description (auto-suggest) | LOW | LOW | P2 |
+| Inline warning for stale account (EC-1) | LOW | LOW | P2 |
+
+---
+
+## Competitor / Prior Art Analysis
+
+| Pattern | Source | How This App Should Adapt |
+|---------|--------|--------------------------|
+| Memorized payees storing type + account + category + memo (not amount) | Quicken for Windows | Identical to our locked decision; confirms "no amount" is the right call |
+| Auto-name template from description / payee name | Quicken memorized payees | Auto-suggest template name from transaction description in the Save drawer |
+| Tombstone check before processing template (filter deleted categories from template run) | Actual Budget (PR #3510) | Validate all FK references at apply time; clear stale FKs silently |
+| Autocomplete from previous transaction (description triggers category + account fill) | Bluecoins SMS autocomplete | `DescriptionAutocomplete` already does this; do NOT duplicate with template auto-apply (anti-feature) |
+| Chip/shortcut row at top of entry form | DateQuickChips (this codebase) | Exact pattern to mirror — `UnstyledButton` in a `Group`, `data-active` attribute, CSS Module |
+| QuickBooks: block account deletion when referenced by a memorized template | QuickBooks (community forum) | Do NOT follow this pattern — it is UX hostile. Instead use graceful degradation (EC-1, EC-2, EC-4) |
+| Amount stored on saved templates | Various apps (Monefy, etc.) | Anti-feature for this use case; amounts go stale immediately |
+
+---
+
+## Sources
+
+- Actual Budget PR #3510 "Ignore deleted categories when running templates": https://github.com/actualbudget/actual/pull/3510 — tombstone pattern for stale category references (HIGH confidence)
+- Quicken memorized payees documentation: https://www.quicken.com/support/how-use-memorized-payee-list-quicken-windows/ — field model and apply behavior (MEDIUM confidence; page returned 403 on fetch but description confirmed by community sources)
+- QuickBooks memorized transactions (block-deletion pattern to avoid): https://quickbooks.intuit.com/learn-support/en-us/help-article/memorize-transactions/create-edit-delete-memorized-transactions/L9kERjiUf_US_en_US — anti-pattern reference (MEDIUM confidence)
+- Bluecoins autocomplete / smart entry: https://www.bluecoinsapp.com/transactions/ — description-based autocomplete (MEDIUM confidence)
+- DateQuickChips.tsx in this codebase: `/home/user/finance_app/frontend/src/components/transactions/form/DateQuickChips.tsx` — definitive reference for chip pattern (HIGH confidence)
+- transactionFormSchema.ts in this codebase: `/home/user/finance_app/frontend/src/components/transactions/form/transactionFormSchema.ts` — authoritative field list and types (HIGH confidence)
+- PROJECT.md v1.7 section: `/home/user/finance_app/.planning/PROJECT.md` — locked decisions (HIGH confidence)
+
+---
+*Feature research for: Transaction Templates (v1.7) — personal quick-entry templates for a couples finance app*
+*Researched: 2026-06-07*
