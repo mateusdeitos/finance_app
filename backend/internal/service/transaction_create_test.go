@@ -1665,6 +1665,91 @@ func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseHonorsPart
 	suite.Assert().Equal(expectedLinkedDate, txUser2[0].Date)
 }
 
+// TestCreateSharedExpenseHonorsConfiguredDayForBothDirections verifies that when
+// BOTH participants configure a day-of-month, the day applied to a split is always
+// the RECIPIENT's preference — regardless of who authors the expense. This exercises
+// the SwapIfNeeded path in both directions (author = From side, and author = To side).
+func (suite *TransactionCreateWithDBTestSuite) TestCreateSharedExpenseHonorsConfiguredDayForBothDirections() {
+	ctx := context.Background()
+	user1, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	user2, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account1, err := suite.createTestAccount(ctx, user1)
+	suite.Require().NoError(err)
+	category1, err := suite.createTestCategory(ctx, user1)
+	suite.Require().NoError(err)
+	account2, err := suite.createTestAccount(ctx, user2)
+	suite.Require().NoError(err)
+	category2, err := suite.createTestCategory(ctx, user2)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, user1.ID, user2.ID, 50)
+	suite.Require().NoError(err)
+
+	// Both sides configure a day: user1 (From side) -> 5, user2 (To side) -> 20.
+	day5, day20 := 5, 20
+	_, err = suite.Services.UserConnection.UpdateSettings(ctx, user1.ID, conn.ID, "Conta user1", 50, &day5)
+	suite.Require().NoError(err)
+	_, err = suite.Services.UserConnection.UpdateSettings(ctx, user2.ID, conn.ID, "Conta user2", 50, &day20)
+	suite.Require().NoError(err)
+
+	baseDate := time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC)
+
+	// Direction A: user1 authors -> recipient is user2, whose configured day is 20.
+	_, err = suite.Services.Transaction.Create(ctx, user1.ID, &domain.TransactionCreateRequest{
+		AccountID:       account1.ID,
+		CategoryID:      category1.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "user1 authors",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	txA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user1.ID, AccountIDs: []int{account1.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txA, 1)
+	suite.Assert().Equal(baseDate, txA[0].Date, "author tx keeps original date")
+	suite.Require().Len(txA[0].LinkedTransactions, 1)
+	suite.Assert().Equal(user2.ID, txA[0].LinkedTransactions[0].UserID)
+	suite.Assert().Equal(
+		time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC),
+		txA[0].LinkedTransactions[0].Date,
+		"recipient user2's linked tx should land on user2's configured day (20)",
+	)
+
+	// Direction B: user2 authors -> recipient is user1, whose configured day is 5.
+	_, err = suite.Services.Transaction.Create(ctx, user2.ID, &domain.TransactionCreateRequest{
+		AccountID:       account2.ID,
+		CategoryID:      category2.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: baseDate},
+		Description:     "user2 authors",
+		TransactionType: domain.TransactionTypeExpense,
+		SplitSettings:   []domain.SplitSettings{{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	txB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &user2.ID, AccountIDs: []int{account2.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(txB, 1)
+	suite.Assert().Equal(baseDate, txB[0].Date, "author tx keeps original date")
+	suite.Require().Len(txB[0].LinkedTransactions, 1)
+	suite.Assert().Equal(user1.ID, txB[0].LinkedTransactions[0].UserID)
+	suite.Assert().Equal(
+		time.Date(2026, 7, 5, 0, 0, 0, 0, time.UTC),
+		txB[0].LinkedTransactions[0].Date,
+		"recipient user1's linked tx should land on user1's configured day (5)",
+	)
+}
+
 func now() time.Time {
 	now := time.Now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
