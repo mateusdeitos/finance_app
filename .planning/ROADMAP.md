@@ -9,6 +9,7 @@
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
 - ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 - 🚧 **v1.6 Push Notifications** — Phases 22–25 (in progress)
+- 🔜 **v1.7 Budgets (Orçamentos)** — Phases 26–29
 
 ## Phases
 
@@ -87,6 +88,13 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 23: Backend Notification Events & Inbox API** - 4 event triggers, best-effort dispatch, inbox endpoints (completed 2026-05-30)
 - [ ] **Phase 24: Frontend Permission, Subscribe & Service Worker** - permission prompt, subscribe/unsubscribe toggle, SW push handler, deep-link navigation
 - [ ] **Phase 25: Frontend Notification Inbox** - inbox UI, unread badge, open-entity navigation, mark-read actions
+
+### v1.7 Budgets (Orçamentos) (Phases 26–29)
+
+- [ ] **Phase 26: DB Migrations + Domain Types** - Goose migrations for budgets + budget_alert_thresholds, all Go domain types and GORM entity structs
+- [ ] **Phase 27: Budget CRUD + Realizado** - Budget management API (create/edit/delete/list) with per-category caps, GetSpent via GetBalance reuse, IDOR guards
+- [ ] **Phase 28: Threshold Alerts** - CheckAndFireAlerts with last_fired_period latch, post-commit goroutine hooks on transaction writes, inbox notification persistence
+- [ ] **Phase 29: Budget Frontend** - BudgetsPage, BudgetCard with Mantine Progress, BudgetFormDrawer, alert notification navigation, query cache invalidation
 
 ## Phase Details
 
@@ -209,6 +217,54 @@ Plans:
 - [ ] 25-05-PLAN.md — Nav wiring: DesktopSidebar link + blue badge, MobileTabBar Mais-tab dot, MobileMoreDrawer item; authored Playwright e2e spec
 **UI hint**: yes
 
+### Phase 26: DB Migrations + Domain Types
+**Goal**: The database schema for private budgets with per-category caps and alert thresholds is in place, and all Go domain types and GORM entity structs compile; no service or handler code yet
+**Depends on**: Phase 25 (v1.7 starts after v1.6 ships)
+**Requirements**: (none — foundation phase; all v1.7 requirements build on this schema)
+**Success Criteria** (what must be TRUE):
+  1. A `budgets` table exists with columns for owner_user_id, category_id, amount_cents, active, and timestamps; a `budget_alert_thresholds` table exists as a child of budgets with threshold_pct, last_fired_period, and a unique constraint on (budget_id, threshold_pct)
+  2. Both Goose migrations include correct Down blocks and `just migrate-down` executes without constraint errors on a local DB
+  3. `go build ./...` passes with the new `internal/domain/budget.go` (Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, BudgetScope) and `internal/entity/budget.go` (GORM structs with ToDomain/FromDomain) in place
+  4. Period-boundary contract is established: all realizado queries will use `domain.Period.StartDate()` / `domain.Period.EndDate()` exclusively — verified by a unit test that asserts a transaction at exactly EndDate() is included and one at EndDate()+1ns is excluded
+**Plans**: TBD
+
+### Phase 27: Budget CRUD + Realizado
+**Goal**: Users can manage their single private budget (add, edit, remove per-category caps) via the API, and retrieve per-category realized spend for any calendar month computed correctly via GetBalance reuse
+**Depends on**: Phase 26
+**Requirements**: BUD-01, BUD-02, BUD-03, BUD-04, BUD-05, SPEND-01, SPEND-02, SPEND-03
+**Success Criteria** (what must be TRUE):
+  1. A user can create a budget entry for a category with a cap in cents; POST /api/budgets returns the new budget with its id, category_id, and amount_cents; creating a second entry for the same category returns a conflict error (one cap per category enforced)
+  2. A user can update a category cap (PUT /api/budgets/:id) and the change applies immediately; a user can delete a single category cap or all caps without affecting the underlying transactions
+  3. GET /api/budgets returns only the authenticated user's own budget entries (IDOR: another user's budget IDs return 403)
+  4. GET /api/budgets/:id/spent?month=YYYY-MM returns spent_cents, limit_cents, and remaining_cents for the given month, computed exclusively via TransactionRepository.GetBalance with CategoryIDs=[budget.category_id] and HideSettlements=false — never new aggregation SQL
+  5. A split transaction counts only the owner's net portion in realizado: an integration test creating a 50/50 split expense of R$100 asserts spent_cents=5000 (not 10000) for the owner's private budget
+  6. Realizado is scoped to the requested calendar month with no rollover; changing the month parameter returns spend only for that month's transactions
+**Plans**: TBD
+
+### Phase 28: Threshold Alerts
+**Goal**: When a transaction write causes a category's realized spend to cross a configured threshold for the first time in a calendar month, the budget owner receives a push notification and an inbox entry; the alert never fires twice for the same threshold in the same month
+**Depends on**: Phase 27
+**Requirements**: ALERT-01, ALERT-02, ALERT-03, ALERT-04
+**Success Criteria** (what must be TRUE):
+  1. A user can configure one or more threshold percentages (e.g. 80, 100) per category cap via the budget create/update endpoint; alerts can be individually enabled or disabled per cap
+  2. After a transaction is committed that causes realized spend to cross a configured threshold, a push notification is delivered to the owner and a notification row of type "budget_alert" is persisted with a deep-link to the budget; the alert fires in a post-commit goroutine and never blocks or fails the originating transaction write
+  3. A second transaction in the same calendar month that keeps realized spend above the same threshold does not fire a second alert; the last_fired_period latch is updated only after a successful push delivery, so a push failure leaves the latch unset and the next qualifying write retries delivery
+  4. When the calendar month rolls over, the same threshold can fire again for the new month without any manual reset or scheduled job
+  5. Two concurrent transaction writes that both cross the same threshold in the same second result in exactly one alert (the conditional UPDATE on last_fired_period acts as the sole write fence; the goroutine that sees rowsAffected=0 skips dispatch)
+**Plans**: TBD
+
+### Phase 29: Budget Frontend
+**Goal**: Users can open a budget page, visualize per-category spend vs. cap with a progress bar, add and edit category caps with threshold configuration through a validated form, and navigate from a budget alert notification directly to their budget
+**Depends on**: Phase 27, Phase 28
+**Requirements**: UI-01, UI-02, UI-03, UI-04
+**Success Criteria** (what must be TRUE):
+  1. A user can navigate to a /budgets page from the app sidebar/navigation; each category cap is shown as a card with a Mantine Progress bar displaying spent amount, cap amount, and percentage — with a visually distinct over-budget state (red color, numeric overage) when spent exceeds cap
+  2. A user can open a drawer to add a new category cap or edit an existing one; the form validates that cap is a positive amount in cents and that threshold percentages are integers between 1 and 200; submitting an invalid form shows inline errors and does not call the API
+  3. The budget progress bars refresh to reflect updated spend after a user creates, edits, or deletes a transaction — without a full page reload; QueryKeys.BudgetSpent is invalidated by all transaction mutations
+  4. Selecting a "budget_alert" notification in the inbox navigates the user to the /budgets page; the correct category cap is visually identifiable on arrival
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -238,7 +294,11 @@ Plans:
 | 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
+| 26. DB Migrations + Domain Types | v1.7 | 0/? | Not started | - |
+| 27. Budget CRUD + Realizado | v1.7 | 0/? | Not started | - |
+| 28. Threshold Alerts | v1.7 | 0/? | Not started | - |
+| 29. Budget Frontend | v1.7 | 0/? | Not started | - |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 shipped: 2026-05-07 · v1.6 started: 2026-05-30_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 shipped: 2026-05-07 · v1.6 started: 2026-05-30 · v1.7 started: 2026-06-07_

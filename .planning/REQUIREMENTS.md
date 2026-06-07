@@ -79,11 +79,27 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _pending roadmap_ | — | — |
+| BUD-01 | Phase 27 | Pending |
+| BUD-02 | Phase 27 | Pending |
+| BUD-03 | Phase 27 | Pending |
+| BUD-04 | Phase 27 | Pending |
+| BUD-05 | Phase 27 | Pending |
+| SPEND-01 | Phase 27 | Pending |
+| SPEND-02 | Phase 27 | Pending |
+| SPEND-03 | Phase 27 | Pending |
+| ALERT-01 | Phase 28 | Pending |
+| ALERT-02 | Phase 28 | Pending |
+| ALERT-03 | Phase 28 | Pending |
+| ALERT-04 | Phase 28 | Pending |
+| UI-01 | Phase 29 | Pending |
+| UI-02 | Phase 29 | Pending |
+| UI-03 | Phase 29 | Pending |
+| UI-04 | Phase 29 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 16 total
-- Mapped to phases: 0 (pending roadmap)
+- Mapped to phases: 16/16 (100%)
 
 ---
 *Requirements defined: 2026-06-06 — single private budget per user, per-category caps*
+*Traceability populated: 2026-06-07 — roadmap created (Phases 26–29)*
