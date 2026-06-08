@@ -233,7 +233,7 @@ test.describe("Import: installment inference from description", () => {
 // ─── Duplicate detection criteria ───────────────────────────────────────────
 
 test.describe("Import: duplicate detection criteria", () => {
-  test("same date+amount but unrelated description is NOT flagged", async ({ browser }) => {
+  test("same date+amount IS flagged even with an unrelated description", async ({ browser }) => {
     const user = await createTestUser("dup-desc");
     const txDate = new Date(2026, 8, 10);
 
@@ -255,10 +255,11 @@ test.describe("Import: duplicate detection criteria", () => {
 
     await importPage.uploadCSV(csv, user.accountId);
 
-    // Description similarity is now part of the match — an unrelated
-    // description means no duplicate warning even with same date + amount.
+    // Exact same date and amount flags a duplicate regardless of how different
+    // the descriptions are: re-imported statements often carry garbled or
+    // missing descriptions but keep the date and amount intact.
     await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
-    await expect(importPage.duplicateWarning(0)).not.toBeVisible();
+    await expect(importPage.duplicateWarning(0)).toBeVisible();
 
     await page.close();
   });
