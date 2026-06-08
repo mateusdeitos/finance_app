@@ -21,21 +21,25 @@ const (
 // It includes inferred values (e.g. category from transaction history) and
 // any transactions or settlements detected as possible duplicates of this row.
 type ParsedImportRow struct {
-	RowIndex                     int                `json:"row_index"`
-	Status                       ImportRowStatus    `json:"status"`
-	Date                         *time.Time         `json:"date,omitempty"`
-	Description                  string             `json:"description"`
-	Type                         TransactionType    `json:"type"`
-	Amount                       int64              `json:"amount"` // cents
-	CategoryID                   *int               `json:"category_id,omitempty"`
-	CategoryInferred             bool               `json:"category_inferred"`
-	DestinationAccountID         *int               `json:"destination_account_id,omitempty"`
-	RecurrenceType               *RecurrenceType    `json:"recurrence_type,omitempty"`
-	RecurrenceCount              *int               `json:"recurrence_count,omitempty"`
-	RecurrenceCurrentInstallment *int               `json:"recurrence_current_installment,omitempty"`
-	ParseErrors                  []string           `json:"parse_errors,omitempty"`
-	DuplicateMatches             []Transaction      `json:"duplicate_matches,omitempty"`
-	SettlementMatches            []SettlementMatch  `json:"settlement_matches,omitempty"`
+	RowIndex int             `json:"row_index"`
+	Status   ImportRowStatus `json:"status"`
+	// Date is a calendar date (no time-of-day). It serializes as YYYY-MM-DD so
+	// the frontend's date components parse it as a local date instead of a UTC
+	// instant — emitting a full RFC3339 timestamp here shifts the displayed day
+	// by one in negative-offset timezones (e.g. UTC-3).
+	Date                         *Date             `json:"date,omitempty"`
+	Description                  string            `json:"description"`
+	Type                         TransactionType   `json:"type"`
+	Amount                       int64             `json:"amount"` // cents
+	CategoryID                   *int              `json:"category_id,omitempty"`
+	CategoryInferred             bool              `json:"category_inferred"`
+	DestinationAccountID         *int              `json:"destination_account_id,omitempty"`
+	RecurrenceType               *RecurrenceType   `json:"recurrence_type,omitempty"`
+	RecurrenceCount              *int              `json:"recurrence_count,omitempty"`
+	RecurrenceCurrentInstallment *int              `json:"recurrence_current_installment,omitempty"`
+	ParseErrors                  []string          `json:"parse_errors,omitempty"`
+	DuplicateMatches             []Transaction     `json:"duplicate_matches,omitempty"`
+	SettlementMatches            []SettlementMatch `json:"settlement_matches,omitempty"`
 }
 
 // SettlementMatch is a settlement flagged as a possible duplicate of an
@@ -92,9 +96,9 @@ type CheckDuplicatesBulkRequest struct {
 // settlements (income rows match credit settlements, expense rows match
 // debit settlements). Both share the same amount/description thresholds.
 type CheckDuplicateRowResult struct {
-	RowIndex          int                `json:"row_index"`
-	Matches           []Transaction      `json:"matches"`
-	SettlementMatches []SettlementMatch  `json:"settlement_matches,omitempty"`
+	RowIndex          int               `json:"row_index"`
+	Matches           []Transaction     `json:"matches"`
+	SettlementMatches []SettlementMatch `json:"settlement_matches,omitempty"`
 }
 
 // CheckDuplicatesBulkResponse is the response of the bulk duplicate check.

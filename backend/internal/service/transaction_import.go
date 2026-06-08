@@ -212,7 +212,7 @@ func parseCSVRow(
 		for _, format := range formats {
 			t, err := time.Parse(format, dateStr)
 			if err == nil {
-				row.Date = &t
+				row.Date = &domain.Date{Time: t}
 				break
 			}
 		}
@@ -485,7 +485,7 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 		if row.Date != nil && row.Amount > 0 {
 			inputs = append(inputs, domain.CheckDuplicateRowInput{
 				RowIndex:    i,
-				Date:        domain.Date{Time: *row.Date},
+				Date:        *row.Date,
 				Amount:      row.Amount,
 				Description: row.Description,
 				Type:        row.Type,

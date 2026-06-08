@@ -666,7 +666,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int64"
                             }
                         }
                     },
@@ -3259,7 +3260,12 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "date": {
-                    "type": "string"
+                    "description": "Date is a calendar date (no time-of-day). It serializes as YYYY-MM-DD so\nthe frontend's date components parse it as a local date instead of a UTC\ninstant — emitting a full RFC3339 timestamp here shifts the displayed day\nby one in negative-offset timezones (e.g. UTC-3).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Date"
+                        }
+                    ]
                 },
                 "description": {
                     "type": "string"
