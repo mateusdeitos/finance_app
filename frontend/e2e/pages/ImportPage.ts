@@ -224,8 +224,10 @@ export class ImportPage {
 
   /** Get the displayed date value of a row (formatted DD/MM/YYYY). */
   async getRowDateValue(rowIndex: number): Promise<string> {
-    const dateInput = this.reviewStep.getByTestId(ImportTestIds.RowInputDate(rowIndex));
-    return dateInput.locator("input").inputValue();
+    // DatePickerInput renders the formatted value as the text content of a
+    // button-like control (the testid'd element) — it has no fillable <input>.
+    const control = this.reviewStep.getByTestId(ImportTestIds.RowInputDate(rowIndex));
+    return (await control.innerText()).trim();
   }
 
   /** Get the current value of the main account select in the upload step. */

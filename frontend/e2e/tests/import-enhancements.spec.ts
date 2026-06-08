@@ -316,7 +316,9 @@ test.describe("Import: date parsing", () => {
     await importPage.uploadCSV(csv, user.accountId);
 
     await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
-    expect(await importPage.getRowDateValue(0)).toBe("04/05/2026");
+    await expect
+      .poll(() => importPage.getRowDateValue(0), { timeout: 10000 })
+      .toBe("04/05/2026");
 
     await page.close();
   });
