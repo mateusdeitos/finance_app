@@ -1767,8 +1767,7 @@ paths:
           type: string
         name: type[]
         type: array
-      - description: 'Search text: accent-insensitive description match or partial
-          amount match (e.g. \'
+      - description: Search description text
         in: query
         name: description.query
         type: string

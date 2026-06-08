@@ -1696,7 +1696,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Search text: accent-insensitive description match or partial amount match (e.g. \\",
+                        "description": "Search description text",
                         "name": "description.query",
                         "in": "query"
                     },

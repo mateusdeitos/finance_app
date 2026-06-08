@@ -98,7 +98,7 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 // @Param        category_id[]      query  []int     false  "Filter by category IDs"   collectionFormat(multi)
 // @Param        tag_id[]           query  []int     false  "Filter by tag IDs"        collectionFormat(multi)
 // @Param        type[]             query  []string  false  "Filter by type"           collectionFormat(multi) Enums(expense, income, transfer)
-// @Param        description.query  query  string    false  "Search text: accent-insensitive description match or partial amount match (e.g. \"50\" or \"1,5\")"
+// @Param        description.query  query  string    false  "Search description text"
 // @Param        description.exact  query  bool      false  "Exact description match"
 // @Param        with_settlements   query  bool      false  "Include settlements"
 // @Param        limit              query  int       false  "Limit"
