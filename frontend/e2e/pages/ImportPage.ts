@@ -222,6 +222,12 @@ export class ImportPage {
     return select.inputValue();
   }
 
+  /** Get the displayed date value of a row (formatted DD/MM/YYYY). */
+  async getRowDateValue(rowIndex: number): Promise<string> {
+    const dateInput = this.reviewStep.getByTestId(ImportTestIds.RowInputDate(rowIndex));
+    return dateInput.locator("input").inputValue();
+  }
+
   /** Get the current value of the main account select in the upload step. */
   async getHeaderAccountValue(): Promise<string> {
     const select = this.uploadStep.getByTestId(ImportTestIds.SelectAccount);
