@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -162,8 +163,19 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		if filter.Description.Exact {
 			query = query.Where("transactions.description = ?", filter.Description.Query)
 		} else {
-			query = query.Where("transactions.description % ?", filter.Description.Query)
-			query = query.Order(fmt.Sprintf("transactions.description <-> '%s' DESC", filter.Description.Query))
+			// Accent-insensitive substring match on the description (so "uniao"
+			// matches "união") OR partial match on the amount formatted as
+			// "reais,centavos" (so "50" matches 50,10 / 50,00 / 1,50 and "1,5"
+			// matches 1,50 / 21,56 / 1,59). Amounts are stored in cents.
+			descLike := "%" + filter.Description.Query + "%"
+			// Accept "." as a decimal separator typed by the user but compare
+			// against the comma-formatted amount.
+			amountLike := "%" + strings.ReplaceAll(filter.Description.Query, ".", ",") + "%"
+			query = query.Where(
+				"(unaccent(transactions.description) ILIKE unaccent(?) OR "+
+					"(abs(transactions.amount) / 100)::text || ',' || lpad((abs(transactions.amount) % 100)::text, 2, '0') ILIKE ?)",
+				descLike, amountLike,
+			)
 		}
 	}
 
@@ -280,8 +292,8 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 	for _, r := range rows {
 		settlementType := domain.SettlementType(r.SettlementType)
 		var (
-			opType  domain.OperationType
-			txType  domain.TransactionType
+			opType domain.OperationType
+			txType domain.TransactionType
 		)
 		if settlementType == domain.SettlementTypeCredit {
 			opType = domain.OperationTypeCredit
