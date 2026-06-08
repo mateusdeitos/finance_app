@@ -6,6 +6,7 @@ import { useAccounts } from "./useAccounts";
 import { useFlattenCategories } from "./useCategories";
 import { Transactions } from "@/types/transactions";
 import { groupTransactions } from "@/utils/groupTransactions";
+import { matchesTransactionSearch } from "@/utils/matchesTransactionSearch";
 
 const EMPTY_TRANSACTIONS: Transactions.Transaction[] = [];
 const EMPTY_ACCOUNTS: Transactions.Account[] = [];
@@ -31,8 +32,7 @@ export function useGroupedTransactions<T = Transactions.TransactionGroup[]>(
 
   const filtered = useMemo(() => {
     if (!search.query) return transactions;
-    const lower = search.query.toLowerCase();
-    return transactions.filter((tx) => tx.description.toLowerCase().includes(lower));
+    return transactions.filter((tx) => matchesTransactionSearch(tx, search.query));
   }, [transactions, search.query]);
 
   const groups = useMemo(
