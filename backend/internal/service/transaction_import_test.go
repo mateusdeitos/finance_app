@@ -683,8 +683,13 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulkAgainstSet
 		{RowIndex: 3, Date: domain.Date{Time: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)}, Amount: 5000, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
 		// No match: amount too far.
 		{RowIndex: 4, Date: domain.Date{Time: sharedDate}, Amount: 9999, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
-		// No match: description mismatch.
-		{RowIndex: 5, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
+		// No match: description mismatch. Uses a different day and a non-exact
+		// (within-tolerance) amount so the exact date+amount signal stays dormant
+		// and the description is the only criterion under test.
+		{RowIndex: 5, Date: domain.Date{Time: time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC)}, Amount: 5001, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
+		// Match: exact same day and amount as the settlement flags a duplicate
+		// even though the description is unrelated.
+		{RowIndex: 6, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
 	}
 
 	results, err := suite.Services.Transaction.CheckDuplicatesBulk(ctx, user1.ID, &connAccountID, rows)
@@ -706,6 +711,8 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulkAgainstSet
 	suite.Empty(byIndex[3].SettlementMatches, "different month should not match")
 	suite.Empty(byIndex[4].SettlementMatches, "amount outside tolerance should not match")
 	suite.Empty(byIndex[5].SettlementMatches, "description mismatch should not match")
+	suite.Require().Len(byIndex[6].SettlementMatches, 1, "exact date and amount should match despite description mismatch")
+	suite.Equal(settlements[0].ID, byIndex[6].SettlementMatches[0].ID)
 }
 
 func TestInferInstallment(t *testing.T) {
