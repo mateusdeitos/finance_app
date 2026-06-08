@@ -85,12 +85,16 @@ export function DuplicateTransactionsDrawer({ row, matches, settlementMatches, c
           title="Como detectamos duplicidades"
         >
           <Text fz="xs" mb={4}>
-            Uma linha é sinalizada quando existe uma transação ou liquidação que atende aos 3 critérios:
+            Uma linha é sinalizada quando existe uma transação ou liquidação em um destes casos:
           </Text>
           <List size="xs" spacing={2}>
-            <List.Item>{similarityLabel}</List.Item>
-            <List.Item>{amountLabel}</List.Item>
-            <List.Item>No mesmo mês da data da transação</List.Item>
+            <List.Item>
+              Mesma data e mesmo valor exatos — mesmo que a descrição seja diferente.
+            </List.Item>
+            <List.Item>
+              No mesmo mês da data da transação, com {amountLabel.toLowerCase()} e{' '}
+              {similarityLabel.toLowerCase()}.
+            </List.Item>
           </List>
           <Text fz="xs" mt={6}>
             Receitas também são comparadas com liquidações de crédito; despesas com liquidações de débito da mesma conta.

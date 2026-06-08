@@ -182,9 +182,14 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 		return settlement(id, amount, domain.SettlementTypeDebit, desc)
 	}
 
+	// otherDay never coincides with the helper's time.Now() settlement date, so
+	// the exact date+amount bypass stays dormant and these cases exercise the
+	// description-based path. The dedicated bypass case below opts in explicitly.
+	otherDay := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	t.Run("income matches credit settlement only", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)
 		assert.Equal(t, domain.SettlementTypeCredit, got[0].Type)
@@ -193,7 +198,7 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 
 	t.Run("expense matches debit settlement only", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeExpense)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeExpense)
 		require.Len(t, got, 1)
 		assert.Equal(t, 2, got[0].ID)
 		assert.Equal(t, domain.SettlementTypeDebit, got[0].Type)
@@ -201,26 +206,26 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 
 	t.Run("transfer skips settlement matching entirely", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5000, "Petz"), debit(2, 5000, "Petz")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeTransfer)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeTransfer)
 		assert.Nil(t, got)
 	})
 
 	t.Run("amount within tolerance matches, outside does not", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5002, "Petz"), credit(2, 5003, "Petz")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)
 	})
 
 	t.Run("description mismatch is filtered out", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5000, "Imec")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeIncome)
 		assert.Empty(t, got)
 	})
 
 	t.Run("empty description skips similarity check", func(t *testing.T) {
 		candidates := []*domain.Settlement{credit(1, 5000, "Whatever")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "", domain.TransactionTypeIncome)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 	})
 
@@ -232,17 +237,39 @@ func TestFilterSettlementDuplicateMatches(t *testing.T) {
 		candidates := []*domain.Settlement{bare}
 		// With a non-empty description, the bare settlement fails the
 		// similarity check (empty source description) and is filtered out.
-		assert.Empty(t, filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome))
+		assert.Empty(t, filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeIncome))
 		// With an empty description, the similarity check is skipped and the
 		// settlement matches on amount + type alone.
-		require.Len(t, filterSettlementDuplicateMatches(candidates, 5000, "", domain.TransactionTypeIncome), 1)
+		require.Len(t, filterSettlementDuplicateMatches(candidates, otherDay, 5000, "", domain.TransactionTypeIncome), 1)
 	})
 
 	t.Run("nil settlement is skipped without panic", func(t *testing.T) {
 		candidates := []*domain.Settlement{nil, credit(1, 5000, "Petz")}
-		got := filterSettlementDuplicateMatches(candidates, 5000, "Petz", domain.TransactionTypeIncome)
+		got := filterSettlementDuplicateMatches(candidates, otherDay, 5000, "Petz", domain.TransactionTypeIncome)
 		require.Len(t, got, 1)
 		assert.Equal(t, 1, got[0].ID)
+	})
+
+	t.Run("exact same day and amount matches even when description differs", func(t *testing.T) {
+		sameDay := time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC)
+		st := credit(1, 5000, "Imec")
+		st.Date = sameDay
+		candidates := []*domain.Settlement{st}
+		// Description does not match, but the exact date+amount signal fires.
+		got := filterSettlementDuplicateMatches(candidates, sameDay, 5000, "Petz", domain.TransactionTypeIncome)
+		require.Len(t, got, 1)
+		assert.Equal(t, 1, got[0].ID)
+	})
+
+	t.Run("same day with description mismatch but amount off by a cent still needs description", func(t *testing.T) {
+		sameDay := time.Date(2026, 5, 14, 0, 0, 0, 0, time.UTC)
+		st := credit(1, 5001, "Imec")
+		st.Date = sameDay
+		candidates := []*domain.Settlement{st}
+		// Amount is within tolerance but not exact, so the bypass does not fire
+		// and the mismatching description filters it out.
+		got := filterSettlementDuplicateMatches(candidates, sameDay, 5000, "Petz", domain.TransactionTypeIncome)
+		assert.Empty(t, got)
 	})
 }
 
@@ -538,6 +565,13 @@ func (suite *TransactionImportWithDBTestSuite) TestDuplicateMatchCriteria() {
 		suite.Empty(checkOne(mismatchDate, 52134, "PETZ 22"))
 	})
 
+	suite.Run("exact same date and amount is a duplicate even with a different description", func() {
+		exactDate := time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)
+		createTx(33300, exactDate, "Original Store")
+		// Description is unrelated, but date and amount match exactly.
+		suite.NotEmpty(checkOne(exactDate, 33300, "Totally Different Text"))
+	})
+
 	suite.Run("no matching amount returns no matches", func() {
 		suite.Empty(checkOne(txDate, 9999, "Spotify Check"))
 	})
@@ -649,8 +683,13 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulkAgainstSet
 		{RowIndex: 3, Date: domain.Date{Time: time.Date(2026, 12, 1, 0, 0, 0, 0, time.UTC)}, Amount: 5000, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
 		// No match: amount too far.
 		{RowIndex: 4, Date: domain.Date{Time: sharedDate}, Amount: 9999, Description: "Jantar restaurante", Type: domain.TransactionTypeIncome},
-		// No match: description mismatch.
-		{RowIndex: 5, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
+		// No match: description mismatch. Uses a different day and a non-exact
+		// (within-tolerance) amount so the exact date+amount signal stays dormant
+		// and the description is the only criterion under test.
+		{RowIndex: 5, Date: domain.Date{Time: time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC)}, Amount: 5001, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
+		// Match: exact same day and amount as the settlement flags a duplicate
+		// even though the description is unrelated.
+		{RowIndex: 6, Date: domain.Date{Time: sharedDate}, Amount: 5000, Description: "Aluguel mensal apto", Type: domain.TransactionTypeIncome},
 	}
 
 	results, err := suite.Services.Transaction.CheckDuplicatesBulk(ctx, user1.ID, &connAccountID, rows)
@@ -672,6 +711,8 @@ func (suite *TransactionImportWithDBTestSuite) TestCheckDuplicatesBulkAgainstSet
 	suite.Empty(byIndex[3].SettlementMatches, "different month should not match")
 	suite.Empty(byIndex[4].SettlementMatches, "amount outside tolerance should not match")
 	suite.Empty(byIndex[5].SettlementMatches, "description mismatch should not match")
+	suite.Require().Len(byIndex[6].SettlementMatches, 1, "exact date and amount should match despite description mismatch")
+	suite.Equal(settlements[0].ID, byIndex[6].SettlementMatches[0].ID)
 }
 
 func TestInferInstallment(t *testing.T) {
