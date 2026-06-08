@@ -226,7 +226,15 @@ Plans:
   2. Both Goose migrations include correct Down blocks and `just migrate-down` executes without constraint errors on a local DB
   3. `go build ./...` passes with the new `internal/domain/budget.go` (Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, BudgetScope) and `internal/entity/budget.go` (GORM structs with ToDomain/FromDomain) in place
   4. Period-boundary contract is established: all realizado queries will use `domain.Period.StartDate()` / `domain.Period.EndDate()` exclusively — verified by a unit test that asserts a transaction at exactly EndDate() is included and one at EndDate()+1ns is excluded
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+
+**Wave 1**
+- [ ] 26-01-PLAN.md — Goose migrations: budgets + budget_alert_thresholds tables (FK CASCADE, UNIQUE, CHECK, Down blocks, migrate-down round-trip)
+- [ ] 26-02-PLAN.md — domain/budget.go (Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, BudgetScope Private-only) + Period-boundary contract test
+
+**Wave 2** *(blocked on 26-02)*
+- [ ] 26-03-PLAN.md — entity/budget.go GORM structs + ToDomain/FromDomain conversions + full `go build ./...` verification (SC3)
 
 ### Phase 27: Budget CRUD + Realizado
 **Goal**: Users can manage their single private budget (add, edit, remove per-category caps) via the API, and retrieve per-category realized spend for any calendar month computed correctly via GetBalance reuse
