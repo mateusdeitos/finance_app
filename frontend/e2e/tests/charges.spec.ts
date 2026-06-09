@@ -500,9 +500,11 @@ test.describe("Charges", () => {
     await expect(payerCard).toBeVisible();
     await expect(payerCard.getByTestId(ChargesTestIds.BtnCancel)).toBeVisible();
     await expect(payerCard.getByTestId(ChargesTestIds.BtnAccept)).toHaveCount(0);
-    // And it does NOT appear under "Recebidas" for the initiator.
+    // And it is NOT shown under "Recebidas" for the initiator. (Mantine keeps
+    // the inactive "Enviadas" panel mounted but hidden, so the card still
+    // EXISTS in the DOM — assert it isn't visible rather than absent.)
     await payerCharges.selectReceivedTab();
-    await expect(payerPage.getByTestId(ChargesTestIds.Card(charge.id))).toHaveCount(0);
+    await expect(payerPage.getByTestId(ChargesTestIds.Card(charge.id))).not.toBeVisible();
 
     // (2) The counterparty (wife) sees it in "Recebidas" and accepts it.
     const wifePage = await openAuthedPage(browser, wifeToken);
