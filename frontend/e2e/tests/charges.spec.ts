@@ -506,7 +506,9 @@ test.describe("Charges", () => {
     await payerCharges.selectReceivedTab();
     await expect(payerPage.getByTestId(ChargesTestIds.Card(charge.id))).not.toBeVisible();
 
-    // (2) The counterparty (wife) sees it in "Recebidas" and accepts it.
+    // (2) The counterparty (wife) is the one offered the Accept action: the
+    // charge shows up in HER "Recebidas" tab with an Accept button (the core of
+    // the reported routing bug). She then settles it.
     const wifePage = await openAuthedPage(browser, wifeToken);
     const wifeCharges = new ChargesPage(wifePage);
     await wifeCharges.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
@@ -514,10 +516,15 @@ test.describe("Charges", () => {
     const wifeCard = wifePage.getByTestId(ChargesTestIds.Card(charge.id));
     await expect(wifeCard).toBeVisible();
     await expect(wifeCard.getByTestId(ChargesTestIds.BtnAccept)).toBeVisible();
-    await wifeCharges.clickAccept();
-    await wifeCharges.fillAcceptForm(wifePriv.id);
-    await wifeCharges.submitAccept();
-    await wifeCharges.expectNotification(/Cobrança aceita/);
+    // The initiator-side actions (Cancel/Reject) must NOT be offered to her.
+    await expect(wifeCard.getByTestId(ChargesTestIds.BtnCancel)).toHaveCount(0);
+
+    // Settle the charge as the wife through the real backend.
+    const acceptRes = await apiFetchAs(wifeToken, `/api/charges/${charge.id}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ account_id: wifePriv.id, date: new Date().toISOString() }),
+    });
+    expect(acceptRes.status).toBe(204);
 
     // (3) Both connection-account balances are zeroed — not doubled.
     const connBalance = async (token: string, accountId: number): Promise<number> => {
