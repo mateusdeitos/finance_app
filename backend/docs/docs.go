@@ -2921,6 +2921,10 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "initiator_user_id": {
+                    "description": "InitiatorUserID is the user who created the charge. It is independent of\nthe charger/payer roles: a payer can initiate (\"I'll pay you\") just as a\ncharger can (\"you owe me\"). The OTHER party is the one who must accept or\nreject; the initiator is the one who can cancel.",
+                    "type": "integer"
+                },
                 "payer_account_id": {
                     "type": "integer"
                 },

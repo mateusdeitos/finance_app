@@ -58,9 +58,11 @@ func (r *chargeRepository) Search(ctx context.Context, options domain.ChargeSear
 	if options.UserID > 0 {
 		switch options.Direction {
 		case "sent":
-			query = query.Where("charger_user_id = ?", options.UserID)
+			// Charges the caller initiated (regardless of charger/payer role).
+			query = query.Where("initiator_user_id = ?", options.UserID)
 		case "received":
-			query = query.Where("payer_user_id = ?", options.UserID)
+			// Charges the caller must act on: they are a party but did not initiate.
+			query = query.Where("(charger_user_id = ? OR payer_user_id = ?) AND initiator_user_id <> ?", options.UserID, options.UserID, options.UserID)
 		default:
 			query = query.Where("(charger_user_id = ? OR payer_user_id = ?)", options.UserID, options.UserID)
 		}
@@ -111,9 +113,11 @@ func (r *chargeRepository) Count(ctx context.Context, options domain.ChargeSearc
 	if options.UserID > 0 {
 		switch options.Direction {
 		case "sent":
-			query = query.Where("charger_user_id = ?", options.UserID)
+			// Charges the caller initiated (regardless of charger/payer role).
+			query = query.Where("initiator_user_id = ?", options.UserID)
 		case "received":
-			query = query.Where("payer_user_id = ?", options.UserID)
+			// Charges the caller must act on: they are a party but did not initiate.
+			query = query.Where("(charger_user_id = ? OR payer_user_id = ?) AND initiator_user_id <> ?", options.UserID, options.UserID, options.UserID)
 		default:
 			query = query.Where("(charger_user_id = ? OR payer_user_id = ?)", options.UserID, options.UserID)
 		}
