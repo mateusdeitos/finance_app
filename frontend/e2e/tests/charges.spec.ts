@@ -431,18 +431,17 @@ test.describe("Charges", () => {
     const payerConnAcc = await findConnAccount(payerToken);
     const wifeConnAcc = await findConnAccount(wifeToken);
 
-    // Seed the imbalance: payer owes 900 (conn balance -900), wife is owed 900.
+    // Seed the imbalance with a SINGLE expense on the payer's connection
+    // account. A transaction on a connection account auto-mirrors an inverted
+    // linked transaction onto the partner's connection account, so this one
+    // entry yields exactly: payer conn = -900 (owes), wife conn = +900 (owed) —
+    // the realistic shape of a shared-expense debt. (Seeding both sides
+    // independently would double it to ±1800.)
     const dateISO = `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, "0")}-01T00:00:00Z`;
     const payerCat = await (
       await apiFetchAs(payerToken, "/api/categories", {
         method: "POST",
         body: JSON.stringify({ name: `Payer Cat ${Date.now()}` }),
-      })
-    ).json();
-    const wifeCat = await (
-      await apiFetchAs(wifeToken, "/api/categories", {
-        method: "POST",
-        body: JSON.stringify({ name: `Wife Cat ${Date.now()}` }),
       })
     ).json();
     await apiFetchAs(payerToken, "/api/transactions", {
@@ -454,17 +453,6 @@ test.describe("Charges", () => {
         amount: 90000,
         date: dateISO,
         description: "owes wife",
-      }),
-    });
-    await apiFetchAs(wifeToken, "/api/transactions", {
-      method: "POST",
-      body: JSON.stringify({
-        account_id: wifeConnAcc,
-        transaction_type: "income",
-        category_id: wifeCat.id,
-        amount: 90000,
-        date: dateISO,
-        description: "owed by payer",
       }),
     });
 
