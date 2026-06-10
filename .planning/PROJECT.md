@@ -159,6 +159,7 @@ Partners can accurately track shared finances, including in-progress installment
 | Template table mirrors the `transactions` shape                        | Reuses the field model the `TransactionForm` already knows; apply maps 1:1 onto form fields                  | TBD |
 | Persist split config on the template (transactions don't store it)     | Split is create-time input → settlements + linked tx; templates need it preserved, so the table carries it    | TBD |
 | Templates are personal (per user), never amount, capped at 3           | Matches user's stated workflow (fast repeat entries); cap keeps the chip row and UI simple                    | TBD |
+| Template tags stored as a `tag_ids` array on the template (no join table) | Avoids id-collision/leakage into `transaction_tags`; no FK needed — stale ids filtered at apply time, like account/category | TBD |
 
 ## Constraints
 

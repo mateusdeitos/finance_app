@@ -65,25 +65,25 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TMPL-01 | — | Pending |
-| TMPL-02 | — | Pending |
-| TMPL-03 | — | Pending |
-| TMPL-04 | — | Pending |
-| TMPL-05 | — | Pending |
-| APPLY-01 | — | Pending |
-| APPLY-02 | — | Pending |
-| APPLY-03 | — | Pending |
-| APPLY-04 | — | Pending |
-| MNG-01 | — | Pending |
-| MNG-02 | — | Pending |
-| MNG-03 | — | Pending |
-| SAFE-01 | — | Pending |
-| SAFE-02 | — | Pending |
+| TMPL-01 | Phase 26 | Pending |
+| TMPL-02 | Phase 27 | Pending |
+| TMPL-03 | Phase 27 | Pending |
+| TMPL-04 | Phase 27 | Pending |
+| TMPL-05 | Phase 26 | Pending |
+| APPLY-01 | Phase 29 | Pending |
+| APPLY-02 | Phase 29 | Pending |
+| APPLY-03 | Phase 29 | Pending |
+| APPLY-04 | Phase 29 | Pending |
+| MNG-01 | Phase 30 | Pending |
+| MNG-02 | Phase 30 | Pending |
+| MNG-03 | Phase 28 | Pending |
+| SAFE-01 | Phase 27 | Pending |
+| SAFE-02 | Phase 27 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 14 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 14
+- Mapped to phases: 14 (100%)
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-06-07*
+*Requirements defined: 2026-06-07 · Traceability populated: 2026-06-08*
