@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
-status: planning
-last_updated: "2026-06-07T23:13:42.575Z"
-last_activity: 2026-06-07
+status: roadmap_ready
+last_updated: "2026-06-08T00:00:00.000Z"
+last_activity: 2026-06-08
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -15,23 +15,19 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 26 of 31 (Backend Foundation — ready to plan)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-07 — Milestone v1.7 started
+Status: Roadmap created — ready for Phase 26 planning
+Last activity: 2026-06-08 — v1.7 roadmap created (6 phases, 26–31)
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260607-001 | Configurable day-of-month for linked transactions on split | 2026-06-07 | ee27c80 | [260607-001-connection-linked-tx-day](./quick/260607-001-connection-linked-tx-day/) |
+Progress: [░░░░░░░░░░] 0%
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-30)
+See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Phase 23 — backend-notification-events-inbox-api
+**Current focus:** Phase 26 — backend-foundation (migration + domain + entity + CategoryService.Delete)
 
 ## Performance Metrics
 
@@ -41,30 +37,26 @@ See: .planning/PROJECT.md (updated 2026-05-30)
 - v1.3: 1 phase (partial), 2 plans (2026-04-18 → 2026-04-20) — Phase 12 deferred
 - v1.4: 3 phases (13–15), 5 plans (2026-04-20 → 2026-05-05) — shipped
 - v1.5: 5 phases (16–19, 21), 7 plans (2026-05-05 → 2026-05-07) — shipped (P20 skipped post-gate)
+- v1.6: 4 phases (22–25) — completed
 
 ## Accumulated Context
 
 ### Decisions
 
-- v1.0 shipped 2026-04-10. Archived: `.planning/milestones/v1.0-ROADMAP.md`
-- v1.1 shipped 2026-04-16. Archived: `.planning/milestones/v1.1-ROADMAP.md`
-- v1.2 shipped 2026-04-17. Archived: `.planning/milestones/v1.2-ROADMAP.md`
-- v1.3 shipped 2026-04-20 (partial — Phase 11 only). Archived: `.planning/milestones/v1.3-ROADMAP.md`. Phase 12 deferred to backlog.
-- v1.4 shipped 2026-05-05 (Phases 13–15). Archived: `.planning/milestones/v1.4-ROADMAP.md`. Phase dirs moved to `.planning/milestones/v1.4-phases/`.
-- v1.5 shipped 2026-05-07 (Phases 16–19, 21; Phase 20 skipped post-gate). Archived: `.planning/milestones/v1.5-ROADMAP.md`, `.planning/milestones/v1.5-RETROSPECTIVE.md`. Phase dirs moved to `.planning/milestones/v1.5-phases/`. Headline: description keystroke 761ms→3.5ms (218×); amount keystroke 929ms→5.6ms (166×). Open follow-up: issue #116 (duplicate-check fires on action flip duplicate→import).
-- v1.6 roadmap created 2026-05-30 — Web Push (VAPID) via 4 phases (22–25): backend subscription foundation, notification events + inbox API, frontend subscribe/SW, frontend inbox UI.
-- Phase 22 Plan 01 complete 2026-05-30 — webpush-go v1.4.0 added, VAPIDConfig wired from env, push_subscriptions+notifications migrations created, domain+entity types defined with round-trip conversion. UNIQUE constraint on endpoint alone (not composite); no gorm.Model on PushSubscription (hard deletes); empty-string VAPID defaults with Plan 03 startup validation.
-- Phase 22 Plan 02 complete 2026-05-30 — PushSubscriptionRepository + NotificationRepository interfaces registered in interfaces.go; push_subscription_repository.go implemented with ON CONFLICT upsert, IDOR-scoped DeleteByEndpoint + ExistsForUser, admin-prune DeleteByEndpointAdmin; notification_repository.go stub; mocks regenerated via mockery; ServiceTestWithDBSuite extended with both repo fields + SetupTest instantiation + Repos literal.
-- Phase 22 Plan 03 complete 2026-05-30 — PushSubscriptionService with input validation (endpoint/p256dh/auth) + IDOR-safe userID handling; integration test suite (8 test cases); PushSubscriptionHandler (POST/DELETE/GET with swagger annotations); VAPID startup guard in main.go; DI wiring + 3 authenticated routes; swagger regenerated with push-subscriptions paths. Integration tests compile-checked; Docker-deferred for execution.
-- Phase 23 Plan 02 complete 2026-05-30 — NotificationService (panic-safe Dispatch + D-08 coalescing + PushSender injectable + 404/410 prune + pt-BR D-07 copy) + NotificationHandler (4 IDOR-scoped inbox endpoints) + DI wiring + route registration (/unread-count, /read-all before /:id/read); MockNotificationService + MockPushSender regenerated; swagger regenerated with 4 /api/notifications paths; go build ./... + go vet green.
-- [Phase ?]: NOTIF-01..04 hooks use post-commit goroutine with context.Background(); D-02 cosmetic-silent, D-03 self-edit guard, D-04 remove-still-notifies in maybeDispatchSplitUpdatedNotification
+- Dedicated `transaction_templates` table (NOT `is_template` column) — isolates templates from all financial query paths
+- Split config stored as typed JSONB `[]domain.SplitSettings` on the template row — not a join table
+- Tags via `template_tags` join table mirroring `transaction_tags` — FK integrity + cascade on tag delete
+- CategoryService.Delete must call `templateRepo.NullifyCategory` to avoid CP-8 (latent 400 on apply)
+- 3-template cap enforced via conditional INSERT in service (race-safe); no DB trigger
+- IDOR: all endpoints gate on `WHERE user_id = ?`; 404 on mismatch (not 403)
+- Phase 28 (SplitSettingsFields mode) is a discrete design decision phase — unresolved open question from research
 
 ### Todos
 
-- Run integration tests with Docker when available
-- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit when planning v1.6+
-- v1.5 follow-up: issue #116 (duplicate-check fires on action flip duplicate→import) — separate PR
-- v1.5 follow-ups parked in `.planning/milestones/v1.5-RETROSPECTIVE.md` → "Open follow-ups" (React Compiler wiring; cenário 3/4 row-internal cost; in-flight request cancellation; perf budget CI gate; bulk-select migration; counted-render e2e test)
+- Run v1.6 integration tests with Docker when available
+- v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
+- v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
+- Phase 29: Read `CurrencyInput.tsx` before implementing `reset({ amount: 0 })` to confirm blank display behavior
 
 ### Blockers
 
@@ -80,4 +72,9 @@ None
 | verification_gap | Phase 08: 08-VERIFICATION.md | human_needed |
 | verification_gap | Phase 09: 09-VERIFICATION.md | human_needed |
 | verification_gap | Phase 10: 10-VERIFICATION.md | human_needed |
-| Phase 23 P23-03 | 25 | - tasks | - files |
+
+## Session Continuity
+
+Last session: 2026-06-08
+Stopped at: Roadmap created for v1.7 Transaction Templates (Phases 26–31)
+Resume file: None
