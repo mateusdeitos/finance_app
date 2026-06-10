@@ -16,7 +16,10 @@ interface Props {
 }
 
 export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, onAccept, onReject, onCancel }: Props) {
-  const isReceived = charge.payer_user_id === currentUserId
+  // "Received" means the charge is awaiting MY action: I'm a party but I did
+  // not initiate it. The initiator (whatever their charger/payer role) is the
+  // one who can cancel; the counterparty is the one who accepts/rejects.
+  const isReceived = charge.initiator_user_id !== currentUserId
   const isPending = charge.status === 'pending'
 
   const period =

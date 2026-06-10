@@ -13,6 +13,7 @@ type Charge struct {
 	PayerUserID      int                 `gorm:"not null"`
 	ChargerAccountID *int
 	PayerAccountID   *int
+	InitiatorUserID  int                 `gorm:"not null"`
 	ConnectionID     int                 `gorm:"not null"`
 	PeriodMonth      int                 `gorm:"not null"`
 	PeriodYear       int                 `gorm:"not null"`
@@ -43,6 +44,7 @@ func (c *Charge) ToDomain() *domain.Charge {
 		PayerUserID:      c.PayerUserID,
 		ChargerAccountID: c.ChargerAccountID,
 		PayerAccountID:   c.PayerAccountID,
+		InitiatorUserID:  c.InitiatorUserID,
 		ConnectionID:     c.ConnectionID,
 		PeriodMonth:      c.PeriodMonth,
 		PeriodYear:       c.PeriodYear,
@@ -62,6 +64,7 @@ func ChargeFromDomain(d *domain.Charge) *Charge {
 		PayerUserID:      d.PayerUserID,
 		ChargerAccountID: d.ChargerAccountID,
 		PayerAccountID:   d.PayerAccountID,
+		InitiatorUserID:  d.InitiatorUserID,
 		ConnectionID:     d.ConnectionID,
 		PeriodMonth:      d.PeriodMonth,
 		PeriodYear:       d.PeriodYear,

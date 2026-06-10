@@ -31,11 +31,14 @@ export function ChargesPage() {
 
   const params = { month: search.month, year: search.year };
   const { query: chargesQuery, invalidate: invalidateCharges } = useCharges(params);
+  // Tabs are split by who initiated the charge, not by charger/payer role:
+  // "Recebidas" = charges awaiting my action (I didn't initiate them),
+  // "Enviadas" = charges I created.
   const { query: receivedQuery } = useCharges(params, (data) =>
-    data.charges.filter((c) => c.payer_user_id === currentUserId),
+    data.charges.filter((c) => c.initiator_user_id !== currentUserId),
   );
   const { query: sentQuery } = useCharges(params, (data) =>
-    data.charges.filter((c) => c.charger_user_id === currentUserId),
+    data.charges.filter((c) => c.initiator_user_id === currentUserId),
   );
 
   const { invalidate: invalidatePendingCount } = useChargesPendingCount();

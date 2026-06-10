@@ -41,23 +41,14 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	}
 
 	// ---- IDOR: caller must be a party ----
-	if charge.ChargerUserID != callerUserID && charge.PayerUserID != callerUserID {
+	if !charge.IsParty(callerUserID) {
 		return pkgErrors.Forbidden("charge")
 	}
 
-	// ---- Non-initiator rule: caller must be the party whose account is nil on the charge ----
-	// If ChargerAccountID is set and PayerAccountID is nil → charger created it → payer must accept
-	// If PayerAccountID is set and ChargerAccountID is nil → payer created it → charger must accept
-	var expectedAccepterID int
-	switch {
-	case charge.ChargerAccountID != nil && charge.PayerAccountID == nil:
-		expectedAccepterID = charge.PayerUserID
-	case charge.PayerAccountID != nil && charge.ChargerAccountID == nil:
-		expectedAccepterID = charge.ChargerUserID
-	default:
-		return pkgErrors.BadRequest("charge is in an invalid state — both or neither account set")
-	}
-	if callerUserID != expectedAccepterID {
+	// ---- Non-initiator rule: only the counterparty (the party who did NOT
+	// create the charge) may accept it. The initiator already committed their
+	// side at creation time. ----
+	if callerUserID != charge.CounterpartyUserID() {
 		return pkgErrors.Forbidden("only the non-initiating party can accept")
 	}
 
@@ -91,12 +82,13 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	chargerConnAccountID := conn.FromAccountID
 	payerConnAccountID := conn.ToAccountID
 
-	// ---- Fill the missing private account on the charge from req.AccountID ----
-	if charge.ChargerAccountID == nil {
-		accID := req.AccountID
+	// ---- Fill the accepter's private account on the charge from req.AccountID ----
+	// The accepter is always the counterparty, so their side is the one still
+	// missing an account. Fill it explicitly based on the caller's role.
+	accID := req.AccountID
+	if callerUserID == charge.ChargerUserID {
 		charge.ChargerAccountID = &accID
-	} else if charge.PayerAccountID == nil {
-		accID := req.AccountID
+	} else {
 		charge.PayerAccountID = &accID
 	}
 
@@ -107,30 +99,17 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	}
 	defer s.dbTransaction.Rollback(txCtx)
 
-	// ---- Re-infer roles by balance at accept time ----
-	period := domain.Period{Month: charge.PeriodMonth, Year: charge.PeriodYear}
-	balResult, err := s.services.Transaction.GetBalance(txCtx, charge.ChargerUserID, period, domain.BalanceFilter{
-		UserID:     charge.ChargerUserID,
-		AccountIDs: []int{chargerConnAccountID},
-	})
-	if err != nil {
-		return pkgErrors.Internal("failed to compute balance", err)
-	}
-
-	// Decision: flipped if balance < 0 (stored charger now owes). Zero → must have amount override.
-	liveBalance := balResult.Balance
-	if liveBalance < 0 {
-		// Swap in-memory fields on charge and persist within the same tx
-		charge.ChargerUserID, charge.PayerUserID = charge.PayerUserID, charge.ChargerUserID
-		charge.ChargerAccountID, charge.PayerAccountID = charge.PayerAccountID, charge.ChargerAccountID
-		chargerConnAccountID, payerConnAccountID = payerConnAccountID, chargerConnAccountID
-		if err := s.chargeRepo.Update(txCtx, charge); err != nil {
-			return pkgErrors.Internal("failed to persist role swap", err)
-		}
-	}
-
 	// Resolve settlement amount.
 	// Priority: accept-time override → stored arbitrary amount → live balance.
+	//
+	// The charge's charger/payer roles are FIXED at creation time and honored
+	// as-is: the charger's connection account is debited and the payer's is
+	// credited, which moves both toward zero when the roles reflect reality.
+	// We do NOT re-infer/swap roles from the live balance — the single-period
+	// balance can disagree with the true (accumulated) debt direction, and a
+	// wrong swap would push both balances away from zero (doubling them) instead
+	// of settling. If the initiator picked the wrong direction, the counterparty
+	// rejects rather than silently flipping the transfer.
 	var amount int64
 	switch {
 	case req.Amount != nil:
@@ -138,6 +117,15 @@ func (s *chargeService) Accept(ctx context.Context, callerUserID int, chargeID i
 	case charge.Amount != nil:
 		amount = *charge.Amount
 	default:
+		period := domain.Period{Month: charge.PeriodMonth, Year: charge.PeriodYear}
+		balResult, err := s.services.Transaction.GetBalance(txCtx, charge.ChargerUserID, period, domain.BalanceFilter{
+			UserID:     charge.ChargerUserID,
+			AccountIDs: []int{chargerConnAccountID},
+		})
+		if err != nil {
+			return pkgErrors.Internal("failed to compute balance", err)
+		}
+		liveBalance := balResult.Balance
 		if liveBalance == 0 {
 			return pkgErrors.BadRequest("nothing to settle — balance is zero")
 		}

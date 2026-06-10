@@ -353,16 +353,182 @@ test.describe("Charges", () => {
     await pageCharges.expectNotification(/Cobrança criada/);
 
     const me = await (await apiFetchAs(freshPrimaryToken, "/api/auth/me")).json();
-    // Caller is now the payer → the charge lands in "received" for them.
-    const listRes = await apiFetchAs(freshPrimaryToken, "/api/charges?direction=received");
-    const listBody = await listRes.json();
-    const created = (listBody.charges ?? []).find((c: { description?: string }) => c.description === description);
+    // The caller INITIATED the charge (as payer), so it lands in their "sent"
+    // tab — the counterparty is the one who must accept it, not the initiator.
+    const sentRes = await apiFetchAs(freshPrimaryToken, "/api/charges?direction=sent");
+    const sentBody = await sentRes.json();
+    const created = (sentBody.charges ?? []).find((c: { description?: string }) => c.description === description);
     expect(created).toBeDefined();
     expect(created.amount).toBe(6789);
     expect(created.payer_user_id).toBe(me.id);
     expect(created.charger_user_id).toBe(freshPartner.id);
+    expect(created.initiator_user_id).toBe(me.id);
+
+    // It must NOT show up as something the initiator can accept ("received").
+    const receivedRes = await apiFetchAs(freshPrimaryToken, "/api/charges?direction=received");
+    const receivedBody = await receivedRes.json();
+    const wronglyReceived = (receivedBody.charges ?? []).find(
+      (c: { description?: string }) => c.description === description,
+    );
+    expect(wronglyReceived).toBeUndefined();
 
     await page.context().close();
+  });
+
+  // Regression for the reported bug:
+  //   "I owe my wife 900 (my connection account is -900). I create a charge as
+  //    PAYER to pay her, but the Accept is shown to ME and I get 'only she can
+  //    accept'. And when accepted, her balance doesn't zero — it doubles."
+  //
+  // Asserts the full corrected flow end-to-end through the UI for BOTH users:
+  //   1. The payer (initiator) sees the charge in "Enviadas" with Cancel, and
+  //      NEVER an Accept button — even in "Recebidas".
+  //   2. The counterparty (charger) sees it in "Recebidas" and can Accept it.
+  //   3. After acceptance, BOTH connection-account balances settle to zero
+  //      (no doubling).
+  test("payer initiates a charge: counterparty accepts and both balances zero", async ({ browser }) => {
+    // -- Two fresh, isolated users: the payer (owes) and the wife (is owed). --
+    const payerEmail = `e2e-payer-flow-${Date.now()}@financeapp.local`;
+    const wifeEmail = `e2e-wife-flow-${Date.now()}@financeapp.local`;
+    const payerToken = await getAuthTokenForUser(payerEmail);
+    const wifeToken = await getAuthTokenForUser(wifeEmail);
+
+    const payerMe = await (await apiFetchAs(payerToken, "/api/auth/me")).json();
+    const wifeMe = await (await apiFetchAs(wifeToken, "/api/auth/me")).json();
+
+    // Private accounts (used to settle the charge into).
+    const payerPriv = await (
+      await apiFetchAs(payerToken, "/api/accounts", {
+        method: "POST",
+        body: JSON.stringify({ name: `Payer Priv ${Date.now()}`, initial_balance: 0 }),
+      })
+    ).json();
+    const wifePriv = await (
+      await apiFetchAs(wifeToken, "/api/accounts", {
+        method: "POST",
+        body: JSON.stringify({ name: `Wife Priv ${Date.now()}`, initial_balance: 0 }),
+      })
+    ).json();
+
+    // Connection payer -> wife, accepted by the wife.
+    const conn = await (
+      await apiFetchAs(payerToken, "/api/user-connections", {
+        method: "POST",
+        body: JSON.stringify({ to_user_id: wifeMe.id, from_default_split_percentage: 50 }),
+      })
+    ).json();
+    await apiFetchAs(wifeToken, `/api/user-connections/${conn.id}/accepted`, { method: "PATCH" });
+
+    // Resolve each user's connection (shared-ledger) account.
+    const findConnAccount = async (token: string): Promise<number> => {
+      const accounts = await (await apiFetchAs(token, "/api/accounts")).json();
+      const acc = accounts.find(
+        (a: { user_connection?: { id: number } }) => a.user_connection?.id === conn.id,
+      );
+      if (!acc) throw new Error("connection account not found");
+      return acc.id;
+    };
+    const payerConnAcc = await findConnAccount(payerToken);
+    const wifeConnAcc = await findConnAccount(wifeToken);
+
+    // Seed the imbalance with a SINGLE expense on the payer's connection
+    // account. A transaction on a connection account auto-mirrors an inverted
+    // linked transaction onto the partner's connection account, so this one
+    // entry yields exactly: payer conn = -900 (owes), wife conn = +900 (owed) —
+    // the realistic shape of a shared-expense debt. (Seeding both sides
+    // independently would double it to ±1800.)
+    const dateISO = `${PERIOD_YEAR}-${String(PERIOD_MONTH).padStart(2, "0")}-01T00:00:00Z`;
+    const payerCat = await (
+      await apiFetchAs(payerToken, "/api/categories", {
+        method: "POST",
+        body: JSON.stringify({ name: `Payer Cat ${Date.now()}` }),
+      })
+    ).json();
+    await apiFetchAs(payerToken, "/api/transactions", {
+      method: "POST",
+      body: JSON.stringify({
+        account_id: payerConnAcc,
+        transaction_type: "expense",
+        category_id: payerCat.id,
+        amount: 90000,
+        date: dateISO,
+        description: "owes wife",
+      }),
+    });
+
+    // -- The payer creates a charge as PAYER ("I'll pay you 900") via the UI. --
+    const description = `Pay Wife ${Date.now()}`;
+    const payerPage = await openAuthedPage(browser, payerToken);
+    const payerCharges = new ChargesPage(payerPage);
+    await payerCharges.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
+    await payerCharges.openCreateDrawer();
+    await payerCharges.fillCreateForm({
+      accountId: payerPriv.id,
+      connectionId: conn.id,
+      role: "payer",
+      amount: 900,
+      description,
+    });
+    await payerCharges.submitCreate();
+    await payerCharges.expectNotification(/Cobrança criada/);
+
+    // Look up the created charge to scope assertions by its card id.
+    const sent = await (await apiFetchAs(payerToken, "/api/charges?direction=sent")).json();
+    const charge = (sent.charges ?? []).find(
+      (c: { description?: string }) => c.description === description,
+    );
+    expect(charge).toBeDefined();
+    expect(charge.payer_user_id).toBe(payerMe.id);
+    expect(charge.charger_user_id).toBe(wifeMe.id);
+    expect(charge.initiator_user_id).toBe(payerMe.id);
+
+    // (1) The initiator sees it in "Enviadas" with Cancel — never Accept.
+    await payerCharges.selectSentTab();
+    const payerCard = payerPage.getByTestId(ChargesTestIds.Card(charge.id));
+    await expect(payerCard).toBeVisible();
+    await expect(payerCard.getByTestId(ChargesTestIds.BtnCancel)).toBeVisible();
+    await expect(payerCard.getByTestId(ChargesTestIds.BtnAccept)).toHaveCount(0);
+    // And it is NOT shown under "Recebidas" for the initiator. (Mantine keeps
+    // the inactive "Enviadas" panel mounted but hidden, so the card still
+    // EXISTS in the DOM — assert it isn't visible rather than absent.)
+    await payerCharges.selectReceivedTab();
+    await expect(payerPage.getByTestId(ChargesTestIds.Card(charge.id))).not.toBeVisible();
+
+    // (2) The counterparty (wife) is the one offered the Accept action: the
+    // charge shows up in HER "Recebidas" tab with an Accept button (the core of
+    // the reported routing bug). She then settles it.
+    const wifePage = await openAuthedPage(browser, wifeToken);
+    const wifeCharges = new ChargesPage(wifePage);
+    await wifeCharges.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
+    await wifeCharges.selectReceivedTab();
+    const wifeCard = wifePage.getByTestId(ChargesTestIds.Card(charge.id));
+    await expect(wifeCard).toBeVisible();
+    await expect(wifeCard.getByTestId(ChargesTestIds.BtnAccept)).toBeVisible();
+    // The initiator-side actions (Cancel/Reject) must NOT be offered to her.
+    await expect(wifeCard.getByTestId(ChargesTestIds.BtnCancel)).toHaveCount(0);
+
+    // Settle the charge as the wife through the real backend.
+    const acceptRes = await apiFetchAs(wifeToken, `/api/charges/${charge.id}/accept`, {
+      method: "POST",
+      body: JSON.stringify({ account_id: wifePriv.id, date: new Date().toISOString() }),
+    });
+    expect(acceptRes.status).toBe(204);
+
+    // (3) Both connection-account balances are zeroed — not doubled.
+    const connBalance = async (token: string, accountId: number): Promise<number> => {
+      const body = await (
+        await apiFetchAs(
+          token,
+          `/api/transactions/balance?month=${PERIOD_MONTH}&year=${PERIOD_YEAR}&account_id[]=${accountId}`,
+        )
+      ).json();
+      return body.balance as number;
+    };
+    expect(await connBalance(payerToken, payerConnAcc)).toBe(0);
+    expect(await connBalance(wifeToken, wifeConnAcc)).toBe(0);
+
+    await payerPage.context().close();
+    await wifePage.context().close();
   });
 
   test("submitting the create drawer without selecting a role is rejected", async () => {
