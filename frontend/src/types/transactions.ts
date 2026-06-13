@@ -41,6 +41,7 @@ export namespace Transactions {
     initial_balance: number;
     is_active: boolean;
     avatar_background_color?: string;
+    position: number;
     created_at?: string;
     updated_at?: string;
     user_connection?: UserConnection;

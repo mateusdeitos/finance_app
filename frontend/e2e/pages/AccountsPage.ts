@@ -43,19 +43,27 @@ export class AccountsPage {
     await expect(this.page.getByTestId(AccountsTestIds.Form)).toBeVisible()
   }
 
-  async clickAccountAction(accountName: string) {
-    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnAction).click()
-  }
-
   async deactivateAccount(accountName: string) {
-    await this.clickAccountAction(accountName)
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnDeactivate).click()
   }
 
+  /**
+   * Hard-deletes an account. For an account with no transactions the delete is
+   * immediate; otherwise a drawer prompts for a strategy (not handled here).
+   */
   async deleteAccount(accountName: string) {
-    await this.clickAccountAction(accountName)
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnDelete).click()
   }
 
   async reactivateAccount(accountName: string) {
-    await this.clickAccountAction(accountName)
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnActivate).click()
+  }
+
+  async moveAccountUp(accountName: string) {
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnMoveUp).click()
+  }
+
+  async moveAccountDown(accountName: string) {
+    await this.getCardByName(accountName).getByTestId(AccountsTestIds.BtnMoveDown).click()
   }
 }

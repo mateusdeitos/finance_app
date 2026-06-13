@@ -54,15 +54,17 @@ test.describe('Accounts', () => {
     await expect(accountsPage.page.getByTestId(AccountsTestIds.SectionInactive).getByText(name)).toBeVisible()
   })
 
-  test('delete (deactivate) an account and verify it moves to inactive', async () => {
+  test('hard-delete an account with no transactions removes it entirely', async () => {
     const name = `Conta Deletar ${Date.now()}`
     const account = await apiCreateAccount({ name, initial_balance: 0 })
     createdIds.push(account.id)
 
     await accountsPage.goto()
+    // No transactions → delete is immediate, no strategy prompt.
     await accountsPage.deleteAccount(name)
     await accountsPage.page.waitForLoadState('networkidle')
 
     await expect(accountsPage.page.getByTestId(AccountsTestIds.SectionActive).getByText(name)).not.toBeVisible()
+    await expect(accountsPage.page.getByTestId(AccountsTestIds.SectionInactive).getByText(name)).not.toBeVisible()
   })
 })
