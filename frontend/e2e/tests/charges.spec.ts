@@ -271,7 +271,7 @@ test.describe("Charges", () => {
 
     await expect(page.getByTestId(ChargesTestIds.Card(charge.id))).toBeVisible();
 
-    await chargesPage.clickDelete();
+    await chargesPage.clickDelete(charge.id);
     await chargesPage.confirmDelete();
 
     await chargesPage.expectNotification(/Cobrança excluída/);

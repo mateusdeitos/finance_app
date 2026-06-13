@@ -155,8 +155,14 @@ export class ChargesPage {
     await expect(this.cancelModal).not.toBeVisible({ timeout: 10000 });
   }
 
-  async clickDelete() {
-    await this.page.getByTestId(ChargesTestIds.BtnDelete).first().click();
+  async clickDelete(chargeId: number) {
+    // Scope to the specific card: Mantine keeps inactive Tabs.Panels mounted
+    // (keepMounted defaults to true), so a page-wide `.first()` can resolve to a
+    // delete button inside the hidden Received/Sent panel and never become visible.
+    await this.page
+      .getByTestId(ChargesTestIds.Card(chargeId))
+      .getByTestId(ChargesTestIds.BtnDelete)
+      .click();
     await expect(this.deleteModal).toBeVisible({ timeout: 5000 });
   }
 
