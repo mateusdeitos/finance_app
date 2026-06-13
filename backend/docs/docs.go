@@ -116,6 +116,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/accounts/reorder": {
+            "put": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Persists the display order of the user's accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Reorder accounts",
+                "parameters": [
+                    {
+                        "description": "Ordered account IDs",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ReorderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/accounts/{id}": {
             "put": {
                 "security": [
@@ -184,6 +232,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Permanently deletes an account. When the account has transactions, pass ` + "`" + `strategy=delete_transactions` + "`" + ` or ` + "`" + `strategy=migrate` + "`" + ` (with ` + "`" + `target_account_id` + "`" + `). Connection accounts cannot be deleted.",
                 "tags": [
                     "accounts"
                 ],
@@ -195,6 +244,18 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Deletion strategy: delete_transactions | migrate",
+                        "name": "strategy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Target account when strategy=migrate",
+                        "name": "target_account_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -251,6 +312,98 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/accounts/{id}/deactivate": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-disables an account without removing its data.",
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Deactivate account",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/accounts/{id}/deletion-info": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the number of transactions linked to the account so the client can prompt before a destructive delete.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get account deletion impact",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.AccountDeletionInfo"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/middleware.ErrorResponse"
                         }
@@ -2840,6 +2993,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "position": {
+                    "type": "integer"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -2847,6 +3003,14 @@ const docTemplate = `{
                     "$ref": "#/definitions/domain.UserConnection"
                 },
                 "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.AccountDeletionInfo": {
+            "type": "object",
+            "properties": {
+                "transaction_count": {
                     "type": "integer"
                 }
             }
@@ -3834,6 +3998,17 @@ const docTemplate = `{
                 },
                 "from_default_split_percentage": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.ReorderRequest": {
+            "type": "object",
+            "properties": {
+                "account_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },

@@ -44,6 +44,9 @@ type AccountRepository interface {
 	Delete(ctx context.Context, id int) error
 	Deactivate(ctx context.Context, id int) error
 	Activate(ctx context.Context, id int) error
+	// Reorder persists the given account order (by position) for the user.
+	// IDs not owned by the user are ignored.
+	Reorder(ctx context.Context, userID int, orderedIDs []int) error
 	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
 }
 
@@ -66,8 +69,11 @@ type TransactionRepository interface { //nolint:interfacebloat // transaction is
 	Update(ctx context.Context, transaction *domain.Transaction) error
 	Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
+	Count(ctx context.Context, filter domain.TransactionFilter) (int64, error)
 	FindOrphanedSettlementTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
+	// ReassignAccount moves all non-deleted transactions from one account to another.
+	ReassignAccount(ctx context.Context, fromAccountID, toAccountID int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
@@ -101,6 +107,10 @@ type ChargeRepository interface {
 	Update(ctx context.Context, charge *domain.Charge) error
 	Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error)
 	ConditionalAccept(ctx context.Context, id int) error
+	// ReassignAccountRefs repoints charger/payer account references from one
+	// account to another (used when an account's data is migrated on delete).
+	// On a plain hard delete the FK (ON DELETE SET NULL) clears the refs instead.
+	ReassignAccountRefs(ctx context.Context, fromAccountID, toAccountID int) error
 }
 
 // PushSubscriptionRepository manages push subscription persistence.

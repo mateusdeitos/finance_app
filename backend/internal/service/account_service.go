@@ -14,14 +14,20 @@ type accountService struct {
 	accountRepo        repository.AccountRepository
 	userRepo           repository.UserRepository
 	userConnectionRepo repository.UserConnectionRepository
+	transactionRepo    repository.TransactionRepository
+	chargeRepo         repository.ChargeRepository
+	services           *Services
 }
 
-func NewAccountService(repos *repository.Repositories) AccountService {
+func NewAccountService(repos *repository.Repositories, services *Services) AccountService {
 	return &accountService{
 		dbTransaction:      repos.DBTransaction,
 		accountRepo:        repos.Account,
 		userRepo:           repos.User,
 		userConnectionRepo: repos.UserConnection,
+		transactionRepo:    repos.Transaction,
+		chargeRepo:         repos.Charge,
+		services:           services,
 	}
 }
 
@@ -152,14 +158,14 @@ func (s *accountService) Activate(ctx context.Context, userID, id int) error {
 	return nil
 }
 
-func (s *accountService) Delete(ctx context.Context, userID, id int) error {
+func (s *accountService) Deactivate(ctx context.Context, userID, id int) error {
 	existing, err := s.GetByID(ctx, userID, id)
 	if err != nil {
 		return err
 	}
 
 	if existing.UserID != userID {
-		return pkgErrors.Forbidden("only account owner can delete")
+		return pkgErrors.Forbidden("only account owner can deactivate")
 	}
 
 	if !existing.IsActive {
@@ -170,5 +176,145 @@ func (s *accountService) Delete(ctx context.Context, userID, id int) error {
 		return pkgErrors.Internal("failed to deactivate account", err)
 	}
 
+	return nil
+}
+
+func (s *accountService) GetDeletionInfo(ctx context.Context, userID, id int) (*domain.AccountDeletionInfo, error) {
+	existing, err := s.GetByID(ctx, userID, id)
+	if err != nil {
+		return nil, err
+	}
+	if existing.UserID != userID {
+		return nil, pkgErrors.Forbidden("only account owner can delete")
+	}
+
+	count, err := s.transactionRepo.Count(ctx, domain.TransactionFilter{AccountIDs: []int{id}})
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to count account transactions", err)
+	}
+
+	return &domain.AccountDeletionInfo{TransactionCount: count}, nil
+}
+
+// Delete permanently removes an account. Connection accounts are never
+// deletable. When the account has transactions, the caller must choose a
+// strategy: delete the transactions (tearing down their shared/linked
+// counterparts via the transaction service) or migrate them to another account.
+func (s *accountService) Delete(ctx context.Context, userID, id int, strategy domain.AccountDeletionStrategy, targetAccountID *int) error {
+	existing, err := s.GetByID(ctx, userID, id)
+	if err != nil {
+		return err
+	}
+	if existing.UserID != userID {
+		return pkgErrors.Forbidden("only account owner can delete")
+	}
+
+	// Connection (shared) accounts must never be deleted — removing one would
+	// cascade-delete the user_connection itself.
+	isConn, err := s.isConnectionAccount(ctx, id)
+	if err != nil {
+		return pkgErrors.Internal("failed to check connection account", err)
+	}
+	if isConn {
+		return pkgErrors.ErrAccountCannotDeleteConnectionAccount
+	}
+
+	count, err := s.transactionRepo.Count(ctx, domain.TransactionFilter{AccountIDs: []int{id}})
+	if err != nil {
+		return pkgErrors.Internal("failed to count account transactions", err)
+	}
+
+	if count > 0 {
+		if !strategy.IsValid() {
+			return pkgErrors.ErrAccountHasLinkedTransactions
+		}
+
+		switch strategy {
+		case domain.AccountDeletionStrategyDeleteTransactions:
+			// Tear down each transaction group through the transaction service so
+			// shared/linked counterparts and settlements are removed consistently.
+			// (DBTransaction is not re-entrant, so this runs outside an outer tx;
+			// each group delete manages its own transaction.)
+			if err := s.deleteAccountTransactions(ctx, userID, id, int(count)); err != nil {
+				return err
+			}
+		case domain.AccountDeletionStrategyMigrate:
+			if err := s.migrateAccountData(ctx, userID, id, targetAccountID); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Final hard delete. The accounts→charges FK is ON DELETE SET NULL, so any
+	// remaining charge references are cleared automatically; the accounts→
+	// transactions FK is ON DELETE CASCADE, removing the now soft-deleted rows.
+	if err := s.accountRepo.Delete(ctx, id); err != nil {
+		return pkgErrors.Internal("failed to delete account", err)
+	}
+
+	return nil
+}
+
+// deleteAccountTransactions removes every transaction on the account by deleting
+// each one's group via the transaction service. It re-queries after each delete
+// because a single group delete may remove several of the account's transactions
+// at once (e.g. both legs of a transfer). maxIterations bounds the loop.
+func (s *accountService) deleteAccountTransactions(ctx context.Context, userID, accountID, maxIterations int) error {
+	for i := 0; i < maxIterations; i++ {
+		txs, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{AccountIDs: []int{accountID}})
+		if err != nil {
+			return pkgErrors.Internal("failed to list account transactions", err)
+		}
+		if len(txs) == 0 {
+			return nil
+		}
+		if err := s.services.Transaction.Delete(ctx, userID, txs[0].ID, domain.TransactionPropagationSettingsAll); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// migrateAccountData moves the account's transactions and charge references to
+// the validated target account inside a single DB transaction.
+func (s *accountService) migrateAccountData(ctx context.Context, userID, accountID int, targetAccountID *int) error {
+	if targetAccountID == nil || *targetAccountID == accountID {
+		return pkgErrors.ErrAccountInvalidMigrationTarget
+	}
+	target, err := s.GetByID(ctx, userID, *targetAccountID)
+	if err != nil || target == nil || !target.IsActive {
+		return pkgErrors.ErrAccountInvalidMigrationTarget
+	}
+	targetIsConn, err := s.isConnectionAccount(ctx, *targetAccountID)
+	if err != nil {
+		return pkgErrors.Internal("failed to check connection account", err)
+	}
+	if targetIsConn {
+		return pkgErrors.ErrAccountInvalidMigrationTarget
+	}
+
+	ctx, err = s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return pkgErrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
+	if err := s.transactionRepo.ReassignAccount(ctx, accountID, *targetAccountID); err != nil {
+		return pkgErrors.Internal("failed to migrate transactions", err)
+	}
+	if err := s.chargeRepo.ReassignAccountRefs(ctx, accountID, *targetAccountID); err != nil {
+		return pkgErrors.Internal("failed to migrate charge references", err)
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return pkgErrors.Internal("failed to commit transaction", err)
+	}
+	return nil
+}
+
+func (s *accountService) Reorder(ctx context.Context, userID int, orderedIDs []int) error {
+	if err := s.accountRepo.Reorder(ctx, userID, orderedIDs); err != nil {
+		return pkgErrors.Internal("failed to reorder accounts", err)
+	}
 	return nil
 }

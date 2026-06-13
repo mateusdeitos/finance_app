@@ -104,6 +104,18 @@ func (r *chargeRepository) ConditionalAccept(ctx context.Context, id int) error 
 	return nil
 }
 
+func (r *chargeRepository) ReassignAccountRefs(ctx context.Context, fromAccountID, toAccountID int) error {
+	db := GetTxFromContext(ctx, r.db)
+	if err := db.Model(&entity.Charge{}).
+		Where("charger_account_id = ?", fromAccountID).
+		Update("charger_account_id", toAccountID).Error; err != nil {
+		return err
+	}
+	return db.Model(&entity.Charge{}).
+		Where("payer_account_id = ?", fromAccountID).
+		Update("payer_account_id", toAccountID).Error
+}
+
 func (r *chargeRepository) Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error) {
 	var count int64
 	query := GetTxFromContext(ctx, r.db).Model(&entity.Charge{})

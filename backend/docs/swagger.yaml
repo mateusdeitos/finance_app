@@ -25,11 +25,18 @@ definitions:
         type: boolean
       name:
         type: string
+      position:
+        type: integer
       updated_at:
         type: string
       user_connection:
         $ref: '#/definitions/domain.UserConnection'
       user_id:
+        type: integer
+    type: object
+  domain.AccountDeletionInfo:
+    properties:
+      transaction_count:
         type: integer
     type: object
   domain.BalanceResult:
@@ -706,6 +713,13 @@ definitions:
       from_default_split_percentage:
         type: integer
     type: object
+  handler.ReorderRequest:
+    properties:
+      account_ids:
+        items:
+          type: integer
+        type: array
+    type: object
   handler.UpdateConnectionSettingsRequest:
     properties:
       account_name:
@@ -805,11 +819,22 @@ paths:
       - accounts
   /api/accounts/{id}:
     delete:
+      description: Permanently deletes an account. When the account has transactions,
+        pass `strategy=delete_transactions` or `strategy=migrate` (with `target_account_id`).
+        Connection accounts cannot be deleted.
       parameters:
       - description: Account ID
         in: path
         name: id
         required: true
+        type: integer
+      - description: 'Deletion strategy: delete_transactions | migrate'
+        in: query
+        name: strategy
+        type: string
+      - description: Target account when strategy=migrate
+        in: query
+        name: target_account_id
         type: integer
       responses:
         "204":
@@ -887,6 +912,92 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Activate account
+      tags:
+      - accounts
+  /api/accounts/{id}/deactivate:
+    post:
+      description: Soft-disables an account without removing its data.
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Deactivate account
+      tags:
+      - accounts
+  /api/accounts/{id}/deletion-info:
+    get:
+      description: Returns the number of transactions linked to the account so the
+        client can prompt before a destructive delete.
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.AccountDeletionInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Get account deletion impact
+      tags:
+      - accounts
+  /api/accounts/reorder:
+    put:
+      consumes:
+      - application/json
+      description: Persists the display order of the user's accounts.
+      parameters:
+      - description: Ordered account IDs
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ReorderRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Reorder accounts
       tags:
       - accounts
   /api/auth/me:

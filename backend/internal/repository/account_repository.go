@@ -91,6 +91,19 @@ func (r *accountRepository) Activate(ctx context.Context, id int) error {
 		Updates(map[string]any{"is_active": true}).Error
 }
 
+func (r *accountRepository) Reorder(ctx context.Context, userID int, orderedIDs []int) error {
+	db := GetTxFromContext(ctx, r.db)
+	for position, id := range orderedIDs {
+		if err := db.
+			Model(&entity.Account{}).
+			Where("id = ? AND user_id = ?", id, userID).
+			Update("position", position).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *accountRepository) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
 	var ents []entity.Account
 	query := GetTxFromContext(ctx, r.db)
@@ -149,7 +162,7 @@ func (r *accountRepository) Search(ctx context.Context, options domain.AccountSe
 		query = query.Where("accounts.is_active = ?", *options.ActiveOnly)
 	}
 
-	query = query.Order("accounts.id ASC")
+	query = query.Order("accounts.position ASC").Order("accounts.id ASC")
 
 	if err := query.Find(&ents).Error; err != nil {
 		return nil, err

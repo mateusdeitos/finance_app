@@ -399,6 +399,54 @@ func (_c *MockAccountRepository_GetSharedAccounts_Call) RunAndReturn(run func(co
 	return _c
 }
 
+// Reorder provides a mock function with given fields: ctx, userID, orderedIDs
+func (_m *MockAccountRepository) Reorder(ctx context.Context, userID int, orderedIDs []int) error {
+	ret := _m.Called(ctx, userID, orderedIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reorder")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int) error); ok {
+		r0 = rf(ctx, userID, orderedIDs)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAccountRepository_Reorder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reorder'
+type MockAccountRepository_Reorder_Call struct {
+	*mock.Call
+}
+
+// Reorder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - orderedIDs []int
+func (_e *MockAccountRepository_Expecter) Reorder(ctx interface{}, userID interface{}, orderedIDs interface{}) *MockAccountRepository_Reorder_Call {
+	return &MockAccountRepository_Reorder_Call{Call: _e.mock.On("Reorder", ctx, userID, orderedIDs)}
+}
+
+func (_c *MockAccountRepository_Reorder_Call) Run(run func(ctx context.Context, userID int, orderedIDs []int)) *MockAccountRepository_Reorder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].([]int))
+	})
+	return _c
+}
+
+func (_c *MockAccountRepository_Reorder_Call) Return(_a0 error) *MockAccountRepository_Reorder_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAccountRepository_Reorder_Call) RunAndReturn(run func(context.Context, int, []int) error) *MockAccountRepository_Reorder_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, options
 func (_m *MockAccountRepository) Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error) {
 	ret := _m.Called(ctx, options)

@@ -64,6 +64,10 @@ const (
 	ErrorTagChargeTransactionTypeCannotChange                        ErrorTag = "TRANSACTION.CHARGE_TYPE_CANNOT_CHANGE"
 	ErrorTagChargeTransactionRecurrenceNotAllowed                    ErrorTag = "TRANSACTION.CHARGE_RECURRENCE_NOT_ALLOWED"
 
+	ErrorTagAccountCannotDeleteConnectionAccount ErrorTag = "ACCOUNT.CANNOT_DELETE_CONNECTION_ACCOUNT"
+	ErrorTagAccountHasLinkedTransactions         ErrorTag = "ACCOUNT.HAS_LINKED_TRANSACTIONS"
+	ErrorTagAccountInvalidMigrationTarget        ErrorTag = "ACCOUNT.INVALID_MIGRATION_TARGET"
+
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
 
@@ -143,6 +147,10 @@ var (
 	ErrChargeTransactionRecurrenceNotAllowed       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionRecurrenceNotAllowed)}, "recurrence cannot be added to a transaction linked to a charge")
 	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
+
+	ErrAccountCannotDeleteConnectionAccount = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotDeleteConnectionAccount)}, "connection accounts cannot be deleted")
+	ErrAccountHasLinkedTransactions         = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountHasLinkedTransactions)}, "account has linked transactions; choose a deletion strategy")
+	ErrAccountInvalidMigrationTarget        = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountInvalidMigrationTarget)}, "invalid migration target account")
 
 	ErrNoActivePushSubscription = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagNoActivePushSubscription)}, "no active push subscription for this user")
 	ErrPushDeliveryFailed       = func(status int, reason string) *ServiceError {

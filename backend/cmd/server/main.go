@@ -97,12 +97,14 @@ func main() {
 	services := &service.Services{
 		Auth:       service.NewAuthService(repos, cfg),
 		User:       service.NewUserService(repos),
-		Account:    service.NewAccountService(repos),
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
 		Settlement: service.NewSettlementService(repos),
 	}
 
+	// Account delete tears down transactions via the transaction service, so it
+	// needs the Services pointer (resolved lazily at call time).
+	services.Account = service.NewAccountService(repos, services)
 	services.UserConnection = service.NewUserConnectionService(repos, services)
 	services.Transaction = service.NewTransactionService(repos, services)
 	services.Charge = service.NewChargeService(repos, services)
@@ -223,9 +225,12 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandler
 	accounts := api.Group("/accounts")
 	accounts.GET("", h.account.Search)
 	accounts.POST("", h.account.Create)
+	accounts.PUT("/reorder", h.account.Reorder)
 	accounts.PUT("/:id", h.account.Update)
+	accounts.GET("/:id/deletion-info", h.account.GetDeletionInfo)
 	accounts.DELETE("/:id", h.account.Delete)
 	accounts.POST("/:id/activate", h.account.Activate)
+	accounts.POST("/:id/deactivate", h.account.Deactivate)
 
 	// User connections
 	userConnections := api.Group("/user-connections")

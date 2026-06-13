@@ -35,8 +35,17 @@ type AccountService interface {
 	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
 	SearchOne(ctx context.Context, options domain.AccountSearchOptions) (*domain.Account, error)
 	Update(ctx context.Context, userID int, account *domain.Account) error
-	Delete(ctx context.Context, userID, id int) error
+	// Deactivate soft-disables an account (is_active = false) without removing data.
+	Deactivate(ctx context.Context, userID, id int) error
+	// Delete permanently removes an account. When the account has transactions the
+	// caller must pick a strategy (delete the transactions, or migrate them to
+	// targetAccountID). Connection accounts cannot be deleted.
+	Delete(ctx context.Context, userID, id int, strategy domain.AccountDeletionStrategy, targetAccountID *int) error
+	// GetDeletionInfo reports the impact of deleting the account (e.g. linked
+	// transaction count) so the client can prompt before a destructive delete.
+	GetDeletionInfo(ctx context.Context, userID, id int) (*domain.AccountDeletionInfo, error)
 	Activate(ctx context.Context, userID, id int) error
+	Reorder(ctx context.Context, userID int, orderedIDs []int) error
 }
 
 type CategoryService interface {
