@@ -260,7 +260,7 @@ func (s *accountService) Delete(ctx context.Context, userID, id int, strategy do
 // because a single group delete may remove several of the account's transactions
 // at once (e.g. both legs of a transfer). maxIterations bounds the loop.
 func (s *accountService) deleteAccountTransactions(ctx context.Context, userID, accountID, maxIterations int) error {
-	for i := 0; i < maxIterations; i++ {
+	for range maxIterations {
 		txs, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{AccountIDs: []int{accountID}})
 		if err != nil {
 			return pkgErrors.Internal("failed to list account transactions", err)

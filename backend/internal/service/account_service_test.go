@@ -220,7 +220,7 @@ func (suite *AccountServiceTestWithDBSuite) TestGetDeletionInfo() {
 	category, err := suite.createTestCategory(ctx, user)
 	suite.Require().NoError(err)
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
 			AccountID:       account.ID,
 			CategoryID:      category.ID,

@@ -979,7 +979,7 @@ paths:
       parameters:
       - description: Ordered account IDs
         in: body
-        name: body
+        name: request
         required: true
         schema:
           $ref: '#/definitions/handler.ReorderRequest'

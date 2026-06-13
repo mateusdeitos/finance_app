@@ -258,7 +258,7 @@ type ReorderRequest struct {
 // @Accept       json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Param        body  body  handler.ReorderRequest  true  "Ordered account IDs"
+// @Param        request  body  handler.ReorderRequest  true  "Ordered account IDs"
 // @Success      204
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
