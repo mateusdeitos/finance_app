@@ -18,8 +18,8 @@ Initially the phase assumed a typed-column table mirroring `transactions` (type,
 | Typed columns mirroring transactions | One column per field, FKs with ON DELETE SET NULL, CategoryService.Delete extension | |
 | Opaque JSONB `payload` | Backend stores the form payload as an opaque blob; validation on apply, silently dropping invalid fields | ✓ |
 
-**User's choice:** "Vamos salvar a template em uma coluna jsonb, isso deixa mais dinâmico, só teremos que validar se o formato bate com o que o front espera, caso não bata, deve ignorar silenciosamente os inválidos na hora de aplicar a template."
-**Notes:** Removes per-field columns, FKs, and the CategoryService.Delete/TagService.Delete hooks (CP-8/CP-1 moot). `name` and `user_id` kept relational for UNIQUE + IDOR + cap. Format contract enforced on the frontend at apply.
+**User's choice:** "Vamos salvar a template em uma coluna jsonb, isso deixa mais dinâmico, só teremos que validar se o formato bate com o que o front espera, caso não bata, deve ignorar silenciosamente os inválidos na hora de aplicar a template." Refinement: "poderia só fazer o unmarshall na strict de transaction e serializar ela na coluna" — i.e. JSONB storage with a strict `TransactionTemplatePayload` struct as the typed write boundary (shape-validated on write), not fully opaque.
+**Notes:** Removes per-field columns, FKs, and the CategoryService.Delete/TagService.Delete hooks (CP-8/CP-1 moot). `name` and `user_id` kept relational for UNIQUE + IDOR + cap. Write path validates SHAPE via the strict struct; existence/stale validation deferred to apply (frontend), silent-dropping invalid fields.
 
 ---
 

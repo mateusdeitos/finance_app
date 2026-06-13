@@ -91,7 +91,7 @@ Partners can accurately track shared finances, including in-progress installment
 
 **Target features:**
 - Dedicated `transaction_templates` table — relational `id`/`user_id`/`name` plus an opaque JSONB `payload` holding the template's form fields (type, account, category, destination, tags, description, split) — without amount or date — keeping templates isolated from balance/listing/charges/settlements queries
-- Opaque payload model: the backend stores/returns the form payload without per-field parsing; format is validated on apply (frontend), silently dropping invalid/stale fields
+- JSONB payload model: on write the backend unmarshals into a strict `TransactionTemplatePayload` struct (shape-validated, amount/date stripped) and stores the canonical JSON; existence/stale validation happens on apply (frontend), silently dropping invalid fields
 - CRUD API for personal templates, IDOR-scoped per user, capped at 3 templates per user
 - Dedicated management UI (drawer/screen) to create / edit / delete templates, plus a "Save as template" action from the transaction form
 - Quick-chip row at the top of `TransactionForm` (same visual pattern as `DateQuickChips`): clicking a chip `reset()`s the form to the template values, leaving the amount field blank and focused
@@ -156,9 +156,9 @@ Partners can accurately track shared finances, including in-progress installment
 | Persist notifications with entity deep-link                            | User wants to navigate from a notification to the charge/transaction it refers to               | TBD |
 | Fire push only after DB commit succeeds                                | Guarantees the referenced entity exists before notifying; avoids notifying on rolled-back txns  | TBD |
 | Dedicated `transaction_templates` table (not an `is_template` column)  | Isolates templates from balance/listing/charges/settlements queries; no risk of leaking into financial reads | TBD |
-| Store template fields as an opaque JSONB `payload` (not typed columns) | Keeps the model dynamic — form can evolve without migrations; backend just persists/returns the blob          | TBD |
+| Store template fields in a JSONB `payload` with a strict Go struct on write | Dynamic storage (one column) + typed write boundary: create/update unmarshals into `TransactionTemplatePayload`, re-serializes canonical form | TBD |
 | Only `id`, `user_id`, `name` (`UNIQUE(user_id,name)`) + `payload` are relational | `name`/`user_id` needed for the chip label, IDOR scope, cap, and uniqueness; everything else rides the payload | TBD |
-| Validation deferred to apply time; silently drop invalid/stale fields  | No DB referential integrity needed; deleted account/category/tag ids are filtered against live data on apply   | TBD |
+| Shape validated on write; existence/stale validation deferred to apply   | Strict struct checks shape only; deleted account/category/tag ids are filtered against live data on apply (silent drop) | TBD |
 | No `CategoryService.Delete`/`TagService.Delete` hooks for templates     | Opaque payload has no FK columns to cascade — apply-time silent-drop replaces it; removes existing-code touches | TBD |
 | Templates are personal (per user), never amount/date, capped at 3, hard-deleted | Matches user's fast-repeat-entry workflow; cap + hard delete keep the chip row and counting simple            | TBD |
 

@@ -220,13 +220,13 @@ Plans:
 **UI hint**: yes
 
 ### Phase 26: Backend Foundation
-**Goal**: The database schema for templates is live and the Go domain/entity types exist, storing the template's form fields as an opaque JSONB `payload` — isolating templates from all financial query paths from the first deploy, with no per-field backend validation (the format contract is enforced on apply, Phase 29)
+**Goal**: The database schema for templates is live and the Go domain/entity types exist — template form fields stored in a JSONB `payload` column with a strict `domain.TransactionTemplatePayload` struct as the typed write boundary — isolating templates from all financial query paths from the first deploy, with existence/stale validation deferred to apply (Phase 29)
 **Depends on**: Nothing (first phase of v1.7; additive schema change with no existing queries affected)
 **Requirements**: TMPL-01, TMPL-05
 **Success Criteria** (what must be TRUE):
   1. A `transaction_templates` table exists with columns `id`, `user_id` (NOT NULL), `name` (NOT NULL, `UNIQUE(user_id, name)`), `payload` (JSONB NOT NULL), `created_at`, `updated_at` — no `amount`, no `date`, no `deleted_at`, no per-field FK columns, and no FK to `transactions`
-  2. The `payload` column round-trips an arbitrary template form payload (type, account_id, category_id, destination_account_id, description, tag_ids, split_settings — including percentage vs fixed-amount split rows) verbatim through the entity Scan/Value, preserving it byte-for-byte (TMPL-05 satisfied by opaque passthrough)
-  3. The backend treats `payload` as opaque — no per-field parsing or validation; deleting a category/account/tag requires no template cleanup (stale ids are filtered at apply time, Phase 29 — the earlier CategoryService.Delete extension is dropped)
+  2. `domain.TransactionTemplate` (`ID`, `UserID`, `Name`, `Payload`) and `domain.TransactionTemplatePayload` (type, account_id, category_id, destination_account_id, description, tag_ids, split_settings) exist; a unit test proves a payload unmarshals into the strict struct and re-marshals preserving all fields including percentage vs fixed-amount split rows (TMPL-05); `amount`/`date` keys are dropped by the strict unmarshal
+  3. The backend validates payload SHAPE via the strict struct on write, but performs NO existence check — deleting a category/account/tag requires no template cleanup (stale ids filtered at apply time, Phase 29; no CategoryService.Delete extension)
   4. All existing financial queries (`Search`, `GetBalance`, `FindOrphanedSettlementTransactions`) are unaffected — no template rows appear in transaction lists or balance calculations
 **Plans**: TBD
 
