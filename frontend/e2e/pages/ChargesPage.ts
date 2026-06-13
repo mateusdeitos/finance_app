@@ -13,6 +13,7 @@ export class ChargesPage {
   readonly acceptDrawer: Locator;
   readonly rejectModal: Locator;
   readonly cancelModal: Locator;
+  readonly deleteModal: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -20,6 +21,7 @@ export class ChargesPage {
     this.acceptDrawer = page.getByTestId(ChargesTestIds.DrawerAccept);
     this.rejectModal = page.getByTestId(ChargesTestIds.ModalConfirm('reject'));
     this.cancelModal = page.getByTestId(ChargesTestIds.ModalConfirm('cancel'));
+    this.deleteModal = page.getByTestId(ChargesTestIds.ModalConfirm('delete'));
   }
 
   async goto() {
@@ -151,6 +153,16 @@ export class ChargesPage {
   async confirmCancel() {
     await this.cancelModal.getByTestId(ChargesTestIds.BtnConfirm('cancel')).click();
     await expect(this.cancelModal).not.toBeVisible({ timeout: 10000 });
+  }
+
+  async clickDelete() {
+    await this.page.getByTestId(ChargesTestIds.BtnDelete).first().click();
+    await expect(this.deleteModal).toBeVisible({ timeout: 5000 });
+  }
+
+  async confirmDelete() {
+    await this.deleteModal.getByTestId(ChargesTestIds.BtnConfirm('delete')).click();
+    await expect(this.deleteModal).not.toBeVisible({ timeout: 10000 });
   }
 
   // --- Sidebar Badge ---
