@@ -89,9 +89,10 @@ export class TransactionsPage {
     }
   }
 
-  /** Clear the description input and type a new value. */
-  async clearAndFillDescription(description: string) {
-    await new TextField(this.updateDrawer, TransactionsTestIds.InputDescription).fill(description);
+  /** Clear the description input and type a new value. Defaults to update drawer. */
+  async clearAndFillDescription(description: string, drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    await new TextField(container, TransactionsTestIds.InputDescription).fill(description);
   }
 
   /** Replace amount by clearing the input then typing digits. Defaults to update drawer. */

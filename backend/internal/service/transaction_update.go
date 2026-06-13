@@ -206,16 +206,40 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// author chose. Settlements derived from the source still need to reflect
 	// the partner's new amount, so we recompute them on the source's behalf
 	// using the freshly-persisted lt.Amount (#117).
+	//
+	// When the partner propagates the amount change across their recurrence
+	// (issue #205), every affected installment on the partner's side adopts the
+	// new amount, so the settlement on each matching author installment must be
+	// recomputed too — not just the edited installment's source. Walk each
+	// updated partner installment and recompute settlements for its source(s).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
-		for _, sourceID := range sourceIDs {
-			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-				IDs: []int{sourceID},
-			})
-			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
+		recomputedSources := make(map[int]bool)
+		for i := range data.transactions {
+			own := data.transactions[i]
+			if own == nil || own.ID == 0 {
+				continue
 			}
-			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
-				return err
+			if !s.shouldUpdateTransactionBasedOnPropagationSettings(own, data) {
+				continue
+			}
+			installmentSourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, own.ID)
+			if err != nil {
+				return pkgErrors.Internal("failed to get source transaction IDs for settlement recompute", err)
+			}
+			for _, sourceID := range installmentSourceIDs {
+				if recomputedSources[sourceID] {
+					continue
+				}
+				recomputedSources[sourceID] = true
+				sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
+					IDs: []int{sourceID},
+				})
+				if err != nil {
+					return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
+				}
+				if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -1358,7 +1382,10 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 //
 // Detection rules (D-01 through D-04):
 //   - D-01: fires only on AddedSplit / RemovedSplit / linked-side amount change.
-//   - D-02: cosmetic-only edits (category/description/date) hit no switch arm → no fire.
+//   - D-02: cosmetic-only edits (category/description/date) do not notify. The
+//     frontend always sends the current amount, so the linked-side arm compares
+//     the requested amount against the previous one and only fires on a real
+//     change (issue #205).
 //   - D-03: self-edit guard — the original author editing their own tx never notifies.
 //   - D-04: remove still notifies; entity_id points to the (soft-deleted) linked tx.
 func (s *transactionService) maybeDispatchSplitUpdatedNotification(
@@ -1367,6 +1394,23 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 	sourceIDs []int,
 	data *transactionUpdateData,
 ) {
+	events := s.collectSplitUpdatedEvents(ctx, callerUserID, sourceIDs, data)
+	if len(events) > 0 {
+		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+		go s.services.Notification.Dispatch(context.Background(), events)
+	}
+}
+
+// collectSplitUpdatedEvents builds (but does not dispatch) the split_updated
+// notification events for a partner-initiated edit. It is split out from
+// maybeDispatchSplitUpdatedNotification so the decision rules can be asserted
+// directly in tests without racing the async dispatch goroutine.
+func (s *transactionService) collectSplitUpdatedEvents(
+	ctx context.Context,
+	callerUserID int,
+	sourceIDs []int,
+	data *transactionUpdateData,
+) []domain.NotificationEvent {
 	changes := data.scenario
 	var events []domain.NotificationEvent
 
@@ -1377,7 +1421,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		// cause the guard to never fire for legacy rows with nil OriginalUserID.
 		if data.previousTransaction.OriginalUserID != nil &&
 			callerUserID == *data.previousTransaction.OriginalUserID {
-			return
+			return nil
 		}
 		// The recipient must deep-link to the linked tx THEY own (just created on
 		// their connection account), not the author's source tx — which the
@@ -1425,7 +1469,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		// cause the guard to never fire for legacy rows with nil OriginalUserID.
 		if data.previousTransaction.OriginalUserID != nil &&
 			callerUserID == *data.previousTransaction.OriginalUserID {
-			return
+			return nil
 		}
 		for _, lt := range data.previousTransaction.LinkedTransactions {
 			if lt.UserID == callerUserID {
@@ -1442,7 +1486,15 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 			})
 		}
 
-	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0:
+	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0 &&
+		*data.req.Amount != data.previousTransaction.Amount:
+		// Issue #205: notify the source owner ONLY when the partner actually
+		// changes the amount. The partner can now also edit cosmetic fields
+		// (date / description / category) on their side; those must not spam the
+		// author with a split_updated notification. The frontend always sends the
+		// current amount, so we compare against the previous value here rather
+		// than relying on amount presence alone.
+		//
 		// Caller IS the partner editing their linked tx amount.
 		// Recipient = source transaction owner.
 		for _, srcID := range sourceIDs {
@@ -1468,8 +1520,5 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		}
 	}
 
-	if len(events) > 0 {
-		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
-		go s.services.Notification.Dispatch(context.Background(), events)
-	}
+	return events
 }
