@@ -44,6 +44,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		userID:                 userID,
 		req:                    req,
 		previousTransaction:    previousTransaction,
+		previousAmount:         previousTransaction.Amount,
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
 		isLinkedTxEdit:         isLinkedTxEdit,
@@ -1589,13 +1590,14 @@ func (s *transactionService) collectSplitUpdatedEvents(
 		}
 
 	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0 &&
-		*data.req.Amount != data.previousTransaction.Amount:
+		*data.req.Amount != data.previousAmount:
 		// Issue #205: notify the source owner ONLY when the partner actually
 		// changes the amount. The partner can now also edit cosmetic fields
 		// (date / description / category) on their side; those must not spam the
 		// author with a split_updated notification. The frontend always sends the
-		// current amount, so we compare against the previous value here rather
-		// than relying on amount presence alone.
+		// current amount, so we compare against the pre-edit amount snapshot
+		// (previousTransaction.Amount is mutated in place by the update loop, so we
+		// must not read it here) rather than relying on amount presence alone.
 		//
 		// Caller IS the partner editing their linked tx amount.
 		// Recipient = source transaction owner.

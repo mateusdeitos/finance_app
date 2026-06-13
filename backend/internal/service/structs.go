@@ -15,6 +15,12 @@ type transactionUpdateData struct {
 	scenario               updateChanges
 	isLinkedTxEdit         bool
 
+	// previousAmount snapshots previousTransaction.Amount before the update loop
+	// mutates it in place (data.transactions[0] is the same pointer). The
+	// split_updated notification guard compares the requested amount against this
+	// snapshot to decide whether the amount actually changed (#205).
+	previousAmount int64
+
 	// transferToUserRecurrence caches the recurrence created for the toUser
 	// during rebuildTransferLinkedTransactions so it's reused across installments.
 	transferToUserRecurrence *domain.TransactionRecurrence

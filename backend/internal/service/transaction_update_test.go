@@ -5173,6 +5173,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_LinkedTxCosmeticEdit
 	data := &transactionUpdateData{
 		userID:              fx.userB.ID,
 		previousTransaction: fx.linkedTx,
+		previousAmount:      fx.linkedTx.Amount,
 		isLinkedTxEdit:      true,
 		scenario:            updateChanges{Value: NOT_CHANGED},
 		req: &domain.TransactionUpdateRequest{
@@ -5196,6 +5197,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_LinkedTxAmountEditFi
 	data := &transactionUpdateData{
 		userID:              fx.userB.ID,
 		previousTransaction: fx.linkedTx,
+		previousAmount:      fx.linkedTx.Amount,
 		isLinkedTxEdit:      true,
 		scenario:            updateChanges{Value: NOT_CHANGED},
 		req: &domain.TransactionUpdateRequest{
