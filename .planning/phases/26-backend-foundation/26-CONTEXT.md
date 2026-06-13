@@ -6,10 +6,10 @@
 <domain>
 ## Phase Boundary
 
-Deliver the **data foundation** for transaction templates: the `transaction_templates` table (migration) and the Go `domain` + `entity` types. The template's form fields are stored as an **opaque JSONB `payload`** — the backend persists and returns it without parsing per-field. Outcome: templates are persistable and structurally isolated from every financial query path (balance, listing, charges, settlements) from the first deploy.
+Deliver the **data foundation** for transaction templates: the `transaction_templates` table (migration) and the Go `domain` + `entity` types. The template's form fields are stored in a JSONB `payload` column, with a strict `domain.TransactionTemplatePayload` struct as the typed write boundary (shape-validated + normalized on write). Outcome: templates are persistable and structurally isolated from every financial query path (balance, listing, charges, settlements) from the first deploy.
 
-**In scope:** schema (`id`, `user_id`, `name`, `payload JSONB`, timestamps), domain/entity types with opaque payload, isolation guarantee.
-**Out of scope (later phases):** repository CRUD + cap + IDOR (Phase 27), apply + format validation / stale-field silent drop (Phase 29), management UI (Phase 30). No HTTP endpoints, no per-field backend validation, no referential integrity.
+**In scope:** schema (`id`, `user_id`, `name`, `payload JSONB`, timestamps), `domain.TransactionTemplate` + `domain.TransactionTemplatePayload` types, entity with JSONB Scan/Value, isolation guarantee.
+**Out of scope (later phases):** repository CRUD + cap + IDOR + the strict unmarshal/marshal wiring (Phase 27), apply + existence validation / stale-field silent drop (Phase 29), management UI (Phase 30). No HTTP endpoints, no referential integrity, no existence checks.
 
 Requirements covered: **TMPL-01**, **TMPL-05**.
 
@@ -18,10 +18,11 @@ Requirements covered: **TMPL-01**, **TMPL-05**.
 <decisions>
 ## Implementation Decisions
 
-### Storage model — opaque JSONB payload
-- **D-01:** The template's transaction fields are stored in a **single opaque `payload JSONB NOT NULL` column** (the form payload: `type`, `account_id`, `category_id`, `destination_account_id`, `description`, `tag_ids`, `split_settings`, …). The backend treats it as opaque (`datatypes.JSON` / `json.RawMessage`) — it does **not** parse, type, or validate individual fields. This keeps the model dynamic: the form can evolve without migrations. (User decision, 2026-06-13.)
-- **D-02:** **`payload` excludes `amount` and `date`** by frontend contract — the "save as template" serializer strips them. Backend is opaque so cannot enforce; the contract lives in the frontend. (Amount always blank on apply; date = today at apply.)
-- **D-03:** **Validation is deferred to apply time (frontend, Phase 29).** On apply, the stored payload is validated against the form's expected shape (Zod); **fields that don't match are silently ignored** (e.g. a `category_id` whose category was deleted is dropped, the rest applies). No error, no crash. This replaces DB referential integrity. (User decision.)
+### Storage model — JSONB payload, typed write boundary
+- **D-01:** The template's transaction fields are stored in a **single `payload JSONB NOT NULL` column** (the form payload: `type`, `account_id`, `category_id`, `destination_account_id`, `description`, `tag_ids`, `split_settings`, …). Storage is dynamic (one column, form can grow), but the **write path is typed**: on create/update the backend **unmarshals the incoming JSON into a strict `domain.TransactionTemplatePayload` struct** (transaction-shaped, minus `amount`/`date`) and **re-serializes that canonical struct into the column**. So create-time **shape** validation + normalization happen via the struct; the column itself stays JSONB. (User decision, 2026-06-13: *"poderia só fazer o unmarshall na strict de transaction e serializar ela na coluna"*.)
+- **D-01b:** **Phase 26 defines the `domain.TransactionTemplatePayload` struct** (Type, AccountID, CategoryID, DestinationAccountID, Description, TagIDs, SplitSettings) alongside `domain.TransactionTemplate` (`ID`, `UserID`, `Name`, `Payload`). The strict unmarshal/marshal logic is wired in the service (Phase 27); Phase 26 just provides the type. "Strict" (e.g. `DisallowUnknownFields`) vs lenient is planner's discretion.
+- **D-02:** **`payload` excludes `amount` and `date`** — they are not fields of `TransactionTemplatePayload`, so a strict unmarshal naturally drops them. (Amount always blank on apply; date = today at apply.)
+- **D-03:** **Existence/referential validation is deferred to apply time (frontend, Phase 29).** The strict struct validates SHAPE only — it does NOT check that a `category_id`/`account_id`/`tag_id` still exists. On apply, the payload is validated against live data and **fields referencing deleted entities are silently dropped** (the rest applies; no error, no crash). This replaces DB referential integrity. (User decision.)
 
 ### Operational columns (relational, not in payload)
 - **D-04:** **`user_id` `NOT NULL`** — owner; the IDOR scope (Phase 27) and the cap/uniqueness scope.
@@ -33,11 +34,11 @@ Requirements covered: **TMPL-01**, **TMPL-05**.
 - **D-08:** **`CategoryService.Delete` is NOT extended** (the earlier CP-8 nullify hook is dropped). With no `category_id` column there is nothing to cascade — apply-time silent-drop handles it. **This removes the only existing-code touch from Phase 26.**
 - **D-09:** **No `TagService.Delete` hook** — same reasoning; stale tag ids filtered at apply.
 - **D-10:** **Type scope = all three (`expense`/`income`/`transfer`) for free** — the opaque payload carries whatever the form produces, including `destination_account_id` for transfer. No schema branching. Per-type field correctness is the frontend form's job.
-- **D-11:** **Split (both modes) and tags ride inside `payload`** — `split_settings` (percentage `Percentage *int` OR fixed-amount `Amount *int64` per row) and `tag_ids` array. Stored verbatim; **TMPL-05 satisfied** by opaque passthrough (no Go serialization logic to round-trip).
+- **D-11:** **Split (both modes) and tags are fields of `TransactionTemplatePayload`** — `split_settings` (percentage `Percentage *int` OR fixed-amount `Amount *int64` per row) and `tag_ids` array. Round-tripped through the strict struct on write; **TMPL-05 satisfied** (both modes preserved through unmarshal→marshal).
 
 ### Claude's Discretion
-- Exact opaque-JSONB Go technique (`datatypes.JSON` vs custom `json.RawMessage` Scan/Value) — follow the existing pattern in `backend/internal/entity/user_settings.go` / `account.go`. No new dependency (STACK research: zero new deps).
-- Whether the backend does *minimal* create-time sanity (valid JSON object, non-empty) vs fully opaque — planner's call; default to minimal/none, since the real contract is enforced on apply.
+- JSONB Go technique for the `payload` column (`datatypes.JSON` vs `json.RawMessage` Scan/Value) — follow the existing pattern in `backend/internal/entity/user_settings.go` / `account.go`. No new dependency (STACK research: zero new deps).
+- Strictness of the create-time unmarshal: `DisallowUnknownFields` (reject unknown keys) vs lenient (ignore them). Default to strict per the user's "strict" intent; planner confirms.
 - Column ordering, `created_at`/`updated_at` conventions, indexes beyond `UNIQUE(user_id, name)` — match existing migrations.
 
 </decisions>
@@ -74,7 +75,7 @@ Requirements covered: **TMPL-01**, **TMPL-05**.
 - Existing migration files in `backend/migrations/` — template for the new CREATE TABLE migration.
 
 ### Established Patterns
-- domain ↔ entity split with round-trip conversion (charges, notifications, push subscriptions all follow it). For templates the payload is opaque, so conversion is trivial (carry the raw JSON through).
+- domain ↔ entity split with round-trip conversion (charges, notifications, push subscriptions all follow it). For templates, `domain.TransactionTemplatePayload` is the strict struct the service unmarshals into on write; the entity stores the marshaled JSON in the `payload` JSONB column.
 - mocks via `just generate-mocks` (mockery); swagger via `just generate-docs` (N/A this phase — no handlers).
 
 ### Integration Points
