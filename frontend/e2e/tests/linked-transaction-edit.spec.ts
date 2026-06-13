@@ -346,28 +346,26 @@ test.describe("Linked Transaction Edit", () => {
     );
     createdTransactionIds.push(partnerTxId);
 
-    // Resolve the primary user's linked installment in a given period by matching
-    // this expense's recurrence on their connection-backed account.
-    const findLinkedInstallment = async (
-      month: number,
-      year: number,
-      recurrenceId?: number,
-    ) => {
+    // Resolve the primary user's linked installment in a given period by its
+    // (unique) description on their connection-backed account. Each installment
+    // carries its own recurrence record, so we match on description rather than a
+    // shared recurrence id.
+    const findLinkedInstallment = async (month: number, year: number, matchDesc: string) => {
       const txs = await apiListTransactions(month, year, { token: primaryToken });
       return txs.find(
         (t) =>
           t.account_id === primaryConnAccountId &&
           t.original_user_id != null &&
-          (recurrenceId != null
-            ? t.transaction_recurrence_id === recurrenceId
-            : t.description === desc),
+          t.description === matchDesc,
       );
     };
 
-    const firstInstallment = await findLinkedInstallment(periods[0].month, periods[0].year);
+    const firstInstallment = await findLinkedInstallment(periods[0].month, periods[0].year, desc);
     expect(firstInstallment, "expected primary linked installment in month 1").toBeTruthy();
-    const recurrenceId = firstInstallment!.transaction_recurrence_id;
-    expect(recurrenceId, "linked installment should carry its own recurrence").toBeTruthy();
+    expect(
+      firstInstallment!.transaction_recurrence_id,
+      "linked installment should be part of a recurrence",
+    ).toBeTruthy();
 
     await transactionsPage.goto();
     await expect(customPage.getByText(desc).first()).toBeVisible({ timeout: 8000 });
@@ -394,7 +392,7 @@ test.describe("Linked Transaction Edit", () => {
 
     // Every primary-side installment adopts the new description.
     for (const period of periods) {
-      const inst = await findLinkedInstallment(period.month, period.year, recurrenceId);
+      const inst = await findLinkedInstallment(period.month, period.year, newDesc);
       expect(
         inst,
         `expected primary linked installment in ${period.month}/${period.year}`,
