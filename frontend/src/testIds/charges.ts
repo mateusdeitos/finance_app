@@ -1,4 +1,4 @@
-export type ChargeAction = 'reject' | 'cancel'
+export type ChargeAction = 'reject' | 'cancel' | 'delete'
 export type ChargeRole = 'charger' | 'payer'
 export type ChargesTab = 'received' | 'sent'
 
@@ -13,6 +13,7 @@ export const ChargesTestIds = {
   BtnAccept: 'btn_accept_charge',
   BtnReject: 'btn_reject_charge',
   BtnCancel: 'btn_cancel_charge',
+  BtnDelete: 'btn_delete_charge',
   SelectConnection: 'select_connection',
   SelectMyAccount: 'select_my_account',
   RadioRole: (role: ChargeRole) => `radio_role_${role}` as const,

@@ -267,6 +267,7 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandler
 	charges.POST("/:id/cancel", h.charge.Cancel)
 	charges.POST("/:id/reject", h.charge.Reject)
 	charges.POST("/:id/accept", h.charge.Accept)
+	charges.DELETE("/:id", h.charge.Delete)
 
 	// Push subscriptions
 	pushSubs := api.Group("/push-subscriptions")

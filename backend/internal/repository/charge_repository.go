@@ -43,6 +43,10 @@ func (r *chargeRepository) Update(ctx context.Context, charge *domain.Charge) er
 	return GetTxFromContext(ctx, r.db).Save(ent).Error
 }
 
+func (r *chargeRepository) Delete(ctx context.Context, id int) error {
+	return GetTxFromContext(ctx, r.db).Delete(&entity.Charge{}, id).Error
+}
+
 func (r *chargeRepository) Search(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error) {
 	var ents []entity.Charge
 	query := GetTxFromContext(ctx, r.db)
