@@ -90,8 +90,8 @@ Partners can accurately track shared finances, including in-progress installment
 **Goal:** Let users save personal, reusable transaction templates (type, account, category, tags, split, description prefilled — never an amount) and apply them via quick chips in the transaction form, so repetitive entries only require typing the amount.
 
 **Target features:**
-- Dedicated `transaction_templates` table mirroring the `transactions` shape (type, account, category, tags, description, split) — but without amount or date — keeping templates isolated from balance/listing/charges/settlements queries
-- Split config persisted on the template (transactions don't store split today — it's create-time input that becomes settlements + linked transactions; the template table carries it, e.g. JSONB)
+- Dedicated `transaction_templates` table — relational `id`/`user_id`/`name` plus an opaque JSONB `payload` holding the template's form fields (type, account, category, destination, tags, description, split) — without amount or date — keeping templates isolated from balance/listing/charges/settlements queries
+- Opaque payload model: the backend stores/returns the form payload without per-field parsing; format is validated on apply (frontend), silently dropping invalid/stale fields
 - CRUD API for personal templates, IDOR-scoped per user, capped at 3 templates per user
 - Dedicated management UI (drawer/screen) to create / edit / delete templates, plus a "Save as template" action from the transaction form
 - Quick-chip row at the top of `TransactionForm` (same visual pattern as `DateQuickChips`): clicking a chip `reset()`s the form to the template values, leaving the amount field blank and focused
@@ -156,10 +156,11 @@ Partners can accurately track shared finances, including in-progress installment
 | Persist notifications with entity deep-link                            | User wants to navigate from a notification to the charge/transaction it refers to               | TBD |
 | Fire push only after DB commit succeeds                                | Guarantees the referenced entity exists before notifying; avoids notifying on rolled-back txns  | TBD |
 | Dedicated `transaction_templates` table (not an `is_template` column)  | Isolates templates from balance/listing/charges/settlements queries; no risk of leaking into financial reads | TBD |
-| Template table mirrors the `transactions` shape                        | Reuses the field model the `TransactionForm` already knows; apply maps 1:1 onto form fields                  | TBD |
-| Persist split config on the template (transactions don't store it)     | Split is create-time input → settlements + linked tx; templates need it preserved, so the table carries it    | TBD |
-| Templates are personal (per user), never amount, capped at 3           | Matches user's stated workflow (fast repeat entries); cap keeps the chip row and UI simple                    | TBD |
-| Template tags stored as a `tag_ids` array on the template (no join table) | Avoids id-collision/leakage into `transaction_tags`; no FK needed — stale ids filtered at apply time, like account/category | TBD |
+| Store template fields as an opaque JSONB `payload` (not typed columns) | Keeps the model dynamic — form can evolve without migrations; backend just persists/returns the blob          | TBD |
+| Only `id`, `user_id`, `name` (`UNIQUE(user_id,name)`) + `payload` are relational | `name`/`user_id` needed for the chip label, IDOR scope, cap, and uniqueness; everything else rides the payload | TBD |
+| Validation deferred to apply time; silently drop invalid/stale fields  | No DB referential integrity needed; deleted account/category/tag ids are filtered against live data on apply   | TBD |
+| No `CategoryService.Delete`/`TagService.Delete` hooks for templates     | Opaque payload has no FK columns to cascade — apply-time silent-drop replaces it; removes existing-code touches | TBD |
+| Templates are personal (per user), never amount/date, capped at 3, hard-deleted | Matches user's fast-repeat-entry workflow; cap + hard delete keep the chip row and counting simple            | TBD |
 
 ## Constraints
 

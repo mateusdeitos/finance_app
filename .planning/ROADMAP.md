@@ -91,7 +91,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 
 ### v1.7 Transaction Templates (Phases 26–31)
 
-- [ ] **Phase 26: Backend Foundation** - DB migration, domain/entity types, CategoryService.Delete extension
+- [ ] **Phase 26: Backend Foundation** - DB migration (opaque JSONB payload), domain/entity types, financial-query isolation
 - [ ] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger
 - [ ] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context
 - [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling
@@ -220,15 +220,14 @@ Plans:
 **UI hint**: yes
 
 ### Phase 26: Backend Foundation
-**Goal**: The database schema for templates is live, the Go domain and entity types exist with typed JSONB split serialization, and CategoryService.Delete is extended to nullify template category references — isolating templates from all financial query paths from the first deploy
+**Goal**: The database schema for templates is live and the Go domain/entity types exist, storing the template's form fields as an opaque JSONB `payload` — isolating templates from all financial query paths from the first deploy, with no per-field backend validation (the format contract is enforced on apply, Phase 29)
 **Depends on**: Nothing (first phase of v1.7; additive schema change with no existing queries affected)
 **Requirements**: TMPL-01, TMPL-05
 **Success Criteria** (what must be TRUE):
-  1. A `transaction_templates` table exists in the DB; `account_id` and `category_id` are nullable with ON DELETE SET NULL; `split_settings` and `tag_ids` are JSONB columns defaulting to `[]` (tags stored as an array of tag ids — no join table, no FK to `tags`); no FK exists to `transactions`
-  2. A round-trip unit test demonstrates that a `[]domain.SplitSettings` value serializes to JSONB and deserializes back with percentage-mode vs fixed-amount mode preserved exactly (CP-1 addressed)
-  3. Deleting a category nullifies `category_id` on any template that referenced it, not just on transactions (CP-8 addressed; `CategoryService.Delete` calls `templateRepo.NullifyCategory`)
+  1. A `transaction_templates` table exists with columns `id`, `user_id` (NOT NULL), `name` (NOT NULL, `UNIQUE(user_id, name)`), `payload` (JSONB NOT NULL), `created_at`, `updated_at` — no `amount`, no `date`, no `deleted_at`, no per-field FK columns, and no FK to `transactions`
+  2. The `payload` column round-trips an arbitrary template form payload (type, account_id, category_id, destination_account_id, description, tag_ids, split_settings — including percentage vs fixed-amount split rows) verbatim through the entity Scan/Value, preserving it byte-for-byte (TMPL-05 satisfied by opaque passthrough)
+  3. The backend treats `payload` as opaque — no per-field parsing or validation; deleting a category/account/tag requires no template cleanup (stale ids are filtered at apply time, Phase 29 — the earlier CategoryService.Delete extension is dropped)
   4. All existing financial queries (`Search`, `GetBalance`, `FindOrphanedSettlementTransactions`) are unaffected — no template rows appear in transaction lists or balance calculations
-  5. Deleting a tag requires no backend cleanup on templates — stale tag ids remain in `tag_ids` and are filtered against live tags at apply time (Phase 29), so no `TagService.Delete` hook is needed
 **Plans**: TBD
 
 ### Phase 27: Backend CRUD API
