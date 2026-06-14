@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 26 Plan 01 complete
-last_updated: "2026-06-14T12:00:00.000Z"
-last_activity: 2026-06-14 -- Plan 26-01 complete (migration + domain types + round-trip tests)
+stopped_at: Phase 26 Plan 02 complete
+last_updated: "2026-06-14T12:15:00.000Z"
+last_activity: 2026-06-14 -- Plan 26-02 complete (entity.TransactionTemplate with typed JSONB, converters, hooks, and round-trip tests)
 progress:
   total_phases: 15
   completed_phases: 4
@@ -16,10 +16,10 @@ progress:
 
 ## Current Position
 
-Phase: 26 (backend-foundation) — EXECUTING
-Plan: 2 of 2
-Status: Executing Phase 26
-Last activity: 2026-06-14 -- Plan 26-01 complete (migration + domain types + round-trip tests)
+Phase: 26 (backend-foundation) — COMPLETE
+Plan: 2 of 2 (all plans complete)
+Status: Phase 26 complete
+Last activity: 2026-06-14 -- Plan 26-02 complete (entity.TransactionTemplate with typed JSONB, converters, hooks, and round-trip tests)
 
 Progress: [█░░░░░░░░░] 10%
 
@@ -53,6 +53,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - Phase 28 (SplitSettingsFields mode) is a discrete design decision phase — unresolved open question from research
 - [26-01] domain.SplitSettings reused verbatim in TransactionTemplatePayload (not redeclared) — ensures both split modes round-trip faithfully (TMPL-05)
 - [26-01] No DisallowUnknownFields on TransactionTemplatePayload in Phase 26 — strict unmarshal wired in Phase 27 service (D-01b)
+- [26-02] TransactionTemplatePayload entity type is a type alias of domain.TransactionTemplatePayload — avoids struct duplication and makes cast-based converters trivial
+- [26-02] Typed Scan/Value on entity payload rather than untyped JSONB map — enforces payload schema at the Go type level
 
 ### Todos
 
@@ -78,6 +80,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-06-14T12:00:00.000Z
-Stopped at: Phase 26 Plan 02 (26-02-PLAN.md)
-Resume file: .planning/phases/26-backend-foundation/26-02-PLAN.md
+Last session: 2026-06-14T12:15:00.000Z
+Stopped at: Phase 26 complete (26-02-SUMMARY.md created)
+Resume file: None — Phase 26 complete
