@@ -666,7 +666,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int64"
                             }
                         }
                     },
@@ -3462,9 +3463,6 @@ const docTemplate = `{
                 },
                 "percentage": {
                     "type": "integer"
-                },
-                "userConnection": {
-                    "$ref": "#/definitions/domain.UserConnection"
                 }
             }
         },

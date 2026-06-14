@@ -660,7 +660,8 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int64"
                             }
                         }
                     },
@@ -3456,9 +3457,6 @@
                 },
                 "percentage": {
                     "type": "integer"
-                },
-                "userConnection": {
-                    "$ref": "#/definitions/domain.UserConnection"
                 }
             }
         },
