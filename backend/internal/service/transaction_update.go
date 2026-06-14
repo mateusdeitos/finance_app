@@ -74,7 +74,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	data := &transactionUpdateData{
 		userID:                 userID,
 		req:                    req,
-		previousTransaction:    previousTransaction,
+		previousTransaction:    *previousTransaction,
 		currentTransaction:     cloneTransactionForUpdate(previousTransaction),
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),

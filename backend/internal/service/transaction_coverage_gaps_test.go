@@ -389,7 +389,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestShouldUpdateTransaction_PastI
 		req: &domain.TransactionUpdateRequest{
 			PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
 		},
-		previousTransaction: prevTx,
+		previousTransaction: *prevTx,
 		// shouldUpdateTransactionBasedOnPropagationSettings compares against the
 		// mutable edited row, so currentTransaction must be set as well.
 		currentTransaction: prevTx,
