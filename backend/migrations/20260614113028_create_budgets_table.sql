@@ -13,4 +13,4 @@ CREATE INDEX idx_budgets_owner_user_id ON budgets(owner_user_id);
 CREATE INDEX idx_budgets_category_id ON budgets(category_id);
 
 -- +goose Down
-DROP TABLE IF EXISTS budgets;
+DROP TABLE IF EXISTS budgets CASCADE;
