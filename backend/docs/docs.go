@@ -4063,9 +4063,6 @@ const docTemplate = `{
                 },
                 "percentage": {
                     "type": "integer"
-                },
-                "userConnection": {
-                    "$ref": "#/definitions/domain.UserConnection"
                 }
             }
         },

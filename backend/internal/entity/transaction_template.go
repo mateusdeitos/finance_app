@@ -3,6 +3,7 @@ package entity
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -26,9 +27,14 @@ func (p *TransactionTemplatePayload) Scan(value interface{}) error {
 	if value == nil {
 		return nil
 	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return nil
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return fmt.Errorf("transaction_template: cannot scan %T into TransactionTemplatePayload", value)
 	}
 	return json.Unmarshal(bytes, p)
 }
