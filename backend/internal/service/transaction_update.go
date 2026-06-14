@@ -13,6 +13,37 @@ import (
 	"github.com/samber/lo"
 )
 
+// cloneTransactionForUpdate returns a copy of t that is deep enough for the
+// update loop to mutate freely without touching the original. The loop mutates
+// row-level fields plus the Tags and LinkedTransactions slices — including
+// LinkedTransactions[i].Date/.Description in the non-linked propagation path —
+// so those backing arrays must not be shared with the pristine snapshot.
+// Pointer fields (TransactionRecurrence, InstallmentNumber, CategoryID, ...) are
+// only ever reassigned, never mutated in place on the clone, so sharing them is
+// safe; the shared TransactionRecurrence is intentionally mutated in place when
+// shrinking the original recurrence.
+func cloneTransactionForUpdate(t *domain.Transaction) *domain.Transaction {
+	if t == nil {
+		return nil
+	}
+
+	clone := *t
+	clone.Tags = slices.Clone(t.Tags)
+	clone.SettlementsFromSource = slices.Clone(t.SettlementsFromSource)
+
+	if t.LinkedTransactions != nil {
+		clone.LinkedTransactions = make([]domain.Transaction, len(t.LinkedTransactions))
+		for i := range t.LinkedTransactions {
+			lt := t.LinkedTransactions[i]
+			lt.Tags = slices.Clone(t.LinkedTransactions[i].Tags)
+			lt.LinkedTransactions = slices.Clone(t.LinkedTransactions[i].LinkedTransactions)
+			clone.LinkedTransactions[i] = lt
+		}
+	}
+
+	return &clone
+}
+
 func (s *transactionService) Update(ctx context.Context, id, userID int, req *domain.TransactionUpdateRequest) error {
 	ctx, err := s.dbTransaction.Begin(ctx)
 	if err != nil {
@@ -43,7 +74,8 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	data := &transactionUpdateData{
 		userID:                 userID,
 		req:                    req,
-		previousTransaction:    previousTransaction,
+		previousTransaction:    *previousTransaction,
+		currentTransaction:     cloneTransactionForUpdate(previousTransaction),
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
 		isLinkedTxEdit:         isLinkedTxEdit,
@@ -410,7 +442,7 @@ func (s *transactionService) normalizeInstallments(ctx context.Context, data *tr
 
 	r := data.transactions[0].TransactionRecurrence
 
-	if r == nil && data.previousTransaction.TransactionRecurrenceID == nil {
+	if r == nil && data.currentTransaction.TransactionRecurrenceID == nil {
 		return nil
 	}
 
@@ -451,7 +483,7 @@ func (s *transactionService) normalizeInstallments(ctx context.Context, data *tr
 
 	existingCount := len(data.transactions)
 	if expectedCount > existingCount {
-		base := data.previousTransaction
+		base := data.currentTransaction
 		lastInstallment := minInstallment + existingCount - 1
 		// Use the last existing transaction's date as the anchor for new installments,
 		// so dates continue sequentially from where the series left off.
@@ -886,9 +918,10 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 
 	// Map of ToAccountID → custom settlement date diff taken from the update request's
 	// split_settings. The user's date input is the intended settlement date for the
-	// EDITED installment (data.previousTransaction). For every other affected
-	// installment in the recurrence we shift its own date by the same diff so the
-	// offset between the installment date and the settlement date stays consistent.
+	// EDITED installment (data.currentTransaction, whose Date already reflects any
+	// requested date change). For every other affected installment in the recurrence
+	// we shift its own date by the same diff so the offset between the installment
+	// date and the settlement date stays consistent.
 	requestedDateDiffByToAccount := make(map[int]time.Duration, len(data.req.SplitSettings))
 	for _, ss := range data.req.SplitSettings {
 		if ss.UserConnection == nil || ss.Date == nil {
@@ -896,7 +929,7 @@ func (s *transactionService) syncSettlementsForTransaction(ctx context.Context, 
 		}
 		conn := *ss.UserConnection
 		conn.SwapIfNeeded(userID)
-		requestedDateDiffByToAccount[conn.ToAccountID] = ss.Date.Time.Sub(data.previousTransaction.Date)
+		requestedDateDiffByToAccount[conn.ToAccountID] = ss.Date.Time.Sub(data.currentTransaction.Date)
 	}
 
 	keptParentIDs := make(map[int]bool, len(own.LinkedTransactions))
@@ -981,11 +1014,11 @@ func (s *transactionService) shouldUpdateTransactionBasedOnPropagationSettings(t
 		return true
 	}
 
-	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent && t.ID != data.previousTransaction.ID {
+	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent && t.ID != data.currentTransaction.ID {
 		return false
 	} else if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrentAndFuture &&
-		t.ID != data.previousTransaction.ID &&
-		!t.Date.After(data.previousTransaction.Date) {
+		t.ID != data.currentTransaction.ID &&
+		!t.Date.After(data.currentTransaction.Date) {
 		return false
 	}
 
@@ -1010,10 +1043,8 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		// propagation=current: only detach the current transaction from the recurrence.
 		// The recurrence record itself must be preserved because other installments still reference it.
 		if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent {
-			data.previousTransaction.TransactionRecurrenceID = nil
-			data.previousTransaction.TransactionRecurrence = nil
-			data.transactions[0].TransactionRecurrenceID = nil
-			data.transactions[0].TransactionRecurrence = nil
+			data.currentTransaction.TransactionRecurrenceID = nil
+			data.currentTransaction.TransactionRecurrence = nil
 			return nil
 		}
 
@@ -1143,7 +1174,7 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		return *r, nil
 	}
 
-	r, err := upsertRecurrence(data.userID, *data.previousTransaction)
+	r, err := upsertRecurrence(data.userID, *data.currentTransaction)
 	if err != nil {
 		return err
 	}
@@ -1185,7 +1216,12 @@ func (s *transactionService) fetchRelatedTransactions(
 	ctx context.Context,
 	data *transactionUpdateData) error {
 
-	transactions := []*domain.Transaction{data.previousTransaction}
+	// Seed the list with the MUTABLE clone (currentTransaction); the pristine
+	// previousTransaction is never placed in data.transactions so the update loop
+	// cannot mutate the before-snapshot. The remaining read-only filters below use
+	// previousTransaction since both hold identical values at this point (before any
+	// mutation) and it documents that we are keying off the original installment.
+	transactions := []*domain.Transaction{data.currentTransaction}
 	hasInstallments := data.previousTransaction.TransactionRecurrenceID != nil && data.previousTransaction.InstallmentNumber != nil
 
 	// propagation current atualiza somente a transação atual e linked transactions
