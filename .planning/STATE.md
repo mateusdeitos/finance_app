@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Budgets
 status: executing
-last_updated: "2026-06-08T12:55:27.669Z"
-last_activity: 2026-06-08 -- Phase 26 planning complete
+last_updated: "2026-06-14T12:00:00.000Z"
+last_activity: 2026-06-14 -- Phase 26 Plan 01 complete (budgets + budget_alert_thresholds migrations)
 progress:
   total_phases: 13
   completed_phases: 4
   total_plans: 19
-  completed_plans: 16
-  percent: 84
+  completed_plans: 17
+  percent: 89
 ---
 
 ## Current Position
 
-Phase: 26 — DB Migrations + Domain Types
-Plan: —
-Status: Ready to execute
-Last activity: 2026-06-08 -- Phase 26 planning complete
-Resume: .planning/phases/26-db-migrations-domain-types/26-CONTEXT.md
+Phase: 26 (db-migrations-domain-types) — EXECUTING
+Plan: 2 of 3
+Status: Executing Phase 26 (Plan 01 complete)
+Last activity: 2026-06-14 -- Phase 26 Plan 01 complete (budgets + budget_alert_thresholds migrations)
+Resume: .planning/phases/26-db-migrations-domain-types/26-02-PLAN.md
 
 ## Project Reference
 
@@ -56,6 +56,7 @@ See: .planning/PROJECT.md (updated 2026-06-06)
 - [Phase ?]: NOTIF-01..04 hooks use post-commit goroutine with context.Background(); D-02 cosmetic-silent, D-03 self-edit guard, D-04 remove-still-notifies in maybeDispatchSplitUpdatedNotification
 - v1.7 roadmap created 2026-06-07 — Budgets (private only) via 4 phases (26–29): DB migrations + domain types, budget CRUD + realizado, threshold alerts, frontend. Key decisions: realizado reuses GetBalance exclusively (HideSettlements=false for private); last_fired_period latch set only after successful push delivery; alerts fire on transaction writes only (post-commit goroutine, same pattern as v1.6); no category equivalence mapping in v1.7 (private budgets only); period uses domain.Period helpers throughout.
 - Phase 26 context gathered 2026-06-07 (26-CONTEXT.md). Decisions: (D-26-1) private-only schema — NO scope/connection_id/category_mapping_id/CHECK despite research ARCHITECTURE.md's shared design (it predates the scope cut); (D-26-2) ship BudgetScope Go type with Private constant only (ROADMAP deliverable, zero DB cost); (D-26-4) "remove cap" = hard DELETE (thresholds cascade), no deleted_at; (D-26-5) `active` = pause toggle, BudgetFilter.ActiveOnly; (D-26-6) per-threshold `enabled BOOLEAN` on budget_alert_thresholds (beyond ROADMAP's 3-col list); (D-26-7) `last_fired_period` = nullable TEXT 'YYYY-MM' matching SPEND-03 API format; (D-26-8) realizado uses domain.Period.StartDate()/EndDate() exclusively, boundary unit test required.
+- Phase 26 Plan 01 complete 2026-06-14 — budgets migration (20260614113028) and budget_alert_thresholds migration (20260614113109) created; all acceptance criteria verified; Docker-deferred static Down-symmetry proof confirms symmetric rollback ordering (child dropped before parent under goose).
 
 ### Todos
 

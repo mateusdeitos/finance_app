@@ -230,7 +230,7 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 26-01-PLAN.md — Goose migrations: budgets + budget_alert_thresholds tables (FK CASCADE, UNIQUE, CHECK, Down blocks, migrate-down round-trip)
+- [x] 26-01-PLAN.md — Goose migrations: budgets + budget_alert_thresholds tables (FK CASCADE, UNIQUE, CHECK, Down blocks, migrate-down round-trip)
 - [ ] 26-02-PLAN.md — domain/budget.go (Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, BudgetScope Private-only) + Period-boundary contract test
 
 **Wave 2** *(blocked on 26-02)*
@@ -302,7 +302,7 @@ Plans:
 | 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
-| 26. DB Migrations + Domain Types | v1.7 | 0/? | Not started | - |
+| 26. DB Migrations + Domain Types | v1.7 | 1/3 | Executing | 2026-06-14 |
 | 27. Budget CRUD + Realizado | v1.7 | 0/? | Not started | - |
 | 28. Threshold Alerts | v1.7 | 0/? | Not started | - |
 | 29. Budget Frontend | v1.7 | 0/? | Not started | - |
