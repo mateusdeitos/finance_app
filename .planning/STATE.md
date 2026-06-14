@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Budgets
 status: executing
-last_updated: "2026-06-14T12:00:00.000Z"
-last_activity: 2026-06-14 -- Phase 26 Plan 02 complete (budget domain types + Period-boundary contract test)
+last_updated: "2026-06-14T12:10:00.000Z"
+last_activity: 2026-06-14 -- Phase 26 Plan 03 complete (Budget+BudgetAlertThreshold entity structs + ROADMAP SC3 go build gate)
 progress:
   total_phases: 13
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 ## Current Position
 
-Phase: 26 (db-migrations-domain-types) — EXECUTING
-Plan: 3 of 3
-Status: Executing Phase 26 (Plans 01 and 02 complete)
-Last activity: 2026-06-14 -- Phase 26 Plan 02 complete (budget domain types + Period-boundary contract test)
-Resume: .planning/phases/26-db-migrations-domain-types/26-03-PLAN.md
+Phase: 26 (db-migrations-domain-types) — COMPLETE
+Plan: 3 of 3 (all complete)
+Status: Phase 26 complete — advancing to Phase 27
+Last activity: 2026-06-14 -- Phase 26 Plan 03 complete (Budget+BudgetAlertThreshold entity structs + ROADMAP SC3 go build gate)
+Resume: .planning/phases/27-budget-crud-realizado/ (Phase 27, not yet planned)
 
 ## Project Reference
 
