@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 26 context gathered
-last_updated: "2026-06-14T11:27:11.180Z"
-last_activity: 2026-06-14 -- Phase 26 planning complete
+stopped_at: Phase 26 Plan 01 complete
+last_updated: "2026-06-14T12:00:00.000Z"
+last_activity: 2026-06-14 -- Plan 26-01 complete (migration + domain types + round-trip tests)
 progress:
   total_phases: 15
   completed_phases: 4
@@ -16,19 +16,19 @@ progress:
 
 ## Current Position
 
-Phase: 26 of 31 (Backend Foundation — ready to plan)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-06-14 -- Phase 26 planning complete
+Phase: 26 (backend-foundation) — EXECUTING
+Plan: 2 of 2
+Status: Executing Phase 26
+Last activity: 2026-06-14 -- Plan 26-01 complete (migration + domain types + round-trip tests)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-06-07)
 
 **Core value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Current focus:** Phase 26 — backend-foundation (migration + domain + entity + CategoryService.Delete)
+**Current focus:** Phase 26 — backend-foundation
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - 3-template cap enforced via conditional INSERT in service (race-safe); no DB trigger
 - IDOR: all endpoints gate on `WHERE user_id = ?`; 404 on mismatch (not 403)
 - Phase 28 (SplitSettingsFields mode) is a discrete design decision phase — unresolved open question from research
+- [26-01] domain.SplitSettings reused verbatim in TransactionTemplatePayload (not redeclared) — ensures both split modes round-trip faithfully (TMPL-05)
+- [26-01] No DisallowUnknownFields on TransactionTemplatePayload in Phase 26 — strict unmarshal wired in Phase 27 service (D-01b)
 
 ### Todos
 
@@ -76,6 +78,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-06-13T20:38:13.140Z
-Stopped at: Phase 26 context gathered
-Resume file: .planning/phases/26-backend-foundation/26-CONTEXT.md
+Last session: 2026-06-14T12:00:00.000Z
+Stopped at: Phase 26 Plan 02 (26-02-PLAN.md)
+Resume file: .planning/phases/26-backend-foundation/26-02-PLAN.md

@@ -91,7 +91,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 
 ### v1.7 Transaction Templates (Phases 26–31)
 
-- [ ] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation
+- [ ] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — Plan 1/2 complete (26-01: migration + domain types)
 - [ ] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger
 - [ ] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context
 - [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling

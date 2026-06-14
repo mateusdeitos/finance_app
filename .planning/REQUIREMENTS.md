@@ -10,11 +10,11 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Template CRUD (TMPL)
 
-- [ ] **TMPL-01**: User can create a personal transaction template that captures type, account, category, tags, description, and split configuration — but never an amount or a date
+- [x] **TMPL-01**: User can create a personal transaction template that captures type, account, category, tags, description, and split configuration — but never an amount or a date
 - [ ] **TMPL-02**: User can view a list of their own templates
 - [ ] **TMPL-03**: User can edit a template's saved fields
 - [ ] **TMPL-04**: User can delete a template
-- [ ] **TMPL-05**: System persists the split configuration faithfully — preserving whether each row was percentage or fixed-amount — so applying a template reproduces the original split input
+- [x] **TMPL-05**: System persists the split configuration faithfully — preserving whether each row was percentage or fixed-amount — so applying a template reproduces the original split input
 
 ### Template Application (APPLY)
 
@@ -65,11 +65,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TMPL-01 | Phase 26 | Pending |
+| TMPL-01 | Phase 26 | Complete (26-01) |
 | TMPL-02 | Phase 27 | Pending |
 | TMPL-03 | Phase 27 | Pending |
 | TMPL-04 | Phase 27 | Pending |
-| TMPL-05 | Phase 26 | Pending |
+| TMPL-05 | Phase 26 | Complete (26-01) |
 | APPLY-01 | Phase 29 | Pending |
 | APPLY-02 | Phase 29 | Pending |
 | APPLY-03 | Phase 29 | Pending |
