@@ -228,7 +228,14 @@ Plans:
   2. `domain.TransactionTemplate` (`ID`, `UserID`, `Name`, `Payload`) and `domain.TransactionTemplatePayload` (type, account_id, category_id, destination_account_id, description, tag_ids, split_settings) exist; a unit test proves a payload unmarshals into the strict struct and re-marshals preserving all fields including percentage vs fixed-amount split rows (TMPL-05); `amount`/`date` keys are dropped by the strict unmarshal
   3. The backend validates payload SHAPE via the strict struct on write, but performs NO existence check — deleting a category/account/tag requires no template cleanup (stale ids filtered at apply time, Phase 29; no CategoryService.Delete extension)
   4. All existing financial queries (`Search`, `GetBalance`, `FindOrphanedSettlementTransactions`) are unaffected — no template rows appear in transaction lists or balance calculations
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+
+**Wave 1**
+- [ ] 26-01-PLAN.md — transaction_templates migration + domain.TransactionTemplate/TransactionTemplatePayload types + payload round-trip test (both split modes, amount/date drop) (TMPL-01, TMPL-05)
+
+**Wave 2** *(blocked on 26-01)*
+- [ ] 26-02-PLAN.md — entity.TransactionTemplate JSONB Scan/Value + domain<->entity converters + hooks + converter round-trip test; isolation from financial queries (TMPL-01, TMPL-05)
 
 ### Phase 27: Backend CRUD API
 **Goal**: A fully functional, IDOR-scoped template API exists at `/api/transaction-templates` with cap enforcement that is race-safe — any authenticated user can create up to 3 personal templates, list, update, and delete them, and no user can access another user's templates
