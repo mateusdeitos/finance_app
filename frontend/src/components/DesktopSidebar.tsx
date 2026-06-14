@@ -3,6 +3,7 @@ import { NotificationToggleRow } from "@/components/notifications/NotificationTo
 import {
   IconBell,
   IconCreditCard,
+  IconHome,
   IconReceipt2,
   IconTree,
   IconWallet,
@@ -33,6 +34,7 @@ type NavLinkDef = {
 };
 
 const navLinks: NavLinkDef[] = [
+  { to: "/home", label: "Início", icon: IconHome },
   { to: "/transactions", label: "Transações", icon: IconReceipt2 },
   { to: "/accounts", label: "Contas", icon: IconWallet },
   { to: "/categories", label: "Categorias", icon: IconTree },
@@ -93,7 +95,7 @@ export function DesktopSidebar() {
 
   return (
     <nav className={classes.sidebar} aria-label="Navegação lateral">
-      <Link to="/transactions" className={classes.brand} data-testid={CommonTestIds.SidebarBrand}>
+      <Link to="/home" className={classes.brand} data-testid={CommonTestIds.SidebarBrand}>
         <img src="/icon.svg" width={28} height={28} alt="FinanceApp" />
         <span className={classes.brandText}>FinanceApp</span>
       </Link>

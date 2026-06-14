@@ -45,7 +45,22 @@ export interface CategorySpending {
  * participation. Aggregation is frontend-only: it reuses the existing
  * "transactions for a period" endpoint (expense + income, never transfers).
  */
-export function useCategorySpending(month: number, year: number): CategorySpending {
+export interface CategorySpendingOptions {
+  /**
+   * When true, settlements are ignored so each category reflects the raw
+   * income/expense amounts (the "não considerar acertos" toggle on the home
+   * dashboard). Defaults to false, matching the backend balance endpoint which
+   * nets settlements into the source transaction's category.
+   */
+  hideSettlements?: boolean
+}
+
+export function useCategorySpending(
+  month: number,
+  year: number,
+  options: CategorySpendingOptions = {},
+): CategorySpending {
+  const { hideSettlements = false } = options
   const { query: categoriesQuery, invalidate } = useCategories()
   const { query: transactionsQuery } = useTransactions({ month, year, types: ['expense', 'income'] })
 
@@ -60,15 +75,17 @@ export function useCategorySpending(month: number, year: number): CategorySpendi
     // debit (expense / owed settlement) subtracts. Transfers are filtered out;
     // settlements have no category, so they net into the source transaction's
     // category — matching how the backend balance endpoint nets the settlement
-    // leg.
+    // leg (unless hideSettlements is set, which ignores them entirely).
     const own = new Map<number, { total: number; count: number }>()
     for (const t of txns) {
       if (t.type === 'transfer' || t.category_id == null) continue
       const acc = own.get(t.category_id) ?? { total: 0, count: 0 }
       acc.total += t.operation_type === 'credit' ? t.amount : -t.amount
       acc.count += 1
-      for (const s of t.settlements_from_source ?? []) {
-        acc.total += s.type === 'credit' ? s.amount : -s.amount
+      if (!hideSettlements) {
+        for (const s of t.settlements_from_source ?? []) {
+          acc.total += s.type === 'credit' ? s.amount : -s.amount
+        }
       }
       own.set(t.category_id, acc)
     }
@@ -86,7 +103,7 @@ export function useCategorySpending(month: number, year: number): CategorySpendi
     const gross = nodes.reduce((s, n) => s + Math.abs(n.total), 0)
     const maxAbs = nodes.reduce((m, n) => Math.max(m, Math.abs(n.total)), 0)
     return { nodes, net, gross, maxAbs }
-  }, [categories, transactions])
+  }, [categories, transactions, hideSettlements])
 
   return {
     nodes,
