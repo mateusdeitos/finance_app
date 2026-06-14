@@ -232,10 +232,10 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 26-01-PLAN.md — transaction_templates migration + domain.TransactionTemplate/TransactionTemplatePayload types + payload round-trip test (both split modes, amount/date drop) (TMPL-01, TMPL-05)
+- [x] 26-01-PLAN.md — transaction_templates migration + domain.TransactionTemplate/TransactionTemplatePayload types + payload round-trip test (both split modes, amount/date drop) (TMPL-01, TMPL-05)
 
 **Wave 2** *(blocked on 26-01)*
-- [ ] 26-02-PLAN.md — entity.TransactionTemplate JSONB Scan/Value + domain<->entity converters + hooks + converter round-trip test; isolation from financial queries (TMPL-01, TMPL-05)
+- [x] 26-02-PLAN.md — entity.TransactionTemplate JSONB Scan/Value + domain<->entity converters + hooks + converter round-trip test; isolation from financial queries (TMPL-01, TMPL-05)
 
 ### Phase 27: Backend CRUD API
 **Goal**: A fully functional, IDOR-scoped template API exists at `/api/transaction-templates` with cap enforcement that is race-safe — any authenticated user can create up to 3 personal templates, list, update, and delete them, and no user can access another user's templates
@@ -326,7 +326,7 @@ Plans:
 | 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
-| 26. Backend Foundation | v1.7 | 0/? | Not started | - |
+| 26. Backend Foundation | v1.7 | 2/2 | Complete    | 2026-06-14 |
 | 27. Backend CRUD API | v1.7 | 0/? | Not started | - |
 | 28. SplitSettingsFields Template Mode | v1.7 | 0/? | Not started | - |
 | 29. Frontend Chip Apply Flow | v1.7 | 0/? | Not started | - |
