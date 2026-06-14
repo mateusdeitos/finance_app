@@ -1043,8 +1043,8 @@ func (s *transactionService) handlerRecurrenceUpdate(
 		// propagation=current: only detach the current transaction from the recurrence.
 		// The recurrence record itself must be preserved because other installments still reference it.
 		if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent {
-			data.transactions[0].TransactionRecurrenceID = nil
-			data.transactions[0].TransactionRecurrence = nil
+			data.currentTransaction.TransactionRecurrenceID = nil
+			data.currentTransaction.TransactionRecurrence = nil
 			return nil
 		}
 
