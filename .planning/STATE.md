@@ -4,7 +4,7 @@ milestone: v1.7
 milestone_name: Budgets
 status: executing
 last_updated: "2026-06-14T12:00:00.000Z"
-last_activity: 2026-06-14 -- Phase 26 Plan 01 complete (budgets + budget_alert_thresholds migrations)
+last_activity: 2026-06-14 -- Phase 26 Plan 02 complete (budget domain types + Period-boundary contract test)
 progress:
   total_phases: 13
   completed_phases: 4
@@ -16,10 +16,10 @@ progress:
 ## Current Position
 
 Phase: 26 (db-migrations-domain-types) — EXECUTING
-Plan: 2 of 3
-Status: Executing Phase 26 (Plan 01 complete)
-Last activity: 2026-06-14 -- Phase 26 Plan 01 complete (budgets + budget_alert_thresholds migrations)
-Resume: .planning/phases/26-db-migrations-domain-types/26-02-PLAN.md
+Plan: 3 of 3
+Status: Executing Phase 26 (Plans 01 and 02 complete)
+Last activity: 2026-06-14 -- Phase 26 Plan 02 complete (budget domain types + Period-boundary contract test)
+Resume: .planning/phases/26-db-migrations-domain-types/26-03-PLAN.md
 
 ## Project Reference
 
@@ -57,6 +57,7 @@ See: .planning/PROJECT.md (updated 2026-06-06)
 - v1.7 roadmap created 2026-06-07 — Budgets (private only) via 4 phases (26–29): DB migrations + domain types, budget CRUD + realizado, threshold alerts, frontend. Key decisions: realizado reuses GetBalance exclusively (HideSettlements=false for private); last_fired_period latch set only after successful push delivery; alerts fire on transaction writes only (post-commit goroutine, same pattern as v1.6); no category equivalence mapping in v1.7 (private budgets only); period uses domain.Period helpers throughout.
 - Phase 26 context gathered 2026-06-07 (26-CONTEXT.md). Decisions: (D-26-1) private-only schema — NO scope/connection_id/category_mapping_id/CHECK despite research ARCHITECTURE.md's shared design (it predates the scope cut); (D-26-2) ship BudgetScope Go type with Private constant only (ROADMAP deliverable, zero DB cost); (D-26-4) "remove cap" = hard DELETE (thresholds cascade), no deleted_at; (D-26-5) `active` = pause toggle, BudgetFilter.ActiveOnly; (D-26-6) per-threshold `enabled BOOLEAN` on budget_alert_thresholds (beyond ROADMAP's 3-col list); (D-26-7) `last_fired_period` = nullable TEXT 'YYYY-MM' matching SPEND-03 API format; (D-26-8) realizado uses domain.Period.StartDate()/EndDate() exclusively, boundary unit test required.
 - Phase 26 Plan 01 complete 2026-06-14 — budgets migration (20260614113028) and budget_alert_thresholds migration (20260614113109) created; all acceptance criteria verified; Docker-deferred static Down-symmetry proof confirms symmetric rollback ordering (child dropped before parent under goose).
+- Phase 26 Plan 02 complete 2026-06-14 — domain/budget.go with Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, and BudgetScope (Private-only forward marker, D-26-2); Period-boundary contract test TestPeriodBoundaryInclusion passes both sub-tests (ROADMAP SC4); go build ./... and go test ./internal/domain/ all green.
 
 ### Todos
 
