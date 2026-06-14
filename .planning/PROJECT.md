@@ -174,4 +174,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-06-07 — v1.7 Transaction Templates started (v1.6 Push Notifications complete, pending formal archive)_
+_Last updated: 2026-06-14 — v1.7 Phase 26 (Backend Foundation) complete: transaction_templates migration + domain/entity types live (JSONB payload, typed write boundary), isolated from all financial query paths. Next: Phase 27 (Backend CRUD API)._
