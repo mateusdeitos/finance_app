@@ -252,6 +252,32 @@ test.describe("Charges", () => {
     await chargesPage.expectNotification(/Cobrança cancelada/);
   });
 
+  test("delete a sent charge", async ({ page }) => {
+    const description = `Delete Test ${Date.now()}`;
+
+    const charge = await apiCreateCharge({
+      connection_id: connectionId,
+      my_account_id: primaryAccountId,
+      period_month: PERIOD_MONTH,
+      period_year: PERIOD_YEAR,
+      description,
+      role: "charger" as const,
+      date: new Date().toISOString(),
+    });
+    createdChargeIds.push(charge.id);
+
+    await chargesPage.gotoMonth(PERIOD_MONTH, PERIOD_YEAR);
+    await chargesPage.selectSentTab();
+
+    await expect(page.getByTestId(ChargesTestIds.Card(charge.id))).toBeVisible();
+
+    await chargesPage.clickDelete(charge.id);
+    await chargesPage.confirmDelete();
+
+    await chargesPage.expectNotification(/Cobrança excluída/);
+    await expect(page.getByTestId(ChargesTestIds.Card(charge.id))).not.toBeVisible({ timeout: 10000 });
+  });
+
   test("create charge via UI with arbitrary amount + charger role on zero balance", async ({ browser }) => {
     // Isolated user pair — the fresh primary will have exactly one connection and one account,
     // so the drawer selectors are unambiguous.

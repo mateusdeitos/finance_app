@@ -73,6 +73,15 @@ func (c *Charge) IsParty(userID int) bool {
 	return c.ChargerUserID == userID || c.PayerUserID == userID
 }
 
+// IsDeletable reports whether the charge can be permanently deleted. Paid
+// charges are never deletable because accepting one created settlement
+// transfer transactions that must be preserved.
+func (c *Charge) IsDeletable() bool {
+	return c.Status == ChargeStatusPending ||
+		c.Status == ChargeStatusRejected ||
+		c.Status == ChargeStatusCancelled
+}
+
 func (c *Charge) ValidateTransition(newStatus ChargeStatus) error {
 	switch c.Status {
 	case ChargeStatusPending:

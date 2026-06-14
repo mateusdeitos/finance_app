@@ -1133,6 +1133,41 @@ paths:
       summary: Create a charge
       tags:
       - charges
+  /api/charges/{id}:
+    delete:
+      description: Permanently deletes a charge. Allowed only while the charge is
+        pending, rejected, or cancelled; paid charges cannot be deleted.
+      parameters:
+      - description: Charge ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete a charge (either party)
+      tags:
+      - charges
   /api/charges/{id}/accept:
     post:
       consumes:

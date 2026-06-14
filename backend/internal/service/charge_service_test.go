@@ -1016,3 +1016,115 @@ func (s *ChargeServiceTestSuite) TestUpdate_ChargeTransferRejectsTypeAndRecurren
 			"expected ErrorTagChargeTransactionRecurrenceNotAllowed")
 	})
 }
+
+// chargeExists reports whether a charge with the given ID is still visible to the user.
+func (s *ChargeServiceTestSuite) chargeExists(ctx context.Context, userID, chargeID int) bool {
+	charges, err := s.Repos.Charge.Search(ctx, domain.ChargeSearchOptions{
+		UserID: userID,
+		IDs:    []int{chargeID},
+	})
+	s.Require().NoError(err)
+	return len(charges) > 0
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_PendingByEitherParty() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+
+	// The payer (counterparty) may delete a pending charge.
+	err = s.Services.Charge.Delete(ctx, payer.ID, charge.ID)
+	s.Require().NoError(err)
+	s.False(s.chargeExists(ctx, charger.ID, charge.ID), "charge should be gone")
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_RejectedAndCancelled() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	for _, status := range []domain.ChargeStatus{domain.ChargeStatusRejected, domain.ChargeStatusCancelled} {
+		charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+		charge.Status = status
+		s.Require().NoError(s.Repos.Charge.Update(ctx, charge))
+
+		err = s.Services.Charge.Delete(ctx, charger.ID, charge.ID)
+		s.Require().NoError(err, "should delete %s charge", status)
+		s.False(s.chargeExists(ctx, charger.ID, charge.ID))
+	}
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_PaidIsBlocked() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 3, 2026
+	conn.SwapIfNeeded(charger.ID)
+	s.seedTransaction(ctx, charger.ID, conn.FromAccountID, 10000, domain.OperationTypeCredit, periodMonth, periodYear)
+
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID, periodMonth, periodYear, chargeDate)
+
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
+		AccountID: payerPrivAcc.ID,
+		Date:      acceptDate,
+	})
+	s.Require().NoError(err)
+
+	err = s.Services.Charge.Delete(ctx, charger.ID, charge.ID)
+	s.Require().Error(err)
+	s.True(errors.Is(err, pkgErrors.ErrChargeCannotDeletePaid) || hasTag(err, pkgErrors.ErrorTagChargeCannotDeletePaid),
+		"expected paid charge delete to be blocked")
+	s.True(s.chargeExists(ctx, charger.ID, charge.ID), "paid charge must remain")
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_NonPartyForbidden() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	stranger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+
+	err = s.Services.Charge.Delete(ctx, stranger.ID, charge.ID)
+	s.Require().Error(err)
+	s.True(s.chargeExists(ctx, charger.ID, charge.ID), "charge must remain after forbidden delete")
+}

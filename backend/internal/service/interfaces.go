@@ -78,6 +78,7 @@ type ChargeService interface {
 	Create(ctx context.Context, callerUserID int, req *domain.CreateChargeRequest) (*domain.Charge, error)
 	Cancel(ctx context.Context, callerUserID, chargeID int) error
 	Reject(ctx context.Context, callerUserID, chargeID int) error
+	Delete(ctx context.Context, callerUserID, chargeID int) error
 	List(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
 	PendingCount(ctx context.Context, callerUserID int) (int64, error)
 	Accept(ctx context.Context, callerUserID int, chargeID int, req *domain.AcceptChargeRequest) error

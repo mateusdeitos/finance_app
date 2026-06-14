@@ -7,19 +7,21 @@ import (
 )
 
 type transactionUpdateData struct {
-	userID                 int
-	req                    *domain.TransactionUpdateRequest
-	previousTransaction    *domain.Transaction
+	userID int
+	req    *domain.TransactionUpdateRequest
+	// previousTransaction is a strictly READ-ONLY pristine snapshot of the edited
+	// transaction as it was before the update. It is held by value (not a pointer)
+	// so it cannot be aliased into the mutable transactions slice — any "before"
+	// comparison (e.g. propagation/date checks) always reads the original values.
+	previousTransaction domain.Transaction
+	// currentTransaction is the MUTABLE clone of previousTransaction that the
+	// update loop mutates and persists. It is the entry seeded into transactions
+	// for the edited row; previousTransaction is never placed in transactions.
+	currentTransaction     *domain.Transaction
 	transactions           []*domain.Transaction
 	transactionIDsToRemove map[int]bool
 	scenario               updateChanges
 	isLinkedTxEdit         bool
-
-	// previousAmount snapshots previousTransaction.Amount before the update loop
-	// mutates it in place (data.transactions[0] is the same pointer). The
-	// split_updated notification guard compares the requested amount against this
-	// snapshot to decide whether the amount actually changed (#205).
-	previousAmount int64
 
 	// sourceIDs are the source (author) transaction IDs backing the edited tx when
 	// it is a partner's linked transaction (empty otherwise). Computed once in

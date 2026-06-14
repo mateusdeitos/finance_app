@@ -234,6 +234,29 @@ func (s *chargeService) Reject(ctx context.Context, callerUserID, chargeID int) 
 	return nil
 }
 
+// Delete permanently removes a charge. Either party may delete it, but only
+// while it is pending, rejected, or cancelled — paid charges are kept because
+// they own settlement transfer transactions.
+func (s *chargeService) Delete(ctx context.Context, callerUserID, chargeID int) error {
+	charge, err := s.chargeRepo.GetByID(ctx, chargeID)
+	if err != nil {
+		return pkgErrors.NotFound("charge")
+	}
+
+	if !charge.IsParty(callerUserID) {
+		return pkgErrors.Forbidden("charge")
+	}
+
+	if !charge.IsDeletable() {
+		return pkgErrors.ErrChargeCannotDeletePaid
+	}
+
+	if err := s.chargeRepo.Delete(ctx, chargeID); err != nil {
+		return pkgErrors.Internal("failed to delete charge", err)
+	}
+	return nil
+}
+
 func (s *chargeService) List(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error) {
 	results, err := s.chargeRepo.Search(ctx, options)
 	if err != nil {
