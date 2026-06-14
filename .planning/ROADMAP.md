@@ -91,7 +91,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 
 ### v1.7 Budgets (Orçamentos) (Phases 26–29)
 
-- [ ] **Phase 26: DB Migrations + Domain Types** - Goose migrations for budgets + budget_alert_thresholds, all Go domain types and GORM entity structs
+- [x] **Phase 26: DB Migrations + Domain Types** - Goose migrations for budgets + budget_alert_thresholds, all Go domain types and GORM entity structs (completed 2026-06-14)
 - [ ] **Phase 27: Budget CRUD + Realizado** - Budget management API (create/edit/delete/list) with per-category caps, GetSpent via GetBalance reuse, IDOR guards
 - [ ] **Phase 28: Threshold Alerts** - CheckAndFireAlerts with last_fired_period latch, post-commit goroutine hooks on transaction writes, inbox notification persistence
 - [ ] **Phase 29: Budget Frontend** - BudgetsPage, BudgetCard with Mantine Progress, BudgetFormDrawer, alert notification navigation, query cache invalidation
@@ -234,7 +234,7 @@ Plans:
 - [x] 26-02-PLAN.md — domain/budget.go (Budget, BudgetAlertThreshold, BudgetFilter, BudgetSpentResult, BudgetScope Private-only) + Period-boundary contract test
 
 **Wave 2** *(blocked on 26-02)*
-- [ ] 26-03-PLAN.md — entity/budget.go GORM structs + ToDomain/FromDomain conversions + full `go build ./...` verification (SC3)
+- [x] 26-03-PLAN.md — entity/budget.go GORM structs + ToDomain/FromDomain conversions + full `go build ./...` verification (SC3)
 
 ### Phase 27: Budget CRUD + Realizado
 **Goal**: Users can manage their single private budget (add, edit, remove per-category caps) via the API, and retrieve per-category realized spend for any calendar month computed correctly via GetBalance reuse
@@ -302,7 +302,7 @@ Plans:
 | 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
-| 26. DB Migrations + Domain Types | v1.7 | 2/3 | Executing | 2026-06-14 |
+| 26. DB Migrations + Domain Types | v1.7 | 3/3 | Complete   | 2026-06-14 |
 | 27. Budget CRUD + Realizado | v1.7 | 0/? | Not started | - |
 | 28. Threshold Alerts | v1.7 | 0/? | Not started | - |
 | 29. Budget Frontend | v1.7 | 0/? | Not started | - |
