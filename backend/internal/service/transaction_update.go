@@ -45,6 +45,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		req:                    req,
 		previousTransaction:    previousTransaction,
 		previousAmount:         previousTransaction.Amount,
+		sourceIDs:              sourceIDs,
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
 		isLinkedTxEdit:         isLinkedTxEdit,
@@ -241,7 +242,10 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 // With propagation, the edit lands on multiple installments, so each affected
 // source is recomputed once (#117, extended for #205).
 func (s *transactionService) recomputeLinkedSettlements(ctx context.Context, data *transactionUpdateData) error {
-	recomputedSources := make(map[int]bool)
+	// Resolve the distinct author-side sources whose partner installment the amount
+	// edit actually applied to (respecting propagation) via the partner→source map
+	// built during fetch — no per-installment lookups.
+	sourceIDSet := make(map[int]bool)
 	for i := range data.transactions {
 		own := data.transactions[i]
 		if own == nil || own.ID == 0 {
@@ -250,24 +254,24 @@ func (s *transactionService) recomputeLinkedSettlements(ctx context.Context, dat
 		if !s.shouldUpdateTransactionBasedOnPropagationSettings(own, data) {
 			continue
 		}
-		installmentSourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, own.ID)
-		if err != nil {
-			return pkgErrors.Internal("failed to get source transaction IDs for settlement recompute", err)
+		if sourceID, ok := data.linkedSourceIDByPartnerID[own.ID]; ok {
+			sourceIDSet[sourceID] = true
 		}
-		for _, sourceID := range installmentSourceIDs {
-			if recomputedSources[sourceID] {
-				continue
-			}
-			recomputedSources[sourceID] = true
-			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-				IDs: []int{sourceID},
-			})
-			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
-			}
-			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
-				return err
-			}
+	}
+	if len(sourceIDSet) == 0 {
+		return nil
+	}
+
+	// Single bulk read of every affected source, performed AFTER the partner
+	// installments were persisted, so their preloaded linked-tx amounts reflect
+	// the edit.
+	sources, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{IDs: lo.Keys(sourceIDSet)})
+	if err != nil {
+		return pkgErrors.Internal("failed to fetch source transactions for settlement recompute", err)
+	}
+	for i := range sources {
+		if err := s.syncSettlementsForTransaction(ctx, sources[i].UserID, data, sources[i]); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1295,29 +1299,29 @@ func (s *transactionService) fetchRelatedTransactions(
 // The partner's linked installments each carry their OWN recurrence record (the
 // create path mints one per installment), so they cannot be collected by
 // recurrence id the way author-side installments are. Instead we walk the
-// AUTHOR's recurrence: the edited linked tx mirrors one author installment, and
-// its siblings are the partner-side mirrors of the author's other installments.
+// AUTHOR's recurrence with a single query that preloads the linked transactions,
+// then filter the partner-side mirrors in memory — no per-installment queries.
 // This works for both legacy and newly created data (#205).
 func (s *transactionService) fetchRelatedLinkedTransactions(ctx context.Context, data *transactionUpdateData) error {
 	edited := data.previousTransaction
 	data.transactions = append(data.transactions, edited)
+	data.linkedSourceIDByPartnerID = make(map[int]int)
+
+	// The edited row's source is already known (computed once in Update); record it
+	// so settlements can be recomputed without re-querying.
+	if len(data.sourceIDs) > 0 {
+		data.linkedSourceIDByPartnerID[edited.ID] = data.sourceIDs[0]
+	}
 
 	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent {
 		return nil
 	}
-	if edited.TransactionRecurrenceID == nil || edited.InstallmentNumber == nil {
+	if edited.TransactionRecurrenceID == nil || edited.InstallmentNumber == nil || len(data.sourceIDs) == 0 {
 		return nil
 	}
 
-	sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, edited.ID)
-	if err != nil {
-		return pkgErrors.Internal("failed to get source transaction IDs for linked propagation", err)
-	}
-	if len(sourceIDs) == 0 {
-		return nil
-	}
-
-	sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
+	// One query to learn the author recurrence + account from the edited row's source.
+	sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{data.sourceIDs[0]}})
 	if err != nil {
 		return pkgErrors.Internal("failed to fetch source transaction for linked propagation", err)
 	}
@@ -1325,6 +1329,8 @@ func (s *transactionService) fetchRelatedLinkedTransactions(ctx context.Context,
 		return nil
 	}
 
+	// One query for every author installment in the recurrence, with their linked
+	// transactions preloaded; the partner-side mirrors are filtered in memory.
 	authorInstallments, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
 		RecurrenceIDs: []int{*sourceTx.TransactionRecurrenceID},
 		AccountIDs:    []int{sourceTx.AccountID},
@@ -1333,24 +1339,22 @@ func (s *transactionService) fetchRelatedLinkedTransactions(ctx context.Context,
 		return pkgErrors.Internal("failed to fetch author installments for linked propagation", err)
 	}
 
-	// Collect the partner-side mirror of each author installment (same partner
-	// user, same connection account), excluding the edited row itself.
 	seen := map[int]bool{edited.ID: true}
-	for _, ai := range authorInstallments {
-		for i := range ai.LinkedTransactions {
-			lt := ai.LinkedTransactions[i]
-			if lt.UserID != edited.UserID || lt.AccountID != edited.AccountID || seen[lt.ID] {
+	for ai := range authorInstallments {
+		src := authorInstallments[ai]
+		for i := range src.LinkedTransactions {
+			lt := &src.LinkedTransactions[i]
+			if lt.UserID != edited.UserID || lt.AccountID != edited.AccountID {
+				continue
+			}
+			data.linkedSourceIDByPartnerID[lt.ID] = src.ID
+			if seen[lt.ID] {
 				continue
 			}
 			seen[lt.ID] = true
-			// Re-fetch each sibling by id so its own recurrence/tags are preloaded.
-			sib, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{lt.ID}})
-			if err != nil {
-				return pkgErrors.Internal("failed to fetch linked sibling for propagation", err)
-			}
-			if sib != nil {
-				data.transactions = append(data.transactions, sib)
-			}
+			// Use the preloaded linked tx directly — it carries every column the
+			// update loop needs (amount/date/description/category/installment).
+			data.transactions = append(data.transactions, lt)
 		}
 	}
 
