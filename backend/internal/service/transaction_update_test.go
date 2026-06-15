@@ -2396,6 +2396,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestPartnerCategorizeRecurringSpl
 	suite.Require().NoError(err)
 	suite.Require().Len(beforeB, 3, "userB should start with 3 mirror installments")
 
+	// All of userB's installments must share ONE recurrence (regression for the
+	// per-installment recurrence creation bug).
+	suite.Require().NotNil(beforeB[0].TransactionRecurrenceID)
+	for _, t := range beforeB {
+		suite.Require().NotNil(t.TransactionRecurrenceID)
+		suite.Assert().Equal(*beforeB[0].TransactionRecurrenceID, *t.TransactionRecurrenceID,
+			"userB installments must share a single recurrence")
+	}
+
 	// userB (the partner) categorizes their first installment, propagating forward.
 	err = suite.Services.Transaction.Update(ctx, beforeB[0].ID, userB.ID, &domain.TransactionUpdateRequest{
 		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
