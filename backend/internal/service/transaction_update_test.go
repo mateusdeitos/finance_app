@@ -5314,6 +5314,83 @@ func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_PartnerPropagatesEdi
 	}
 }
 
+// TestIssue205_PartnerCategoryEditDoesNotDuplicateInstallments reproduces the
+// production bug where the partner (to_user) categorizing ONE installment of a
+// linked recurring shared expense spawned duplicate installments for the
+// following months. Root cause: the partner's installments each carry their own
+// recurrence record (the create path mints one per installment), and the legacy
+// drawer sent no propagation_settings; the backend treated empty propagation as
+// "propagate", so normalizeInstallments saw a recurrence whose Installments
+// total exceeded the single row pointing at it and "filled the gap" with stub
+// rows. A linked-tx edit must NEVER create installments (#205).
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_PartnerCategoryEditDoesNotDuplicateInstallments() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB) // userB's own category
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            domain.Date{Time: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC)},
+		Description:     "Conta de Luz",
+		Amount:          11006,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  4,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB has 4 linked installments, each with its OWN recurrence record.
+	userBBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userBBefore, 4, "userB should start with exactly 4 linked installments")
+
+	// userB categorizes the SECOND installment with NO propagation_settings —
+	// exactly how the legacy linked drawer sent a category-only edit.
+	target := userBBefore[1]
+	err = suite.Services.Transaction.Update(ctx, target.ID, userB.ID, &domain.TransactionUpdateRequest{
+		CategoryID: lo.ToPtr(categoryB.ID),
+	})
+	suite.Require().NoError(err)
+
+	// No stub installments may be created — userB still has exactly 4.
+	userBAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBAfter, 4, "categorizing a linked installment must NOT create duplicate installments")
+
+	// userA's side is untouched (4 installments, original category).
+	userAAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userAAfter, 4, "userA installments must be untouched")
+}
+
 // TestInstallmentScenario9b: recorrência 4x mensal com split -> remove split da parcela 3
 // (propagation=current_and_future, installment > 1, total inalterado).
 // Regressão para issue #83: edições de parcela n>1 com current_and_future e total igual
