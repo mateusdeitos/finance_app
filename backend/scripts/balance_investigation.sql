@@ -496,3 +496,25 @@ JOIN transactions mirror ON mirror.id = s.parent_transaction_id
 WHERE (s.account_id IN (28, 29) OR mirror.account_id IN (28, 29))
   AND s.amount <> mirror.amount
 ORDER BY ABS(s.amount - mirror.amount) DESC;
+
+
+-- -----------------------------------------------------------------------------
+-- Query M6 — Pares diretos conta<->conta (via linked_transactions) com valor OU
+--            mês diferente, tocando junho. Pega lançamentos criados DIRETO na
+--            conta compartilhada (ex.: despesa na conta 28 espelhada como receita
+--            na 29), cujo par deveria ter mesmo valor e mesmo mês.
+-- -----------------------------------------------------------------------------
+SELECT lt.transaction_id AS a_id, ta.account_id AS a_acc, ta.operation_type::text AS a_op,
+       ta.amount AS a_amount, ta.date AS a_date,
+       lt.linked_transaction_id AS b_id, tb.account_id AS b_acc, tb.operation_type::text AS b_op,
+       tb.amount AS b_amount, tb.date AS b_date,
+       (ta.amount - tb.amount) AS diff_amount, ta.description
+FROM linked_transactions lt
+JOIN transactions ta ON ta.id = lt.transaction_id
+JOIN transactions tb ON tb.id = lt.linked_transaction_id
+WHERE (ta.account_id IN (28, 29) OR tb.account_id IN (28, 29))
+  AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+  AND (ta.amount <> tb.amount
+       OR date_trunc('month', ta.date) <> date_trunc('month', tb.date))
+  AND (date_trunc('month', ta.date) = DATE '2026-06-01'
+       OR date_trunc('month', tb.date) = DATE '2026-06-01');
