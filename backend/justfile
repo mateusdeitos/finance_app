@@ -94,6 +94,12 @@ generate-mocks:
 seed email partner="":
 	go run cmd/scripts/seed/main.go {{email}} {{partner}}
 
+# Consolidate partner recurrences fragmented by the create-transaction bug.
+# Runs a dry-run preview by default; pass --apply to perform the changes.
+# Usage: just consolidate-recurrences [--apply]
+consolidate-recurrences *args:
+	go run cmd/scripts/consolidate_recurrences/main.go {{args}}
+
 # Clean build artifacts
 clean:
 	rm -rf bin/ mocks/
