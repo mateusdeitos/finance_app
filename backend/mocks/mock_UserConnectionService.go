@@ -358,11 +358,7 @@ func (_e *MockUserConnectionService_Expecter) UpdateSettings(ctx interface{}, us
 
 func (_c *MockUserConnectionService_UpdateSettings_Call) Run(run func(ctx context.Context, userID int, id int, accountName string, defaultSplitPercentage int, linkedTransactionDayOfMonth *int)) *MockUserConnectionService_UpdateSettings_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var _p5 *int
-		if args[5] != nil {
-			_p5 = args[5].(*int)
-		}
-		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(string), args[4].(int), _p5)
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(string), args[4].(int), args[5].(*int))
 	})
 	return _c
 }

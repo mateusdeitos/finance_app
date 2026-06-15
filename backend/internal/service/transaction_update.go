@@ -81,11 +81,34 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		isLinkedTxEdit:         isLinkedTxEdit,
 	}
 
+	// Detect a shared-account-direct edit: a transaction created directly on a
+	// connection account is mirrored 1:1 (inverted) on the partner's connection
+	// account with no settlement, so source and mirror must always share the same
+	// amount. The discriminator is the SOURCE transaction's account — a split's
+	// source lives on a private account, a shared-account transaction's source on a
+	// connection account. Only worth checking when a mirror exists.
+	if data.isLinkedTxEdit || len(previousTransaction.LinkedTransactions) > 0 {
+		sourceForDetection := previousTransaction
+		if data.isLinkedTxEdit {
+			src, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
+			if err != nil {
+				return err
+			}
+			sourceForDetection = src
+		}
+		sourceAccount, err := s.services.Account.GetByID(ctx, sourceForDetection.UserID, sourceForDetection.AccountID)
+		if err != nil {
+			return err
+		}
+		data.isSharedAccountEdit = sourceAccount.UserConnection != nil
+	}
+
 	// Linked transaction edits never change split/type/recurrence (those fields are
-	// rejected by validation). Treat them as unchanged so rebuildTransactions does
-	// not misread the absent SplitSettings as a "removed split" and delete the
-	// partner's installments.
-	if data.isLinkedTxEdit {
+	// rejected by validation), and shared-account edits keep their 1:1 mirror in
+	// amount-sync directly. Treat both as unchanged so rebuildTransactions does not
+	// misread the absent SplitSettings as a "removed split" and delete the partner's
+	// installments.
+	if data.isLinkedTxEdit || data.isSharedAccountEdit {
 		data.scenario = updateChanges{
 			Value:           NOT_CHANGED,
 			SplitHasChanged: false,
@@ -147,6 +170,16 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 
 		if req.Amount != nil && *req.Amount > 0 {
 			own.Amount = *req.Amount
+
+			// Shared-account author edit: the partner's 1:1 mirror on their
+			// connection account must stay equal in amount. Splits intentionally
+			// differ (the private source holds the full amount, the mirror the
+			// share), so this is gated on the shared-account case only.
+			if data.isSharedAccountEdit && !data.isLinkedTxEdit {
+				for i := range own.LinkedTransactions {
+					own.LinkedTransactions[i].Amount = *req.Amount
+				}
+			}
 		}
 
 		if req.Date != nil && !req.Date.IsZero() {
@@ -239,15 +272,35 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// the partner's new amount, so we recompute them on the source's behalf
 	// using the freshly-persisted lt.Amount (#117).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
-		for _, sourceID := range sourceIDs {
-			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-				IDs: []int{sourceID},
-			})
-			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
+		if data.isSharedAccountEdit {
+			// Shared-account partner edit: the source transaction lives on the
+			// author's connection account as a 1:1 mirror (no settlement), so it
+			// must adopt the partner's new amount. Honor propagation so only the
+			// installments actually updated sync, mapping each mirror back to its
+			// source via the linked_transactions join.
+			for _, mirrorTx := range data.transactions {
+				if !s.shouldUpdateTransactionBasedOnPropagationSettings(mirrorTx, data) {
+					continue
+				}
+				srcIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, mirrorTx.ID)
+				if err != nil {
+					return pkgErrors.Internal("failed to get source transaction IDs for shared-account sync", err)
+				}
+				if err := s.transactionRepo.UpdateAmountByIDs(ctx, srcIDs, *req.Amount); err != nil {
+					return err
+				}
 			}
-			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
-				return err
+		} else {
+			for _, sourceID := range sourceIDs {
+				sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
+					IDs: []int{sourceID},
+				})
+				if err != nil {
+					return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
+				}
+				if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
+					return err
+				}
 			}
 		}
 	}

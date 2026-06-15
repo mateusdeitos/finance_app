@@ -70,6 +70,7 @@ type TransactionRepository interface { //nolint:interfacebloat // transaction is
 	Delete(ctx context.Context, ids []int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
+	UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	NullifyCategory(ctx context.Context, categoryID int) error
 	ReassignCategory(ctx context.Context, fromID, toID int) error

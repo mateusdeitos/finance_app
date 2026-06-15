@@ -542,3 +542,56 @@ WHERE ta.account_id IN (28, 29) AND tb.account_id IN (28, 29)
   AND (date_trunc('month', ta.date) = DATE '2026-06-01'
        OR date_trunc('month', tb.date) = DATE '2026-06-01')
 ORDER BY ABS(ta.amount - tb.amount) DESC;
+
+
+-- =============================================================================
+-- DUPLICAÇÃO DE ESPELHO (#117) — quando o parceiro edita/categoriza a tx espelho
+-- de um split, ela pode ser duplicada do lado dele/dela. O débito extra fica sem
+-- settlement correspondente -> desequilibra o saldo (residual negativo).
+-- =============================================================================
+
+
+-- -----------------------------------------------------------------------------
+-- Query D1 — Espelhos órfãos na conta do parceiro (29): criados pelo autor (6)
+--   via split mas SEM settlement apontando e SEM linha em linked_transactions.
+--   Um espelho legítimo é sempre parent_transaction_id de um settlement e está
+--   no join; uma duplicata fica solta. Some os amounts: deve explicar o residual.
+-- -----------------------------------------------------------------------------
+SELECT t.id, t.amount, t.date, t.description, t.category_id, t.operation_type::text AS op
+FROM transactions t
+WHERE t.account_id = 29 AND t.deleted_at IS NULL
+  AND t.original_user_id = 6 AND t.user_id = 7
+  AND NOT EXISTS (SELECT 1 FROM settlements s WHERE s.parent_transaction_id = t.id)
+  AND NOT EXISTS (SELECT 1 FROM linked_transactions lt
+                  WHERE lt.linked_transaction_id = t.id OR lt.transaction_id = t.id)
+ORDER BY t.date, t.description;
+
+
+-- -----------------------------------------------------------------------------
+-- Query D2 — Duplicatas por chave natural nas contas de conexão (mesmo
+--   valor/data/descrição/conta/usuário 2+ vezes). category_ids mostra a cópia
+--   categorizada vs a duplicata.
+-- -----------------------------------------------------------------------------
+SELECT account_id, user_id, original_user_id, operation_type::text AS op, amount, date, description,
+       COUNT(*) AS qtd,
+       array_agg(id ORDER BY id) AS tx_ids,
+       array_agg(category_id ORDER BY id) AS category_ids,
+       array_agg(installment_number ORDER BY id) AS parcelas
+FROM transactions
+WHERE account_id IN (28, 29) AND deleted_at IS NULL
+GROUP BY account_id, user_id, original_user_id, operation_type, amount, date, description
+HAVING COUNT(*) > 1
+ORDER BY date, description;
+
+
+-- -----------------------------------------------------------------------------
+-- Query D3 — Corrupção no join linked_transactions: pares reversos/duplicados
+--   (a->b e b->a). Sintoma estrutural do #117.
+-- -----------------------------------------------------------------------------
+SELECT LEAST(transaction_id, linked_transaction_id) AS a,
+       GREATEST(transaction_id, linked_transaction_id) AS b,
+       COUNT(*) AS qtd,
+       array_agg(transaction_id || '->' || linked_transaction_id) AS direcoes
+FROM linked_transactions
+GROUP BY LEAST(transaction_id, linked_transaction_id), GREATEST(transaction_id, linked_transaction_id)
+HAVING COUNT(*) > 1;
