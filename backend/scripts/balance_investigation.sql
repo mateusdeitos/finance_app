@@ -386,3 +386,113 @@ SELECT mes,
 FROM movs
 GROUP BY mes
 ORDER BY mes;
+
+
+-- =============================================================================
+-- SEÇÃO DIRECIONADA — saldo MENSAL de 06/2026
+--   Caso concreto: conta 28 (user 6) x conta 29 (user 7).
+--   Período no GetBalance (não acumulado): date BETWEEN '2026-06-01' E '2026-06-30'.
+--   Ajuste as constantes abaixo para outro mês/contas.
+-- =============================================================================
+
+
+-- -----------------------------------------------------------------------------
+-- Query M1 — Saldo de 06/2026 de cada conta, lado a lado (espelha GetBalance
+--            não-acumulado: sem initial_balance).
+-- -----------------------------------------------------------------------------
+WITH rng AS (SELECT DATE '2026-06-01' AS d0, DATE '2026-06-30' AS d1),
+acc(account_id, user_id) AS (VALUES (28, 6), (29, 7))
+SELECT acc.account_id, acc.user_id,
+       COALESCE(tx.bal, 0)               AS tx_bal,
+       COALESCE(st.bal, 0)               AS settle_bal,
+       COALESCE(tx.bal, 0) + COALESCE(st.bal, 0) AS saldo_junho_cents
+FROM acc
+LEFT JOIN LATERAL (
+    SELECT SUM(CASE WHEN t.operation_type = 'credit' THEN t.amount ELSE -t.amount END) AS bal
+    FROM transactions t, rng
+    WHERE t.account_id = acc.account_id AND t.user_id = acc.user_id AND t.deleted_at IS NULL
+      AND t.date BETWEEN rng.d0 AND rng.d1
+) tx ON TRUE
+LEFT JOIN LATERAL (
+    SELECT SUM(CASE WHEN s.type = 'credit' THEN s.amount ELSE -s.amount END) AS bal
+    FROM settlements s
+    JOIN transactions src ON src.id = s.source_transaction_id AND src.deleted_at IS NULL, rng
+    WHERE s.account_id = acc.account_id AND s.user_id = acc.user_id
+      AND s.date BETWEEN rng.d0 AND rng.d1
+) st ON TRUE;
+
+
+-- -----------------------------------------------------------------------------
+-- Query M2 — Todos os lançamentos de 06/2026 nas duas contas (para conferir
+--            item a item). Cada despesa compartilhada deveria aparecer como um
+--            settlement numa conta e uma transação de sinal oposto na outra.
+-- -----------------------------------------------------------------------------
+SELECT 'tx'::text AS origem, t.id, t.account_id, t.user_id, t.type::text AS tipo,
+       t.operation_type::text AS op, t.amount, t.date, t.charge_id,
+       t.description
+FROM transactions t
+WHERE t.account_id IN (28, 29) AND t.deleted_at IS NULL
+  AND t.date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+UNION ALL
+SELECT 'settlement', s.id, s.account_id, s.user_id, s.type::text, s.type::text,
+       s.amount, s.date, NULL,
+       'parent_tx=' || s.parent_transaction_id || ' source_tx=' || s.source_transaction_id
+FROM settlements s
+JOIN transactions src ON src.id = s.source_transaction_id AND src.deleted_at IS NULL
+WHERE s.account_id IN (28, 29)
+  AND s.date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+ORDER BY account_id, date, origem;
+
+
+-- -----------------------------------------------------------------------------
+-- Query M3 — *** SUSPEITO Nº 1 PARA DIVERGÊNCIA MENSAL ***
+--            Charges cujas duas pernas caem em MESES diferentes.
+--   charge_accept.go usa chargerDate (data de criação) na perna do charger e
+--   req.Date (data do aceite) na perna do payer. Se forem de meses diferentes,
+--   uma conta é debitada em junho e a outra creditada em outro mês -> o mês não
+--   fecha (embora o acumulado feche).
+-- -----------------------------------------------------------------------------
+SELECT t.charge_id,
+       COUNT(DISTINCT date_trunc('month', t.date)) AS meses_distintos,
+       array_agg(DISTINCT to_char(t.date, 'YYYY-MM') ORDER BY to_char(t.date, 'YYYY-MM')) AS meses,
+       array_agg(t.account_id ORDER BY t.date) AS contas,
+       array_agg(t.operation_type::text ORDER BY t.date) AS ops,
+       array_agg(t.amount ORDER BY t.date) AS amounts
+FROM transactions t
+WHERE t.charge_id IS NOT NULL AND t.deleted_at IS NULL
+  AND t.account_id IN (28, 29)
+GROUP BY t.charge_id
+HAVING COUNT(DISTINCT date_trunc('month', t.date)) > 1;
+
+
+-- -----------------------------------------------------------------------------
+-- Query M4 — *** SUSPEITO Nº 2 ***
+--            Settlement e seu espelho em meses diferentes, tocando junho.
+--   GetBalance agrupa settlement por s.date e o espelho por t.date.
+-- -----------------------------------------------------------------------------
+SELECT s.id AS settlement_id, s.account_id AS conta_settlement, s.amount,
+       s.date AS settlement_date, to_char(s.date, 'YYYY-MM') AS mes_settlement,
+       mirror.id AS espelho_id, mirror.account_id AS conta_espelho,
+       mirror.date AS espelho_date, to_char(mirror.date, 'YYYY-MM') AS mes_espelho
+FROM settlements s
+JOIN transactions mirror ON mirror.id = s.parent_transaction_id
+WHERE (s.account_id IN (28, 29) OR mirror.account_id IN (28, 29))
+  AND date_trunc('month', s.date) <> date_trunc('month', mirror.date)
+  AND (date_trunc('month', s.date)      = DATE '2026-06-01'
+    OR date_trunc('month', mirror.date) = DATE '2026-06-01')
+ORDER BY s.date;
+
+
+-- -----------------------------------------------------------------------------
+-- Query M5 — Pares com VALOR divergente tocando as contas 28/29 (qualquer mês,
+--            mas afeta junho se uma das pontas estiver em junho).
+-- -----------------------------------------------------------------------------
+SELECT s.id AS settlement_id, s.account_id AS conta_settlement, s.amount AS settlement_amount,
+       mirror.id AS espelho_id, mirror.account_id AS conta_espelho, mirror.amount AS espelho_amount,
+       (s.amount - mirror.amount) AS diferenca_cents,
+       s.date AS settlement_date, mirror.date AS espelho_date
+FROM settlements s
+JOIN transactions mirror ON mirror.id = s.parent_transaction_id
+WHERE (s.account_id IN (28, 29) OR mirror.account_id IN (28, 29))
+  AND s.amount <> mirror.amount
+ORDER BY ABS(s.amount - mirror.amount) DESC;
