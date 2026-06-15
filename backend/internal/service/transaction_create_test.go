@@ -435,11 +435,12 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		case 2:
-			// toTx from transfer2: credit on user1's shared account (received from user2)
+			// toTx from transfer2: debit on user1's shared account (user2 transferred to user1,
+			// so user1 is the counterpart and gets the debit that mirrors user2's credit)
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		}
 	}
 
@@ -482,11 +483,12 @@ func (suite *TransactionCreateWithDBTestSuite) TestTransferBetweenDifferentUsers
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
 			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 		case 2:
-			// toTx from transfer1: credit on user2's shared account (received from user1)
+			// toTx from transfer1: debit on user2's shared account (user1 transferred to user2,
+			// so user2 is the counterpart and gets the debit that mirrors user1's credit)
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		}
 	}
 
@@ -609,11 +611,11 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 				suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 			}
 		} else {
-			// Last 3: toTx from transfer2 (OriginalUserID=user2), credit on shared account
+			// Last 3: toTx from transfer2 (OriginalUserID=user2), debit on shared account
 			suite.Assert().Equal(user2.ID, lo.FromPtr(transactionsUser1[i].OriginalUserID), fmt.Sprintf("transactionsUser1[%d].OriginalUserID should be %d", i, user2.ID))
 			suite.Assert().Equal(int64(500), int64(transactionsUser1[i].Amount), fmt.Sprintf("transactionsUser1[%d].Amount should be %d", i, 500))
 			suite.Assert().Equal(connection.FromAccountID, transactionsUser1[i].AccountID, fmt.Sprintf("transactionsUser1[%d].AccountID should be %d", i, connection.FromAccountID))
-			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser1[i].OperationType, fmt.Sprintf("transactionsUser1[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		}
 	}
 
@@ -654,11 +656,11 @@ func (suite *TransactionCreateWithDBTestSuite) TestRecurringTransferBetweenDiffe
 				suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
 			}
 		} else {
-			// Last 3: toTx from transfer1 (OriginalUserID=user1), credit on shared account
+			// Last 3: toTx from transfer1 (OriginalUserID=user1), debit on shared account
 			suite.Assert().Equal(user1.ID, lo.FromPtr(transactionsUser2[i].OriginalUserID), fmt.Sprintf("transactionsUser2[%d].OriginalUserID should be %d", i, user1.ID))
 			suite.Assert().Equal(int64(100), int64(transactionsUser2[i].Amount), fmt.Sprintf("transactionsUser2[%d].Amount should be %d", i, 100))
 			suite.Assert().Equal(connection.ToAccountID, transactionsUser2[i].AccountID, fmt.Sprintf("transactionsUser2[%d].AccountID should be %d", i, connection.ToAccountID))
-			suite.Assert().Equal(domain.OperationTypeCredit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeCredit))
+			suite.Assert().Equal(domain.OperationTypeDebit, transactionsUser2[i].OperationType, fmt.Sprintf("transactionsUser2[%d].OperationType should be %s", i, domain.OperationTypeDebit))
 		}
 	}
 }

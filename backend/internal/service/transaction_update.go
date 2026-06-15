@@ -736,9 +736,11 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 
 	c.SwapIfNeeded(data.userID)
 
-	// Cross-user transfer: create both the fromTx (author's credit on shared account)
-	// and the toTx (receiver's credit on their shared account), matching the creation
-	// logic in injectLinkedTransactions.
+	// Cross-user transfer: create both the fromTx (author's credit on their shared
+	// account) and the toTx (a debit on the counterpart's shared account), matching the
+	// creation logic in injectLinkedTransactions. The two legs have opposite operation
+	// types so the connection stays zero-sum — crediting the author's side debits the
+	// counterpart's, otherwise both sides would be credited and the balance would drift.
 	fromTx := domain.Transaction{
 		ID:                      0,
 		InstallmentNumber:       tx.InstallmentNumber,
@@ -763,7 +765,7 @@ func (s *transactionService) rebuildTransferLinkedTransactions(
 		UserID:            c.ToUserID,
 		OriginalUserID:    tx.OriginalUserID,
 		Type:              domain.TransactionTypeTransfer,
-		OperationType:     domain.OperationTypeCredit,
+		OperationType:     domain.OperationTypeDebit,
 		AccountID:         c.ToAccountID,
 		CategoryID:        nil,
 		Amount:            baseAmount,

@@ -227,11 +227,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_SameUserToDif
 	suite.Assert().Equal(userA.ID, fromTx.UserID)
 	suite.Assert().Equal(domain.OperationTypeCredit, fromTx.OperationType)
 
-	// toTx: credit on partner's shared account
+	// toTx: debit on partner's shared account (mirrors the author's credit fromTx, keeping
+	// the connection zero-sum)
 	toTx := updated.LinkedTransactions[1]
 	suite.Assert().Equal(conn.ToAccountID, toTx.AccountID)
 	suite.Assert().Equal(conn.ToUserID, toTx.UserID)
-	suite.Assert().Equal(domain.OperationTypeCredit, toTx.OperationType)
+	suite.Assert().Equal(domain.OperationTypeDebit, toTx.OperationType)
 
 	// Old same-user credit transaction should be deleted; author keeps main debit + fromTx credit
 	userATxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userA.ID})
@@ -375,11 +376,11 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_Transfer_DifferentUser
 	suite.Assert().Equal(userA.ID, fromTx.UserID, "fromTx should belong to userA")
 	suite.Assert().Equal(domain.OperationTypeCredit, fromTx.OperationType)
 
-	// toTx: credit on userC's shared account
+	// toTx: debit on userC's shared account (mirrors the author's credit fromTx)
 	toTx := updated.LinkedTransactions[1]
 	suite.Assert().Equal(connAC.ToAccountID, toTx.AccountID, "toTx should now target userC's account")
 	suite.Assert().Equal(userC.ID, toTx.UserID, "toTx should now belong to userC")
-	suite.Assert().Equal(domain.OperationTypeCredit, toTx.OperationType)
+	suite.Assert().Equal(domain.OperationTypeDebit, toTx.OperationType)
 
 	// userB should have no transactions
 	userBTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})

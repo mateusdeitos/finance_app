@@ -327,7 +327,15 @@ When users create a transfer to another user through a connection account, 3 tra
 
 - 1 transfer operation type = 'debit' with the account being the author private account
 - 1 transfer operation type = 'credit' with the account being the author side's account of the user_connection (fromTx)
-- 1 transfer operation type = 'credit' with the account being the other user side's account of the user_connection (toTx)
+- 1 transfer operation type = 'debit' with the account being the other user side's account of the user_connection (toTx)
+
+The fromTx (author side, credit) and the toTx (counterpart side, debit) have **opposite**
+operation types so the connection stays zero-sum: a transfer only moves money, so crediting
+the author's shared account must debit the counterpart's. If both sides were credited, the
+combined connection balance would drift by `2 × amount` instead of staying balanced — and a
+direct transfer used to settle a debt would push the balance away from zero instead of
+toward it. This mirrors the charge-settlement flow, which already debits one connection
+account and credits the other.
 
 **Updates must preserve the same 3-transaction structure.** When `rebuildTransferLinkedTransactions` runs (for `RemainedTransfer` or `TypeChangedToTransfer` scenarios), it must recreate both the fromTx and the toTx. To determine if a transfer is cross-user, check for a `UserConnection` on the destination account via `getConnectionFromDestinationAccountID` — do NOT check account ownership (`account.UserID`), because connection accounts may belong to the connection creator.
 

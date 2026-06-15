@@ -364,11 +364,12 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_IncomeToDifferentUserT
 	suite.Assert().Equal(userA.ID, fromTx.UserID)
 	suite.Assert().Equal(domain.OperationTypeCredit, fromTx.OperationType)
 
-	// toTx: credit on partner's shared account
+	// toTx: debit on partner's shared account (mirrors the author's credit fromTx so the
+	// connection stays zero-sum)
 	toTx := updated.LinkedTransactions[1]
 	suite.Assert().Equal(conn.ToAccountID, toTx.AccountID)
 	suite.Assert().Equal(userB.ID, toTx.UserID)
-	suite.Assert().Equal(domain.OperationTypeCredit, toTx.OperationType)
+	suite.Assert().Equal(domain.OperationTypeDebit, toTx.OperationType)
 }
 
 // ─── shouldUpdateTransactionBasedOnPropagationSettings ───────────────────────

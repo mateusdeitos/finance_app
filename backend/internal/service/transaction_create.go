@@ -602,6 +602,16 @@ func (s *transactionService) injectLinkedTransactions(
 			toDate = adjustLinkedTransactionDay(transaction.Date, connection.ToLinkedTransactionDayOfMonth)
 		}
 
+		// The counterpart's linked transaction always carries the author's own
+		// OperationType:
+		//   - Shared expense/income: mirrors the author's leg (debit/credit) so the
+		//     partner's shared account moves the same direction.
+		//   - Cross-user transfer: the author's fromTransaction is the credit mirror
+		//     of the private debit, so the counterpart leg must be the OPPOSITE
+		//     (a debit) to keep the connection zero-sum. Crediting the author's
+		//     shared account debits the counterpart's — otherwise both sides would be
+		//     credited and the connection balance would drift instead of settling.
+		//     For a transfer, transaction.OperationType is the debit we want here.
 		toTransaction := domain.Transaction{
 			ID:                0,
 			InstallmentNumber: transaction.InstallmentNumber,
@@ -610,7 +620,7 @@ func (s *transactionService) injectLinkedTransactions(
 			UserID:            connection.ToUserID,
 			OriginalUserID:    &userID,
 			Type:              transaction.Type,
-			OperationType:     lo.Ternary(req.TransactionType == domain.TransactionTypeTransfer, transaction.OperationType.Invert(), transaction.OperationType),
+			OperationType:     transaction.OperationType,
 			AccountID:         connection.ToAccountID,
 			CategoryID:        nil,
 			Amount:            amount,

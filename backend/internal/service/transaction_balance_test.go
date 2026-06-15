@@ -986,10 +986,11 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(0), result1.Balance)
 
-	// user2 balance: +3000 (credit on connection account)
+	// user2 balance: -3000 (debit toTx on connection account — the counterpart leg that
+	// mirrors user1's credit, keeping the connection zero-sum)
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(3000), result2.Balance)
+	suite.Assert().Equal(int64(-3000), result2.Balance)
 
 	// user1 source account: -3000
 	resultSrc, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{
@@ -1005,12 +1006,18 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(3000), resultFromTx.Balance)
 
-	// user2 connection account: +3000
+	// user2 connection account: -3000 (debit toTx mirroring user1's credit fromTx, so the
+	// two sides of the connection net to zero — a transfer just moves money, it must not
+	// inflate the combined connection balance)
 	resultDst, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{
 		AccountIDs: []int{conn.ToAccountID},
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(3000), resultDst.Balance)
+	suite.Assert().Equal(int64(-3000), resultDst.Balance)
+
+	// The connection as a whole nets to zero: user1's +3000 fromTx offsets user2's -3000
+	// toTx, so the transfer settles cleanly instead of drifting the connection balance.
+	suite.Assert().Equal(int64(0), resultFromTx.Balance+resultDst.Balance)
 }
 
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser_AmountUpdated() {
@@ -1121,10 +1128,10 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_DiffUser
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(0), result1.Balance)
 
-	// user2: +4000
+	// user2: -4000 (debit toTx mirroring user1's credit fromTx)
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(4000), result2.Balance)
+	suite.Assert().Equal(int64(-4000), result2.Balance)
 }
 
 func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser_DestinationChanged() {
@@ -1240,10 +1247,10 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Transfer_SameUser
 	suite.Require().NoError(err)
 	suite.Assert().Equal(int64(0), result1.Balance)
 
-	// user2: +1500 (credit on connection account)
+	// user2: -1500 (debit toTx on connection account mirroring user1's credit fromTx)
 	result2, err := suite.Services.Transaction.GetBalance(ctx, user2.ID, period, domain.BalanceFilter{})
 	suite.Require().NoError(err)
-	suite.Assert().Equal(int64(1500), result2.Balance)
+	suite.Assert().Equal(int64(-1500), result2.Balance)
 
 	// user1 old destination account2: now 0
 	resultOldDst, err := suite.Services.Transaction.GetBalance(ctx, user1.ID, period, domain.BalanceFilter{

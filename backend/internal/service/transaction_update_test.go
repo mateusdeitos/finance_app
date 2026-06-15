@@ -1222,7 +1222,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestScenario6_OwnExpenseWithLinke
 			{
 				Amount:                  200,
 				Type:                    domain.TransactionTypeTransfer,
-				OperationType:           domain.OperationTypeCredit,
+				OperationType:           domain.OperationTypeDebit,
 				AccountID:               destination.ToAccountID,
 				CategoryID:              nil,
 				Date:                    expectedDate,
@@ -2668,10 +2668,10 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5h_Increas
 	suite.Require().NoError(err)
 	suite.Assert().Len(afterFromTx, 6, "author should have 6 fromTx installments")
 
-	// toUser: 6 credit on shared account
+	// toUser: 6 debit on shared account (counterpart legs mirroring the author's credits)
 	toUserAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &toUser.ID})
 	suite.Require().NoError(err)
-	suite.Assert().Len(toUserAfter, 6, "toUser should have 6 credit installments")
+	suite.Assert().Len(toUserAfter, 6, "toUser should have 6 debit installments")
 
 	// Total: author 12 + toUser 6 = 18
 	suite.Assert().Equal(6, afterDebit[0].TransactionRecurrence.Installments)
@@ -5582,15 +5582,15 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateTransferBetweenDifferen
 	suite.Require().NoError(err)
 	suite.Assert().Len(authorTxs, 2, "author should see 2 transactions (debit + fromTx credit)")
 
-	// toUser sees 1 tx (credit on their shared account)
+	// toUser sees 1 tx (debit on their shared account — counterpart leg mirroring the author's credit)
 	toUserTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
 		UserID: &toUser.ID,
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Len(toUserTxs, 1, "toUser should see 1 transaction (credit)")
+	suite.Assert().Len(toUserTxs, 1, "toUser should see 1 transaction (debit)")
 	suite.Assert().Equal(int64(10000), toUserTxs[0].Amount)
 	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxs[0].Type)
-	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxs[0].OperationType)
+	suite.Assert().Equal(domain.OperationTypeDebit, toUserTxs[0].OperationType)
 	suite.Assert().Equal(connection.ToAccountID, toUserTxs[0].AccountID)
 
 	// Update the transfer amount from the author
@@ -5620,7 +5620,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdateTransferBetweenDifferen
 	suite.Assert().Len(toUserTxsAfterUpdate, 1, "toUser should still see 1 transaction after update")
 	suite.Assert().Equal(newAmount, toUserTxsAfterUpdate[0].Amount, "toUser tx amount should be updated")
 	suite.Assert().Equal(domain.TransactionTypeTransfer, toUserTxsAfterUpdate[0].Type)
-	suite.Assert().Equal(domain.OperationTypeCredit, toUserTxsAfterUpdate[0].OperationType)
+	suite.Assert().Equal(domain.OperationTypeDebit, toUserTxsAfterUpdate[0].OperationType)
 	suite.Assert().Equal(connection.ToAccountID, toUserTxsAfterUpdate[0].AccountID)
 	suite.Assert().Equal(author.ID, lo.FromPtr(toUserTxsAfterUpdate[0].OriginalUserID), "originalUserID should be the author")
 
@@ -5716,7 +5716,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_U
 	for _, tx := range toUserTxsAfter {
 		suite.Assert().Equal(newAmount, tx.Amount)
 		suite.Assert().NotNil(tx.TransactionRecurrenceID, "toUser tx recurrence should be preserved")
-		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+		suite.Assert().Equal(domain.OperationTypeDebit, tx.OperationType)
 	}
 }
 
@@ -5927,7 +5927,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestRecurringTransfer_CrossUser_C
 	suite.Assert().Len(userCTxs, 3, "userC should have 3 installments")
 	for _, tx := range userCTxs {
 		suite.Assert().Equal(int64(4000), tx.Amount)
-		suite.Assert().Equal(domain.OperationTypeCredit, tx.OperationType)
+		suite.Assert().Equal(domain.OperationTypeDebit, tx.OperationType)
 		suite.Assert().Equal(connAC.ToAccountID, tx.AccountID)
 		suite.Assert().NotNil(tx.TransactionRecurrenceID, "userC tx recurrence should exist")
 	}
