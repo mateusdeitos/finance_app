@@ -518,3 +518,27 @@ WHERE (ta.account_id IN (28, 29) OR tb.account_id IN (28, 29))
        OR date_trunc('month', ta.date) <> date_trunc('month', tb.date))
   AND (date_trunc('month', ta.date) = DATE '2026-06-01'
        OR date_trunc('month', tb.date) = DATE '2026-06-01');
+
+
+-- -----------------------------------------------------------------------------
+-- Query M7 — Pares ESPELHO em conta compartilhada que NÃO batem em valor.
+--   Isola o bug: as DUAS pernas estão em contas de conexão (28/29) e foram
+--   criadas direto na conta compartilhada (linked tx 1:1 invertido, sem
+--   settlement). Quando os valores divergem, alguém editou um lado e o outro
+--   não sincronizou. Exclui splits legítimos (fonte em conta privada).
+--   Remova o filtro de data para varrer todos os meses.
+-- -----------------------------------------------------------------------------
+SELECT lt.transaction_id AS minha_tx, ta.account_id AS minha_conta, ta.user_id AS meu_user,
+       ta.operation_type::text AS minha_op, ta.amount AS meu_valor, ta.date AS minha_data,
+       lt.linked_transaction_id AS espelho_tx, tb.account_id AS conta_espelho, tb.user_id AS user_espelho,
+       tb.operation_type::text AS op_espelho, tb.amount AS valor_espelho, tb.date AS data_espelho,
+       (ta.amount - tb.amount) AS diff_cents, ta.description
+FROM linked_transactions lt
+JOIN transactions ta ON ta.id = lt.transaction_id
+JOIN transactions tb ON tb.id = lt.linked_transaction_id
+WHERE ta.account_id IN (28, 29) AND tb.account_id IN (28, 29)
+  AND ta.deleted_at IS NULL AND tb.deleted_at IS NULL
+  AND ta.amount <> tb.amount
+  AND (date_trunc('month', ta.date) = DATE '2026-06-01'
+       OR date_trunc('month', tb.date) = DATE '2026-06-01')
+ORDER BY ABS(ta.amount - tb.amount) DESC;
