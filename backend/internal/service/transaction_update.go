@@ -76,6 +76,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		req:                    req,
 		previousTransaction:    *previousTransaction,
 		currentTransaction:     cloneTransactionForUpdate(previousTransaction),
+		sourceIDs:              sourceIDs,
 		transactions:           []*domain.Transaction{},
 		transactionIDsToRemove: make(map[int]bool),
 		isLinkedTxEdit:         isLinkedTxEdit,
@@ -238,17 +239,15 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// author chose. Settlements derived from the source still need to reflect
 	// the partner's new amount, so we recompute them on the source's behalf
 	// using the freshly-persisted lt.Amount (#117).
+	//
+	// When the partner propagates the amount change across their recurrence
+	// (issue #205), every affected installment on the partner's side adopts the
+	// new amount, so the settlement on each matching author installment must be
+	// recomputed too — not just the edited installment's source. Walk each
+	// updated partner installment and recompute settlements for its source(s).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
-		for _, sourceID := range sourceIDs {
-			sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-				IDs: []int{sourceID},
-			})
-			if err != nil {
-				return pkgErrors.Internal("failed to fetch source transaction for settlement recompute", err)
-			}
-			if err := s.syncSettlementsForTransaction(ctx, sourceTx.UserID, data, sourceTx); err != nil {
-				return err
-			}
+		if err := s.recomputeLinkedSettlements(ctx, data); err != nil {
+			return err
 		}
 	}
 
@@ -264,6 +263,48 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// not silently use the completed transaction.
 	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
+	return nil
+}
+
+// recomputeLinkedSettlements recomputes the author-side settlement for every
+// partner installment that the current linked-tx amount edit applied to. The
+// partner's amount change does not cross to the author's source transaction, but
+// the settlement derived from each source must follow the partner's new amount.
+// With propagation, the edit lands on multiple installments, so each affected
+// source is recomputed once (#117, extended for #205).
+func (s *transactionService) recomputeLinkedSettlements(ctx context.Context, data *transactionUpdateData) error {
+	// Resolve the distinct author-side sources whose partner installment the amount
+	// edit actually applied to (respecting propagation) via the partner→source map
+	// built during fetch — no per-installment lookups.
+	sourceIDSet := make(map[int]bool)
+	for i := range data.transactions {
+		own := data.transactions[i]
+		if own == nil || own.ID == 0 {
+			continue
+		}
+		if !s.shouldUpdateTransactionBasedOnPropagationSettings(own, data) {
+			continue
+		}
+		if sourceID, ok := data.linkedSourceIDByPartnerID[own.ID]; ok {
+			sourceIDSet[sourceID] = true
+		}
+	}
+	if len(sourceIDSet) == 0 {
+		return nil
+	}
+
+	// Single bulk read of every affected source, performed AFTER the partner
+	// installments were persisted, so their preloaded linked-tx amounts reflect
+	// the edit.
+	sources, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{IDs: lo.Keys(sourceIDSet)})
+	if err != nil {
+		return pkgErrors.Internal("failed to fetch source transactions for settlement recompute", err)
+	}
+	for i := range sources {
+		if err := s.syncSettlementsForTransaction(ctx, sources[i].UserID, data, sources[i]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -429,6 +470,16 @@ func (s *transactionService) determineTypeUpdateScenario(ctx context.Context, da
 }
 
 func (s *transactionService) normalizeInstallments(ctx context.Context, data *transactionUpdateData) error {
+	// Linked-tx edits never restructure the recurrence (RecurrenceSettings is a
+	// disallowed field for them). The partner's installments are gathered directly
+	// in fetchRelatedLinkedTransactions, so the count-based add/remove logic must
+	// not run here — otherwise a partner whose installments don't share a single
+	// recurrence record (the create path mints one per installment) would get
+	// stray stub installments created to "fill" the series (#205).
+	if data.isLinkedTxEdit {
+		return nil
+	}
+
 	if len(data.transactions) == 0 {
 		return nil
 	}
@@ -1216,6 +1267,12 @@ func (s *transactionService) fetchRelatedTransactions(
 	ctx context.Context,
 	data *transactionUpdateData) error {
 
+	// Linked-tx edits gather siblings by walking the author's recurrence, since
+	// the partner's installments don't share a single recurrence id (#205).
+	if data.isLinkedTxEdit {
+		return s.fetchRelatedLinkedTransactions(ctx, data)
+	}
+
 	// Seed the list with the MUTABLE clone (currentTransaction); the pristine
 	// previousTransaction is never placed in data.transactions so the update loop
 	// cannot mutate the before-snapshot. The remaining read-only filters below use
@@ -1266,6 +1323,82 @@ func (s *transactionService) fetchRelatedTransactions(
 
 	data.transactions = append(data.transactions, transactions...)
 
+	return nil
+}
+
+// fetchRelatedLinkedTransactions populates data.transactions for a partner
+// (to_user) edit of their linked transaction. The edited row is always included;
+// when propagation is not "current" and the row is part of a recurrence, the
+// partner's sibling installments are gathered too.
+//
+// The partner's linked installments each carry their OWN recurrence record (the
+// create path mints one per installment), so they cannot be collected by
+// recurrence id the way author-side installments are. Instead we walk the
+// AUTHOR's recurrence with a single query that preloads the linked transactions,
+// then filter the partner-side mirrors in memory — no per-installment queries.
+// This works for both legacy and newly created data (#205).
+func (s *transactionService) fetchRelatedLinkedTransactions(ctx context.Context, data *transactionUpdateData) error {
+	// Seed the edited row with the MUTABLE clone; the pristine previousTransaction is
+	// never placed in data.transactions. Both hold identical values here (pre-loop),
+	// so the id/recurrence/account reads below are equivalent.
+	edited := data.currentTransaction
+	data.transactions = append(data.transactions, edited)
+	data.linkedSourceIDByPartnerID = make(map[int]int)
+
+	// The edited row's source is already known (computed once in Update); record it
+	// so settlements can be recomputed without re-querying.
+	if len(data.sourceIDs) > 0 {
+		data.linkedSourceIDByPartnerID[edited.ID] = data.sourceIDs[0]
+	}
+
+	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent {
+		return nil
+	}
+	if edited.TransactionRecurrenceID == nil || edited.InstallmentNumber == nil || len(data.sourceIDs) == 0 {
+		return nil
+	}
+
+	// One query to learn the author recurrence + account from the edited row's source.
+	sourceTx, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{data.sourceIDs[0]}})
+	if err != nil {
+		return pkgErrors.Internal("failed to fetch source transaction for linked propagation", err)
+	}
+	if sourceTx == nil || sourceTx.TransactionRecurrenceID == nil {
+		return nil
+	}
+
+	// One query for every author installment in the recurrence, with their linked
+	// transactions preloaded; the partner-side mirrors are filtered in memory.
+	authorInstallments, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{
+		RecurrenceIDs: []int{*sourceTx.TransactionRecurrenceID},
+		AccountIDs:    []int{sourceTx.AccountID},
+	})
+	if err != nil {
+		return pkgErrors.Internal("failed to fetch author installments for linked propagation", err)
+	}
+
+	seen := map[int]bool{edited.ID: true}
+	for ai := range authorInstallments {
+		src := authorInstallments[ai]
+		for i := range src.LinkedTransactions {
+			lt := &src.LinkedTransactions[i]
+			if lt.UserID != edited.UserID || lt.AccountID != edited.AccountID {
+				continue
+			}
+			data.linkedSourceIDByPartnerID[lt.ID] = src.ID
+			if seen[lt.ID] {
+				continue
+			}
+			seen[lt.ID] = true
+			// Use the preloaded linked tx directly — it carries every column the
+			// update loop needs (amount/date/description/category/installment).
+			data.transactions = append(data.transactions, lt)
+		}
+	}
+
+	slices.SortFunc(data.transactions, func(a, b *domain.Transaction) int {
+		return lo.FromPtr(a.InstallmentNumber) - lo.FromPtr(b.InstallmentNumber)
+	})
 	return nil
 }
 
@@ -1394,7 +1527,10 @@ func (s *transactionService) validateUpdateTransactionRequest(ctx context.Contex
 //
 // Detection rules (D-01 through D-04):
 //   - D-01: fires only on AddedSplit / RemovedSplit / linked-side amount change.
-//   - D-02: cosmetic-only edits (category/description/date) hit no switch arm → no fire.
+//   - D-02: cosmetic-only edits (category/description/date) do not notify. The
+//     frontend always sends the current amount, so the linked-side arm compares
+//     the requested amount against the previous one and only fires on a real
+//     change (issue #205).
 //   - D-03: self-edit guard — the original author editing their own tx never notifies.
 //   - D-04: remove still notifies; entity_id points to the (soft-deleted) linked tx.
 func (s *transactionService) maybeDispatchSplitUpdatedNotification(
@@ -1403,6 +1539,23 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 	sourceIDs []int,
 	data *transactionUpdateData,
 ) {
+	events := s.collectSplitUpdatedEvents(ctx, callerUserID, sourceIDs, data)
+	if len(events) > 0 {
+		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
+		go s.services.Notification.Dispatch(context.Background(), events)
+	}
+}
+
+// collectSplitUpdatedEvents builds (but does not dispatch) the split_updated
+// notification events for a partner-initiated edit. It is split out from
+// maybeDispatchSplitUpdatedNotification so the decision rules can be asserted
+// directly in tests without racing the async dispatch goroutine.
+func (s *transactionService) collectSplitUpdatedEvents(
+	ctx context.Context,
+	callerUserID int,
+	sourceIDs []int,
+	data *transactionUpdateData,
+) []domain.NotificationEvent {
 	changes := data.scenario
 	var events []domain.NotificationEvent
 
@@ -1413,7 +1566,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		// cause the guard to never fire for legacy rows with nil OriginalUserID.
 		if data.previousTransaction.OriginalUserID != nil &&
 			callerUserID == *data.previousTransaction.OriginalUserID {
-			return
+			return nil
 		}
 		// The recipient must deep-link to the linked tx THEY own (just created on
 		// their connection account), not the author's source tx — which the
@@ -1461,7 +1614,7 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		// cause the guard to never fire for legacy rows with nil OriginalUserID.
 		if data.previousTransaction.OriginalUserID != nil &&
 			callerUserID == *data.previousTransaction.OriginalUserID {
-			return
+			return nil
 		}
 		for _, lt := range data.previousTransaction.LinkedTransactions {
 			if lt.UserID == callerUserID {
@@ -1478,7 +1631,16 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 			})
 		}
 
-	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0:
+	case data.isLinkedTxEdit && data.req.Amount != nil && *data.req.Amount > 0 &&
+		*data.req.Amount != data.previousTransaction.Amount:
+		// Issue #205: notify the source owner ONLY when the partner actually
+		// changes the amount. The partner can now also edit cosmetic fields
+		// (date / description / category) on their side; those must not spam the
+		// author with a split_updated notification. The frontend always sends the
+		// current amount, so we compare against the read-only previousTransaction
+		// snapshot (now a pristine value that the update loop never mutates) rather
+		// than relying on amount presence alone.
+		//
 		// Caller IS the partner editing their linked tx amount.
 		// Recipient = source transaction owner.
 		for _, srcID := range sourceIDs {
@@ -1504,8 +1666,5 @@ func (s *transactionService) maybeDispatchSplitUpdatedNotification(
 		}
 	}
 
-	if len(events) > 0 {
-		//nolint:gosec,contextcheck // G118: intentional detached context — post-commit push dispatch must outlive request ctx (NOTIF-06)
-		go s.services.Notification.Dispatch(context.Background(), events)
-	}
+	return events
 }
