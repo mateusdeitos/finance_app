@@ -476,7 +476,25 @@ export function TransactionsPage() {
   const settlementById = useMemo(() => {
     const m = new Map<number, Transactions.Settlement>();
     for (const tx of allTransactions) {
+      // Inline settlements riding along with their source transaction.
       for (const s of tx.settlements_from_source ?? []) m.set(s.id, s);
+      // Orphan/synthetic settlement rows arrive as standalone transactions
+      // carrying origin_settlement_id; their amount/type live on the tx
+      // itself, so map them too — otherwise selecting one wouldn't count
+      // toward selectedTotalCents.
+      if (tx.origin_settlement_id !== undefined) {
+        m.set(tx.origin_settlement_id, {
+          id: tx.origin_settlement_id,
+          user_id: tx.user_id,
+          amount: tx.amount,
+          type: tx.operation_type === "credit" ? "credit" : "debit",
+          account_id: tx.account_id,
+          source_transaction_id: tx.source_transaction_id ?? 0,
+          parent_transaction_id: 0,
+          date: tx.date,
+          created_at: tx.created_at,
+        });
+      }
     }
     return m;
   }, [allTransactions]);
