@@ -507,6 +507,17 @@ func (s *transactionService) normalizeInstallments(ctx context.Context, data *tr
 		return nil
 	}
 
+	// Linked transaction (partner) edits never change recurrence structure —
+	// recurrence_settings are rejected by validation, so the installment count
+	// must stay fixed. Skipping is essential because a partner's recurring split
+	// gets ONE recurrence per installment at creation (each with
+	// Installments=TotalInstallments but only a single backing row); without this
+	// guard, expectedCount (N-K+1) would dwarf existingCount (1) and we would
+	// create N-K phantom duplicate installments on the partner's account.
+	if data.isLinkedTxEdit {
+		return nil
+	}
+
 	// For propagation=current with an existing recurrence, the other installments were not
 	// fetched and must not be touched — skip all normalization.
 	if data.req.PropagationSettings == domain.TransactionPropagationSettingsCurrent &&
