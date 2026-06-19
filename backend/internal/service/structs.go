@@ -22,6 +22,12 @@ type transactionUpdateData struct {
 	transactionIDsToRemove map[int]bool
 	scenario               updateChanges
 	isLinkedTxEdit         bool
+	// isSharedAccountEdit marks an edit to a transaction created directly on a
+	// connection account (a 1:1 inverted mirror on the partner's connection
+	// account, with no settlement). Such edits keep source and mirror amounts
+	// equal and bypass the split state machine — which would otherwise misread
+	// the absent split_settings as a removed split and delete the mirror.
+	isSharedAccountEdit bool
 
 	// sourceIDs are the source (author) transaction IDs backing the edited tx when
 	// it is a partner's linked transaction (empty otherwise). Computed once in

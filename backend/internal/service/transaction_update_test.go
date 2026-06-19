@@ -2343,6 +2343,92 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5d_Increas
 	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
 }
 
+// TestPartnerCategorizeRecurringSplit_NoDuplication is a regression for the
+// duplication bug: a partner categorizing (editing the category of) their mirror
+// installment of a recurring split with propagation=current_and_future caused
+// normalizeInstallments to create phantom duplicate installments on the
+// partner's account. Each partner split installment carries its OWN recurrence
+// (Installments=Total but a single backing row), so without the isLinkedTxEdit
+// guard expectedCount (Total) dwarfs existingCount (1) and the missing
+// installments are wrongly created.
+func (suite *TransactionUpdateWithDBTestSuite) TestPartnerCategorizeRecurringSplit_NoDuplication() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: d},
+		Description:     "shared recurring expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB starts with exactly 3 mirror installments.
+	beforeB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(beforeB, 3, "userB should start with 3 mirror installments")
+
+	// All of userB's installments must share ONE recurrence (regression for the
+	// per-installment recurrence creation bug).
+	suite.Require().NotNil(beforeB[0].TransactionRecurrenceID)
+	for _, t := range beforeB {
+		suite.Require().NotNil(t.TransactionRecurrenceID)
+		suite.Assert().Equal(*beforeB[0].TransactionRecurrenceID, *t.TransactionRecurrenceID,
+			"userB installments must share a single recurrence")
+	}
+
+	// userB (the partner) categorizes their first installment, propagating forward.
+	err = suite.Services.Transaction.Update(ctx, beforeB[0].ID, userB.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
+		CategoryID:          lo.ToPtr(categoryB.ID),
+	})
+	suite.Require().NoError(err)
+
+	// No phantom installments may be created on the partner's side.
+	afterB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterB, 3, "userB must still have 3 installments — no duplication")
+
+	// The author's side is untouched.
+	afterA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterA, 3, "userA should still have 3 installments")
+}
+
 // TestInstallmentScenario5e: increase own income installments from 3→6 editing installment 2 (propagation=all).
 // Regression: new installment dates must anchor from last existing, not from the edited transaction.
 func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5e_IncreaseInstallments_OwnIncome_FromSecondInstallment() {

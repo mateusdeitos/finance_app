@@ -82,11 +82,17 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		isLinkedTxEdit:         isLinkedTxEdit,
 	}
 
+	data.isSharedAccountEdit, err = s.detectSharedAccountEdit(ctx, previousTransaction, data.isLinkedTxEdit, sourceIDs)
+	if err != nil {
+		return err
+	}
+
 	// Linked transaction edits never change split/type/recurrence (those fields are
-	// rejected by validation). Treat them as unchanged so rebuildTransactions does
-	// not misread the absent SplitSettings as a "removed split" and delete the
-	// partner's installments.
-	if data.isLinkedTxEdit {
+	// rejected by validation), and shared-account edits keep their 1:1 mirror in
+	// amount-sync directly. Treat both as unchanged so rebuildTransactions does not
+	// misread the absent SplitSettings as a "removed split" and delete the partner's
+	// installments.
+	if data.isLinkedTxEdit || data.isSharedAccountEdit {
 		data.scenario = updateChanges{
 			Value:           NOT_CHANGED,
 			SplitHasChanged: false,
@@ -148,6 +154,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 
 		if req.Amount != nil && *req.Amount > 0 {
 			own.Amount = *req.Amount
+			s.syncSharedAccountMirrorAmount(data, own, *req.Amount)
 		}
 
 		if req.Date != nil && !req.Date.IsZero() {
@@ -246,7 +253,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// recomputed too — not just the edited installment's source. Walk each
 	// updated partner installment and recompute settlements for its source(s).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
-		if err := s.recomputeLinkedSettlements(ctx, data); err != nil {
+		if err := s.syncLinkedTxAmountPropagation(ctx, data); err != nil {
 			return err
 		}
 	}
@@ -264,6 +271,83 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
 	return nil
+}
+
+// detectSharedAccountEdit reports whether the edit targets a transaction created
+// directly on a connection account — a 1:1 inverted mirror on the partner's
+// connection account, with no settlement, whose source and mirror must always
+// share the same amount. The discriminator is the SOURCE transaction's account:
+// a split's source lives on a private account, a shared-account transaction's
+// source on a connection account. Only worth checking when a mirror exists.
+func (s *transactionService) detectSharedAccountEdit(ctx context.Context, previousTransaction *domain.Transaction, isLinkedTxEdit bool, sourceIDs []int) (bool, error) {
+	if !isLinkedTxEdit && len(previousTransaction.LinkedTransactions) == 0 {
+		return false, nil
+	}
+
+	sourceForDetection := previousTransaction
+	if isLinkedTxEdit {
+		src, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
+		if err != nil {
+			return false, err
+		}
+		sourceForDetection = src
+	}
+
+	sourceAccount, err := s.services.Account.GetByID(ctx, sourceForDetection.UserID, sourceForDetection.AccountID)
+	if err != nil {
+		return false, err
+	}
+	return sourceAccount.UserConnection != nil, nil
+}
+
+// syncSharedAccountMirrorAmount keeps the partner's 1:1 mirror equal in amount
+// when the author edits a shared-account transaction. Splits intentionally
+// differ (the private source holds the full amount, the mirror the share), so
+// this is a no-op outside the shared-account author-edit case.
+func (s *transactionService) syncSharedAccountMirrorAmount(data *transactionUpdateData, own *domain.Transaction, amount int64) {
+	if !data.isSharedAccountEdit || data.isLinkedTxEdit {
+		return
+	}
+	for i := range own.LinkedTransactions {
+		own.LinkedTransactions[i].Amount = amount
+	}
+}
+
+// syncLinkedTxAmountPropagation routes a partner-initiated amount edit to the
+// correct author-side sync: shared-account 1:1 mirrors overwrite the source
+// amount; splits recompute the source-derived settlement. Both honor propagation
+// across the partner's recurrence.
+func (s *transactionService) syncLinkedTxAmountPropagation(ctx context.Context, data *transactionUpdateData) error {
+	if data.isSharedAccountEdit {
+		return s.syncSharedAccountSourceAmounts(ctx, data)
+	}
+	return s.recomputeLinkedSettlements(ctx, data)
+}
+
+// syncSharedAccountSourceAmounts handles a partner-initiated amount edit on a
+// shared-account 1:1 mirror: the author-side source carries no settlement, so it
+// must itself adopt the partner's new amount. Mirrors recomputeLinkedSettlements'
+// structure — resolve the distinct affected sources via the partner→source map
+// built during fetch (#205), respecting propagation — but overwrites the source
+// amount in bulk instead of recomputing settlements.
+func (s *transactionService) syncSharedAccountSourceAmounts(ctx context.Context, data *transactionUpdateData) error {
+	sourceIDSet := make(map[int]bool)
+	for i := range data.transactions {
+		own := data.transactions[i]
+		if own == nil || own.ID == 0 {
+			continue
+		}
+		if !s.shouldUpdateTransactionBasedOnPropagationSettings(own, data) {
+			continue
+		}
+		if sourceID, ok := data.linkedSourceIDByPartnerID[own.ID]; ok {
+			sourceIDSet[sourceID] = true
+		}
+	}
+	if len(sourceIDSet) == 0 {
+		return nil
+	}
+	return s.transactionRepo.UpdateAmountByIDs(ctx, lo.Keys(sourceIDSet), *data.req.Amount)
 }
 
 // recomputeLinkedSettlements recomputes the author-side settlement for every
