@@ -171,11 +171,33 @@ export function TransactionsPage() {
     return tx?.transaction_recurrence_id != null;
   });
 
-  // Filter out linked transactions where user is not the original creator (SEL-02 silent skip)
+  // Filter out linked transactions where user is not the original creator (SEL-02 silent skip).
+  // Used for actions that the partner (to_user) is NOT allowed to perform on their own
+  // linked side: bulk delete (the backend cascades a partner delete onto the author's
+  // source) and bulk division (split_settings is a disallowed field for linked txs).
   function getEligibleIds(): number[] {
     return [...selectedIds].filter((id) => {
       const tx = allTransactions.find((t) => t.id === id);
       return tx?.original_user_id == null || tx?.original_user_id === currentUserId;
+    });
+  }
+
+  // Eligibility for bulk edits of fields the partner (to_user) is allowed to change on
+  // their own linked side — date and category (issue #205 parity with single-row edit).
+  // Unlike getEligibleIds, this includes the partner's linked transactions: their
+  // original_user_id points at the author, but the partner OWNS the row
+  // (user_id === currentUserId) and the backend permits amount/date/description/tags/
+  // category edits on it. buildUpdatePayload sends only { tags, ...overrides } for linked
+  // txs, so no disallowed structural field leaks onto the wire.
+  function getFieldEditEligibleIds(): number[] {
+    return [...selectedIds].filter((id) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      if (!tx) return false;
+      return (
+        tx.user_id === currentUserId ||
+        tx.original_user_id == null ||
+        tx.original_user_id === currentUserId
+      );
     });
   }
 
@@ -303,7 +325,7 @@ export function TransactionsPage() {
         propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer actionLabel="alterar" />);
       }
 
-      const eligibleIds = getEligibleIds();
+      const eligibleIds = getFieldEditEligibleIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id);
         return { id, label: tx?.description ?? String(id) };
@@ -353,7 +375,7 @@ export function TransactionsPage() {
       // Settlement IDs are tagged with a stable prefix in the BulkProgressItem
       // label-key so the action callback can dispatch each kind to the right
       // endpoint while reusing the existing progress drawer.
-      const eligibleTxIds = getEligibleIds();
+      const eligibleTxIds = getFieldEditEligibleIds();
       const txItems: BulkProgressItem[] = eligibleTxIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id);
         return { id, label: tx?.description ?? String(id) };
