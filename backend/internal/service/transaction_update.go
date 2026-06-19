@@ -253,11 +253,7 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	// recomputed too — not just the edited installment's source. Walk each
 	// updated partner installment and recompute settlements for its source(s).
 	if data.isLinkedTxEdit && req.Amount != nil && *req.Amount > 0 {
-		if data.isSharedAccountEdit {
-			if err := s.syncSharedAccountSourceAmounts(ctx, data); err != nil {
-				return err
-			}
-		} else if err := s.recomputeLinkedSettlements(ctx, data); err != nil {
+		if err := s.syncLinkedTxAmountPropagation(ctx, data); err != nil {
 			return err
 		}
 	}
@@ -315,6 +311,17 @@ func (s *transactionService) syncSharedAccountMirrorAmount(data *transactionUpda
 	for i := range own.LinkedTransactions {
 		own.LinkedTransactions[i].Amount = amount
 	}
+}
+
+// syncLinkedTxAmountPropagation routes a partner-initiated amount edit to the
+// correct author-side sync: shared-account 1:1 mirrors overwrite the source
+// amount; splits recompute the source-derived settlement. Both honor propagation
+// across the partner's recurrence.
+func (s *transactionService) syncLinkedTxAmountPropagation(ctx context.Context, data *transactionUpdateData) error {
+	if data.isSharedAccountEdit {
+		return s.syncSharedAccountSourceAmounts(ctx, data)
+	}
+	return s.recomputeLinkedSettlements(ctx, data)
 }
 
 // syncSharedAccountSourceAmounts handles a partner-initiated amount edit on a
