@@ -29,6 +29,16 @@ type transactionUpdateData struct {
 	// the absent split_settings as a removed split and delete the mirror.
 	isSharedAccountEdit bool
 
+	// sourceIDs are the source (author) transaction IDs backing the edited tx when
+	// it is a partner's linked transaction (empty otherwise). Computed once in
+	// Update so the linked-propagation helpers don't re-query per installment.
+	sourceIDs []int
+
+	// linkedSourceIDByPartnerID maps each partner-side installment ID gathered for
+	// a linked-tx edit to its author-side source transaction ID. Built once during
+	// fetch so settlements can be recomputed in bulk without per-row lookups (#205).
+	linkedSourceIDByPartnerID map[int]int
+
 	// transferToUserRecurrence caches the recurrence created for the toUser
 	// during rebuildTransferLinkedTransactions so it's reused across installments.
 	transferToUserRecurrence *domain.TransactionRecurrence

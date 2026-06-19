@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Box, Button, Group, Select, SimpleGrid, Stack } from "@mantine/core";
+import { Alert, Box, Button, Divider, Group, Select, SimpleGrid, Stack, TextInput } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
 import { DatePickerInput } from "@mantine/dates";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,12 +13,15 @@ import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { parseDate, localDateStr } from "@/utils/parseDate";
 import { CurrencyInput } from "./form/CurrencyInput";
+import { UpdatePropagationSelector } from "./UpdatePropagationSelector";
 import { TransactionsTestIds } from "@/testIds";
 
 const schema = z.object({
   date: z.string().min(1, "Data é obrigatória"),
   amount: z.number().int().positive("Valor deve ser maior que zero"),
   category_id: z.number().int("Selecione uma categoria"),
+  description: z.string().min(1, "Descrição é obrigatória"),
+  propagation_settings: z.enum(["current", "current_and_future", "all"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -39,6 +42,8 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
     label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
   }));
 
+  const isRecurring = transaction.transaction_recurrence_id != null;
+
   const {
     control,
     handleSubmit,
@@ -49,6 +54,8 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
       date: localDateStr(parseDate(transaction.date)),
       amount: transaction.amount,
       category_id: transaction.category_id ?? undefined,
+      description: transaction.description ?? "",
+      propagation_settings: "current",
     },
   });
 
@@ -61,6 +68,8 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
       amount: values.amount,
       date: values.date,
       category_id: values.category_id,
+      description: values.description,
+      propagation_settings: isRecurring ? values.propagation_settings : undefined,
     };
 
     mutation.mutate(
@@ -128,6 +137,22 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
 
           <Controller
             control={control}
+            name="description"
+            render={({ field }) => (
+              <TextInput
+                ref={field.ref}
+                label="Descrição"
+                required
+                value={field.value}
+                onChange={(e) => field.onChange(e.currentTarget.value)}
+                error={errors.description?.message}
+                data-testid={TransactionsTestIds.InputDescription}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
             name="category_id"
             render={({ field }) => (
               <Select
@@ -149,6 +174,19 @@ export function UpdateLinkedSplitDrawer({ transaction }: Props) {
               />
             )}
           />
+
+          {isRecurring && (
+            <>
+              <Divider />
+              <Controller
+                control={control}
+                name="propagation_settings"
+                render={({ field }) => (
+                  <UpdatePropagationSelector value={field.value} onChange={field.onChange} />
+                )}
+              />
+            </>
+          )}
         </Stack>
 
         <Box
