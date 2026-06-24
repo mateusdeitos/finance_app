@@ -3,6 +3,7 @@ import type { SVGProps } from 'react'
 import { Box, Center, Group, Loader, Stack, Text } from '@mantine/core'
 import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from 'recharts'
 import { useIncomeExpenseFlow, type FlowNode } from '@/hooks/useIncomeExpenseFlow'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { formatBalance } from '@/utils/formatCents'
 import { DashboardCard } from './DashboardCard'
 import { HomeTestIds } from '@/testIds'
@@ -108,9 +109,13 @@ function SankeyTooltip({ active, payload }: {
 export function IncomeSankeyCard({ month, year }: Props) {
   const { nodes, links, totalIncome, totalExpense, leftover, hasData, isLoading } =
     useIncomeExpenseFlow(month, year)
+  const isMobile = useIsMobile()
 
   // Grow the chart with the number of nodes so labels don't overlap.
   const height = Math.max(260, nodes.length * 28)
+  // Side margins reserve room for the income/expense labels; trim them on
+  // mobile so the flow isn't squeezed into a thin strip.
+  const sideMargin = isMobile ? 60 : 90
 
   return (
     <DashboardCard title="Distribuição da receita" testId={HomeTestIds.IncomeFlowSection}>
@@ -128,7 +133,7 @@ export function IncomeSankeyCard({ month, year }: Props) {
                 link={renderSankeyLink}
                 nodePadding={24}
                 nodeWidth={10}
-                margin={{ top: 30, right: 90, bottom: 8, left: 90 }}
+                margin={{ top: 30, right: sideMargin, bottom: 8, left: sideMargin }}
               >
                 <Tooltip content={<SankeyTooltip />} />
               </Sankey>
