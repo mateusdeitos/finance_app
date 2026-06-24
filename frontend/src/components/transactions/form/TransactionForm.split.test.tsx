@@ -15,6 +15,7 @@ const privateAccount: Transactions.Account = {
   name: "Mine",
   initial_balance: 0,
   is_active: true,
+  position: 0,
 };
 
 const connAccount: Transactions.Account = {
@@ -23,6 +24,7 @@ const connAccount: Transactions.Account = {
   name: "Partner",
   initial_balance: 0,
   is_active: true,
+  position: 0,
   user_connection: {
     id: 10,
     from_user_id: 1,

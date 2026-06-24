@@ -20,6 +20,7 @@ const privateAccount: Transactions.Account = {
   name: "Nubank",
   initial_balance: 0,
   is_active: true,
+  position: 0,
 };
 
 const sharedAccount: Transactions.Account = {
@@ -28,6 +29,7 @@ const sharedAccount: Transactions.Account = {
   name: "Amanda",
   initial_balance: 0,
   is_active: true,
+  position: 0,
   user_connection: {
     id: 3,
     from_user_id: VIEWER_ID,

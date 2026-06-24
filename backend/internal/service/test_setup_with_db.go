@@ -136,7 +136,6 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 
 	// Create services that don't depend on other services first
 	authService := NewAuthService(suite.Repos, suite.Config)
-	accountService := NewAccountService(suite.Repos)
 	categoryService := NewCategoryService(suite.Repos)
 	tagService := NewTagService(suite.Repos)
 	settlementService := NewSettlementService(suite.Repos)
@@ -144,19 +143,15 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	// Create Services struct with the services created so far
 	suite.Services = &Services{
 		Auth:       authService,
-		Account:    accountService,
 		Category:   categoryService,
 		Tag:        tagService,
 		Settlement: settlementService,
 	}
 
 	// Create services that depend on the Services struct
-	transactionService := NewTransactionService(suite.Repos, suite.Services)
-	userConnectionService := NewUserConnectionService(suite.Repos, suite.Services)
-
-	// Add the remaining services to the Services struct
-	suite.Services.Transaction = transactionService
-	suite.Services.UserConnection = userConnectionService
+	suite.Services.Account = NewAccountService(suite.Repos, suite.Services)
+	suite.Services.Transaction = NewTransactionService(suite.Repos, suite.Services)
+	suite.Services.UserConnection = NewUserConnectionService(suite.Repos, suite.Services)
 	suite.Services.Charge = NewChargeService(suite.Repos, suite.Services)
 	suite.Services.PushSubscription = NewPushSubscriptionService(suite.Repos, suite.Config)
 	suite.Services.Notification = NewNotificationService(suite.Repos, suite.Config)

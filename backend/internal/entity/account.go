@@ -11,29 +11,31 @@ import (
 )
 
 type Account struct {
-	ID             int
-	UserID         int
-	Name           string
-	Description    *string
-	InitialBalance int64
+	ID                    int
+	UserID                int
+	Name                  string
+	Description           *string
+	InitialBalance        int64
 	IsActive              bool
 	AvatarBackgroundColor *string
+	Position              int
 	CreatedAt             *time.Time
-	UpdatedAt      *time.Time
-	UserConnection *AccountUserConnection `gorm:"<-:false"`
+	UpdatedAt             *time.Time
+	UserConnection        *AccountUserConnection `gorm:"<-:false"`
 }
 
 func (a *Account) ToDomain() *domain.Account {
 	acc := &domain.Account{
-		ID:             a.ID,
-		UserID:         a.UserID,
-		Name:           a.Name,
-		Description:    a.Description,
-		InitialBalance: a.InitialBalance,
+		ID:                    a.ID,
+		UserID:                a.UserID,
+		Name:                  a.Name,
+		Description:           a.Description,
+		InitialBalance:        a.InitialBalance,
 		IsActive:              a.IsActive,
 		AvatarBackgroundColor: a.AvatarBackgroundColor,
+		Position:              a.Position,
 		CreatedAt:             a.CreatedAt,
-		UpdatedAt:      a.UpdatedAt,
+		UpdatedAt:             a.UpdatedAt,
 	}
 
 	if a.UserConnection != nil {
@@ -45,15 +47,16 @@ func (a *Account) ToDomain() *domain.Account {
 
 func AccountFromDomain(d *domain.Account) *Account {
 	a := &Account{
-		ID:             d.ID,
-		UserID:         d.UserID,
-		Name:           d.Name,
-		Description:    d.Description,
-		InitialBalance: d.InitialBalance,
+		ID:                    d.ID,
+		UserID:                d.UserID,
+		Name:                  d.Name,
+		Description:           d.Description,
+		InitialBalance:        d.InitialBalance,
 		IsActive:              d.IsActive,
 		AvatarBackgroundColor: d.AvatarBackgroundColor,
+		Position:              d.Position,
 		CreatedAt:             d.CreatedAt,
-		UpdatedAt:      d.UpdatedAt,
+		UpdatedAt:             d.UpdatedAt,
 	}
 
 	if d.UserConnection != nil {

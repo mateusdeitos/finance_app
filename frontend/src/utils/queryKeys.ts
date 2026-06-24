@@ -3,6 +3,7 @@ export const QueryKeys = {
   Transactions: 'transactions',
   Balance: 'balance',
   Accounts: 'accounts',
+  AccountDeletionInfo: 'account-deletion-info',
   Categories: 'categories',
   Tags: 'tags',
   InviteInfo: 'invite-info',
