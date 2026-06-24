@@ -49,7 +49,9 @@ function renderSankeyNode(rawProps: unknown): ReactNode {
     anchor = 'end'
   } else if (node.kind === 'hub') {
     labelX = x + width / 2
-    labelY = y - 8
+    // The hub is the tallest node and sits at the very top, so anchor the label
+    // just below the chart's top edge instead of above the node (which clips).
+    labelY = Math.max(y - 12, 14)
     anchor = 'middle'
   } else {
     labelX = x + width + 6
@@ -126,7 +128,7 @@ export function IncomeSankeyCard({ month, year }: Props) {
                 link={renderSankeyLink}
                 nodePadding={24}
                 nodeWidth={10}
-                margin={{ top: 8, right: 90, bottom: 8, left: 90 }}
+                margin={{ top: 30, right: 90, bottom: 8, left: 90 }}
               >
                 <Tooltip content={<SankeyTooltip />} />
               </Sankey>
