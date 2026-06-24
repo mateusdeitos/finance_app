@@ -455,8 +455,6 @@ definitions:
           the previously-saved value on update (preserved by the sync snapshot).
       percentage:
         type: integer
-      userConnection:
-        $ref: '#/definitions/domain.UserConnection'
     type: object
   domain.SubscribePushRequest:
     properties:

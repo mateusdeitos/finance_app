@@ -1,66 +1,63 @@
-# Requirements: Couples Finance App — v1.6 Push Notifications
+# Requirements: Couples Finance App — v1.7 Transaction Templates
 
-**Defined:** 2026-05-30
+**Defined:** 2026-06-07
 **Core Value:** Partners can accurately track shared finances, including in-progress installment purchases, without losing history or requiring manual workarounds.
-**Milestone goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
-**Source:** GitHub issue #174 (Notificações)
+**Milestone goal:** Let users save personal, reusable transaction templates (type, account, category, tags, split, description prefilled — never an amount) and apply them via quick chips in the transaction form, so repetitive entries only require typing the amount.
 
-## Milestone v1.6 Requirements
+## Milestone v1.7 Requirements
 
 Requirements for this milestone. Each maps to exactly one roadmap phase.
 
-### Push Subscription (SUB)
+### Template CRUD (TMPL)
 
-- [x] **SUB-01**: User can grant browser notification permission and register a Web Push subscription for the current device
-- [x] **SUB-02**: User can turn notifications off, which removes the current device's push subscription on the server
-- [x] **SUB-03**: System persists push subscriptions per user + device (endpoint + keys) and prunes a subscription when the push service reports it expired/invalid (HTTP 404/410)
-- [x] **SUB-04**: System can report whether the current device already has an active push subscription, so the frontend can show the correct enabled/disabled state
+- [x] **TMPL-01**: User can create a personal transaction template that captures type, account, category, tags, description, and split configuration — but never an amount or a date
+- [ ] **TMPL-02**: User can view a list of their own templates
+- [ ] **TMPL-03**: User can edit a template's saved fields
+- [ ] **TMPL-04**: User can delete a template
+- [x] **TMPL-05**: System persists the split configuration faithfully — preserving whether each row was percentage or fixed-amount — so applying a template reproduces the original split input
 
-### Notification Events (NOTIF)
+### Template Application (APPLY)
 
-- [x] **NOTIF-01**: When the partner creates a new charge, the charge recipient receives a push notification
-- [x] **NOTIF-02**: When the partner accepts a charge, the charge creator receives a push notification
-- [x] **NOTIF-03**: When the partner creates a new split transaction, the user whose side receives the linked transaction gets a push notification
-- [x] **NOTIF-04**: When the partner updates a split transaction in a way that affects the user's linked side, the user receives a push notification
-- [x] **NOTIF-05**: Each notification is persisted server-side with its type and a deep-link reference to the related entity (charge or transaction)
-- [x] **NOTIF-06**: Notifications are dispatched after the originating DB transaction commits; a delivery failure neither rolls back nor blocks the originating operation (best-effort)
+- [ ] **APPLY-01**: User sees a row of template chips at the top of the transaction form, styled like the existing date quick-chips
+- [ ] **APPLY-02**: Clicking a template chip fills the form from the template, leaves the amount field blank, and moves focus to the amount field
+- [ ] **APPLY-03**: A template's saved split is prefilled on apply and remains editable before submit
+- [ ] **APPLY-04**: User can apply a template even if a referenced account, category, or tag was deleted — the stale field is cleared and all other fields are preserved (no error or crash)
 
-### Notification Inbox (INBOX)
+### Template Management (MNG)
 
-- [x] **INBOX-01**: User can open an in-app notification inbox listing their notifications, newest first
-- [x] **INBOX-02**: User can see an unread count indicator and distinguish unread notifications from read ones
-- [x] **INBOX-03**: User can select a notification to navigate to its related charge or transaction
-- [x] **INBOX-04**: User can mark notifications as read individually and all at once; opening a notification marks it read
+- [ ] **MNG-01**: User can open a dedicated management surface (drawer/screen) to create, edit, and delete templates
+- [ ] **MNG-02**: User can save the current transaction form's values as a new template via a "Save as template" action
+- [ ] **MNG-03**: The template editor presents the split configuration sensibly with no amount present (no misleading "R$0,00" live display)
 
-### Permissions & Controls (CTRL)
+### Safety & Limits (SAFE)
 
-- [x] **CTRL-01**: User is asked for notification permission contextually via an explicit in-app action (not automatically on first load)
-- [x] **CTRL-02**: User can see and toggle the notification on/off state for the current device
-- [x] **CTRL-03**: Clicking a delivered OS/browser push notification opens the app focused on the related entity
+- [ ] **SAFE-01**: System caps templates at 3 per user and rejects creating a 4th with a clear, race-safe error
+- [ ] **SAFE-02**: Templates are private to their owner — another user cannot read, edit, or delete them (404 on owner mismatch, not 403)
 
 ## Future Requirements
 
 Deferred to a later milestone. Tracked but not in the current roadmap.
 
-### Notifications (future)
+### Templates (future)
 
-- **NOTIF-F1**: Charge reject / cancel notifications
-- **CTRL-F1**: Per-notification-type preference toggles (charges vs split transactions)
-- **DELIV-F1**: Queued / retried delivery for guaranteed push (e.g. Cloud Tasks)
-- **DIGEST-F1**: Notification grouping / digest when many events fire in a short window
+- **TMPL-F1**: Shared / connection-wide templates (both partners see the same set)
+- **TMPL-F2**: Reordering templates / custom chip order (v1.7 is deterministic creation-order)
+- **TMPL-F3**: Recurrence/installment settings saved on a template
+- **TMPL-F4**: Raise or remove the 3-template cap once the chip-row UX is validated
+- **TMPL-F5**: Apply a template to bulk-create many transactions at once
 
 ## Out of Scope
 
-Explicitly excluded for v1.6. Documented to prevent scope creep.
+Explicitly excluded for v1.7. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Email / SMS / native FCM / APN delivery | v1.6 is Web Push (PWA) only — reuses the existing service worker, no native shells |
-| Queued / retried push delivery | Synchronous best-effort chosen; durability deferred to a future milestone |
-| Per-notification-type preference toggles | v1.6 ships minimal device-level enable/disable only |
-| Charge reject / cancel notifications | Only "received" and "accepted" are in scope per issue #174 |
-| Notification grouping / digest | One notification per event in v1.6 |
-| Cross-device subscription sync / management UI | Each device manages its own subscription; no central device list |
+| Shared / connection-wide templates | v1.7 templates are personal (per user) only |
+| Storing an amount or date on a template | Amount is always blank on apply; date defaults to today at apply time |
+| Unlimited templates | Capped at 3 per user for v1.7 to keep the chip row and UI simple |
+| Recurrence / installment settings on templates | Templates seed a single transaction's base fields, not a recurring series |
+| Bulk-create from a template | Apply prefills one form; bulk creation is out of scope |
+| `is_template` column on `transactions` | Rejected for a dedicated table to isolate templates from all financial query paths |
 
 ## Traceability
 
@@ -68,29 +65,25 @@ Which phases cover which requirements. Populated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SUB-01 | Phase 24 | Complete (UAT pending) |
-| SUB-02 | Phase 24 | Complete (UAT pending) |
-| SUB-03 | Phase 22 | Complete |
-| SUB-04 | Phase 22 | Complete |
-| NOTIF-01 | Phase 23 | Complete |
-| NOTIF-02 | Phase 23 | Complete |
-| NOTIF-03 | Phase 23 | Complete |
-| NOTIF-04 | Phase 23 | Complete |
-| NOTIF-05 | Phase 23 | Complete |
-| NOTIF-06 | Phase 23 | Complete |
-| INBOX-01 | Phase 25 | Complete |
-| INBOX-02 | Phase 25 | Complete |
-| INBOX-03 | Phase 25 | Complete |
-| INBOX-04 | Phase 25 | Complete |
-| CTRL-01 | Phase 24 | Complete (UAT pending) |
-| CTRL-02 | Phase 24 | Complete (UAT pending) |
-| CTRL-03 | Phase 24 | Complete (UAT pending) |
+| TMPL-01 | Phase 26 | Complete (26-01) |
+| TMPL-02 | Phase 27 | Pending |
+| TMPL-03 | Phase 27 | Pending |
+| TMPL-04 | Phase 27 | Pending |
+| TMPL-05 | Phase 26 | Complete (26-01) |
+| APPLY-01 | Phase 29 | Pending |
+| APPLY-02 | Phase 29 | Pending |
+| APPLY-03 | Phase 29 | Pending |
+| APPLY-04 | Phase 29 | Pending |
+| MNG-01 | Phase 30 | Pending |
+| MNG-02 | Phase 30 | Pending |
+| MNG-03 | Phase 28 | Pending |
+| SAFE-01 | Phase 27 | Pending |
+| SAFE-02 | Phase 27 | Pending |
 
 **Coverage:**
-- v1.6 requirements: 17 total
-- Mapped to phases: 17
-- Unmapped: 0 ✓
+- v1.7 requirements: 14 total
+- Mapped to phases: 14 (100%)
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 — traceability mapped (Phases 22–25)*
+*Requirements defined: 2026-06-07 · Traceability populated: 2026-06-08*
