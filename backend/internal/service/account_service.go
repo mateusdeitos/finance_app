@@ -313,8 +313,18 @@ func (s *accountService) migrateAccountData(ctx context.Context, userID, account
 }
 
 func (s *accountService) Reorder(ctx context.Context, userID int, orderedIDs []int) error {
+	ctx, err := s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return pkgErrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
 	if err := s.accountRepo.Reorder(ctx, userID, orderedIDs); err != nil {
 		return pkgErrors.Internal("failed to reorder accounts", err)
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return pkgErrors.Internal("failed to commit transaction", err)
 	}
 	return nil
 }
