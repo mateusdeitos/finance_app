@@ -1,4 +1,4 @@
-import { Switch, Table, Text } from '@mantine/core'
+import { Group, Switch, Table, Text } from '@mantine/core'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useBalance } from '@/hooks/useBalance'
 import { formatBalance } from '@/utils/formatCents'
@@ -38,14 +38,16 @@ export function AccountBalancesCard({
       title="Saldo das contas"
       testId={HomeTestIds.AccountBalancesSection}
       action={
-        <Switch
-          size="sm"
-          checked={accumulated}
-          onChange={(e) => onAccumulatedChange(e.currentTarget.checked)}
-          label="Acumulado"
-          labelPosition="left"
-          data-testid={HomeTestIds.AccumulatedToggle}
-        />
+        <Group gap={8} wrap="nowrap" align="center">
+          <Text size="sm">Acumulado</Text>
+          <Switch
+            size="sm"
+            checked={accumulated}
+            onChange={(e) => onAccumulatedChange(e.currentTarget.checked)}
+            aria-label="Acumulado"
+            data-testid={HomeTestIds.AccumulatedToggle}
+          />
+        </Group>
       }
     >
       {accounts.length === 0 ? (

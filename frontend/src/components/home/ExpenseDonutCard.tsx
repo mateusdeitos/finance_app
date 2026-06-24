@@ -55,14 +55,16 @@ export function ExpenseDonutCard({ month, year, hideSettlements, onHideSettlemen
       title="Despesas por categoria"
       testId={HomeTestIds.ExpenseChartSection}
       action={
-        <Switch
-          size="sm"
-          checked={!hideSettlements}
-          onChange={(e) => onHideSettlementsChange(!e.currentTarget.checked)}
-          label="Considerar acertos"
-          labelPosition="left"
-          data-testid={HomeTestIds.SettlementsToggle}
-        />
+        <Group gap={8} wrap="nowrap" align="center">
+          <Text size="sm" ta="right">Considerar acertos</Text>
+          <Switch
+            size="sm"
+            checked={!hideSettlements}
+            onChange={(e) => onHideSettlementsChange(!e.currentTarget.checked)}
+            aria-label="Considerar acertos"
+            data-testid={HomeTestIds.SettlementsToggle}
+          />
+        </Group>
       }
     >
       {isLoading ? (
