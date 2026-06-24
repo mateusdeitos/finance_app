@@ -730,6 +730,54 @@ func (_c *MockTransactionRepository_Update_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// UpdateAmountByIDs provides a mock function with given fields: ctx, ids, amount
+func (_m *MockTransactionRepository) UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error {
+	ret := _m.Called(ctx, ids, amount)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAmountByIDs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int, int64) error); ok {
+		r0 = rf(ctx, ids, amount)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRepository_UpdateAmountByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAmountByIDs'
+type MockTransactionRepository_UpdateAmountByIDs_Call struct {
+	*mock.Call
+}
+
+// UpdateAmountByIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []int
+//   - amount int64
+func (_e *MockTransactionRepository_Expecter) UpdateAmountByIDs(ctx interface{}, ids interface{}, amount interface{}) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	return &MockTransactionRepository_UpdateAmountByIDs_Call{Call: _e.mock.On("UpdateAmountByIDs", ctx, ids, amount)}
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) Run(run func(ctx context.Context, ids []int, amount int64)) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]int), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) Return(_a0 error) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) RunAndReturn(run func(context.Context, []int, int64) error) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockTransactionRepository creates a new instance of MockTransactionRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockTransactionRepository(t interface {

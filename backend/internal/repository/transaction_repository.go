@@ -331,6 +331,20 @@ func (r *transactionRepository) GetSourceTransactionIDs(ctx context.Context, lin
 	return ids, err
 }
 
+// UpdateAmountByIDs sets the amount column on the given transactions without
+// touching their associations. Used to keep the source of a shared-account
+// transaction in amount-sync with its 1:1 partner mirror without going through
+// the full Save path (which would re-replace linked_transactions rows).
+func (r *transactionRepository) UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Transaction{}).
+		Where("id IN ?", ids).
+		Update("amount", amount).Error
+}
+
 func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
 	endDate := filter.Period.EndDate()
 	var args []interface{}

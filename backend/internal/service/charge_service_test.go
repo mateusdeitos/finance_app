@@ -36,6 +36,7 @@ func (s *ChargeServiceTestSuite) createPendingCharge(
 		PayerUserID:      payerUserID,
 		ChargerAccountID: &chargerAccID,
 		PayerAccountID:   nil,
+		InitiatorUserID:  chargerUserID,
 		ConnectionID:     connectionID,
 		PeriodMonth:      periodMonth,
 		PeriodYear:       periodYear,
@@ -371,7 +372,14 @@ func (s *ChargeServiceTestSuite) TestAccept_IDOR() {
 	}
 }
 
-func (s *ChargeServiceTestSuite) TestAccept_RoleReinference_BalanceFlipped() {
+// TestAccept_DoesNotReinferRoles is a regression test for the charge-settlement
+// doubling bug. The accept flow used to re-infer the charger/payer roles from
+// the charger's *single-period* connection balance and swap them when it was
+// negative. That single-period balance can disagree with the true (accumulated)
+// debt direction, and a wrong swap pushes both balances away from zero instead
+// of settling — doubling them. The roles chosen at creation must now be honored
+// verbatim, regardless of how the live balance looks at accept time.
+func (s *ChargeServiceTestSuite) TestAccept_DoesNotReinferRoles() {
 	ctx := context.Background()
 
 	charger, err := s.createTestUser(ctx)
@@ -390,27 +398,21 @@ func (s *ChargeServiceTestSuite) TestAccept_RoleReinference_BalanceFlipped() {
 	periodMonth, periodYear := 7, 2026
 	conn.SwapIfNeeded(charger.ID)
 	chargerConnAccID := conn.FromAccountID
-	payerConnAccID := conn.ToAccountID
-
-	// Seed credit in charger's conn account initially (balance > 0 for charger)
-	s.seedTransaction(ctx, charger.ID, chargerConnAccID, 10000, domain.OperationTypeCredit, periodMonth, periodYear)
 
 	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
-	// Charge created: charger has positive balance → charger is charger
+	// Charge created with charger as the initiator and an explicit amount.
 	charge := s.createPendingCharge(ctx,
 		charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID,
 		periodMonth, periodYear, chargeDate,
 	)
+	storedAmount := int64(10000)
+	charge.Amount = &storedAmount
+	s.Require().NoError(s.Repos.Charge.Update(ctx, charge))
 
-	// After creation, flip balance: add a large debit to charger's conn account
-	// so that charger's balance goes negative (charger now owes)
+	// Make the charger's single-period connection balance negative at accept
+	// time — the exact condition that used to trigger the buggy role swap.
 	s.seedTransaction(ctx, charger.ID, chargerConnAccID, 20000, domain.OperationTypeDebit, periodMonth, periodYear)
 
-	// Also seed the payer's side so we have conn acc for payer
-	_ = payerConnAccID // used implicitly via swap
-	_ = payerPrivAcc
-
-	// Accept as original payer (payer.ID has no account set on charge)
 	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
 	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
 		AccountID: payerPrivAcc.ID,
@@ -418,14 +420,19 @@ func (s *ChargeServiceTestSuite) TestAccept_RoleReinference_BalanceFlipped() {
 	})
 	s.Require().NoError(err)
 
-	// Reload charge: roles should have been swapped
 	reloaded, err := s.Repos.Charge.GetByID(ctx, charge.ID)
 	s.Require().NoError(err)
 	assert.Equal(s.T(), domain.ChargeStatusPaid, reloaded.Status)
 
-	// After swap: original charger is now PayerUserID, original payer is ChargerUserID
-	assert.Equal(s.T(), payer.ID, reloaded.ChargerUserID, "original payer should now be charger after balance flip")
-	assert.Equal(s.T(), charger.ID, reloaded.PayerUserID, "original charger should now be payer after balance flip")
+	// Roles are preserved — NO swap.
+	assert.Equal(s.T(), charger.ID, reloaded.ChargerUserID, "charger role must be preserved (no re-inference swap)")
+	assert.Equal(s.T(), payer.ID, reloaded.PayerUserID, "payer role must be preserved (no re-inference swap)")
+
+	// And the transfers honor the stored roles: charger's connection account is
+	// debited, payer's is credited.
+	rows := s.chargeTransactions(ctx, charge.ID)
+	s.Require().Len(rows, 4)
+	s.True(hasChargeTx(rows, charger.ID, chargerConnAccID, domain.OperationTypeDebit), "charger conn account debited")
 }
 
 // TestCreate_ArbitraryAmount_ZeroBalance verifies that a caller can create a charge
@@ -464,6 +471,7 @@ func (s *ChargeServiceTestSuite) TestCreate_ArbitraryAmount_ZeroBalance() {
 	assert.Equal(s.T(), amount, *created.Amount)
 	assert.Equal(s.T(), charger.ID, created.ChargerUserID)
 	assert.Equal(s.T(), payer.ID, created.PayerUserID)
+	assert.Equal(s.T(), charger.ID, created.InitiatorUserID, "creator is the initiator")
 	s.Require().NotNil(created.ChargerAccountID)
 	assert.Equal(s.T(), chargerPrivAcc.ID, *created.ChargerAccountID)
 	assert.Nil(s.T(), created.PayerAccountID)
@@ -503,6 +511,7 @@ func (s *ChargeServiceTestSuite) TestCreate_PayerRole_ZeroBalance() {
 	s.Require().NoError(err)
 	assert.Equal(s.T(), payer.ID, created.PayerUserID)
 	assert.Equal(s.T(), charger.ID, created.ChargerUserID)
+	assert.Equal(s.T(), payer.ID, created.InitiatorUserID, "payer is the initiator here")
 	s.Require().NotNil(created.PayerAccountID)
 	assert.Equal(s.T(), payerPrivAcc.ID, *created.PayerAccountID)
 	assert.Nil(s.T(), created.ChargerAccountID)
@@ -1006,4 +1015,116 @@ func (s *ChargeServiceTestSuite) TestUpdate_ChargeTransferRejectsTypeAndRecurren
 		s.Assert().True(hasTag(err, pkgErrors.ErrorTagChargeTransactionRecurrenceNotAllowed),
 			"expected ErrorTagChargeTransactionRecurrenceNotAllowed")
 	})
+}
+
+// chargeExists reports whether a charge with the given ID is still visible to the user.
+func (s *ChargeServiceTestSuite) chargeExists(ctx context.Context, userID, chargeID int) bool {
+	charges, err := s.Repos.Charge.Search(ctx, domain.ChargeSearchOptions{
+		UserID: userID,
+		IDs:    []int{chargeID},
+	})
+	s.Require().NoError(err)
+	return len(charges) > 0
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_PendingByEitherParty() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+
+	// The payer (counterparty) may delete a pending charge.
+	err = s.Services.Charge.Delete(ctx, payer.ID, charge.ID)
+	s.Require().NoError(err)
+	s.False(s.chargeExists(ctx, charger.ID, charge.ID), "charge should be gone")
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_RejectedAndCancelled() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	for _, status := range []domain.ChargeStatus{domain.ChargeStatusRejected, domain.ChargeStatusCancelled} {
+		charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+		charge.Status = status
+		s.Require().NoError(s.Repos.Charge.Update(ctx, charge))
+
+		err = s.Services.Charge.Delete(ctx, charger.ID, charge.ID)
+		s.Require().NoError(err, "should delete %s charge", status)
+		s.False(s.chargeExists(ctx, charger.ID, charge.ID))
+	}
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_PaidIsBlocked() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerPrivAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+	payerPrivAcc, err := s.createTestAccount(ctx, payer)
+	s.Require().NoError(err)
+
+	periodMonth, periodYear := 3, 2026
+	conn.SwapIfNeeded(charger.ID)
+	s.seedTransaction(ctx, charger.ID, conn.FromAccountID, 10000, domain.OperationTypeCredit, periodMonth, periodYear)
+
+	chargeDate := time.Date(periodYear, time.Month(periodMonth), 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerPrivAcc.ID, conn.ID, periodMonth, periodYear, chargeDate)
+
+	acceptDate := time.Date(periodYear, time.Month(periodMonth), 2, 0, 0, 0, 0, time.UTC)
+	err = s.Services.Charge.Accept(ctx, payer.ID, charge.ID, &domain.AcceptChargeRequest{
+		AccountID: payerPrivAcc.ID,
+		Date:      acceptDate,
+	})
+	s.Require().NoError(err)
+
+	err = s.Services.Charge.Delete(ctx, charger.ID, charge.ID)
+	s.Require().Error(err)
+	s.True(errors.Is(err, pkgErrors.ErrChargeCannotDeletePaid) || hasTag(err, pkgErrors.ErrorTagChargeCannotDeletePaid),
+		"expected paid charge delete to be blocked")
+	s.True(s.chargeExists(ctx, charger.ID, charge.ID), "paid charge must remain")
+}
+
+func (s *ChargeServiceTestSuite) TestDelete_NonPartyForbidden() {
+	ctx := context.Background()
+
+	charger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	payer, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	stranger, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+	conn, err := s.createAcceptedTestUserConnection(ctx, charger.ID, payer.ID, 50)
+	s.Require().NoError(err)
+	chargerAcc, err := s.createTestAccount(ctx, charger)
+	s.Require().NoError(err)
+
+	chargeDate := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	charge := s.createPendingCharge(ctx, charger.ID, payer.ID, chargerAcc.ID, conn.ID, 3, 2026, chargeDate)
+
+	err = s.Services.Charge.Delete(ctx, stranger.ID, charge.ID)
+	s.Require().Error(err)
+	s.True(s.chargeExists(ctx, charger.ID, charge.ID), "charge must remain after forbidden delete")
 }

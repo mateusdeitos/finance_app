@@ -833,6 +833,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/charges/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permanently deletes a charge. Allowed only while the charge is pending, rejected, or cancelled; paid charges cannot be deleted.",
+                "tags": [
+                    "charges"
+                ],
+                "summary": "Delete a charge (either party)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Charge ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/charges/{id}/accept": {
             "post": {
                 "security": [
@@ -3083,6 +3138,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "initiator_user_id": {
+                    "description": "InitiatorUserID is the user who created the charge. It is independent of\nthe charger/payer roles: a payer can initiate (\"I'll pay you\") just as a\ncharger can (\"you owe me\"). The OTHER party is the one who must accept or\nreject; the initiator is the one who can cancel.",
                     "type": "integer"
                 },
                 "payer_account_id": {

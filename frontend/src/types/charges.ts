@@ -8,6 +8,7 @@ export namespace Charges {
     payer_user_id: number;
     charger_account_id: number | null;
     payer_account_id: number | null;
+    initiator_user_id: number;
     connection_id: number;
     period_month: number;
     period_year: number;

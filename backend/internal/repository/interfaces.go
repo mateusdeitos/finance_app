@@ -76,6 +76,7 @@ type TransactionRepository interface { //nolint:interfacebloat // transaction is
 	ReassignAccount(ctx context.Context, fromAccountID, toAccountID int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
+	UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	NullifyCategory(ctx context.Context, categoryID int) error
 	ReassignCategory(ctx context.Context, fromID, toID int) error
@@ -105,6 +106,7 @@ type ChargeRepository interface {
 	GetByID(ctx context.Context, id int) (*domain.Charge, error)
 	Search(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
 	Update(ctx context.Context, charge *domain.Charge) error
+	Delete(ctx context.Context, id int) error
 	Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error)
 	ConditionalAccept(ctx context.Context, id int) error
 	// ReassignAccountRefs repoints charger/payer account references from one

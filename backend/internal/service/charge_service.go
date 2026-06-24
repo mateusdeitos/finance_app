@@ -131,13 +131,14 @@ func (s *chargeService) Create(ctx context.Context, callerUserID int, req *domai
 	}
 
 	charge := &domain.Charge{
-		ConnectionID: req.ConnectionID,
-		PeriodMonth:  req.PeriodMonth,
-		PeriodYear:   req.PeriodYear,
-		Description:  req.Description,
-		Amount:       amount,
-		Status:       domain.ChargeStatusPending,
-		Date:         &req.Date,
+		ConnectionID:    req.ConnectionID,
+		InitiatorUserID: callerUserID,
+		PeriodMonth:     req.PeriodMonth,
+		PeriodYear:      req.PeriodYear,
+		Description:     req.Description,
+		Amount:          amount,
+		Status:          domain.ChargeStatusPending,
+		Date:            &req.Date,
 	}
 
 	myAccID := req.MyAccountID
@@ -184,13 +185,13 @@ func (s *chargeService) Cancel(ctx context.Context, callerUserID, chargeID int) 
 	}
 
 	// IDOR: is caller a party at all?
-	if charge.ChargerUserID != callerUserID && charge.PayerUserID != callerUserID {
+	if !charge.IsParty(callerUserID) {
 		return pkgErrors.Forbidden("charge")
 	}
 
-	// Role check: only charger can cancel
-	if charge.ChargerUserID != callerUserID {
-		return pkgErrors.Forbidden("only the charger can cancel")
+	// Only the party who created the charge can cancel it.
+	if !charge.IsInitiator(callerUserID) {
+		return pkgErrors.Forbidden("only the initiator can cancel")
 	}
 
 	// Status transition validation
@@ -212,13 +213,13 @@ func (s *chargeService) Reject(ctx context.Context, callerUserID, chargeID int) 
 	}
 
 	// IDOR: is caller a party at all?
-	if charge.ChargerUserID != callerUserID && charge.PayerUserID != callerUserID {
+	if !charge.IsParty(callerUserID) {
 		return pkgErrors.Forbidden("charge")
 	}
 
-	// Role check: only payer can reject
-	if charge.PayerUserID != callerUserID {
-		return pkgErrors.Forbidden("only the payer can reject")
+	// Only the counterparty (the party who did not initiate) can reject.
+	if charge.IsInitiator(callerUserID) {
+		return pkgErrors.Forbidden("only the counterparty can reject")
 	}
 
 	// Status transition validation
@@ -229,6 +230,29 @@ func (s *chargeService) Reject(ctx context.Context, callerUserID, chargeID int) 
 	charge.Status = domain.ChargeStatusRejected
 	if err := s.chargeRepo.Update(ctx, charge); err != nil {
 		return pkgErrors.Internal("failed to reject charge", err)
+	}
+	return nil
+}
+
+// Delete permanently removes a charge. Either party may delete it, but only
+// while it is pending, rejected, or cancelled — paid charges are kept because
+// they own settlement transfer transactions.
+func (s *chargeService) Delete(ctx context.Context, callerUserID, chargeID int) error {
+	charge, err := s.chargeRepo.GetByID(ctx, chargeID)
+	if err != nil {
+		return pkgErrors.NotFound("charge")
+	}
+
+	if !charge.IsParty(callerUserID) {
+		return pkgErrors.Forbidden("charge")
+	}
+
+	if !charge.IsDeletable() {
+		return pkgErrors.ErrChargeCannotDeletePaid
+	}
+
+	if err := s.chargeRepo.Delete(ctx, chargeID); err != nil {
+		return pkgErrors.Internal("failed to delete charge", err)
 	}
 	return nil
 }

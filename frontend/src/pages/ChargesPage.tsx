@@ -11,6 +11,7 @@ import { useCharges } from "@/hooks/useCharges";
 import { useChargesPendingCount } from "@/hooks/useChargesPendingCount";
 import { useRejectCharge } from "@/hooks/useRejectCharge";
 import { useCancelCharge } from "@/hooks/useCancelCharge";
+import { useDeleteCharge } from "@/hooks/useDeleteCharge";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { Fab } from "@/components/Fab";
 import { PullToRefresh } from "@/components/PullToRefresh";
@@ -31,11 +32,14 @@ export function ChargesPage() {
 
   const params = { month: search.month, year: search.year };
   const { query: chargesQuery, invalidate: invalidateCharges } = useCharges(params);
+  // Tabs are split by who initiated the charge, not by charger/payer role:
+  // "Recebidas" = charges awaiting my action (I didn't initiate them),
+  // "Enviadas" = charges I created.
   const { query: receivedQuery } = useCharges(params, (data) =>
-    data.charges.filter((c) => c.payer_user_id === currentUserId),
+    data.charges.filter((c) => c.initiator_user_id !== currentUserId),
   );
   const { query: sentQuery } = useCharges(params, (data) =>
-    data.charges.filter((c) => c.charger_user_id === currentUserId),
+    data.charges.filter((c) => c.initiator_user_id === currentUserId),
   );
 
   const { invalidate: invalidatePendingCount } = useChargesPendingCount();
@@ -53,6 +57,7 @@ export function ChargesPage() {
 
   const { mutation: rejectMutation } = useRejectCharge();
   const { mutation: cancelMutation } = useCancelCharge();
+  const { mutation: deleteMutation } = useDeleteCharge();
 
   function getPartnerName(charge: Charges.Charge): string {
     return partnerNameMapQuery.data?.get(charge.connection_id) ?? "Parceiro(a)";
@@ -69,7 +74,13 @@ export function ChargesPage() {
       return; // user dismissed the modal
     }
 
-    const mutation = action === "reject" ? rejectMutation : cancelMutation;
+    const mutation =
+      action === "reject" ? rejectMutation : action === "cancel" ? cancelMutation : deleteMutation;
+    const copy: Record<ConfirmChargeAction, { title: string; message: string }> = {
+      reject: { title: "Cobrança recusada", message: "Cobrança recusada com sucesso." },
+      cancel: { title: "Cobrança cancelada", message: "Cobrança cancelada com sucesso." },
+      delete: { title: "Cobrança excluída", message: "Cobrança excluída com sucesso." },
+    };
     mutation.mutate(charge.id, {
       onSuccess: () => {
         invalidateCharges();
@@ -77,11 +88,8 @@ export function ChargesPage() {
         invalidateTransactions();
         notifications.show({
           color: "teal",
-          title: action === "reject" ? "Cobrança recusada" : "Cobrança cancelada",
-          message:
-            action === "reject"
-              ? "Cobrança recusada com sucesso."
-              : "Cobrança cancelada com sucesso.",
+          title: copy[action].title,
+          message: copy[action].message,
           autoClose: 3000,
         });
       },
@@ -168,6 +176,7 @@ export function ChargesPage() {
                   balanceAmount={charge.amount}
                   onAccept={() => handleAccept(charge)}
                   onReject={() => void handleChargeAction("reject", charge)}
+                  onDelete={() => void handleChargeAction("delete", charge)}
                 />
               ))}
             </Stack>
@@ -200,6 +209,7 @@ export function ChargesPage() {
                   partnerName={getPartnerName(charge)}
                   balanceAmount={charge.amount}
                   onCancel={() => void handleChargeAction("cancel", charge)}
+                  onDelete={() => void handleChargeAction("delete", charge)}
                 />
               ))}
             </Stack>

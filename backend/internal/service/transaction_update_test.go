@@ -2343,6 +2343,92 @@ func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5d_Increas
 	suite.Assert().Equal(6, after[0].TransactionRecurrence.Installments)
 }
 
+// TestPartnerCategorizeRecurringSplit_NoDuplication is a regression for the
+// duplication bug: a partner categorizing (editing the category of) their mirror
+// installment of a recurring split with propagation=current_and_future caused
+// normalizeInstallments to create phantom duplicate installments on the
+// partner's account. Each partner split installment carries its OWN recurrence
+// (Installments=Total but a single backing row), so without the isLinkedTxEdit
+// guard expectedCount (Total) dwarfs existingCount (1) and the missing
+// installments are wrongly created.
+func (suite *TransactionUpdateWithDBTestSuite) TestPartnerCategorizeRecurringSplit_NoDuplication() {
+	ctx := context.Background()
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		AccountID:       accountA.ID,
+		CategoryID:      categoryA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		Amount:          100,
+		Date:            domain.Date{Time: d},
+		Description:     "shared recurring expense",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: conn.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB starts with exactly 3 mirror installments.
+	beforeB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(beforeB, 3, "userB should start with 3 mirror installments")
+
+	// All of userB's installments must share ONE recurrence (regression for the
+	// per-installment recurrence creation bug).
+	suite.Require().NotNil(beforeB[0].TransactionRecurrenceID)
+	for _, t := range beforeB {
+		suite.Require().NotNil(t.TransactionRecurrenceID)
+		suite.Assert().Equal(*beforeB[0].TransactionRecurrenceID, *t.TransactionRecurrenceID,
+			"userB installments must share a single recurrence")
+	}
+
+	// userB (the partner) categorizes their first installment, propagating forward.
+	err = suite.Services.Transaction.Update(ctx, beforeB[0].ID, userB.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsCurrentAndFuture,
+		CategoryID:          lo.ToPtr(categoryB.ID),
+	})
+	suite.Require().NoError(err)
+
+	// No phantom installments may be created on the partner's side.
+	afterB, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterB, 3, "userB must still have 3 installments — no duplication")
+
+	// The author's side is untouched.
+	afterA, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(afterA, 3, "userA should still have 3 installments")
+}
+
 // TestInstallmentScenario5e: increase own income installments from 3→6 editing installment 2 (propagation=all).
 // Regression: new installment dates must anchor from last existing, not from the edited transaction.
 func (suite *TransactionUpdateWithDBTestSuite) TestInstallmentScenario5e_IncreaseInstallments_OwnIncome_FromSecondInstallment() {
@@ -5157,6 +5243,238 @@ func (suite *TransactionUpdateWithDBTestSuite) TestLinkedTransactionPropagation_
 	suite.Require().NoError(err)
 	suite.Require().NotEmpty(userBTransactions)
 	suite.Equal(newDesc, userBTransactions[0].Description, "userB's linked transaction description should be updated")
+}
+
+// TestIssue205_LinkedTxCosmeticEditFiresNoNotification verifies the partner can
+// edit cosmetic fields (date/description) on their linked tx without notifying
+// the author — the split_updated notification only fires when the amount changes.
+// The request still carries the (unchanged) amount, as the frontend always sends it.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_LinkedTxCosmeticEditFiresNoNotification() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	svc := suite.Services.Transaction.(*transactionService)
+
+	// Amount present but unchanged (== linked tx's current amount) + a description edit.
+	data := &transactionUpdateData{
+		userID:              fx.userB.ID,
+		previousTransaction: *fx.linkedTx,
+		isLinkedTxEdit:      true,
+		scenario:            updateChanges{Value: NOT_CHANGED},
+		req: &domain.TransactionUpdateRequest{
+			Amount:      lo.ToPtr(fx.linkedTx.Amount),
+			Description: lo.ToPtr("userB local note"),
+		},
+	}
+
+	events := svc.collectSplitUpdatedEvents(ctx, fx.userB.ID, []int{fx.authorTx.ID}, data)
+	suite.Assert().Empty(events, "cosmetic linked-tx edit (amount unchanged) must not notify the author")
+}
+
+// TestIssue205_LinkedTxAmountEditFiresNotification verifies the author IS notified
+// when the partner actually changes the amount on their linked tx.
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_LinkedTxAmountEditFiresNotification() {
+	ctx := context.Background()
+	fx := suite.setupSharedExpenseForLinkedTxEditTests(ctx, 30000)
+
+	svc := suite.Services.Transaction.(*transactionService)
+
+	data := &transactionUpdateData{
+		userID:              fx.userB.ID,
+		previousTransaction: *fx.linkedTx,
+		isLinkedTxEdit:      true,
+		scenario:            updateChanges{Value: NOT_CHANGED},
+		req: &domain.TransactionUpdateRequest{
+			Amount: lo.ToPtr(fx.linkedTx.Amount + 5000),
+		},
+	}
+
+	events := svc.collectSplitUpdatedEvents(ctx, fx.userB.ID, []int{fx.authorTx.ID}, data)
+	suite.Require().Len(events, 1, "an amount change must notify the author exactly once")
+	suite.Assert().Equal(fx.userA.ID, events[0].RecipientUserID)
+	suite.Assert().Equal(fx.userB.ID, events[0].ActorUserID)
+	suite.Assert().Equal(domain.NotificationTypeSplitUpdated, events[0].Type)
+	suite.Assert().Equal(fx.authorTx.ID, events[0].EntityID)
+}
+
+// TestIssue205_PartnerPropagatesEditsToAllInstallments verifies that when the
+// partner (to_user) edits their linked transaction with propagation=all on a
+// recurring shared expense, the change lands on EVERY installment on the
+// partner's side — and the matching settlements on the author's side follow the
+// new amount — while the author's own installments stay untouched (#205).
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_PartnerPropagatesEditsToAllInstallments() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	originalDate := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	const sourceAmount int64 = 10000 // split 50% -> linked/settlement amount = 5000
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            domain.Date{Time: originalDate},
+		Description:     "recurring shared expense",
+		Amount:          sourceAmount,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  3,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userA's 3 source installments (sorted by installment number).
+	userATxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userATxs, 3)
+
+	// userB's 3 linked installments (sorted by installment number).
+	userBTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userBTxs, 3, "userB should have 3 linked installments")
+
+	firstLinked := userBTxs[0]
+	suite.Require().Equal(int64(5000), firstLinked.Amount)
+
+	// userB edits the first linked installment: new amount + new description, propagation=all.
+	const newLinkedAmount int64 = 8000
+	newDesc := "userB local note"
+	err = suite.Services.Transaction.Update(ctx, firstLinked.ID, userB.ID, &domain.TransactionUpdateRequest{
+		Amount:              lo.ToPtr(newLinkedAmount),
+		Description:         lo.ToPtr(newDesc),
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+	})
+	suite.Require().NoError(err)
+
+	// Every userB installment adopts the new amount + description.
+	userBAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userBAfter, 3)
+	for i, tx := range userBAfter {
+		suite.Assert().Equalf(newLinkedAmount, tx.Amount, "userB installment[%d] amount should propagate", i)
+		suite.Assert().Equalf(newDesc, tx.Description, "userB installment[%d] description should propagate", i)
+	}
+
+	// userA's own installments keep the author's amount and original description.
+	userAAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userAAfter, 3)
+	for i, tx := range userAAfter {
+		suite.Assert().Equalf(sourceAmount, tx.Amount, "userA installment[%d] amount must NOT change", i)
+		suite.Assert().Equalf("recurring shared expense", tx.Description, "userA installment[%d] description must NOT change", i)
+	}
+
+	// The settlement on EACH author installment follows the partner's new amount.
+	for i, srcTx := range userAAfter {
+		settlements := suite.settlementsForSource(ctx, srcTx.ID)
+		suite.Require().Lenf(settlements, 1, "author installment[%d] should keep exactly one settlement", i)
+		suite.Assert().Equalf(newLinkedAmount, settlements[0].Amount, "settlement[%d] amount must follow partner's new amount", i)
+	}
+}
+
+// TestIssue205_PartnerCategoryEditDoesNotDuplicateInstallments reproduces the
+// production bug where the partner (to_user) categorizing ONE installment of a
+// linked recurring shared expense spawned duplicate installments for the
+// following months. Root cause: the partner's installments each carry their own
+// recurrence record (the create path mints one per installment), and the legacy
+// drawer sent no propagation_settings; the backend treated empty propagation as
+// "propagate", so normalizeInstallments saw a recurrence whose Installments
+// total exceeded the single row pointing at it and "filled the gap" with stub
+// rows. A linked-tx edit must NEVER create installments (#205).
+func (suite *TransactionUpdateWithDBTestSuite) TestIssue205_PartnerCategoryEditDoesNotDuplicateInstallments() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	accountA, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+	categoryA, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+	categoryB, err := suite.createTestCategory(ctx, userB) // userB's own category
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		Date:            domain.Date{Time: time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC)},
+		Description:     "Conta de Luz",
+		Amount:          11006,
+		AccountID:       accountA.ID,
+		TransactionType: domain.TransactionTypeExpense,
+		CategoryID:      categoryA.ID,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  4,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// userB has 4 linked installments, each with its OWN recurrence record.
+	userBBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(userBBefore, 4, "userB should start with exactly 4 linked installments")
+
+	// userB categorizes the SECOND installment with NO propagation_settings —
+	// exactly how the legacy linked drawer sent a category-only edit.
+	target := userBBefore[1]
+	err = suite.Services.Transaction.Update(ctx, target.ID, userB.ID, &domain.TransactionUpdateRequest{
+		CategoryID: lo.ToPtr(categoryB.ID),
+	})
+	suite.Require().NoError(err)
+
+	// No stub installments may be created — userB still has exactly 4.
+	userBAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &userB.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userBAfter, 4, "categorizing a linked installment must NOT create duplicate installments")
+
+	// userA's side is untouched (4 installments, original category).
+	userAAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID:     &userA.ID,
+		AccountIDs: []int{accountA.ID},
+		SortBy:     &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(userAAfter, 4, "userA installments must be untouched")
 }
 
 // TestInstallmentScenario9b: recorrência 4x mensal com split -> remove split da parcela 3

@@ -70,6 +70,7 @@ function makeCharge(id: number, amount: number | null = 5000): Charges.Charge {
     payer_user_id: 2,
     charger_account_id: null,
     payer_account_id: null,
+    initiator_user_id: 1,
     connection_id: 1,
     period_month: 5,
     period_year: 2026,

@@ -134,7 +134,8 @@ jobs:
         env:
           DB_DSN: ${{ secrets.DB_DSN_PROD }}
         run: |
-          STATUS=$(goose -dir migrations postgres "$DB_DSN" status)
+          # goose logs to stderr, so capture both streams or $STATUS is empty
+          STATUS=$(goose -dir migrations postgres "$DB_DSN" status 2>&1)
           echo "$STATUS"
           PENDING=$(echo "$STATUS" | grep -c "Pending" || true)
           if [ "$PENDING" -gt 0 ]; then

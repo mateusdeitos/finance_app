@@ -68,6 +68,8 @@ const (
 	ErrorTagAccountHasLinkedTransactions         ErrorTag = "ACCOUNT.HAS_LINKED_TRANSACTIONS"
 	ErrorTagAccountInvalidMigrationTarget        ErrorTag = "ACCOUNT.INVALID_MIGRATION_TARGET"
 
+	ErrorTagChargeCannotDeletePaid ErrorTag = "CHARGE.CANNOT_DELETE_PAID"
+
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
 	ErrorTagFailedToCreateTag    ErrorTag = "TAG.FAILED_TO_CREATE"
 
@@ -145,6 +147,7 @@ var (
 	ErrLinkedTransactionDisallowedFieldChanged     = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagLinkedTransactionDisallowedFieldChanged)}, "linked transactions can only edit date, description, category, and tags")
 	ErrChargeTransactionTypeCannotChange           = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionTypeCannotChange)}, "the type of a transaction linked to a charge cannot be changed")
 	ErrChargeTransactionRecurrenceNotAllowed       = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeTransactionRecurrenceNotAllowed)}, "recurrence cannot be added to a transaction linked to a charge")
+	ErrChargeCannotDeletePaid                      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeCannotDeletePaid)}, "paid charges cannot be deleted")
 	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
 
