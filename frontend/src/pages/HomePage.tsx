@@ -84,7 +84,7 @@ export function HomePage() {
 
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
           <RecurringTransactionsCard
-            title="Recorrentes iniciando"
+            title="Recorrências iniciando"
             transactions={recurring.starting}
             total={recurring.startingTotal}
             isLoading={recurring.isLoading}
@@ -93,7 +93,7 @@ export function HomePage() {
             totalTestId={HomeTestIds.RecurringStartingTotal}
           />
           <RecurringTransactionsCard
-            title="Recorrentes finalizando"
+            title="Recorrências finalizando"
             transactions={recurring.ending}
             total={recurring.endingTotal}
             isLoading={recurring.isLoading}
