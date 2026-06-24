@@ -43,6 +43,7 @@ export function AccountBalancesCard({
           checked={accumulated}
           onChange={(e) => onAccumulatedChange(e.currentTarget.checked)}
           label="Acumulado"
+          labelPosition="left"
           data-testid={HomeTestIds.AccumulatedToggle}
         />
       }

@@ -60,6 +60,7 @@ export function ExpenseDonutCard({ month, year, hideSettlements, onHideSettlemen
           checked={!hideSettlements}
           onChange={(e) => onHideSettlementsChange(!e.currentTarget.checked)}
           label="Considerar acertos"
+          labelPosition="left"
           data-testid={HomeTestIds.SettlementsToggle}
         />
       }
