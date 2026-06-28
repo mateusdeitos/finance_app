@@ -7,9 +7,9 @@ export interface RecurringSummary {
   starting: Transactions.Transaction[]
   /** Recurring installments whose last installment lands in the period. */
   ending: Transactions.Transaction[]
-  /** Σ amount (cents) of the starting installments. */
+  /** Signed Σ of the starting installments (credit +, debit −), in cents. */
   startingTotal: number
-  /** Σ amount (cents) of the ending installments. */
+  /** Signed Σ of the ending installments (credit +, debit −), in cents. */
   endingTotal: number
   isLoading: boolean
   isError: boolean
@@ -43,7 +43,11 @@ export function useRecurringForPeriod(month: number, year: number): RecurringSum
       if (total != null && t.installment_number === total) ending.push(t)
     }
 
-    const sum = (list: Transactions.Transaction[]) => list.reduce((s, t) => s + t.amount, 0)
+    // Net the amounts by operation type so the table footer matches the signed
+    // per-row values (credit adds, debit subtracts) instead of summing raw
+    // magnitudes.
+    const sum = (list: Transactions.Transaction[]) =>
+      list.reduce((s, t) => s + (t.operation_type === 'credit' ? t.amount : -t.amount), 0)
     return {
       starting,
       ending,

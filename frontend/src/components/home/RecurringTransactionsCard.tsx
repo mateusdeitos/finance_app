@@ -57,7 +57,7 @@ export function RecurringTransactionsCard({
           <Divider />
           <Group justify="space-between">
             <Text size="sm" fw={700}>Total</Text>
-            <Text size="sm" fw={700} data-testid={totalTestId}>{formatBalance(total)}</Text>
+            <Text size="sm" fw={700} c={total >= 0 ? 'teal' : 'red'} data-testid={totalTestId}>{formatBalance(total)}</Text>
           </Group>
         </Stack>
       )}
