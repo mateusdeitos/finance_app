@@ -54,3 +54,16 @@ export function tintColor(hex: string, alpha: number): string {
   const b = parseInt(h.slice(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
+
+/**
+ * Returns a lighter solid `#rrggbb` shade of `hex`, mixing each channel toward
+ * white by `amount` (0 = unchanged, 1 = white). Used to give a parent's
+ * subcategories distinguishable tints of the same family hue.
+ */
+export function lightenColor(hex: string, amount: number): string {
+  const h = hex.replace('#', '')
+  const t = Math.max(0, Math.min(1, amount))
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * t)
+  const to2 = (channel: number) => mix(channel).toString(16).padStart(2, '0')
+  return `#${to2(parseInt(h.slice(0, 2), 16))}${to2(parseInt(h.slice(2, 4), 16))}${to2(parseInt(h.slice(4, 6), 16))}`
+}
