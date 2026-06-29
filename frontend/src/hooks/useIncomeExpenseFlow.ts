@@ -39,9 +39,12 @@ const LEFTOVER_COLOR = '#2a9d8f'
 /**
  * Builds a Sankey graph showing the period's money flow: each income category
  * flows into a central "Receita" hub, which then flows out to each expense
- * category (and to a "Sobra" node when income exceeds expenses). Reuses the
- * category aggregation from {@link useCategorySpending} so the numbers match the
- * Categorias view and the backend balance endpoint.
+ * category and — one level deeper — to that category's subcategories
+ * (`Receita → categoria → subcategoria`). A "Sobra" node receives the leftover
+ * when income exceeds expenses. Reuses the category aggregation from
+ * {@link useCategorySpending} (whose nodes already carry the subcategory tree
+ * with rolled-up totals) so the numbers match the Categorias view and the
+ * backend balance endpoint.
  */
 export function useIncomeExpenseFlow(month: number, year: number): IncomeExpenseFlow {
   const { nodes: catNodes, categoriesLoading, spendLoading, isError, invalidate } =
@@ -62,9 +65,10 @@ export function useIncomeExpenseFlow(month: number, year: number): IncomeExpense
 
     const nodes: FlowNode[] = []
     const links: FlowLink[] = []
+    const addNode = (node: FlowNode) => nodes.push(node) - 1
 
-    // Index 0..N-1: income categories. Then the hub. Then expenses, then leftover.
-    incomeCats.forEach((n) => nodes.push({ name: n.category.name, color: n.color, kind: 'income' }))
+    // Income categories (single level) feed the central hub.
+    incomeCats.forEach((n) => addNode({ name: n.category.name, color: n.color, kind: 'income' }))
     const hubIndex = nodes.length
     nodes.push({ name: 'Receita', color: HUB_COLOR, kind: 'hub' })
 
@@ -72,15 +76,37 @@ export function useIncomeExpenseFlow(month: number, year: number): IncomeExpense
       links.push({ source: i, target: hubIndex, value: n.total, color: INCOME_COLOR })
     })
 
-    expenseCats.forEach((n) => {
-      const idx = nodes.length
-      nodes.push({ name: n.category.name, color: n.color, kind: 'expense' })
-      links.push({ source: hubIndex, target: idx, value: n.magnitude, color: n.color })
-    })
+    // Hub → expense category → subcategory. A subcategory's total already rolls
+    // up its own descendants; the parent's leftover "direct" spending (not under
+    // any subcategory) becomes a "(direto)" leaf so the parent node stays
+    // balanced.
+    for (const parent of expenseCats) {
+      const parentIndex = addNode({ name: parent.category.name, color: parent.color, kind: 'expense' })
+      links.push({ source: hubIndex, target: parentIndex, value: parent.magnitude, color: parent.color })
+
+      const childExpenses = parent.children
+        .filter((c) => c.total < 0)
+        .map((c) => ({ ...c, magnitude: -c.total }))
+        .sort((a, b) => b.magnitude - a.magnitude)
+
+      if (childExpenses.length === 0) continue
+
+      let childSum = 0
+      for (const child of childExpenses) {
+        const childIndex = addNode({ name: child.category.name, color: child.color, kind: 'expense' })
+        links.push({ source: parentIndex, target: childIndex, value: child.magnitude, color: child.color })
+        childSum += child.magnitude
+      }
+
+      const directSpend = parent.magnitude - childSum
+      if (directSpend > 0) {
+        const directIndex = addNode({ name: `${parent.category.name} (direto)`, color: parent.color, kind: 'expense' })
+        links.push({ source: parentIndex, target: directIndex, value: directSpend, color: parent.color })
+      }
+    }
 
     if (leftover > 0) {
-      const idx = nodes.length
-      nodes.push({ name: 'Sobra', color: LEFTOVER_COLOR, kind: 'leftover' })
+      const idx = addNode({ name: 'Sobra', color: LEFTOVER_COLOR, kind: 'leftover' })
       links.push({ source: hubIndex, target: idx, value: leftover, color: LEFTOVER_COLOR })
     }
 
