@@ -1,6 +1,7 @@
 import type { ReactNode, ReactElement } from 'react'
 import type { SVGProps } from 'react'
 import { Box, Center, Group, Loader, Stack, Text } from '@mantine/core'
+import { IconInfoCircle } from '@tabler/icons-react'
 import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from 'recharts'
 import { useIncomeExpenseFlow, type FlowNode } from '@/hooks/useIncomeExpenseFlow'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -149,6 +150,12 @@ export function IncomeSankeyCard({ month, year }: Props) {
             <Text size="sm" c="red">Despesas: {formatBalance(totalExpense)}</Text>
             <Text size="sm" c={leftover >= 0 ? 'teal' : 'red'} fw={600}>
               {leftover >= 0 ? 'Sobra' : 'Déficit'}: {formatBalance(leftover)}
+            </Text>
+          </Group>
+          <Group gap={6} wrap="nowrap" align="center">
+            <IconInfoCircle size={14} color="var(--mantine-color-dimmed)" />
+            <Text size="xs" c="dimmed">
+              Os acertos estão considerados no saldo de cada categoria.
             </Text>
           </Group>
         </Stack>
