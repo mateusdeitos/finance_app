@@ -225,17 +225,34 @@ jobs:
           channelId: live
           entryPoint: frontend
 
-      # The Firebase Hosting CLI occasionally hits a "premature close" on the
-      # release call and retries it non-idempotently, failing with
-      # "supplied version ... is the current active version" even though the
-      # first attempt already went live. A fresh invocation creates a new
-      # version id and releases cleanly, so retry once on failure.
-      - name: Deploy to Firebase Hosting (retry)
+      # In CI the Hosting CLI's HTTP keep-alive connections premature-close and
+      # every request is retried. Idempotent calls recover, but the
+      # channels/live release POST is retried non-idempotently: the first attempt
+      # already publishes the version (it becomes the live/active one), the
+      # response is lost, and the retry fails with "is the current active
+      # version". So that specific failure means the deploy actually went live.
+      # On failure, re-run the deploy directly and treat only that error as
+      # success; any other error still fails the job.
+      - name: Deploy to Firebase Hosting (idempotent fallback)
         if: steps.firebase_deploy.outcome == 'failure'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
-          channelId: live
-          entryPoint: frontend
+        working-directory: frontend
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          set +e
+          out="$(npx -y firebase-tools@latest deploy --only hosting --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)"
+          status=$?
+          set -e
+          echo "$out"
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if echo "$out" | grep -q "is the current active version"; then
+            echo "::notice::Hosting release already live (non-idempotent CLI retry after premature close); treating as success."
+            exit 0
+          fi
+          echo "::error::Firebase Hosting deploy failed (exit $status)."
+          exit "$status"
