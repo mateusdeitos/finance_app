@@ -24,7 +24,9 @@ interface SankeyNodeRenderProps {
   width: number
   height: number
   index: number
-  payload: FlowNode
+  // recharts merges our FlowNode fields with its computed node; sourceLinks lets
+  // us tell an expense parent (has outgoing links to subcategories) from a leaf.
+  payload: FlowNode & { sourceLinks?: unknown[] }
 }
 
 interface SankeyLinkRenderProps {
@@ -45,16 +47,19 @@ function renderSankeyNode(rawProps: unknown): ReactNode {
   let labelX: number
   let labelY = y + height / 2
   let anchor: 'start' | 'end' | 'middle'
+  const hasChildren = (node.sourceLinks?.length ?? 0) > 0
   if (node.kind === 'income') {
     labelX = x - 6
     anchor = 'end'
-  } else if (node.kind === 'hub') {
+  } else if (node.kind === 'hub' || (node.kind === 'expense' && hasChildren)) {
+    // Hub and expense parents have outgoing links to their right, so anchor the
+    // label above the node (clamped under the top edge) instead of overlapping
+    // those flows.
     labelX = x + width / 2
-    // The hub is the tallest node and sits at the very top, so anchor the label
-    // just below the chart's top edge instead of above the node (which clips).
     labelY = Math.max(y - 12, 14)
     anchor = 'middle'
   } else {
+    // Leaves: income/expense subcategories, childless parents and "Sobra".
     labelX = x + width + 6
     anchor = 'start'
   }
