@@ -215,6 +215,23 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
+        id: firebase_deploy
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        continue-on-error: true
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+          channelId: live
+          entryPoint: frontend
+
+      # The Firebase Hosting CLI occasionally hits a "premature close" on the
+      # release call and retries it non-idempotently, failing with
+      # "supplied version ... is the current active version" even though the
+      # first attempt already went live. A fresh invocation creates a new
+      # version id and releases cleanly, so retry once on failure.
+      - name: Deploy to Firebase Hosting (retry)
+        if: steps.firebase_deploy.outcome == 'failure'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
