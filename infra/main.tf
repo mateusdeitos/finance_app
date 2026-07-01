@@ -10,6 +10,25 @@ resource "google_artifact_registry_repository" "backend" {
   location      = var.gcp_region
   format        = "DOCKER"
   description   = "Docker images for the backend service"
+
+  # Keep the registry small: retain the 5 most-recent images and delete anything
+  # older. Dozens of released tags (backend:v0.1.72 and counting) otherwise pile
+  # up and creep past the 0.5 GB free storage tier.
+  cleanup_policies {
+    id     = "keep-recent-5"
+    action = "KEEP"
+    most_recent_versions {
+      keep_count = 5
+    }
+  }
+
+  cleanup_policies {
+    id     = "delete-old"
+    action = "DELETE"
+    condition {
+      older_than = "2592000s" # 30 days
+    }
+  }
 }
 
 # ── CI/CD Service Account (GitHub Actions) ────────────────────────────────────
@@ -63,6 +82,16 @@ resource "google_cloud_run_v2_service" "backend" {
   template {
     service_account = google_service_account.backend.email
 
+    # Scale to zero when idle. With only a couple of users, a warm instance is
+    # not worth paying for 24/7. min=0 is the single biggest cost lever here —
+    # a previous manual `gcloud run services update` had pinned minScale=1,
+    # which (combined with cpu_idle=false) billed one full vCPU + memory around
+    # the clock. Keep this explicit so the drift can't silently return.
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 4
+    }
+
     containers {
       # Placeholder image — replaced by GitHub Actions on every release deploy
       image = "gcr.io/cloudrun/hello"
@@ -70,8 +99,15 @@ resource "google_cloud_run_v2_service" "backend" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "256Mi"
         }
+        # Request-based CPU billing: CPU is only allocated while a request is
+        # being handled, not for the whole lifetime of a warm instance. Drops
+        # the service comfortably inside the Cloud Run free tier at this scale.
+        # Trade-off: post-response push-notification goroutines (context.Background)
+        # run throttled between requests — acceptable for a 2-user app.
+        cpu_idle          = true
+        startup_cpu_boost = false
       }
 
       # ── Server ────────────────────────────────────────────────────────────
