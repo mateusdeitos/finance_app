@@ -82,27 +82,9 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		isLinkedTxEdit:         isLinkedTxEdit,
 	}
 
-	data.isSharedAccountEdit, err = s.detectSharedAccountEdit(ctx, previousTransaction, data.isLinkedTxEdit, sourceIDs)
+	err = s.resolveUpdateScenario(ctx, data, previousTransaction)
 	if err != nil {
 		return err
-	}
-
-	// Linked transaction edits never change split/type/recurrence (those fields are
-	// rejected by validation), and shared-account edits keep their 1:1 mirror in
-	// amount-sync directly. Treat both as unchanged so rebuildTransactions does not
-	// misread the absent SplitSettings as a "removed split" and delete the partner's
-	// installments.
-	if data.isLinkedTxEdit || data.isSharedAccountEdit {
-		data.scenario = updateChanges{
-			Value:           NOT_CHANGED,
-			SplitHasChanged: false,
-			HadRecurrence:   previousTransaction.TransactionRecurrenceID != nil,
-		}
-	} else {
-		data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
-		if err != nil {
-			return err
-		}
 	}
 
 	errs := s.createTags(ctx, userID, req.Tags)
@@ -271,6 +253,41 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
 	return nil
+}
+
+// resolveUpdateScenario detects whether the edit targets a shared-account
+// transaction and computes the type-change scenario for the update, populating
+// data.isSharedAccountEdit and data.scenario.
+//
+// Linked-tx edits and shared-account edits keep their 1:1 mirror in sync directly
+// (amount-sync), so they are pinned to NOT_CHANGED — otherwise rebuildTransactions
+// would misread the absent SplitSettings as a "removed split" and delete the
+// partner's installments. The shared-account type flip (expense↔income) is applied
+// later in rebuildTransactions via applySharedAccountTypeChange. Transfers are not
+// allowed on shared accounts (mirrors the create-time rule), so a transfer type
+// change is rejected explicitly instead of being silently dropped.
+func (s *transactionService) resolveUpdateScenario(ctx context.Context, data *transactionUpdateData, previousTransaction *domain.Transaction) error {
+	var err error
+	data.isSharedAccountEdit, err = s.detectSharedAccountEdit(ctx, previousTransaction, data.isLinkedTxEdit, data.sourceIDs)
+	if err != nil {
+		return err
+	}
+
+	if data.isSharedAccountEdit && lo.FromPtr(data.req.TransactionType) == domain.TransactionTypeTransfer {
+		return pkgErrors.ErrTransferNotAllowedOnSharedAccount
+	}
+
+	if data.isLinkedTxEdit || data.isSharedAccountEdit {
+		data.scenario = updateChanges{
+			Value:           NOT_CHANGED,
+			SplitHasChanged: false,
+			HadRecurrence:   previousTransaction.TransactionRecurrenceID != nil,
+		}
+		return nil
+	}
+
+	data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
+	return err
 }
 
 // detectSharedAccountEdit reports whether the edit targets a transaction created
@@ -814,10 +831,34 @@ func (s *transactionService) rebuildTransactions(
 			for j := range data.transactions[i].LinkedTransactions {
 				data.transactions[i].LinkedTransactions[j].SetType(*data.req.TransactionType)
 			}
+		} else if data.isSharedAccountEdit {
+			s.applySharedAccountTypeChange(data, data.transactions[i])
 		}
 	}
 
 	return nil
+}
+
+// applySharedAccountTypeChange flips the transaction type on an author-initiated
+// shared-account edit. A shared-account transaction and its partner mirror form a
+// 1:1 inverted pair (expense on one side ↔ income on the other), so changing the
+// author's type must set the source to the new type and the mirror to the inverted
+// type. The scenario machinery is bypassed for shared-account edits (forced to
+// NOT_CHANGED in Update to preserve amount-sync and avoid deleting the mirror), so
+// the flip is applied directly here. Transfers are rejected upstream, so only
+// expense↔income is handled; a linked-side (partner) edit never changes type.
+func (s *transactionService) applySharedAccountTypeChange(data *transactionUpdateData, tx *domain.Transaction) {
+	if data.isLinkedTxEdit || data.req.TransactionType == nil {
+		return
+	}
+	newType := *data.req.TransactionType
+	if newType == tx.Type || newType == domain.TransactionTypeTransfer {
+		return
+	}
+	tx.SetType(newType)
+	for j := range tx.LinkedTransactions {
+		tx.LinkedTransactions[j].SetType(newType.Invert())
+	}
 }
 
 func (s *transactionService) rebuildTransferLinkedTransactions(
