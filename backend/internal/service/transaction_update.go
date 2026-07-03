@@ -82,36 +82,9 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 		isLinkedTxEdit:         isLinkedTxEdit,
 	}
 
-	data.isSharedAccountEdit, err = s.detectSharedAccountEdit(ctx, previousTransaction, data.isLinkedTxEdit, sourceIDs)
+	err = s.resolveUpdateScenario(ctx, data, previousTransaction)
 	if err != nil {
 		return err
-	}
-
-	// Transfers are not allowed on shared accounts (mirrors the create-time rule),
-	// so a shared-account transaction can only flip between expense and income.
-	// Reject a transfer type change explicitly instead of silently dropping it.
-	if data.isSharedAccountEdit && lo.FromPtr(req.TransactionType) == domain.TransactionTypeTransfer {
-		return pkgErrors.ErrTransferNotAllowedOnSharedAccount
-	}
-
-	// Linked transaction edits never change split/type/recurrence (those fields are
-	// rejected by validation), and shared-account edits keep their 1:1 mirror in
-	// amount-sync directly. Treat both as unchanged so rebuildTransactions does not
-	// misread the absent SplitSettings as a "removed split" and delete the partner's
-	// installments. The type change on a shared-account edit is applied directly in
-	// rebuildTransactions via applySharedAccountTypeChange, which flips the source
-	// and its inverted mirror without going through the split-based scenario machinery.
-	if data.isLinkedTxEdit || data.isSharedAccountEdit {
-		data.scenario = updateChanges{
-			Value:           NOT_CHANGED,
-			SplitHasChanged: false,
-			HadRecurrence:   previousTransaction.TransactionRecurrenceID != nil,
-		}
-	} else {
-		data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
-		if err != nil {
-			return err
-		}
 	}
 
 	errs := s.createTags(ctx, userID, req.Tags)
@@ -280,6 +253,41 @@ func (s *transactionService) Update(ctx context.Context, id, userID int, req *do
 	//nolint:contextcheck // intentional detached context for post-commit dispatch (NOTIF-06)
 	s.maybeDispatchSplitUpdatedNotification(context.Background(), userID, sourceIDs, data)
 	return nil
+}
+
+// resolveUpdateScenario detects whether the edit targets a shared-account
+// transaction and computes the type-change scenario for the update, populating
+// data.isSharedAccountEdit and data.scenario.
+//
+// Linked-tx edits and shared-account edits keep their 1:1 mirror in sync directly
+// (amount-sync), so they are pinned to NOT_CHANGED — otherwise rebuildTransactions
+// would misread the absent SplitSettings as a "removed split" and delete the
+// partner's installments. The shared-account type flip (expense↔income) is applied
+// later in rebuildTransactions via applySharedAccountTypeChange. Transfers are not
+// allowed on shared accounts (mirrors the create-time rule), so a transfer type
+// change is rejected explicitly instead of being silently dropped.
+func (s *transactionService) resolveUpdateScenario(ctx context.Context, data *transactionUpdateData, previousTransaction *domain.Transaction) error {
+	var err error
+	data.isSharedAccountEdit, err = s.detectSharedAccountEdit(ctx, previousTransaction, data.isLinkedTxEdit, data.sourceIDs)
+	if err != nil {
+		return err
+	}
+
+	if data.isSharedAccountEdit && lo.FromPtr(data.req.TransactionType) == domain.TransactionTypeTransfer {
+		return pkgErrors.ErrTransferNotAllowedOnSharedAccount
+	}
+
+	if data.isLinkedTxEdit || data.isSharedAccountEdit {
+		data.scenario = updateChanges{
+			Value:           NOT_CHANGED,
+			SplitHasChanged: false,
+			HadRecurrence:   previousTransaction.TransactionRecurrenceID != nil,
+		}
+		return nil
+	}
+
+	data.scenario, err = s.determineTypeUpdateScenario(ctx, data)
+	return err
 }
 
 // detectSharedAccountEdit reports whether the edit targets a transaction created
