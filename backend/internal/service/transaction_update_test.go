@@ -6620,6 +6620,103 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_ExpenseOnSharedAccount
 	suite.Assert().Empty(after2, "second edit of a shared-account expense must still not create a settlement")
 }
 
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_TypeChangeOnSharedAccount_FlipsSourceAndMirror() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	d := now()
+	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: d},
+		Description:     "shared account expense",
+	})
+	suite.Require().NoError(err)
+
+	// Sanity: the mirror on the partner's connection account is an inverted income.
+	partnerBefore, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(partnerBefore, 1)
+	suite.Assert().Equal(domain.TransactionTypeIncome, partnerBefore[0].Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, partnerBefore[0].OperationType)
+
+	// Change the shared-account transaction type from expense to income.
+	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings: domain.TransactionPropagationSettingsAll,
+		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
+	})
+	suite.Require().NoError(err)
+
+	// Author's source flips to income/credit.
+	source, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{txID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(domain.TransactionTypeIncome, source.Type)
+	suite.Assert().Equal(domain.OperationTypeCredit, source.OperationType)
+
+	// Partner's mirror flips to the inverted type: expense/debit.
+	partnerAfter, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &userB.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(partnerAfter, 1, "mirror must survive the type change")
+	suite.Assert().Equal(domain.TransactionTypeExpense, partnerAfter[0].Type)
+	suite.Assert().Equal(domain.OperationTypeDebit, partnerAfter[0].OperationType)
+	suite.Assert().Equal(conn.ToAccountID, partnerAfter[0].AccountID)
+	suite.Assert().Equal(int64(1000), partnerAfter[0].Amount, "mirror amount must stay in sync")
+}
+
+func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_TypeChangeToTransferOnSharedAccount_IsRejected() {
+	ctx := context.Background()
+
+	userA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	userB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	conn, err := suite.createAcceptedTestUserConnection(ctx, userA.ID, userB.ID, 50)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, userA)
+	suite.Require().NoError(err)
+
+	privateAccount, err := suite.createTestAccount(ctx, userA)
+	suite.Require().NoError(err)
+
+	d := now()
+	txID, err := suite.Services.Transaction.Create(ctx, userA.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: d},
+		Description:     "shared account expense",
+	})
+	suite.Require().NoError(err)
+
+	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
+		PropagationSettings:  domain.TransactionPropagationSettingsAll,
+		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
+		DestinationAccountID: lo.ToPtr(privateAccount.ID),
+	})
+	suite.Require().Error(err)
+	suite.Assert().ErrorIs(err, pkgErrors.ErrTransferNotAllowedOnSharedAccount)
+
+	// The transaction type must be unchanged.
+	source, err := suite.Repos.Transaction.SearchOne(ctx, domain.TransactionFilter{IDs: []int{txID}})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(domain.TransactionTypeExpense, source.Type)
+}
+
 func TestTransactionUpdateWithDB(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
