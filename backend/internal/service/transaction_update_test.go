@@ -6654,8 +6654,7 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_TypeChangeOnSharedAcco
 
 	// Change the shared-account transaction type from expense to income.
 	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
-		PropagationSettings: domain.TransactionPropagationSettingsAll,
-		TransactionType:     lo.ToPtr(domain.TransactionTypeIncome),
+		TransactionType: lo.ToPtr(domain.TransactionTypeIncome),
 	})
 	suite.Require().NoError(err)
 
@@ -6704,7 +6703,6 @@ func (suite *TransactionUpdateWithDBTestSuite) TestUpdate_TypeChangeToTransferOn
 	suite.Require().NoError(err)
 
 	err = suite.Services.Transaction.Update(ctx, txID, userA.ID, &domain.TransactionUpdateRequest{
-		PropagationSettings:  domain.TransactionPropagationSettingsAll,
 		TransactionType:      lo.ToPtr(domain.TransactionTypeTransfer),
 		DestinationAccountID: lo.ToPtr(privateAccount.ID),
 	})
