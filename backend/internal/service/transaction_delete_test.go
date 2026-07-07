@@ -749,7 +749,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrentAnd
 // ---------------------------------------------------------------------------
 
 // Cenário A (split em conta privada): a ponta apaga a sua tx — desfaz o split.
-// A tx privada do autor sobrevive; a tx da ponta e o settlement são removidos.
+// A tx privada do author sobrevive; a tx da ponta e o settlement são removidos.
 func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitCurrent() {
 	ctx := context.Background()
 
@@ -799,14 +799,14 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitCurrent() {
 
 	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
 	suite.Require().NoError(err)
-	suite.Assert().Len(authorTxs, 1, "a despesa privada do autor sobrevive")
+	suite.Assert().Len(authorTxs, 1, "a despesa privada do author sobrevive")
 	suite.Assert().Equal(int64(100), authorTxs[0].Amount)
 
 	settlementsAfter, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
 	suite.Require().NoError(err)
 	suite.Assert().Len(settlementsAfter, 0, "settlement removido para manter o saldo compartilhado consistente")
 
-	// O autor é notificado (dispatch assíncrono).
+	// O author é notificado (dispatch assíncrono).
 	time.Sleep(200 * time.Millisecond)
 	notifs, err := suite.Services.Notification.List(ctx, author.ID, domain.NotificationFilter{Limit: 100})
 	suite.Require().NoError(err)
@@ -817,13 +817,13 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitCurrent() {
 			break
 		}
 	}
-	suite.Require().NotNil(found, "autor recebe notificação shared_transaction_deleted")
+	suite.Require().NotNil(found, "author recebe notificação shared_transaction_deleted")
 	suite.Assert().Equal(int64(50), lo.FromPtr(found.Amount))
 	suite.Assert().Equal("Split expense", lo.FromPtr(found.Description))
 }
 
 // Cenário A recorrente, propagação 'all': a ponta apaga uma parcela e todas as
-// suas parcelas + settlements somem; todas as parcelas do autor sobrevivem.
+// suas parcelas + settlements somem; todas as parcelas do author sobrevivem.
 func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitAll() {
 	ctx := context.Background()
 
@@ -874,7 +874,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitAll() {
 
 	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
 	suite.Require().NoError(err)
-	suite.Assert().Len(authorTxs, installments, "todas as parcelas do autor sobrevivem")
+	suite.Assert().Len(authorTxs, installments, "todas as parcelas do author sobrevivem")
 
 	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
 	suite.Require().NoError(err)
@@ -883,7 +883,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitAll() {
 
 // Cenário A recorrente, propagação 'current_and_future': a ponta apaga da
 // parcela 7 em diante; parcelas 1–6 da ponta e seus settlements ficam; todas as
-// 12 parcelas do autor permanecem.
+// 12 parcelas do author permanecem.
 func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitCurrentAndFuture() {
 	ctx := context.Background()
 
@@ -941,7 +941,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSplitCurrentAndFut
 
 	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
 	suite.Require().NoError(err)
-	suite.Assert().Len(authorTxs, installments, "todas as parcelas do autor permanecem")
+	suite.Assert().Len(authorTxs, installments, "todas as parcelas do author permanecem")
 
 	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
 	suite.Require().NoError(err)
@@ -965,7 +965,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountCurre
 
 	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
 		TransactionType: domain.TransactionTypeExpense,
-		AccountID:       conn.FromAccountID, // conta compartilhada do autor
+		AccountID:       conn.FromAccountID, // conta compartilhada do author
 		CategoryID:      category.ID,
 		Amount:          100,
 		Date:            domain.Date{Time: time.Now().UTC()},
@@ -987,7 +987,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountCurre
 
 	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
 	suite.Require().NoError(err)
-	suite.Assert().Len(authorTxs, 0, "lado do autor também apagado")
+	suite.Assert().Len(authorTxs, 0, "lado do author também apagado")
 
 	time.Sleep(200 * time.Millisecond)
 	notifs, err := suite.Services.Notification.List(ctx, author.ID, domain.NotificationFilter{Limit: 100})
@@ -999,10 +999,10 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountCurre
 			break
 		}
 	}
-	suite.Require().NotNil(found, "autor recebe notificação shared_transaction_deleted")
+	suite.Require().NotNil(found, "author recebe notificação shared_transaction_deleted")
 	suite.Assert().Equal(int64(100), lo.FromPtr(found.Amount))
 	suite.Assert().Equal("Shared account expense", lo.FromPtr(found.Description))
-	suite.Assert().Equal(0, found.EntityID, "sem alvo de navegação (tx do autor apagada)")
+	suite.Assert().Equal(0, found.EntityID, "sem alvo de navegação (tx do author apagada)")
 }
 
 // Cenário B recorrente, propagação 'all': a ponta apaga uma parcela e ambos os
@@ -1064,7 +1064,7 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountAll()
 		UserID: author.ID,
 	})
 	suite.Require().NoError(err)
-	suite.Assert().Len(authorRecs, 0, "recorrência do autor limpa")
+	suite.Assert().Len(authorRecs, 0, "recorrência do author limpa")
 
 	pontaRecs, err := suite.Repos.TransactionRecurrence.Search(ctx, domain.TransactionRecurrenceFilter{
 		IDs:    []int{*pontaRecurrenceID},

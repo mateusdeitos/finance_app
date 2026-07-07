@@ -28,106 +28,27 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 		return err
 	}
 
-	// Autorização: rejeita quem não tem nenhuma relação com a transação — nem é o
-	// autor original, nem é o dono da linha.
+	// Reject anyone with no relation to the transaction: neither the original
+	// creator nor the owner of the row.
 	if transaction.OriginalUserID != nil && *transaction.OriginalUserID != userID && transaction.UserID != userID {
 		return pkgErrors.ErrParentTransactionBelongsToAnotherUser
 	}
 
-	// Notificação disparada ao autor quando a exclusão parte do usuário da ponta.
-	// É populada nos ramos da ponta e enviada após o commit.
+	// Notification fired to the author when the deletion comes from the partner
+	// on the receiving end. Populated by the partner paths, dispatched post-commit.
 	var deleteEvent *domain.NotificationEvent
 
-	// Autor = criou a transação (OriginalUserID nil OU igual ao usuário atual). A
-	// source de splits/compartilhadas é criada com OriginalUserID = &autor.
-	isAuthor := transaction.OriginalUserID == nil || *transaction.OriginalUserID == userID
-
-	if isAuthor {
-		// Caminho do autor: preserva o comportamento atual. Se o autor passou o id de
-		// uma transação vinculada (o lado da ponta), troca para a source e deleta os
-		// dois lados. A busca da source NÃO é mais escopada por usuário.
-		sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id)
-		if err != nil {
-			return pkgErrors.Internal("failed to get source transaction IDs", err)
-		}
-		if len(sourceIDs) > 0 {
-			sourceTransaction, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
-			if err != nil {
-				return err
-			}
-			transaction = sourceTransaction
-		}
-
-		if err := s.dispatchDelete(ctx, transaction.UserID, transaction, propagationSettings, true, false); err != nil {
+	// The author created the transaction (OriginalUserID nil OR equal to the
+	// current user). The source of splits/shared transactions is created with
+	// OriginalUserID = &author.
+	if transaction.OriginalUserID == nil || *transaction.OriginalUserID == userID {
+		if err := s.deleteAsAuthor(ctx, transaction, id, propagationSettings); err != nil {
 			return err
 		}
 	} else {
-		// Caminho da ponta (garantido pela autorização acima:
-		// OriginalUserID != nil && *OriginalUserID != userID && UserID == userID).
-		settlements, err := s.settlementRepo.Search(ctx, domain.SettlementFilter{
-			ParentTransactionIDs: []int{transaction.ID},
-		})
+		deleteEvent, err = s.deleteAsPartner(ctx, userID, transaction, id, propagationSettings)
 		if err != nil {
-			return pkgErrors.Internal("failed to search settlements for delete", err)
-		}
-
-		if len(settlements) > 0 {
-			// Cenário A (split em conta privada): desfaz o split apenas do lado da
-			// ponta — apaga a transação da ponta + os settlements vinculados, sem
-			// tocar na transação privada do autor. Propaga para as parcelas da
-			// recorrência da própria ponta.
-			if err := s.dispatchDelete(ctx, userID, transaction, propagationSettings, false, true); err != nil {
-				return err
-			}
-
-			// A transação privada do autor sobrevive — a notificação aponta para ela.
-			entityID := 0
-			if sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id); err == nil && len(sourceIDs) > 0 {
-				entityID = sourceIDs[0]
-			}
-			deleteEvent = &domain.NotificationEvent{
-				RecipientUserID: *transaction.OriginalUserID,
-				ActorUserID:     userID,
-				Type:            domain.NotificationTypeSharedTransactionDeleted,
-				EntityType:      "transaction",
-				EntityID:        entityID,
-				Amount:          transaction.Amount,
-				Description:     transaction.Description,
-				TxKind:          string(transaction.Type),
-			}
-		} else {
-			// Cenário B (conta compartilhada) / transferência entre usuários: sem
-			// settlement, apaga os dois lados. Troca para a source e propaga pelas
-			// parcelas escopadas ao dono da source (autor).
-			source := transaction
-			sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id)
-			if err != nil {
-				return pkgErrors.Internal("failed to get source transaction IDs", err)
-			}
-			if len(sourceIDs) > 0 {
-				source, err = s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
-				if err != nil {
-					return err
-				}
-			}
-
-			if err := s.dispatchDelete(ctx, source.UserID, source, propagationSettings, true, false); err != nil {
-				return err
-			}
-
-			// A transação do autor também é apagada, então não há alvo de navegação:
-			// entity_id = 0 e o corpo carrega descrição + valor. TxKind usa o tipo da
-			// source (o tipo original do autor), pois o lado da ponta é invertido.
-			deleteEvent = &domain.NotificationEvent{
-				RecipientUserID: *transaction.OriginalUserID,
-				ActorUserID:     userID,
-				Type:            domain.NotificationTypeSharedTransactionDeleted,
-				EntityType:      "transaction",
-				EntityID:        0,
-				Amount:          transaction.Amount,
-				Description:     transaction.Description,
-				TxKind:          string(source.Type),
-			}
+			return err
 		}
 	}
 
@@ -136,25 +57,108 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	}
 
 	if deleteEvent != nil {
-		//nolint:gosec,contextcheck // G118: contexto destacado intencional — o push pós-commit precisa sobreviver ao ctx da request (NOTIF-06)
+		//nolint:gosec,contextcheck // G118: detached context on purpose — the post-commit push must outlive the request ctx (NOTIF-06)
 		go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{*deleteEvent})
 	}
 
 	return nil
 }
 
-// getByID busca uma transação escopada ao usuário. Usado pelo fluxo de update.
-func (s *transactionService) getByID(ctx context.Context, userID int, id int) (*domain.Transaction, error) {
-	return s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-		IDs:    []int{id},
-		UserID: &userID,
-	})
+// deleteAsAuthor preserves the pre-existing behavior: delete both sides plus
+// installments. If the author passed the id of a linked (partner) transaction,
+// swap to the source first. The swap is no longer scoped to the deleting user.
+func (s *transactionService) deleteAsAuthor(ctx context.Context, transaction *domain.Transaction, id int, propagation domain.TransactionPropagationSettings) error {
+	sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id)
+	if err != nil {
+		return pkgErrors.Internal("failed to get source transaction IDs", err)
+	}
+	if len(sourceIDs) > 0 {
+		sourceTransaction, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
+		if err != nil {
+			return err
+		}
+		transaction = sourceTransaction
+	}
+
+	return s.dispatchDelete(ctx, transaction.UserID, transaction, propagation, true, false)
 }
 
-// dispatchDelete resolve o modo de propagação e delega para deleteTransactions.
-//   - installmentUserID: dono da recorrência cujas parcelas serão coletadas.
-//   - pullLinked: se true, também apaga as transações vinculadas (o outro lado).
-//   - deleteSettlements: se true, remove os settlements vinculados às transações alvo.
+// deleteAsPartner handles deletion initiated by the partner on the receiving end
+// (guaranteed by the authorization check in Delete: OriginalUserID != nil &&
+// *OriginalUserID != userID && UserID == userID). It returns the notification
+// event to fire to the author after commit.
+func (s *transactionService) deleteAsPartner(ctx context.Context, userID int, transaction *domain.Transaction, id int, propagation domain.TransactionPropagationSettings) (*domain.NotificationEvent, error) {
+	settlements, err := s.settlementRepo.Search(ctx, domain.SettlementFilter{
+		ParentTransactionIDs: []int{transaction.ID},
+	})
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to search settlements for delete", err)
+	}
+
+	// Scenario A (split on a private account): undo the split only on the
+	// partner side — delete the partner transaction(s) plus their settlements,
+	// leaving the author's private transaction untouched. Propagates across the
+	// partner's own recurrence.
+	if len(settlements) > 0 {
+		if err := s.dispatchDelete(ctx, userID, transaction, propagation, false, true); err != nil {
+			return nil, err
+		}
+
+		// The author's private transaction survives — link the notification to it.
+		entityID := 0
+		if sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id); err == nil && len(sourceIDs) > 0 {
+			entityID = sourceIDs[0]
+		}
+		return &domain.NotificationEvent{
+			RecipientUserID: *transaction.OriginalUserID,
+			ActorUserID:     userID,
+			Type:            domain.NotificationTypeSharedTransactionDeleted,
+			EntityType:      "transaction",
+			EntityID:        entityID,
+			Amount:          transaction.Amount,
+			Description:     transaction.Description,
+			TxKind:          string(transaction.Type),
+		}, nil
+	}
+
+	// Scenario B (transaction on a shared account) / cross-user transfer: no
+	// settlement, delete both sides. Swap to the source and propagate across the
+	// installments scoped to the source owner (the author).
+	source := transaction
+	sourceIDs, err := s.transactionRepo.GetSourceTransactionIDs(ctx, id)
+	if err != nil {
+		return nil, pkgErrors.Internal("failed to get source transaction IDs", err)
+	}
+	if len(sourceIDs) > 0 {
+		source, err = s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{sourceIDs[0]}})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := s.dispatchDelete(ctx, source.UserID, source, propagation, true, false); err != nil {
+		return nil, err
+	}
+
+	// The author's transaction is also deleted, so there is no navigation target:
+	// entity_id = 0 and the body carries description + amount. TxKind uses the
+	// source type (the author's original type), since the partner side is inverted.
+	return &domain.NotificationEvent{
+		RecipientUserID: *transaction.OriginalUserID,
+		ActorUserID:     userID,
+		Type:            domain.NotificationTypeSharedTransactionDeleted,
+		EntityType:      "transaction",
+		EntityID:        0,
+		Amount:          transaction.Amount,
+		Description:     transaction.Description,
+		TxKind:          string(source.Type),
+	}, nil
+}
+
+// dispatchDelete resolves the propagation mode and delegates to deleteTransactions.
+//   - installmentUserID: owner of the recurrence whose installments are collected.
+//   - pullLinked: when true, also delete the linked transactions (the other side).
+//   - deleteSettlements: when true, remove the settlements bound to the targets.
 func (s *transactionService) dispatchDelete(
 	ctx context.Context,
 	installmentUserID int,
@@ -183,10 +187,10 @@ func (s *transactionService) dispatchDelete(
 	}
 }
 
-// collectInstallments retorna as parcelas da recorrência da transação que devem
-// ser apagadas. Sem recorrência (ou sem número de parcela no modo futuro), retorna
-// apenas a própria transação. userID escopa a busca ao dono da recorrência (a
-// source no caminho do autor/cenário B, a própria ponta no cenário A).
+// collectInstallments returns the recurrence installments that must be deleted.
+// With no recurrence (or no installment number in future-only mode) it returns
+// just the transaction itself. userID scopes the search to the recurrence owner
+// (the source on the author/scenario-B path, the partner on scenario A).
 func (s *transactionService) collectInstallments(ctx context.Context, userID int, transaction *domain.Transaction, futureOnly bool) ([]*domain.Transaction, error) {
 	if transaction.TransactionRecurrenceID == nil || (futureOnly && transaction.InstallmentNumber == nil) {
 		return []*domain.Transaction{transaction}, nil
@@ -209,13 +213,13 @@ func (s *transactionService) collectInstallments(ctx context.Context, userID int
 	return installments, nil
 }
 
-// deleteTransactions apaga o conjunto de transações informado.
-//   - pullLinked: também apaga as transações vinculadas (o outro lado do
-//     compartilhamento), primeiro as vinculadas e depois as source.
-//   - deleteSettlements: remove os settlements cujo parent_transaction_id aponta
-//     para as transações alvo. Necessário no cenário de split, em que a source do
-//     autor NÃO é apagada e, por ser soft-delete, o CASCADE da FK não dispara — o
-//     settlement precisa ser removido explicitamente para o saldo compartilhado bater.
+// deleteTransactions deletes the given set of transactions.
+//   - pullLinked: also delete the linked transactions (the other side of the
+//     share), the linked ones first and the sources afterwards.
+//   - deleteSettlements: remove the settlements whose parent_transaction_id points
+//     at the targets. Required in the split scenario, where the author's source is
+//     NOT deleted and — being a soft delete — the FK CASCADE does not fire, so the
+//     settlement must be removed explicitly for the shared balance to stay correct.
 func (s *transactionService) deleteTransactions(ctx context.Context, targets []*domain.Transaction, pullLinked bool, deleteSettlements bool) error {
 	toDelete := make([]*domain.Transaction, 0, len(targets)*2)
 	toDelete = append(toDelete, targets...)
@@ -284,10 +288,18 @@ func (s *transactionService) deleteRecurrencesWithoutTransactions(ctx context.Co
 		}
 	}
 
-	// deleta todas as recorrências sem transações
+	// delete every recurrence with no remaining transactions
 	if err := s.transactionRecurRepo.Delete(ctx, excludeRecurrenceIDs); err != nil {
 		return pkgErrors.Internal("failed to delete recurrences", err)
 	}
 
 	return nil
+}
+
+// getByID fetches a transaction scoped to the user. Used by the update flow.
+func (s *transactionService) getByID(ctx context.Context, userID int, id int) (*domain.Transaction, error) {
+	return s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
+		IDs:    []int{id},
+		UserID: &userID,
+	})
 }
