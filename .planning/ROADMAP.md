@@ -247,7 +247,18 @@ Plans:
   3. PUT /api/transaction-templates/:id updates the template's fields including tag replacement; requesting with another user's template ID returns 404, not 403
   4. DELETE /api/transaction-templates/:id removes the template and its tag associations; requesting with another user's template ID returns 404
   5. Swagger documentation is generated and reflects all four endpoints with correct request/response schemas
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+
+**Wave 1**
+- [ ] 27-01-PLAN.md — TEMPLATE.* errors + request DTOs + TransactionTemplateRepository (race-safe cap + IDOR scoping) + mocks
+
+**Wave 2** *(blocked on 27-01)*
+- [ ] 27-02-PLAN.md — TransactionTemplateService (IDOR arg, validation, duplicate-name 409, cap translation) + suite wiring + service mock
+
+**Wave 3** *(blocked on 27-02)*
+- [ ] 27-03-PLAN.md — TransactionTemplateHandler (4 routes + Swagger) + main.go DI/routes + generate-docs + handler tests
+- [ ] 27-04-PLAN.md — testcontainers integration suite: cap race (SAFE-01), IDOR 404 (SAFE-02), duplicate, validation, ordering, isolation
 
 ### Phase 28: SplitSettingsFields Template Mode
 **Goal**: The `SplitSettingsFields` component works correctly in a no-amount context — the template form can embed it without displaying a misleading "R$0,00" live calculation or causing confusing UX when no amount is present
@@ -327,7 +338,7 @@ Plans:
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
 | 26. Backend Foundation | v1.7 | 2/2 | Complete    | 2026-06-14 |
-| 27. Backend CRUD API | v1.7 | 0/? | Not started | - |
+| 27. Backend CRUD API | v1.7 | 0/4 | Planned | - |
 | 28. SplitSettingsFields Template Mode | v1.7 | 0/? | Not started | - |
 | 29. Frontend Chip Apply Flow | v1.7 | 0/? | Not started | - |
 | 30. Frontend Management UI | v1.7 | 0/? | Not started | - |
