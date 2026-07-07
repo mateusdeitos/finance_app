@@ -6,6 +6,7 @@ export type Me = {
   name: string
   email: string
   avatar_url?: string
+  is_admin: boolean
 }
 
 export async function fetchMe(): Promise<Me> {

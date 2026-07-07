@@ -148,7 +148,7 @@ func (_c *MockAuthService_TestLogin_Call) RunAndReturn(run func(context.Context,
 }
 
 // ValidateToken provides a mock function with given fields: ctx, token
-func (_m *MockAuthService) ValidateToken(ctx context.Context, token string) (*domain.User, error) {
+func (_m *MockAuthService) ValidateToken(ctx context.Context, token string) (*domain.User, *domain.Impersonator, error) {
 	ret := _m.Called(ctx, token)
 
 	if len(ret) == 0 {
@@ -156,8 +156,9 @@ func (_m *MockAuthService) ValidateToken(ctx context.Context, token string) (*do
 	}
 
 	var r0 *domain.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*domain.User, error)); ok {
+	var r1 *domain.Impersonator
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*domain.User, *domain.Impersonator, error)); ok {
 		return rf(ctx, token)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.User); ok {
@@ -168,13 +169,21 @@ func (_m *MockAuthService) ValidateToken(ctx context.Context, token string) (*do
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string) *domain.Impersonator); ok {
 		r1 = rf(ctx, token)
 	} else {
-		r1 = ret.Error(1)
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*domain.Impersonator)
+		}
 	}
 
-	return r0, r1
+	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
+		r2 = rf(ctx, token)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // MockAuthService_ValidateToken_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ValidateToken'
@@ -196,12 +205,12 @@ func (_c *MockAuthService_ValidateToken_Call) Run(run func(ctx context.Context, 
 	return _c
 }
 
-func (_c *MockAuthService_ValidateToken_Call) Return(_a0 *domain.User, _a1 error) *MockAuthService_ValidateToken_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *MockAuthService_ValidateToken_Call) Return(_a0 *domain.User, _a1 *domain.Impersonator, _a2 error) *MockAuthService_ValidateToken_Call {
+	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockAuthService_ValidateToken_Call) RunAndReturn(run func(context.Context, string) (*domain.User, error)) *MockAuthService_ValidateToken_Call {
+func (_c *MockAuthService_ValidateToken_Call) RunAndReturn(run func(context.Context, string) (*domain.User, *domain.Impersonator, error)) *MockAuthService_ValidateToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 )
@@ -19,6 +20,18 @@ type UserRepository interface {
 	GetByExternalID(ctx context.Context, externalID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	Delete(ctx context.Context, id int) error
+	// Search returns users whose name or email matches query (case-insensitive),
+	// capped at limit. An empty query returns the first `limit` users. Used by
+	// the admin impersonation user picker.
+	Search(ctx context.Context, query string, limit int) ([]*domain.User, error)
+}
+
+// ImpersonationRepository persists the admin impersonation audit trail.
+type ImpersonationRepository interface {
+	Create(ctx context.Context, session *domain.ImpersonationSession) error
+	GetByID(ctx context.Context, id string) (*domain.ImpersonationSession, error)
+	// Revoke marks the session ended at the given time. No-op if already revoked.
+	Revoke(ctx context.Context, id string, at time.Time) error
 }
 
 type UserSocialRepository interface {
@@ -164,4 +177,5 @@ type Repositories struct {
 	Charge                ChargeRepository
 	PushSubscription      PushSubscriptionRepository
 	Notification          NotificationRepository
+	Impersonation         ImpersonationRepository
 }

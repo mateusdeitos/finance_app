@@ -1,5 +1,5 @@
 import { AppShell, Group, Menu, Text, Box } from "@mantine/core";
-import { IconLogout, IconUsers } from "@tabler/icons-react";
+import { IconLogout, IconUsers, IconEyeglass } from "@tabler/icons-react";
 import { Link, Outlet } from "@tanstack/react-router";
 import { useMe } from "@/hooks/useMe";
 import { useLogout } from "@/hooks/useLogout";
@@ -12,6 +12,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { useServiceWorkerNavigation } from "@/hooks/useServiceWorkerNavigation";
 import { renderDrawer } from "@/utils/renderDrawer";
+import { ImpersonateUserDrawer } from "@/components/admin/ImpersonateUserDrawer";
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
+import { AdminTestIds } from "@/testIds";
 
 const MOBILE_HEADER_HEIGHT = 50;
 const MOBILE_TAB_BAR_HEIGHT = 56;
@@ -73,6 +76,15 @@ export function AppLayout() {
                   >
                     Criar Conexão
                   </Menu.Item>
+                  {user.is_admin && (
+                    <Menu.Item
+                      leftSection={<IconEyeglass size={16} />}
+                      onClick={() => void renderDrawer(() => <ImpersonateUserDrawer />).catch(() => {})}
+                      data-testid={AdminTestIds.MenuImpersonate}
+                    >
+                      Impersonar usuário
+                    </Menu.Item>
+                  )}
                   <Menu.Divider />
                   <Menu.Item
                     leftSection={<IconLogout size={16} />}
@@ -88,6 +100,8 @@ export function AppLayout() {
           </Group>
         </Group>
       </AppShell.Header>
+
+      <ImpersonationBanner />
 
       <AppShell.Navbar p={0} visibleFrom="sm">
         <DesktopSidebar />
