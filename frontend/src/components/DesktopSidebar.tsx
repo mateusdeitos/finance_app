@@ -24,6 +24,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { EditConnectionDrawer } from "@/components/connections/EditConnectionDrawer";
 import { ImpersonateUserDrawer } from "@/components/admin/ImpersonateUserDrawer";
+import { ImpersonationNotice } from "@/components/admin/ImpersonationNotice";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CommonTestIds, NotificationsTestIds, AdminTestIds } from "@/testIds";
 import { Transactions } from "@/types/transactions";
@@ -101,6 +102,8 @@ export function DesktopSidebar() {
         <img src="/icon.svg" width={28} height={28} alt="FinanceApp" />
         <span className={classes.brandText}>FinanceApp</span>
       </Link>
+
+      <ImpersonationNotice />
 
       <div className={classes.navGroup}>
         {navLinks.map(({ to, label, icon: Icon }) => {

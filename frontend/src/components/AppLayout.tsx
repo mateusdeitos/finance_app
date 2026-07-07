@@ -13,7 +13,6 @@ import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { useServiceWorkerNavigation } from "@/hooks/useServiceWorkerNavigation";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { ImpersonateUserDrawer } from "@/components/admin/ImpersonateUserDrawer";
-import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { AdminTestIds } from "@/testIds";
 
 const MOBILE_HEADER_HEIGHT = 50;
@@ -100,8 +99,6 @@ export function AppLayout() {
           </Group>
         </Group>
       </AppShell.Header>
-
-      <ImpersonationBanner />
 
       <AppShell.Navbar p={0} visibleFrom="sm">
         <DesktopSidebar />
