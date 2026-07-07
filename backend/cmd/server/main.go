@@ -129,7 +129,7 @@ func main() {
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
-	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
+	impersonationHandler := handler.NewImpersonationHandler(services)
 
 	// Setup Echo
 	e := echo.New()

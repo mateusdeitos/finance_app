@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
@@ -15,13 +14,11 @@ import (
 
 type ImpersonationHandler struct {
 	service service.ImpersonationService
-	cfg     *config.Config
 }
 
-func NewImpersonationHandler(services *service.Services, cfg *config.Config) *ImpersonationHandler {
+func NewImpersonationHandler(services *service.Services) *ImpersonationHandler {
 	return &ImpersonationHandler{
 		service: services.Impersonation,
-		cfg:     cfg,
 	}
 }
 
