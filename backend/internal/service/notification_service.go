@@ -67,12 +67,22 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 			d := ev.Description
 			description = &d
 		}
+		// Persist the amount so the inbox can render the value even when the
+		// referenced entity was deleted (e.g. a partner removing a shared-account
+		// transaction, where there is nothing left to resolve). Store nil for a
+		// zero amount to keep the column NULL.
+		var amount *int64
+		if ev.Amount != 0 {
+			a := ev.Amount
+			amount = &a
+		}
 		_, err := s.notifRepo.Create(ctx, &domain.Notification{
 			UserID:      ev.RecipientUserID,
 			Type:        ev.Type,
 			EntityType:  ev.EntityType,
 			EntityID:    ev.EntityID,
 			Description: description,
+			Amount:      amount,
 		})
 		if err != nil {
 			log.Printf("[notification] failed to persist row: %v", err)
@@ -292,6 +302,8 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 		body = fmt.Sprintf("%s atualizou uma %s dividida (%s)", actorName, splitNoun, formatBRL(first.Amount))
 	case first.Type == domain.NotificationTypeTransferReceived:
 		body = fmt.Sprintf("%s te transferiu %s", actorName, formatBRL(first.Amount))
+	case first.Type == domain.NotificationTypeSharedTransactionDeleted:
+		body = fmt.Sprintf("%s removeu uma %s compartilhada de %s: %s", actorName, splitNoun, formatBRL(first.Amount), first.Description)
 	default:
 		body = actorName + " enviou uma notificação"
 	}
@@ -309,6 +321,8 @@ func (s *notificationService) buildPayload(actorName string, evGroup []domain.No
 		title = capitalize(splitNoun) + " dividida atualizada"
 	case domain.NotificationTypeTransferReceived:
 		title = "Nova transferência"
+	case domain.NotificationTypeSharedTransactionDeleted:
+		title = "Transação compartilhada removida"
 	default:
 		title = "Finance App"
 	}

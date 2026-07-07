@@ -152,6 +152,49 @@ describe('describeNotification', () => {
     })
   })
 
+  // shared_transaction_deleted
+  describe('shared_transaction_deleted', () => {
+    it('known amount + description', () => {
+      const result = describeNotification(
+        makeNotification('shared_transaction_deleted', 'transaction'),
+        {
+          amount: AMOUNT,
+          amountState: 'known',
+          partnerName: PARTNER,
+          description: 'Mercado',
+        },
+      )
+      expect(result).toBe(
+        `${PARTNER} removeu uma transação compartilhada de ${formatBalance(AMOUNT)}: Mercado`,
+      )
+    })
+
+    it('known amount + null description omits colon portion', () => {
+      const result = describeNotification(
+        makeNotification('shared_transaction_deleted', 'transaction'),
+        {
+          amount: AMOUNT,
+          amountState: 'known',
+          partnerName: PARTNER,
+          description: null,
+        },
+      )
+      expect(result).toBe(`${PARTNER} removeu uma transação compartilhada de ${formatBalance(AMOUNT)}`)
+    })
+
+    it('loading state degrades to no-amount copy', () => {
+      const result = describeNotification(
+        makeNotification('shared_transaction_deleted', 'transaction'),
+        {
+          amount: null,
+          amountState: 'loading',
+          partnerName: PARTNER,
+        },
+      )
+      expect(result).toBe(`${PARTNER} removeu uma transação compartilhada`)
+    })
+  })
+
   // fallbacks
   describe('fallbacks', () => {
     it('null partnerName falls back to "Seu parceiro(a)"', () => {

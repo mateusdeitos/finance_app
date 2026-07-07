@@ -58,6 +58,14 @@ export function describeNotification(
       if (amountState === 'loading') return `${who} te transferiu um valor`
       return `${who} te transferiu ${amountState === 'missing' ? DASH : amt}`
 
+    case 'shared_transaction_deleted': {
+      if (amountState === 'loading') return `${who} removeu uma transação compartilhada`
+      const value = amountState === 'missing' ? DASH : amt
+      return ctx.description
+        ? `${who} removeu uma transação compartilhada de ${value}: ${ctx.description}`
+        : `${who} removeu uma transação compartilhada de ${value}`
+    }
+
     default:
       return 'Nova notificação'
   }

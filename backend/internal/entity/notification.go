@@ -7,13 +7,14 @@ import (
 )
 
 type Notification struct {
-	ID          int        `gorm:"primaryKey;autoIncrement"`
-	UserID      int        `gorm:"not null;index"`
-	Type        string     `gorm:"not null"`
-	EntityType  string     `gorm:"not null"`
-	EntityID    int        `gorm:"not null"`
-	Read        bool       `gorm:"not null;default:false"`
-	Description *string    `gorm:"column:description"`
+	ID          int     `gorm:"primaryKey;autoIncrement"`
+	UserID      int     `gorm:"not null;index"`
+	Type        string  `gorm:"not null"`
+	EntityType  string  `gorm:"not null"`
+	EntityID    int     `gorm:"not null"`
+	Read        bool    `gorm:"not null;default:false"`
+	Description *string `gorm:"column:description"`
+	Amount      *int64  `gorm:"column:amount"`
 	CreatedAt   *time.Time
 }
 
@@ -26,6 +27,7 @@ func (e *Notification) ToDomain() *domain.Notification {
 		EntityID:    e.EntityID,
 		Read:        e.Read,
 		Description: e.Description,
+		Amount:      e.Amount,
 		CreatedAt:   e.CreatedAt,
 	}
 }
@@ -39,5 +41,6 @@ func NotificationFromDomain(d *domain.Notification) *Notification {
 		EntityID:    d.EntityID,
 		Read:        d.Read,
 		Description: d.Description,
+		Amount:      d.Amount,
 	}
 }

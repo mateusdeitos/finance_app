@@ -29,6 +29,7 @@ const NOTIF_TYPE_CONFIG: Record<
   split_created: { Icon: IconUsers, color: 'violet' },
   split_updated: { Icon: IconRefresh, color: 'orange' },
   transfer_received: { Icon: IconTransferIn, color: 'green' },
+  shared_transaction_deleted: { Icon: IconTrash, color: 'red' },
 }
 
 const FALLBACK_CONFIG = { Icon: IconCreditCard, color: 'gray' }
@@ -96,9 +97,18 @@ export function NotificationRow({
   // rows created before the column existed have no description).
   const description = notification.description ?? resolved.description
 
+  // Prefer the amount persisted on the notification row. It's authoritative for
+  // rows whose referenced entity can't be resolved to the right value — e.g. a
+  // shared-transaction deletion, where the source is gone (entity_id 0) or holds
+  // the full amount rather than the removed share. Fall back to entity resolution
+  // for older rows / types that don't persist an amount.
+  const hasPersistedAmount = notification.amount != null
+  const amount = hasPersistedAmount ? (notification.amount as number) : resolved.amount
+  const amountState = hasPersistedAmount ? 'known' : resolved.amountState
+
   const desc = describeNotification(notification, {
-    amount: resolved.amount,
-    amountState: resolved.amountState,
+    amount,
+    amountState,
     partnerName,
     description,
   })
