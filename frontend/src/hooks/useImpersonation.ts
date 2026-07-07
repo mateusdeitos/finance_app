@@ -1,53 +1,32 @@
-import { useSyncExternalStore } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { startImpersonation, stopImpersonation } from '@/api/admin'
-import {
-  clearImpersonation,
-  getImpersonation,
-  setImpersonation,
-  subscribeImpersonation,
-  type ImpersonationSession,
-} from '@/utils/impersonation'
+import { useMe } from '@/hooks/useMe'
 
 /**
- * Exposes the current impersonation session and start/stop actions.
- *
- * The session is held in an external store (see `utils/impersonation.ts`) and
- * read via `useSyncExternalStore`, so every subscriber re-renders when it
- * changes. After starting or stopping we invalidate *all* queries so the whole
- * app reloads its data under the new identity.
+ * Impersonation state + actions. State is derived from `/api/auth/me` (the
+ * backend returns an `impersonator` when the session is impersonated), so there
+ * is no client-held token: the impersonation JWT lives in an HttpOnly cookie
+ * swapped server-side. After start/stop we invalidate all queries so the whole
+ * app reloads under the new identity.
  */
 export function useImpersonation() {
-  const session = useSyncExternalStore(subscribeImpersonation, getImpersonation, getImpersonation)
   const queryClient = useQueryClient()
+  const { query } = useMe((m) => m.impersonator ?? null)
+  const impersonator = query.data ?? null
 
   const start = async (targetUserId: number, reason: string): Promise<void> => {
-    const result = await startImpersonation(targetUserId, reason)
-    const next: ImpersonationSession = {
-      token: result.token,
-      session_id: result.session_id,
-      expires_at: result.expires_at,
-      target: {
-        id: result.target_user.id,
-        name: result.target_user.name,
-        email: result.target_user.email,
-        avatar_url: result.target_user.avatar_url,
-      },
-    }
-    setImpersonation(next)
+    await startImpersonation(targetUserId, reason)
     await queryClient.invalidateQueries()
   }
 
   const stop = async (): Promise<void> => {
-    // Best-effort server-side revoke; always clear locally even if it fails so
-    // the admin is never stuck in an impersonated state.
+    // Best-effort revoke; always reload so the admin returns to their own view.
     try {
       await stopImpersonation()
     } finally {
-      clearImpersonation()
       await queryClient.invalidateQueries()
     }
   }
 
-  return { session, isImpersonating: session !== null, start, stop }
+  return { impersonator, isImpersonating: impersonator !== null, start, stop }
 }

@@ -14,11 +14,6 @@ import App from './App'
 import { AppNotifications } from './components/AppNotifications'
 import { theme } from './theme'
 import { queryClient } from './queryClient'
-import { installImpersonationInterceptor } from './utils/impersonation'
-
-// Install the fetch interceptor before any request is made so an active
-// impersonation session (restored from sessionStorage) applies immediately.
-installImpersonationInterceptor()
 
 // Mantine's DateInput parses user-typed input via dayjs(value, valueFormat, locale).
 // Without customParseFormat, dayjs ignores the format string and falls back to

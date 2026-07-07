@@ -114,10 +114,6 @@ func main() {
 	services.Notification = service.NewNotificationService(repos, cfg)
 	services.Impersonation = service.NewImpersonationService(repos, cfg)
 
-	// Seed admin flags from ADMIN_EMAILS so at least one operator can impersonate
-	// users for troubleshooting. Idempotent: only promotes users not already admin.
-	promoteAdmins(context.Background(), repos.User, cfg.Impersonation.AdminEmails)
-
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
 	accountHandler := handler.NewAccountHandler(services)
@@ -129,7 +125,7 @@ func main() {
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
-	impersonationHandler := handler.NewImpersonationHandler(services)
+	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
 
 	// Setup Echo
 	e := echo.New()
@@ -330,30 +326,6 @@ func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {
 	transactions.PUT("/:id", h.Update)
 	transactions.POST("/import-csv", h.ImportCSV)
 	transactions.POST("/check-duplicates-bulk", h.CheckDuplicatesBulk)
-}
-
-// promoteAdmins sets users.is_admin = true for every email in ADMIN_EMAILS that
-// maps to an existing user. Runtime authorization always reads the DB flag; this
-// only seeds it so the operator isn't locked out of impersonation on a fresh
-// deploy. Users that don't exist yet are skipped (they'll be created on first
-// login and can be promoted directly in the DB).
-func promoteAdmins(ctx context.Context, userRepo repository.UserRepository, emails []string) {
-	for _, email := range emails {
-		user, err := userRepo.GetByEmail(ctx, email)
-		if err != nil {
-			log.Printf("WARNING: failed to look up admin candidate %q: %v", email, err)
-			continue
-		}
-		if user == nil || user.IsAdmin {
-			continue
-		}
-		user.IsAdmin = true
-		if err := userRepo.Update(ctx, user); err != nil {
-			log.Printf("WARNING: failed to promote admin %q: %v", email, err)
-			continue
-		}
-		log.Printf("Promoted %q to admin", email)
-	}
 }
 
 func initLogger(cfg *config.Config) zerolog.Logger {

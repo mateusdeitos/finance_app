@@ -22,12 +22,12 @@ export async function searchAdminUsers(query: string): Promise<AdminUser[]> {
 }
 
 export type StartImpersonationResult = {
-  token: string
-  session_id: string
-  expires_at: string
   target_user: Me
+  expires_at: string
 }
 
+// The impersonation token is delivered as an HttpOnly cookie (auth_token is
+// swapped server-side), so nothing token-related is returned here.
 export async function startImpersonation(
   targetUserId: number,
   reason: string,
@@ -42,8 +42,9 @@ export async function startImpersonation(
   return res.json()
 }
 
-// stopImpersonation is called while the impersonation token is active; the fetch
-// interceptor attaches it, so the backend can revoke the current session.
+// stopImpersonation is called while impersonating (auth_token cookie holds the
+// impersonation token); the backend revokes the session and restores the admin
+// cookie.
 export async function stopImpersonation(): Promise<void> {
   const res = await fetch(`${apiUrl}/api/impersonation/stop`, {
     method: 'POST',

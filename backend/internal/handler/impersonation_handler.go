@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/service"
 	"github.com/finance_app/backend/pkg/appcontext"
@@ -12,14 +13,29 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// ImpersonatorCookieName holds the admin's own auth token while they impersonate
+// a user. On start we move the admin's auth_token here and overwrite auth_token
+// with the impersonation token; on stop we move it back. Both cookies are
+// HttpOnly, so the impersonation token is never exposed to JavaScript.
+const ImpersonatorCookieName = "impersonator_token"
+
 type ImpersonationHandler struct {
 	service service.ImpersonationService
+	cfg     *config.Config
 }
 
-func NewImpersonationHandler(services *service.Services) *ImpersonationHandler {
+func NewImpersonationHandler(services *service.Services, cfg *config.Config) *ImpersonationHandler {
 	return &ImpersonationHandler{
 		service: services.Impersonation,
+		cfg:     cfg,
 	}
+}
+
+// startImpersonationResponse is what the admin receives on start. It never
+// includes the token — that is delivered as an HttpOnly cookie.
+type startImpersonationResponse struct {
+	TargetUser *domain.User `json:"target_user"`
+	ExpiresAt  time.Time    `json:"expires_at"`
 }
 
 // adminUserView is the trimmed user shape returned by the admin picker — no
@@ -84,7 +100,7 @@ func (h *ImpersonationHandler) SearchUsers(c echo.Context) error {
 // @Security     CookieAuth
 // @Security     BearerAuth
 // @Param        request  body      domain.StartImpersonationRequest  true  "Impersonation target and reason"
-// @Success      201      {object}  domain.StartImpersonationResult
+// @Success      201      {object}  handler.startImpersonationResponse
 // @Failure      400      {object}  middleware.ErrorResponse
 // @Failure      401      {object}  middleware.ErrorResponse
 // @Failure      403      {object}  middleware.ErrorResponse
@@ -98,6 +114,14 @@ func (h *ImpersonationHandler) Start(c echo.Context) error {
 		return HandleServiceError(apperrors.ErrImpersonationNesting)
 	}
 
+	// The admin must be authenticated via the auth_token cookie so we can stash
+	// their session and restore it on stop. (Bearer-only callers can't be swapped
+	// back, so we require the cookie here.)
+	adminCookie, err := c.Cookie(AuthCookieName)
+	if err != nil || adminCookie.Value == "" {
+		return echo.NewHTTPError(http.StatusUnauthorized, "impersonation requires a cookie session")
+	}
+
 	var req domain.StartImpersonationRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
@@ -109,7 +133,33 @@ func (h *ImpersonationHandler) Start(c echo.Context) error {
 		return HandleServiceError(err)
 	}
 
-	return c.JSON(http.StatusCreated, result)
+	secure := h.cfg.App.Env == envProduction
+	// Stash the admin's own session so Stop can restore it.
+	c.SetCookie(&http.Cookie{
+		Name:     ImpersonatorCookieName,
+		Value:    adminCookie.Value,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
+	})
+	// Swap auth_token to the impersonation token. Expires with the session so a
+	// leaked cookie stops working on its own.
+	c.SetCookie(&http.Cookie{
+		Name:     AuthCookieName,
+		Value:    result.Token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  result.ExpiresAt,
+	})
+
+	return c.JSON(http.StatusCreated, startImpersonationResponse{
+		TargetUser: result.TargetUser,
+		ExpiresAt:  result.ExpiresAt,
+	})
 }
 
 // Stop godoc
@@ -135,5 +185,41 @@ func (h *ImpersonationHandler) Stop(c echo.Context) error {
 		return HandleServiceError(err)
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{"status": "ok", "stopped_at": time.Now().UTC().Format(time.RFC3339)})
+	secure := h.cfg.App.Env == envProduction
+	// Restore the admin's own session from the stashed cookie. If it's missing
+	// (e.g. it expired), clear auth_token so the admin re-authenticates rather
+	// than staying stuck as the impersonated user.
+	if impCookie, err := c.Cookie(ImpersonatorCookieName); err == nil && impCookie.Value != "" {
+		c.SetCookie(&http.Cookie{
+			Name:     AuthCookieName,
+			Value:    impCookie.Value,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(h.cfg.JWT.Expiration()),
+		})
+	} else {
+		c.SetCookie(&http.Cookie{
+			Name:     AuthCookieName,
+			Value:    "",
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   -1,
+		})
+	}
+	// Always clear the stash cookie.
+	c.SetCookie(&http.Cookie{
+		Name:     ImpersonatorCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }

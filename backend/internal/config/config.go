@@ -76,10 +76,6 @@ type VAPIDConfig struct {
 
 // ImpersonationConfig controls the admin user-impersonation feature.
 type ImpersonationConfig struct {
-	// AdminEmails is a CSV allowlist (ADMIN_EMAILS) of users promoted to admin
-	// at startup. It only *seeds* the users.is_admin column — runtime
-	// authorization always reads the DB flag, never this list.
-	AdminEmails []string
 	// TokenTTLMinutes bounds how long an impersonation token stays valid.
 	// Kept short by design: impersonation is for a troubleshooting session,
 	// not a standing grant.
@@ -137,7 +133,6 @@ func Load(files ...string) (*Config, error) {
 			Subject:    getEnv("VAPID_SUBJECT", ""),
 		},
 		Impersonation: ImpersonationConfig{
-			AdminEmails:     parseCSV(getEnv("ADMIN_EMAILS", "")),
 			TokenTTLMinutes: getEnvAsInt("IMPERSONATION_TOKEN_TTL_MINUTES", 30),
 		},
 	}

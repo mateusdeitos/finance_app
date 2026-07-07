@@ -1,19 +1,23 @@
 import { useState } from 'react'
 import { Box, Button, Group, Text } from '@mantine/core'
 import { IconEyeglass } from '@tabler/icons-react'
+import { useMe } from '@/hooks/useMe'
 import { useImpersonation } from '@/hooks/useImpersonation'
 import { AdminTestIds } from '@/testIds'
 
 /**
  * Persistent, unmissable banner shown while an admin is impersonating a user.
- * Fixed to the top above the app chrome so it stays visible on every page, and
- * offers the only supported way to exit the impersonated session.
+ * Driven by `/api/auth/me`: during impersonation `me` is the target user and
+ * carries an `impersonator`. Fixed to the top so it stays visible on every page
+ * and offers the only supported way to exit the impersonated session.
  */
 export function ImpersonationBanner() {
-  const { session, isImpersonating, stop } = useImpersonation()
+  const { query } = useMe()
+  const me = query.data
+  const { stop } = useImpersonation()
   const [stopping, setStopping] = useState(false)
 
-  if (!isImpersonating || !session) return null
+  if (!me?.impersonator) return null
 
   async function handleStop() {
     setStopping(true)
@@ -45,7 +49,7 @@ export function ImpersonationBanner() {
         <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
           <IconEyeglass size={18} />
           <Text size="sm" fw={600} truncate>
-            Impersonando {session.target.name} ({session.target.email})
+            Impersonando {me.name} ({me.email})
           </Text>
         </Group>
         <Button
