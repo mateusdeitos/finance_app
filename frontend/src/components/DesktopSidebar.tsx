@@ -10,6 +10,7 @@ import {
   IconUserPlus,
   IconLogout,
   IconChevronDown,
+  IconEyeglass,
   type Icon as TablerIcon,
 } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -22,8 +23,10 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { InviteDrawer } from "@/components/InviteDrawer";
 import { EditConnectionDrawer } from "@/components/connections/EditConnectionDrawer";
+import { ImpersonateUserDrawer } from "@/components/admin/ImpersonateUserDrawer";
+import { ImpersonationNotice } from "@/components/admin/ImpersonationNotice";
 import { renderDrawer } from "@/utils/renderDrawer";
-import { CommonTestIds, NotificationsTestIds } from "@/testIds";
+import { CommonTestIds, NotificationsTestIds, AdminTestIds } from "@/testIds";
 import { Transactions } from "@/types/transactions";
 import classes from "./DesktopSidebar.module.css";
 
@@ -99,6 +102,8 @@ export function DesktopSidebar() {
         <img src="/icon.svg" width={28} height={28} alt="FinanceApp" />
         <span className={classes.brandText}>FinanceApp</span>
       </Link>
+
+      <ImpersonationNotice />
 
       <div className={classes.navGroup}>
         {navLinks.map(({ to, label, icon: Icon }) => {
@@ -192,6 +197,15 @@ export function DesktopSidebar() {
               <NotificationToggleRow variant="desktop" />
             </div>
             <Menu.Divider />
+            {user.is_admin && (
+              <Menu.Item
+                leftSection={<IconEyeglass size={16} />}
+                onClick={() => void renderDrawer(() => <ImpersonateUserDrawer />).catch(() => {})}
+                data-testid={AdminTestIds.MenuImpersonate}
+              >
+                Impersonar usuário
+              </Menu.Item>
+            )}
             <Menu.Item
               leftSection={<IconLogout size={16} />}
               color="red"

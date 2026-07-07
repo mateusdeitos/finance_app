@@ -352,6 +352,66 @@ func (_c *MockUserRepository_Update_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// Search provides a mock function with given fields: ctx, query, limit
+func (_m *MockUserRepository) Search(ctx context.Context, query string, limit int) ([]*domain.User, error) {
+	ret := _m.Called(ctx, query, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Search")
+	}
+
+	var r0 []*domain.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]*domain.User, error)); ok {
+		return rf(ctx, query, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*domain.User); ok {
+		r0 = rf(ctx, query, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, query, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserRepository_Search_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Search'
+type MockUserRepository_Search_Call struct {
+	*mock.Call
+}
+
+// Search is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+//   - limit int
+func (_e *MockUserRepository_Expecter) Search(ctx interface{}, query interface{}, limit interface{}) *MockUserRepository_Search_Call {
+	return &MockUserRepository_Search_Call{Call: _e.mock.On("Search", ctx, query, limit)}
+}
+
+func (_c *MockUserRepository_Search_Call) Run(run func(ctx context.Context, query string, limit int)) *MockUserRepository_Search_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockUserRepository_Search_Call) Return(_a0 []*domain.User, _a1 error) *MockUserRepository_Search_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserRepository_Search_Call) RunAndReturn(run func(context.Context, string, int) ([]*domain.User, error)) *MockUserRepository_Search_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockUserRepository creates a new instance of MockUserRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockUserRepository(t interface {

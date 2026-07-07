@@ -13,9 +13,26 @@ type UserService interface {
 
 type AuthService interface {
 	OAuthCallback(ctx context.Context, provider string, user *domain.User, providerID string) (*domain.User, string, error)
-	ValidateToken(ctx context.Context, token string) (*domain.User, error)
+	// ValidateToken authenticates a JWT. For a normal token it returns the user
+	// and a nil impersonator. For an impersonation token it returns the
+	// impersonated (target) user plus the acting admin as the impersonator,
+	// after verifying the backing session is still active.
+	ValidateToken(ctx context.Context, token string) (*domain.User, *domain.Impersonator, error)
 	// TestLogin upserts a user by email and returns a JWT. Only for non-production use.
 	TestLogin(ctx context.Context, email string) (string, error)
+}
+
+// ImpersonationService issues and revokes admin impersonation sessions.
+type ImpersonationService interface {
+	// Start verifies the caller is an admin, that the target exists and is not
+	// an admin, records an audit session, and returns a short-lived token that
+	// authenticates as the target while carrying the admin as `act`.
+	Start(ctx context.Context, adminUserID, targetUserID int, reason, ipAddress, userAgent string) (*domain.StartImpersonationResult, error)
+	// Stop revokes the given session. actorAdminID must own the session.
+	// Idempotent: revoking an already-revoked session is a no-op.
+	Stop(ctx context.Context, sessionID string, actorAdminID int) error
+	// SearchUsers backs the admin user picker.
+	SearchUsers(ctx context.Context, query string, limit int) ([]*domain.User, error)
 }
 
 type TransactionService interface {
@@ -134,4 +151,5 @@ type Services struct {
 	Onboarding       OnboardingService
 	PushSubscription PushSubscriptionService
 	Notification     NotificationService
+	Impersonation    ImpersonationService
 }

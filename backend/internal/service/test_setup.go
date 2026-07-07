@@ -51,6 +51,7 @@ type ServiceTestSuite struct {
 	MockTransactionRecurrenceRepository *mocks.MockTransactionRecurrenceRepository
 	MockUserSettingsRepository          *mocks.MockUserSettingsRepository
 	MockUserConnectionRepository        *mocks.MockUserConnectionRepository
+	MockImpersonationRepository         *mocks.MockImpersonationRepository
 }
 
 // SetupTest is called before each test method
@@ -76,6 +77,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 	suite.MockTransactionRecurrenceRepository = mocks.NewMockTransactionRecurrenceRepository(suite.T())
 	suite.MockUserSettingsRepository = mocks.NewMockUserSettingsRepository(suite.T())
 	suite.MockUserConnectionRepository = mocks.NewMockUserConnectionRepository(suite.T())
+	suite.MockImpersonationRepository = mocks.NewMockImpersonationRepository(suite.T())
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -89,6 +91,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 		TransactionRecurrence: suite.MockTransactionRecurrenceRepository,
 		UserSettings:          suite.MockUserSettingsRepository,
 		UserConnection:        suite.MockUserConnectionRepository,
+		Impersonation:         suite.MockImpersonationRepository,
 	}
 
 	// Create test config for AuthService
@@ -96,6 +99,9 @@ func (suite *ServiceTestSuite) SetupTest() {
 		JWT: config.JWTConfig{
 			Secret:          "test-secret-key-for-testing-only",
 			ExpirationHours: 24,
+		},
+		Impersonation: config.ImpersonationConfig{
+			TokenTTLMinutes: 30,
 		},
 	}
 
@@ -106,9 +112,10 @@ func (suite *ServiceTestSuite) SetupTest() {
 
 	// Create Services struct with the services created so far
 	suite.Services = &Services{
-		Auth:     authService,
-		Category: categoryService,
-		Tag:      tagService,
+		Auth:          authService,
+		Category:      categoryService,
+		Tag:           tagService,
+		Impersonation: NewImpersonationService(suite.Repos, suite.Config),
 	}
 
 	// Create services that depend on the Services struct
