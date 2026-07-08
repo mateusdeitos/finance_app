@@ -114,3 +114,7 @@ None - no external service configuration required.
 ---
 *Phase: 27-backend-crud-api*
 *Completed: 2026-07-08*
+
+## Self-Check: PASSED
+
+All created/modified files found on disk (transaction_template_service.go, interfaces.go, test_setup_with_db.go, mock_TransactionTemplateService.go, 27-02-SUMMARY.md); all task/summary commit hashes (4b482c4, db2e0ab, 7d0dc1e) present in git log.
