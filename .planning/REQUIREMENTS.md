@@ -66,9 +66,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TMPL-01 | Phase 26 | Complete (26-01) |
-| TMPL-02 | Phase 27 | Pending |
-| TMPL-03 | Phase 27 | Pending |
-| TMPL-04 | Phase 27 | Pending |
+| TMPL-02 | Phase 27 | In Progress (27-01) |
+| TMPL-03 | Phase 27 | In Progress (27-01) |
+| TMPL-04 | Phase 27 | In Progress (27-01) |
 | TMPL-05 | Phase 26 | Complete (26-01) |
 | APPLY-01 | Phase 29 | Pending |
 | APPLY-02 | Phase 29 | Pending |
@@ -77,8 +77,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MNG-01 | Phase 30 | Pending |
 | MNG-02 | Phase 30 | Pending |
 | MNG-03 | Phase 28 | Pending |
-| SAFE-01 | Phase 27 | Pending |
-| SAFE-02 | Phase 27 | Pending |
+| SAFE-01 | Phase 27 | In Progress (27-01) |
+| SAFE-02 | Phase 27 | In Progress (27-01) |
 
 **Coverage:**
 - v1.7 requirements: 14 total

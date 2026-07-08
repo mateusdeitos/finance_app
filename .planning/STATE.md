@@ -3,25 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 context gathered
-last_updated: "2026-07-07T15:01:00.644Z"
-last_activity: 2026-07-07 -- Phase 27 planning complete
+stopped_at: Phase 27 Plan 01 executed
+last_updated: "2026-07-08T23:43:10Z"
+last_activity: 2026-07-08 -- 27-01 (repository + errors + DTOs + mocks) executed
 progress:
   total_phases: 15
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 18
-  percent: 82
+  total_plans: 23
+  completed_plans: 19
+  percent: 83
 ---
 
 ## Current Position
 
 Phase: 27
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 27 planning complete
+Plan: 01 complete, 02 next
+Status: Executing
+Last activity: 2026-07-08 -- 27-01 (repository + errors + DTOs + mocks) executed
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Project Reference
 
@@ -55,6 +55,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [26-01] No DisallowUnknownFields on TransactionTemplatePayload in Phase 26 — strict unmarshal wired in Phase 27 service (D-01b)
 - [26-02] TransactionTemplatePayload entity type is a type alias of domain.TransactionTemplatePayload — avoids struct duplication and makes cast-based converters trivial
 - [26-02] Typed Scan/Value on entity payload rather than untyped JSONB map — enforces payload schema at the Go type level
+- [27-01] TEMPLATE.LIMIT_REACHED and TEMPLATE.DUPLICATE_NAME use ErrCodeAlreadyExists (409), not ErrCodeValidation (400) — deliberately diverges from the CATEGORY.DUPLICATE_NAME precedent's actual (incorrect) code
+- [27-01] Create's race-safe cap uses a single .Raw(INSERT...RETURNING...).Scan(&created) statement rather than .Rows()+ScanRows() — simpler, still respects the entity's JSONB Scan/Value, and RowsAffected==0 on the result signals the cap was hit
 
 ### Todos
 
@@ -80,6 +82,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-06-14T18:41:25.409Z
-Stopped at: Phase 27 context gathered
-Resume file: .planning/phases/27-backend-crud-api/27-CONTEXT.md
+Last session: 2026-07-08T23:43:10Z
+Stopped at: Phase 27 Plan 01 executed
+Resume file: .planning/phases/27-backend-crud-api/27-02-PLAN.md
