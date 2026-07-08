@@ -581,6 +581,56 @@ definitions:
       user_id:
         type: integer
     type: object
+  domain.TransactionTemplate:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      payload:
+        $ref: '#/definitions/domain.TransactionTemplatePayload'
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  domain.TransactionTemplateCreateRequest:
+    properties:
+      name:
+        type: string
+      payload:
+        $ref: '#/definitions/domain.TransactionTemplatePayload'
+    type: object
+  domain.TransactionTemplatePayload:
+    properties:
+      account_id:
+        type: integer
+      category_id:
+        type: integer
+      description:
+        type: string
+      destination_account_id:
+        type: integer
+      split_settings:
+        items:
+          $ref: '#/definitions/domain.SplitSettings'
+        type: array
+      tag_ids:
+        items:
+          type: integer
+        type: array
+      type:
+        $ref: '#/definitions/domain.TransactionType'
+    type: object
+  domain.TransactionTemplateUpdateRequest:
+    properties:
+      name:
+        type: string
+      payload:
+        $ref: '#/definitions/domain.TransactionTemplatePayload'
+    type: object
   domain.TransactionType:
     enum:
     - expense
@@ -1714,6 +1764,138 @@ paths:
       summary: Update tag
       tags:
       - tags
+  /api/transaction-templates:
+    get:
+      description: Returns the authenticated user's saved transaction templates, oldest
+        first (max 3)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.TransactionTemplate'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: List transaction templates
+      tags:
+      - transaction-templates
+    post:
+      consumes:
+      - application/json
+      description: Creates a new personal transaction template for the authenticated
+        user, capped at 3 per user
+      parameters:
+      - description: Template data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TransactionTemplateCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.TransactionTemplate'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Create a transaction template
+      tags:
+      - transaction-templates
+  /api/transaction-templates/{id}:
+    delete:
+      description: Hard-deletes a transaction template owned by the authenticated
+        user
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete a transaction template
+      tags:
+      - transaction-templates
+    put:
+      consumes:
+      - application/json
+      description: Full replace of a transaction template's name and payload (owner-scoped)
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Template data
+        in: body
+        name: template
+        required: true
+        schema:
+          $ref: '#/definitions/domain.TransactionTemplateUpdateRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Update a transaction template
+      tags:
+      - transaction-templates
   /api/transactions:
     get:
       parameters:
