@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 Plan 02 executed
-last_updated: "2026-07-08T23:48:33Z"
-last_activity: 2026-07-08 -- 27-02 (service layer: IDOR + validation + duplicate/cap 409 + suite wiring + mock) executed
+stopped_at: Phase 27 Plan 03 executed
+last_updated: "2026-07-08T23:55:04Z"
+last_activity: 2026-07-08 -- 27-03 (handler layer: 4 routes + Swagger annotations + main.go wiring + generate-docs + handler tests) executed
 progress:
   total_phases: 15
   completed_phases: 5
   total_plans: 23
-  completed_plans: 20
-  percent: 87
+  completed_plans: 21
+  percent: 91
 ---
 
 ## Current Position
 
 Phase: 27
-Plan: 02 complete, 03 next
+Plan: 03 complete, 04 next
 Status: Executing
-Last activity: 2026-07-08 -- 27-02 (service layer: IDOR + validation + duplicate/cap 409 + suite wiring + mock) executed
+Last activity: 2026-07-08 -- 27-03 (handler layer: 4 routes + Swagger annotations + main.go wiring + generate-docs + handler tests) executed
 
 Progress: [██░░░░░░░░] 20%
 
@@ -58,6 +58,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [27-01] TEMPLATE.LIMIT_REACHED and TEMPLATE.DUPLICATE_NAME use ErrCodeAlreadyExists (409), not ErrCodeValidation (400) — deliberately diverges from the CATEGORY.DUPLICATE_NAME precedent's actual (incorrect) code
 - [27-01] Create's race-safe cap uses a single .Raw(INSERT...RETURNING...).Scan(&created) statement rather than .Rows()+ScanRows() — simpler, still respects the entity's JSONB Scan/Value, and RowsAffected==0 on the result signals the cap was hit
 - [27-02] TransactionTemplateService.Create/Update wrap the duplicate-name pre-check + write in one DBTransaction (category_service.Create skeleton); Update's duplicate check excludes the row's own id so a no-op rename doesn't false-positive
+- [27-03] PUT /api/transaction-templates/:id returns 204 (no re-fetch) since this phase has no GET /:id endpoint; client already holds the full replacement payload it sent
+- [27-03] Handler tests prove IDOR by sending a spoofed `user_id` in the Create request body (silently dropped by lenient unmarshal, no UserID field on the DTO) and asserting the mock receives the CONTEXT userID instead
 
 ### Todos
 
@@ -83,6 +85,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-08T23:48:33Z
-Stopped at: Phase 27 Plan 02 executed
-Resume file: .planning/phases/27-backend-crud-api/27-03-PLAN.md
+Last session: 2026-07-08T23:55:04Z
+Stopped at: Phase 27 Plan 03 executed
+Resume file: .planning/phases/27-backend-crud-api/27-04-PLAN.md
