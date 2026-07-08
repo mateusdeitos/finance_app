@@ -81,6 +81,11 @@ const (
 
 	ErrorTagNoActivePushSubscription ErrorTag = "NOTIFICATION.NO_ACTIVE_PUSH_SUBSCRIPTION"
 	ErrorTagPushDeliveryFailed       ErrorTag = "NOTIFICATION.PUSH_DELIVERY_FAILED"
+
+	ErrorTagTemplateLimitReached  ErrorTag = "TEMPLATE.LIMIT_REACHED"
+	ErrorTagTemplateDuplicateName ErrorTag = "TEMPLATE.DUPLICATE_NAME"
+	ErrorTagTemplateNameRequired  ErrorTag = "TEMPLATE.NAME_REQUIRED"
+	ErrorTagTemplateInvalidType   ErrorTag = "TEMPLATE.INVALID_TYPE"
 )
 
 var (
@@ -152,6 +157,11 @@ var (
 		}
 		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, msg)
 	}
+
+	ErrTemplateLimitReached  = NewWithTag(ErrCodeAlreadyExists, []string{string(ErrorTagTemplateLimitReached)}, "you can only have up to 3 templates")
+	ErrTemplateDuplicateName = NewWithTag(ErrCodeAlreadyExists, []string{string(ErrorTagTemplateDuplicateName)}, "a template with this name already exists")
+	ErrTemplateNameRequired  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateNameRequired)}, "name is required")
+	ErrTemplateInvalidType   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateInvalidType)}, "invalid transaction type")
 )
 
 // ServiceError represents a service-level error with a code and message
