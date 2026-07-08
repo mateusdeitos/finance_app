@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 Plan 01 executed
-last_updated: "2026-07-08T23:43:10Z"
-last_activity: 2026-07-08 -- 27-01 (repository + errors + DTOs + mocks) executed
+stopped_at: Phase 27 Plan 02 executed
+last_updated: "2026-07-08T23:48:33Z"
+last_activity: 2026-07-08 -- 27-02 (service layer: IDOR + validation + duplicate/cap 409 + suite wiring + mock) executed
 progress:
   total_phases: 15
   completed_phases: 5
   total_plans: 23
-  completed_plans: 19
-  percent: 83
+  completed_plans: 20
+  percent: 87
 ---
 
 ## Current Position
 
 Phase: 27
-Plan: 01 complete, 02 next
+Plan: 02 complete, 03 next
 Status: Executing
-Last activity: 2026-07-08 -- 27-01 (repository + errors + DTOs + mocks) executed
+Last activity: 2026-07-08 -- 27-02 (service layer: IDOR + validation + duplicate/cap 409 + suite wiring + mock) executed
 
 Progress: [██░░░░░░░░] 20%
 
@@ -57,6 +57,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [26-02] Typed Scan/Value on entity payload rather than untyped JSONB map — enforces payload schema at the Go type level
 - [27-01] TEMPLATE.LIMIT_REACHED and TEMPLATE.DUPLICATE_NAME use ErrCodeAlreadyExists (409), not ErrCodeValidation (400) — deliberately diverges from the CATEGORY.DUPLICATE_NAME precedent's actual (incorrect) code
 - [27-01] Create's race-safe cap uses a single .Raw(INSERT...RETURNING...).Scan(&created) statement rather than .Rows()+ScanRows() — simpler, still respects the entity's JSONB Scan/Value, and RowsAffected==0 on the result signals the cap was hit
+- [27-02] TransactionTemplateService.Create/Update wrap the duplicate-name pre-check + write in one DBTransaction (category_service.Create skeleton); Update's duplicate check excludes the row's own id so a no-op rename doesn't false-positive
 
 ### Todos
 
@@ -82,6 +83,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-08T23:43:10Z
-Stopped at: Phase 27 Plan 01 executed
-Resume file: .planning/phases/27-backend-crud-api/27-02-PLAN.md
+Last session: 2026-07-08T23:48:33Z
+Stopped at: Phase 27 Plan 02 executed
+Resume file: .planning/phases/27-backend-crud-api/27-03-PLAN.md
