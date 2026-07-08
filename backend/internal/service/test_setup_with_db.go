@@ -63,6 +63,7 @@ type ServiceTestWithDBSuite struct {
 	ChargeRepository                repository.ChargeRepository
 	PushSubscriptionRepository      repository.PushSubscriptionRepository
 	NotificationRepository          repository.NotificationRepository
+	TransactionTemplateRepository   repository.TransactionTemplateRepository
 }
 
 var initDb sync.Once
@@ -104,6 +105,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.ChargeRepository = repository.NewChargeRepository(suite.DB)
 	suite.PushSubscriptionRepository = repository.NewPushSubscriptionRepository(suite.DB)
 	suite.NotificationRepository = repository.NewNotificationRepository(suite.DB)
+	suite.TransactionTemplateRepository = repository.NewTransactionTemplateRepository(suite.DB)
 
 	// Create repositories struct
 	suite.Repos = &repository.Repositories{
@@ -121,6 +123,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 		Charge:                suite.ChargeRepository,
 		PushSubscription:      suite.PushSubscriptionRepository,
 		Notification:          suite.NotificationRepository,
+		TransactionTemplate:   suite.TransactionTemplateRepository,
 	}
 
 	// Create test config for AuthService.
@@ -160,6 +163,7 @@ func (suite *ServiceTestWithDBSuite) SetupTest() {
 	suite.Services.Charge = NewChargeService(suite.Repos, suite.Services)
 	suite.Services.PushSubscription = NewPushSubscriptionService(suite.Repos, suite.Config)
 	suite.Services.Notification = NewNotificationService(suite.Repos, suite.Config)
+	suite.Services.TransactionTemplate = NewTransactionTemplateService(suite.Repos)
 }
 
 func (suite *ServiceTestWithDBSuite) createTestUser(ctx context.Context) (*domain.User, error) {
