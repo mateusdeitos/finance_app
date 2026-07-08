@@ -136,6 +136,21 @@ type NotificationRepository interface {
 	DeleteAllRead(ctx context.Context, userID int) error
 }
 
+// TransactionTemplateRepository manages per-user transaction templates.
+// GetByIDForUser/Update/Delete are scoped by (id, user_id) — SAFE-02:
+// a row that doesn't match the caller returns NOT_FOUND (via RowsAffected == 0
+// or ErrRecordNotFound), never leaking existence across users.
+// Create is race-safe capped at 3 rows per user (SAFE-01) — see ErrTemplateLimitReached.
+// This repository is deliberately NOT joined into Search/GetBalance/settlement
+// queries (P26 isolation guarantee).
+type TransactionTemplateRepository interface {
+	ListByUserID(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error)
+	Create(ctx context.Context, t *domain.TransactionTemplate) (*domain.TransactionTemplate, error)
+	GetByIDForUser(ctx context.Context, userID, id int) (*domain.TransactionTemplate, error)
+	Update(ctx context.Context, userID int, t *domain.TransactionTemplate) error
+	Delete(ctx context.Context, userID, id int) error
+}
+
 // Repositories contains all repository interfaces
 type Repositories struct {
 	DBTransaction         DBTransaction
@@ -152,4 +167,5 @@ type Repositories struct {
 	Charge                ChargeRepository
 	PushSubscription      PushSubscriptionRepository
 	Notification          NotificationRepository
+	TransactionTemplate   TransactionTemplateRepository
 }
