@@ -257,7 +257,7 @@ Plans:
 - [x] 27-02-PLAN.md — TransactionTemplateService (IDOR arg, validation, duplicate-name 409, cap translation) + suite wiring + service mock
 
 **Wave 3** *(blocked on 27-02)*
-- [ ] 27-03-PLAN.md — TransactionTemplateHandler (4 routes + Swagger) + main.go DI/routes + generate-docs + handler tests
+- [x] 27-03-PLAN.md — TransactionTemplateHandler (4 routes + Swagger) + main.go DI/routes + generate-docs + handler tests
 - [ ] 27-04-PLAN.md — testcontainers integration suite: cap race (SAFE-01), IDOR 404 (SAFE-02), duplicate, validation, ordering, isolation
 
 ### Phase 28: SplitSettingsFields Template Mode
