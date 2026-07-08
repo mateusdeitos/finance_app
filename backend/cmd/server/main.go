@@ -91,6 +91,7 @@ func main() {
 		UserSettings:          repository.NewUserSettingsRepository(db),
 		PushSubscription:      repository.NewPushSubscriptionRepository(db),
 		Notification:          repository.NewNotificationRepository(db),
+		TransactionTemplate:   repository.NewTransactionTemplateRepository(db),
 	}
 
 	// Initialize services
@@ -109,6 +110,7 @@ func main() {
 	services.Onboarding = service.NewOnboardingService(repos)
 	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
 	services.Notification = service.NewNotificationService(repos, cfg)
+	services.TransactionTemplate = service.NewTransactionTemplateService(repos)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -121,6 +123,7 @@ func main() {
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
+	templateHandler := handler.NewTransactionTemplateHandler(services)
 
 	// Setup Echo
 	e := echo.New()
@@ -170,6 +173,7 @@ func main() {
 		onboarding:     onboardingHandler,
 		pushSub:        pushSubHandler,
 		notification:   notifHandler,
+		template:       templateHandler,
 	})
 
 	// Start server
@@ -212,6 +216,7 @@ type apiHandlers struct {
 	onboarding     *handler.OnboardingHandler
 	pushSub        *handler.PushSubscriptionHandler
 	notification   *handler.NotificationHandler
+	template       *handler.TransactionTemplateHandler
 }
 
 // registerAPIRoutes wires every authenticated route group under the /api group.
@@ -288,6 +293,13 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandler
 
 	// Settlements
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
+
+	// Transaction templates
+	templates := api.Group("/transaction-templates")
+	templates.GET("", h.template.List)
+	templates.POST("", h.template.Create)
+	templates.PUT("/:id", h.template.Update)
+	templates.DELETE("/:id", h.template.Delete)
 }
 
 func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {
