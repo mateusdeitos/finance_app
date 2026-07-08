@@ -34,3 +34,18 @@ type TransactionTemplatePayload struct {
 	SplitSettings        []SplitSettings `json:"split_settings,omitempty"`
 	// NO Amount, NO Date (D-02) — a struct unmarshal naturally drops them.
 }
+
+// TransactionTemplateCreateRequest is the create request body.
+// Payload binds into the strict TransactionTemplatePayload — unknown keys
+// (including "amount"/"date") are silently dropped (D-01/D-02); the service
+// re-serializes the canonical struct into the payload column (D-02).
+type TransactionTemplateCreateRequest struct {
+	Name    string                     `json:"name"`
+	Payload TransactionTemplatePayload `json:"payload"`
+}
+
+// TransactionTemplateUpdateRequest is the PUT (full-replace) request body (D-06).
+type TransactionTemplateUpdateRequest struct {
+	Name    string                     `json:"name"`
+	Payload TransactionTemplatePayload `json:"payload"`
+}
