@@ -16,4 +16,5 @@ export const QueryKeys = {
   NotificationUnreadCount: 'notification-unread-count',
   NotificationChargesById: 'notification-charges-by-id',
   NotificationTransactionsById: 'notification-transactions-by-id',
+  TransactionTemplates: 'transaction-templates',
 } as const
