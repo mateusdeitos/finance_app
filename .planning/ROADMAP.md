@@ -9,7 +9,7 @@
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
 - ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 - 🚧 **v1.6 Push Notifications** — Phases 22–25 (in progress)
-- 📋 **v1.7 Transaction Templates** — Phases 26–31 (planned)
+- 🚧 **v1.7 Transaction Templates** — Phases 26–31 (in progress)
 
 ## Phases
 
@@ -94,7 +94,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — 2/2 plans complete
 - [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
 - [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
-- [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling
+- [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 1/2 plans complete (data layer done; chip UI + apply logic pending)
 - [ ] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template
 - [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
 

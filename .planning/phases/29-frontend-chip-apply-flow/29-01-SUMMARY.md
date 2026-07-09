@@ -98,3 +98,7 @@ None - no external service configuration required.
 ---
 *Phase: 29-frontend-chip-apply-flow*
 *Completed: 2026-07-09*
+
+## Self-Check: PASSED
+
+All created/modified files found on disk; all task commits (e782ade, 0f304dc) and the summary commit (12e18a0) verified present in git log.
