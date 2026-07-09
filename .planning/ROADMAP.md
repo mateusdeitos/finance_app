@@ -94,7 +94,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — 2/2 plans complete
 - [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
 - [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
-- [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 1/2 plans complete (data layer done; chip UI + apply logic pending)
+- [x] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 2/2 plans complete
 - [ ] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template
 - [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
 
@@ -344,7 +344,7 @@ Plans:
 | 26. Backend Foundation | v1.7 | 2/2 | Complete    | 2026-06-14 |
 | 27. Backend CRUD API | v1.7 | 4/4 | Complete | 2026-07-09 |
 | 28. SplitSettingsFields Template Mode | v1.7 | 1/1 | Complete | 2026-07-09 |
-| 29. Frontend Chip Apply Flow | v1.7 | 0/? | Not started | - |
+| 29. Frontend Chip Apply Flow | v1.7 | 2/2 | Complete | 2026-07-09 |
 | 30. Frontend Management UI | v1.7 | 0/? | Not started | - |
 | 31. E2E Acceptance | v1.7 | 0/? | Not started | - |
 

@@ -18,10 +18,10 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Template Application (APPLY)
 
-- [ ] **APPLY-01**: User sees a row of template chips at the top of the transaction form, styled like the existing date quick-chips
-- [ ] **APPLY-02**: Clicking a template chip fills the form from the template, leaves the amount field blank, and moves focus to the amount field
-- [ ] **APPLY-03**: A template's saved split is prefilled on apply and remains editable before submit
-- [ ] **APPLY-04**: User can apply a template even if a referenced account, category, or tag was deleted — the stale field is cleared and all other fields are preserved (no error or crash)
+- [x] **APPLY-01**: User sees a row of template chips at the top of the transaction form, styled like the existing date quick-chips
+- [x] **APPLY-02**: Clicking a template chip fills the form from the template, leaves the amount field blank, and moves focus to the amount field
+- [x] **APPLY-03**: A template's saved split is prefilled on apply and remains editable before submit
+- [x] **APPLY-04**: User can apply a template even if a referenced account, category, or tag was deleted — the stale field is cleared and all other fields are preserved (no error or crash)
 
 ### Template Management (MNG)
 
@@ -70,10 +70,10 @@ Which phases cover which requirements. Populated during roadmap creation.
 | TMPL-03 | Phase 27 | Complete (27-04) |
 | TMPL-04 | Phase 27 | Complete (27-04) |
 | TMPL-05 | Phase 26 | Complete (26-01) |
-| APPLY-01 | Phase 29 | Pending |
-| APPLY-02 | Phase 29 | Pending |
-| APPLY-03 | Phase 29 | Pending |
-| APPLY-04 | Phase 29 | Pending |
+| APPLY-01 | Phase 29 | Complete (29-02) |
+| APPLY-02 | Phase 29 | Complete (29-02) |
+| APPLY-03 | Phase 29 | Complete (29-02) |
+| APPLY-04 | Phase 29 | Complete (29-02) |
 | MNG-01 | Phase 30 | Pending |
 | MNG-02 | Phase 30 | Pending |
 | MNG-03 | Phase 28 | Complete (28-01) |
