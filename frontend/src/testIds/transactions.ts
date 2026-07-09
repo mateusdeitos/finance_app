@@ -74,6 +74,8 @@ export const TransactionsTestIds = {
   BtnAddSplitRow: 'btn_add_split_row',
   SplitRowPreview: (rowIndex: number | string) => `text_split_preview_${rowIndex}` as const,
   SplitSumFooter: 'text_split_sum_footer',
+  SegmentedSplitMode: 'segmented_split_mode',
+  SegmentSplitMode: (mode: 'percentage' | 'amount') => `segment_split_mode_${mode}` as const,
 
   // Transfer row avatar pair
   TransferAvatarGroup: 'transfer_avatar_group',

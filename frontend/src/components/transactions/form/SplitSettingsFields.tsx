@@ -358,9 +358,16 @@ export function SplitSettingsFields({
             value={mode}
             onChange={(v) => setMode(v as SplitMode)}
             data={[
-              { value: "percentage", label: "%" },
-              { value: "amount", label: "R$" },
+              {
+                value: "percentage",
+                label: <span data-testid={TransactionsTestIds.SegmentSplitMode("percentage")}>%</span>,
+              },
+              {
+                value: "amount",
+                label: <span data-testid={TransactionsTestIds.SegmentSplitMode("amount")}>R$</span>,
+              },
             ]}
+            data-testid={TransactionsTestIds.SegmentedSplitMode}
           />
         )}
       </Group>
