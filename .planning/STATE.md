@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 Plan 04 executed (Phase 27 complete)
-last_updated: "2026-07-09T00:01:40Z"
-last_activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
+stopped_at: Phase 28 Plan 01 executed (Phase 28 complete)
+last_updated: "2026-07-09T19:23:00Z"
+last_activity: 2026-07-09 -- 28-01 (templateMode prop on SplitSettingsFields: previews suppressed, %/R$ toggle preserved, vitest coverage) executed -- Phase 28 complete
 progress:
   total_phases: 15
-  completed_phases: 6
-  total_plans: 23
-  completed_plans: 22
+  completed_phases: 7
+  total_plans: 24
+  completed_plans: 23
   percent: 96
 ---
 
 ## Current Position
 
-Phase: 27 (complete) -- Phase 28 next
-Plan: 04 complete (Phase 27 finished: 4/4 plans)
+Phase: 28 (complete) -- Phase 29 next
+Plan: 01 complete (Phase 28 finished: 1/1 plans)
 Status: Executing
-Last activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
+Last activity: 2026-07-09 -- 28-01 (templateMode prop on SplitSettingsFields: previews suppressed, %/R$ toggle preserved, vitest coverage) executed -- Phase 28 complete
 
 Progress: [██████████] 96%
 
@@ -61,6 +61,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [27-03] PUT /api/transaction-templates/:id returns 204 (no re-fetch) since this phase has no GET /:id endpoint; client already holds the full replacement payload it sent
 - [27-03] Handler tests prove IDOR by sending a spoofed `user_id` in the Create request body (silently dropped by lenient unmarshal, no UserID field on the DTO) and asserting the mock receives the CONTEXT userID instead
 - [27-04] testcontainers integration suite (no `//go:build integration` tag, matching `user_connection_service_test.go` precedent) proves SAFE-01 (concurrent double-create at count=2 -> exactly one success + one TEMPLATE.LIMIT_REACHED, final count==3) and SAFE-02 (cross-user Update/Delete -> pkgErrors.IsNotFound, never Forbidden) against real PostgreSQL; Docker unavailable in this execution environment ("rootless Docker not found"), so the suite compiles/vets clean but actual execution is deferred to CI — Phase 27 (Backend CRUD API) is now fully complete
+- [28-01] templateMode is additive (default false) threaded through SplitSettingsFields -> SplitRow -> SplitRowControls; per-row `= R$ X` preview and `Soma X%` footer suppressed via explicit `&& !templateMode` guards (not just the pre-existing `totalAmount > 0` guard) per locked decision D-01 (suppress, no placeholder); %/R$ SegmentedControl toggle stays functional — Phase 28 (SplitSettingsFields Template Mode) is now complete, unblocking Phase 29/30
 
 ### Todos
 
@@ -87,6 +88,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-09T00:01:40Z
-Stopped at: Phase 27 Plan 04 executed (Phase 27 complete)
-Resume file: .planning/phases/28-splitsettingsfields-template-mode (Phase 28 not yet planned)
+Last session: 2026-07-09T19:23:00Z
+Stopped at: Phase 28 Plan 01 executed (Phase 28 complete)
+Resume file: .planning/phases/29-frontend-chip-apply-flow (Phase 29 not yet planned)
