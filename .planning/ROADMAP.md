@@ -92,7 +92,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 ### v1.7 Transaction Templates (Phases 26–31)
 
 - [x] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — 2/2 plans complete
-- [ ] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger
+- [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
 - [ ] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context
 - [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling
 - [ ] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template
@@ -258,7 +258,7 @@ Plans:
 
 **Wave 3** *(blocked on 27-02)*
 - [x] 27-03-PLAN.md — TransactionTemplateHandler (4 routes + Swagger) + main.go DI/routes + generate-docs + handler tests
-- [ ] 27-04-PLAN.md — testcontainers integration suite: cap race (SAFE-01), IDOR 404 (SAFE-02), duplicate, validation, ordering, isolation
+- [x] 27-04-PLAN.md — testcontainers integration suite: cap race (SAFE-01), IDOR 404 (SAFE-02), duplicate, validation, ordering, isolation
 
 ### Phase 28: SplitSettingsFields Template Mode
 **Goal**: The `SplitSettingsFields` component works correctly in a no-amount context — the template form can embed it without displaying a misleading "R$0,00" live calculation or causing confusing UX when no amount is present
