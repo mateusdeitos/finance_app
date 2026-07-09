@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 28 Plan 01 executed (Phase 28 complete)
-last_updated: "2026-07-09T19:23:00Z"
-last_activity: 2026-07-09 -- 28-01 (templateMode prop on SplitSettingsFields: previews suppressed, %/R$ toggle preserved, vitest coverage) executed -- Phase 28 complete
+stopped_at: Phase 29 Plan 01 executed (frontend data layer for transaction templates)
+last_updated: "2026-07-09T19:46:34Z"
+last_activity: 2026-07-09 -- 29-01 (Transactions.Template/TemplatePayload types, fetchTransactionTemplates client, useTransactionTemplates list hook, QueryKeys.TransactionTemplates) executed -- Phase 29 in progress (1 plan known so far)
 progress:
   total_phases: 15
   completed_phases: 7
-  total_plans: 24
-  completed_plans: 23
+  total_plans: 25
+  completed_plans: 24
   percent: 96
 ---
 
 ## Current Position
 
-Phase: 28 (complete) -- Phase 29 next
-Plan: 01 complete (Phase 28 finished: 1/1 plans)
+Phase: 29 (in progress) -- Plan 01 of 29 complete
+Plan: 01 complete; Plan 02 (chip UI + apply logic) not yet planned/executed
 Status: Executing
-Last activity: 2026-07-09 -- 28-01 (templateMode prop on SplitSettingsFields: previews suppressed, %/R$ toggle preserved, vitest coverage) executed -- Phase 28 complete
+Last activity: 2026-07-09 -- 29-01 (Transactions.Template/TemplatePayload types, fetchTransactionTemplates client, useTransactionTemplates list hook, QueryKeys.TransactionTemplates) executed
 
 Progress: [██████████] 96%
 
@@ -62,6 +62,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [27-03] Handler tests prove IDOR by sending a spoofed `user_id` in the Create request body (silently dropped by lenient unmarshal, no UserID field on the DTO) and asserting the mock receives the CONTEXT userID instead
 - [27-04] testcontainers integration suite (no `//go:build integration` tag, matching `user_connection_service_test.go` precedent) proves SAFE-01 (concurrent double-create at count=2 -> exactly one success + one TEMPLATE.LIMIT_REACHED, final count==3) and SAFE-02 (cross-user Update/Delete -> pkgErrors.IsNotFound, never Forbidden) against real PostgreSQL; Docker unavailable in this execution environment ("rootless Docker not found"), so the suite compiles/vets clean but actual execution is deferred to CI — Phase 27 (Backend CRUD API) is now fully complete
 - [28-01] templateMode is additive (default false) threaded through SplitSettingsFields -> SplitRow -> SplitRowControls; per-row `= R$ X` preview and `Soma X%` footer suppressed via explicit `&& !templateMode` guards (not just the pre-existing `totalAmount > 0` guard) per locked decision D-01 (suppress, no placeholder); %/R$ SegmentedControl toggle stays functional — Phase 28 (SplitSettingsFields Template Mode) is now complete, unblocking Phase 29/30
+- [29-01] Data layer only (read-only): Transactions.Template/TemplatePayload types reuse SplitSetting/TransactionType verbatim (no redeclaration); fetchTransactionTemplates mirrors fetchAccounts exactly (no Content-Type header on GET, credentials:'include' only) instead of the plan's illustrative snippet which included the header; useTransactionTemplates mirrors useAccounts's select-generic + invalidate + 5min staleTime shape — no mutation hooks yet (Phase 30 scope)
 
 ### Todos
 
@@ -69,7 +70,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - Run Phase 27 (27-04) testcontainers integration suite with Docker in CI to confirm SAFE-01/SAFE-02 assertions pass against a live PostgreSQL container
 - v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
 - v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
-- Phase 29: Read `CurrencyInput.tsx` before implementing `reset({ amount: 0 })` to confirm blank display behavior
+- Phase 29 Plan 02: Read `CurrencyInput.tsx` before implementing `reset({ amount: 0 })` to confirm blank display behavior; also read `DateQuickChips.tsx` (mirror target) and `TransactionForm.tsx` `handleSuggestionSelect` (~L225-239, apply precedent)
 
 ### Blockers
 
@@ -88,6 +89,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-09T19:23:00Z
-Stopped at: Phase 28 Plan 01 executed (Phase 28 complete)
-Resume file: .planning/phases/29-frontend-chip-apply-flow (Phase 29 not yet planned)
+Last session: 2026-07-09T19:46:34Z
+Stopped at: Phase 29 Plan 01 executed (frontend data layer for transaction templates)
+Resume file: .planning/phases/29-frontend-chip-apply-flow/29-02-PLAN.md (chip UI + apply logic)
