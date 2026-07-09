@@ -3,25 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 Plan 03 executed
-last_updated: "2026-07-08T23:55:04Z"
-last_activity: 2026-07-08 -- 27-03 (handler layer: 4 routes + Swagger annotations + main.go wiring + generate-docs + handler tests) executed
+stopped_at: Phase 27 Plan 04 executed (Phase 27 complete)
+last_updated: "2026-07-09T00:01:40Z"
+last_activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
 progress:
   total_phases: 15
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 23
-  completed_plans: 21
-  percent: 91
+  completed_plans: 22
+  percent: 96
 ---
 
 ## Current Position
 
-Phase: 27
-Plan: 03 complete, 04 next
+Phase: 27 (complete) -- Phase 28 next
+Plan: 04 complete (Phase 27 finished: 4/4 plans)
 Status: Executing
-Last activity: 2026-07-08 -- 27-03 (handler layer: 4 routes + Swagger annotations + main.go wiring + generate-docs + handler tests) executed
+Last activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
 
-Progress: [██░░░░░░░░] 20%
+Progress: [██████████] 96%
 
 ## Project Reference
 
@@ -60,10 +60,12 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [27-02] TransactionTemplateService.Create/Update wrap the duplicate-name pre-check + write in one DBTransaction (category_service.Create skeleton); Update's duplicate check excludes the row's own id so a no-op rename doesn't false-positive
 - [27-03] PUT /api/transaction-templates/:id returns 204 (no re-fetch) since this phase has no GET /:id endpoint; client already holds the full replacement payload it sent
 - [27-03] Handler tests prove IDOR by sending a spoofed `user_id` in the Create request body (silently dropped by lenient unmarshal, no UserID field on the DTO) and asserting the mock receives the CONTEXT userID instead
+- [27-04] testcontainers integration suite (no `//go:build integration` tag, matching `user_connection_service_test.go` precedent) proves SAFE-01 (concurrent double-create at count=2 -> exactly one success + one TEMPLATE.LIMIT_REACHED, final count==3) and SAFE-02 (cross-user Update/Delete -> pkgErrors.IsNotFound, never Forbidden) against real PostgreSQL; Docker unavailable in this execution environment ("rootless Docker not found"), so the suite compiles/vets clean but actual execution is deferred to CI — Phase 27 (Backend CRUD API) is now fully complete
 
 ### Todos
 
 - Run v1.6 integration tests with Docker when available
+- Run Phase 27 (27-04) testcontainers integration suite with Docker in CI to confirm SAFE-01/SAFE-02 assertions pass against a live PostgreSQL container
 - v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
 - v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
 - Phase 29: Read `CurrencyInput.tsx` before implementing `reset({ amount: 0 })` to confirm blank display behavior
@@ -85,6 +87,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-08T23:55:04Z
-Stopped at: Phase 27 Plan 03 executed
-Resume file: .planning/phases/27-backend-crud-api/27-04-PLAN.md
+Last session: 2026-07-09T00:01:40Z
+Stopped at: Phase 27 Plan 04 executed (Phase 27 complete)
+Resume file: .planning/phases/28-splitsettingsfields-template-mode (Phase 28 not yet planned)

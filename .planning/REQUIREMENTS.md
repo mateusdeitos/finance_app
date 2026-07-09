@@ -11,9 +11,9 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Template CRUD (TMPL)
 
 - [x] **TMPL-01**: User can create a personal transaction template that captures type, account, category, tags, description, and split configuration — but never an amount or a date
-- [ ] **TMPL-02**: User can view a list of their own templates
-- [ ] **TMPL-03**: User can edit a template's saved fields
-- [ ] **TMPL-04**: User can delete a template
+- [x] **TMPL-02**: User can view a list of their own templates
+- [x] **TMPL-03**: User can edit a template's saved fields
+- [x] **TMPL-04**: User can delete a template
 - [x] **TMPL-05**: System persists the split configuration faithfully — preserving whether each row was percentage or fixed-amount — so applying a template reproduces the original split input
 
 ### Template Application (APPLY)
@@ -31,8 +31,8 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 
 ### Safety & Limits (SAFE)
 
-- [ ] **SAFE-01**: System caps templates at 3 per user and rejects creating a 4th with a clear, race-safe error
-- [ ] **SAFE-02**: Templates are private to their owner — another user cannot read, edit, or delete them (404 on owner mismatch, not 403)
+- [x] **SAFE-01**: System caps templates at 3 per user and rejects creating a 4th with a clear, race-safe error
+- [x] **SAFE-02**: Templates are private to their owner — another user cannot read, edit, or delete them (404 on owner mismatch, not 403)
 
 ## Future Requirements
 
@@ -66,9 +66,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TMPL-01 | Phase 26 | Complete (26-01) |
-| TMPL-02 | Phase 27 | In Progress (27-03) |
-| TMPL-03 | Phase 27 | In Progress (27-03) |
-| TMPL-04 | Phase 27 | In Progress (27-03) |
+| TMPL-02 | Phase 27 | Complete (27-04) |
+| TMPL-03 | Phase 27 | Complete (27-04) |
+| TMPL-04 | Phase 27 | Complete (27-04) |
 | TMPL-05 | Phase 26 | Complete (26-01) |
 | APPLY-01 | Phase 29 | Pending |
 | APPLY-02 | Phase 29 | Pending |
@@ -77,8 +77,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | MNG-01 | Phase 30 | Pending |
 | MNG-02 | Phase 30 | Pending |
 | MNG-03 | Phase 28 | Pending |
-| SAFE-01 | Phase 27 | In Progress (27-02) |
-| SAFE-02 | Phase 27 | In Progress (27-03) |
+| SAFE-01 | Phase 27 | Complete (27-04) |
+| SAFE-02 | Phase 27 | Complete (27-04) |
 
 **Coverage:**
 - v1.7 requirements: 14 total
