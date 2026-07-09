@@ -50,6 +50,7 @@ interface SplitRowControlsProps {
   rowIndex: number;
   error?: string;
   mode: SplitMode;
+  templateMode: boolean;
 }
 
 function SplitRowControls({
@@ -60,6 +61,7 @@ function SplitRowControls({
   rowPath,
   rowIndex,
   error,
+  templateMode,
 }: SplitRowControlsProps) {
   const { control, setValue } = useFormContext<FieldValues>();
 
@@ -107,8 +109,15 @@ function SplitRowControls({
         />
       )}
 
-      <Text size="sm" c="dimmed" className={classes.preview}>
-        {mode === "percentage" && totalAmount > 0 ? `= R$ ${formatCurrency(calculatedAmount)}` : ""}
+      <Text
+        size="sm"
+        c="dimmed"
+        className={classes.preview}
+        data-testid={TransactionsTestIds.SplitRowPreview(rowIndex)}
+      >
+        {mode === "percentage" && totalAmount > 0 && !templateMode
+          ? `= R$ ${formatCurrency(calculatedAmount)}`
+          : ""}
       </Text>
 
       <Controller
@@ -145,6 +154,7 @@ interface SplitRowProps {
   error?: string;
   comboboxWithinPortal?: boolean;
   mode: SplitMode;
+  templateMode: boolean;
 }
 
 function SplitRow({
@@ -158,6 +168,7 @@ function SplitRow({
   error,
   comboboxWithinPortal = true,
   mode,
+  templateMode,
 }: SplitRowProps) {
   const { control, setValue } = useFormContext<FieldValues>();
   const connectionId = useWatch({
@@ -248,6 +259,7 @@ function SplitRow({
             rowIndex={rowIndex}
             error={error}
             mode={mode}
+            templateMode={templateMode}
           />
         )}
       </div>
@@ -270,12 +282,15 @@ interface SplitSettingsFieldsProps {
   comboboxWithinPortal?: boolean;
   /** Force percentage-only mode (used by Bulk + Import flows). */
   onlyPercentage?: boolean;
+  /** No-amount context (template form): suppress derived-value previews. */
+  templateMode?: boolean;
 }
 
 export function SplitSettingsFields({
   namePrefix = "",
   comboboxWithinPortal = true,
   onlyPercentage = false,
+  templateMode = false,
 }: SplitSettingsFieldsProps) {
   const {
     control,
@@ -378,6 +393,7 @@ export function SplitSettingsFields({
               error={rowError}
               comboboxWithinPortal={comboboxWithinPortal}
               mode={effectiveMode}
+              templateMode={templateMode}
             />
           );
         })}
@@ -403,8 +419,8 @@ export function SplitSettingsFields({
         ) : (
           <span />
         )}
-        {fields.length > 0 && totalAmount > 0 && (
-          <Group gap={4} align="center">
+        {fields.length > 0 && totalAmount > 0 && !templateMode && (
+          <Group gap={4} align="center" data-testid={TransactionsTestIds.SplitSumFooter}>
             {isHundred && <IconCheck size={12} color="var(--mantine-color-teal-6)" stroke={3} />}
             <Text size="xs" fw={600} c={isHundred ? "teal" : "dimmed"}>
               {`Soma ${sumPct}% (R$ ${formatCurrency(partnerSum)})`}
