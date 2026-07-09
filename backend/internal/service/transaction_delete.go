@@ -80,7 +80,7 @@ func (s *transactionService) deleteAsAuthor(ctx context.Context, transaction *do
 		transaction = sourceTransaction
 	}
 
-	return s.dispatchDelete(ctx, transaction.UserID, transaction, propagation, true, false)
+	return s.dispatchDelete(ctx, transaction.UserID, transaction, propagation, true)
 }
 
 // deleteAsPartner handles deletion initiated by the partner on the receiving end
@@ -100,7 +100,7 @@ func (s *transactionService) deleteAsPartner(ctx context.Context, userID int, tr
 	// leaving the author's private transaction untouched. Propagates across the
 	// partner's own recurrence.
 	if len(settlements) > 0 {
-		if err := s.dispatchDelete(ctx, userID, transaction, propagation, false, true); err != nil {
+		if err := s.dispatchDelete(ctx, userID, transaction, propagation, false); err != nil {
 			return nil, err
 		}
 
@@ -136,7 +136,7 @@ func (s *transactionService) deleteAsPartner(ctx context.Context, userID int, tr
 		}
 	}
 
-	if err := s.dispatchDelete(ctx, source.UserID, source, propagation, true, false); err != nil {
+	if err := s.dispatchDelete(ctx, source.UserID, source, propagation, true); err != nil {
 		return nil, err
 	}
 
@@ -158,30 +158,28 @@ func (s *transactionService) deleteAsPartner(ctx context.Context, userID int, tr
 // dispatchDelete resolves the propagation mode and delegates to deleteTransactions.
 //   - installmentUserID: owner of the recurrence whose installments are collected.
 //   - pullLinked: when true, also delete the linked transactions (the other side).
-//   - deleteSettlements: when true, remove the settlements bound to the targets.
 func (s *transactionService) dispatchDelete(
 	ctx context.Context,
 	installmentUserID int,
 	transaction *domain.Transaction,
 	propagation domain.TransactionPropagationSettings,
 	pullLinked bool,
-	deleteSettlements bool,
 ) error {
 	switch propagation {
 	case domain.TransactionPropagationSettingsCurrent:
-		return s.deleteTransactions(ctx, []*domain.Transaction{transaction}, pullLinked, deleteSettlements)
+		return s.deleteTransactions(ctx, []*domain.Transaction{transaction}, pullLinked)
 	case domain.TransactionPropagationSettingsAll:
 		installments, err := s.collectInstallments(ctx, installmentUserID, transaction, false)
 		if err != nil {
 			return err
 		}
-		return s.deleteTransactions(ctx, installments, pullLinked, deleteSettlements)
+		return s.deleteTransactions(ctx, installments, pullLinked)
 	case domain.TransactionPropagationSettingsCurrentAndFuture:
 		installments, err := s.collectInstallments(ctx, installmentUserID, transaction, true)
 		if err != nil {
 			return err
 		}
-		return s.deleteTransactions(ctx, installments, pullLinked, deleteSettlements)
+		return s.deleteTransactions(ctx, installments, pullLinked)
 	default:
 		return pkgErrors.ErrInvalidPropagationSettings(propagation)
 	}
@@ -216,11 +214,11 @@ func (s *transactionService) collectInstallments(ctx context.Context, userID int
 // deleteTransactions deletes the given set of transactions.
 //   - pullLinked: also delete the linked transactions (the other side of the
 //     share), the linked ones first and the sources afterwards.
-//   - deleteSettlements: remove the settlements whose parent_transaction_id points
-//     at the targets. Required in the split scenario, where the author's source is
-//     NOT deleted and — being a soft delete — the FK CASCADE does not fire, so the
-//     settlement must be removed explicitly for the shared balance to stay correct.
-func (s *transactionService) deleteTransactions(ctx context.Context, targets []*domain.Transaction, pullLinked bool, deleteSettlements bool) error {
+//
+// It always removes the settlements bound to any of the deleted transactions
+// (see deleteSettlementsForTransactions), on both the author and the partner
+// paths.
+func (s *transactionService) deleteTransactions(ctx context.Context, targets []*domain.Transaction, pullLinked bool) error {
 	toDelete := make([]*domain.Transaction, 0, len(targets)*2)
 	toDelete = append(toDelete, targets...)
 
@@ -237,23 +235,12 @@ func (s *transactionService) deleteTransactions(ctx context.Context, targets []*
 		}
 	}
 
-	if deleteSettlements {
-		targetIDs := lo.Map(targets, func(t *domain.Transaction, _ int) int { return t.ID })
-		settlements, err := s.settlementRepo.Search(ctx, domain.SettlementFilter{
-			ParentTransactionIDs: targetIDs,
-		})
-		if err != nil {
-			return pkgErrors.Internal("failed to search settlements to delete", err)
-		}
-		if len(settlements) > 0 {
-			settlementIDs := lo.Map(settlements, func(st *domain.Settlement, _ int) int { return st.ID })
-			if err := s.settlementRepo.Delete(ctx, settlementIDs); err != nil {
-				return pkgErrors.Internal("failed to delete settlements", err)
-			}
-		}
+	transactionIDs := lo.Map(toDelete, func(t *domain.Transaction, _ int) int { return t.ID })
+
+	if err := s.deleteSettlementsForTransactions(ctx, transactionIDs); err != nil {
+		return err
 	}
 
-	transactionIDs := lo.Map(toDelete, func(t *domain.Transaction, _ int) int { return t.ID })
 	if err := s.transactionRepo.Delete(ctx, transactionIDs); err != nil {
 		return pkgErrors.Internal("failed to delete transactions", err)
 	}
@@ -262,6 +249,30 @@ func (s *transactionService) deleteTransactions(ctx context.Context, targets []*
 		return pkgErrors.Internal("failed to delete recurrences without transactions", err)
 	}
 
+	return nil
+}
+
+// deleteSettlementsForTransactions hard-deletes the settlements bound to any of
+// the given transactions. A settlement's parent_transaction_id is the partner
+// (receiving) transaction, which is always part of the deletion set whenever a
+// share is torn down: the author path pulls the linked partner tx (pullLinked),
+// and the partner (scenario A) path deletes the parent directly. Removing them
+// keeps shared-account balances correct and leaves no orphan rows — the FK
+// CASCADE does not fire because transactions are only soft-deleted.
+func (s *transactionService) deleteSettlementsForTransactions(ctx context.Context, transactionIDs []int) error {
+	settlements, err := s.settlementRepo.Search(ctx, domain.SettlementFilter{
+		ParentTransactionIDs: transactionIDs,
+	})
+	if err != nil {
+		return pkgErrors.Internal("failed to search settlements to delete", err)
+	}
+	if len(settlements) == 0 {
+		return nil
+	}
+	settlementIDs := lo.Map(settlements, func(st *domain.Settlement, _ int) int { return st.ID })
+	if err := s.settlementRepo.Delete(ctx, settlementIDs); err != nil {
+		return pkgErrors.Internal("failed to delete settlements", err)
+	}
 	return nil
 }
 

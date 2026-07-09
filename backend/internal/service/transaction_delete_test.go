@@ -147,6 +147,16 @@ func (suite *TransactionDeleteTestWithDBSuite) TestDeleteChildTransaction() {
 		suite.T().Fatalf("Failed to search transactions: %v", err)
 	}
 	assert.Len(suite.T(), transactions, 0)
+
+	// The author deleting a shared split must also hard-delete the settlement
+	// row (no orphan left behind).
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{
+		UserIDs: []int{user.ID},
+	})
+	if err != nil {
+		suite.T().Fatalf("Failed to search settlements: %v", err)
+	}
+	assert.Len(suite.T(), settlements, 0, "author delete should remove the settlement row")
 }
 
 func (suite *TransactionDeleteTestWithDBSuite) TestPropagationSettingsCurrent() {
@@ -1072,6 +1082,78 @@ func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountAll()
 	})
 	suite.Require().NoError(err)
 	suite.Assert().Len(pontaRecs, 0, "recorrência da ponta limpa")
+}
+
+// Cenário B recorrente, propagação 'current_and_future': a ponta apaga a partir
+// da parcela 7 e ambos os lados mantêm 1–6 e apagam 7–12; as recorrências (que
+// ainda têm parcelas) são preservadas.
+func (suite *TransactionDeleteTestWithDBSuite) TestPontaDeleteSharedAccountCurrentAndFuture() {
+	ctx := context.Background()
+
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	ponta, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, author)
+	suite.Require().NoError(err)
+	conn, err := suite.createAcceptedTestUserConnection(ctx, author.ID, ponta.ID, 50)
+	suite.Require().NoError(err)
+
+	installments := 12
+	keep := 6 // installments 1..6 remain on both sides
+	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       conn.FromAccountID,
+		CategoryID:      category.ID,
+		Amount:          100,
+		Date:            domain.Date{Time: time.Now().UTC()},
+		Description:     "Recurring shared account",
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
+		},
+	})
+	suite.Require().NoError(err)
+
+	pontaTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{
+		UserID: &ponta.ID,
+		SortBy: &domain.SortBy{Field: "installment_number", Order: domain.SortOrderAsc},
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(pontaTxs, installments)
+
+	target := pontaTxs[keep] // installment 7 (index 6)
+	suite.Require().Equal(keep+1, lo.FromPtr(target.InstallmentNumber))
+
+	err = suite.Services.Transaction.Delete(ctx, ponta.ID, target.ID, domain.TransactionPropagationSettingsCurrentAndFuture)
+	suite.Require().NoError(err)
+
+	// Both sides keep installments 1..6 and drop 7..12.
+	pontaTxs, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &ponta.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaTxs, keep, "the partner keeps installments 1..6")
+	for _, t := range pontaTxs {
+		suite.Assert().LessOrEqual(lo.FromPtr(t.InstallmentNumber), keep)
+	}
+
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, keep, "the author keeps installments 1..6")
+	for _, t := range authorTxs {
+		suite.Assert().LessOrEqual(lo.FromPtr(t.InstallmentNumber), keep)
+	}
+
+	// The recurrences still have installments 1..6, so they are preserved.
+	authorRecurrenceID := authorTxs[0].TransactionRecurrenceID
+	suite.Require().NotNil(authorRecurrenceID)
+	authorRecs, err := suite.Repos.TransactionRecurrence.Search(ctx, domain.TransactionRecurrenceFilter{
+		IDs:    []int{*authorRecurrenceID},
+		UserID: author.ID,
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorRecs, 1, "author recurrence preserved")
 }
 
 func TestTransactionDelete(t *testing.T) {
