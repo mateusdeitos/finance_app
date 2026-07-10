@@ -33,19 +33,44 @@ func (m *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusUnauthorized, "missing authentication")
 		}
 
-		user, err := m.authService.ValidateToken(c.Request().Context(), token)
+		user, impersonator, err := m.authService.ValidateToken(c.Request().Context(), token)
 		if err != nil {
 			return apperrors.ToHTTPError(err)
 		}
 
 		ctx := appcontext.WithUser(c.Request().Context(), user)
 		ctx = appcontext.WithUserID(ctx, user.ID)
+		if impersonator != nil {
+			ctx = appcontext.WithImpersonator(ctx, impersonator)
+		}
 
 		c.SetRequest(c.Request().WithContext(ctx))
 
-		// Inject user_id into request logger (per D-13)
-		applog.FromContext(c.Request().Context()).With("user_id", user.ID)
+		// Inject user_id into request logger (per D-13). During impersonation the
+		// acting admin is also attached so every log line is attributable to a
+		// human, not just the impersonated account.
+		logger := applog.FromContext(c.Request().Context()).With("user_id", user.ID)
+		if impersonator != nil {
+			logger.With("impersonator_id", impersonator.AdminUserID).
+				With("impersonated_user_id", user.ID).
+				With("impersonation_session_id", impersonator.SessionID)
+		}
 
+		return next(c)
+	}
+}
+
+// RequireAdmin gates a route to real admins only. It must be applied after
+// RequireAuth. An impersonation token authenticates as the (non-admin) target,
+// so it is rejected here; a request is also rejected if it carries an
+// impersonator, preventing an impersonation session from reaching admin routes.
+func (m *AuthMiddleware) RequireAdmin(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		user := appcontext.GetUserFromContext(ctx)
+		if user == nil || !user.IsAdmin || appcontext.GetImpersonatorFromContext(ctx) != nil {
+			return apperrors.ToHTTPError(apperrors.ErrImpersonationForbidden)
+		}
 		return next(c)
 	}
 }

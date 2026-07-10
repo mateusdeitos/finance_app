@@ -310,17 +310,22 @@ export const TransactionForm = ({
             ) : (
               <SegmentedControl
                 color={typeColor}
-                data={(["expense", "income", "transfer"] as const).map((t) => ({
-                  value: t,
-                  label: (
-                    <Group gap={6} wrap="nowrap" justify="center">
-                      {TYPE_ICON[t]}
-                      <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
-                        {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
-                      </span>
-                    </Group>
-                  ),
-                }))}
+                // Transfers are not allowed on shared accounts (the backend rejects
+                // them), so only expense/income are offered when the selected account
+                // is shared.
+                data={(["expense", "income", "transfer"] as const)
+                  .filter((t) => !(t === "transfer" && isSharedAccount))
+                  .map((t) => ({
+                    value: t,
+                    label: (
+                      <Group gap={6} wrap="nowrap" justify="center">
+                        {TYPE_ICON[t]}
+                        <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>
+                          {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
+                        </span>
+                      </Group>
+                    ),
+                  }))}
                 value={field.value}
                 onChange={(val) => {
                   field.onChange(val);

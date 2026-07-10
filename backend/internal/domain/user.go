@@ -9,6 +9,7 @@ type User struct {
 	Email      string    `json:"email"`
 	Password   string    `json:"-"` // Never serialize password
 	AvatarURL  *string   `json:"avatar_url,omitempty"`
+	IsAdmin    bool      `json:"is_admin"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

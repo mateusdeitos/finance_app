@@ -11,12 +11,13 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	OAuth    OAuthConfig
-	App      AppConfig
-	VAPID    VAPIDConfig
+	Server        ServerConfig
+	Database      DatabaseConfig
+	JWT           JWTConfig
+	OAuth         OAuthConfig
+	App           AppConfig
+	VAPID         VAPIDConfig
+	Impersonation ImpersonationConfig
 }
 
 type ServerConfig struct {
@@ -73,6 +74,18 @@ type VAPIDConfig struct {
 	Subject    string // VAPID_SUBJECT     — "mailto:..." per RFC 8292
 }
 
+// ImpersonationConfig controls the admin user-impersonation feature.
+type ImpersonationConfig struct {
+	// TokenTTLMinutes bounds how long an impersonation token stays valid.
+	// Kept short by design: impersonation is for a troubleshooting session,
+	// not a standing grant.
+	TokenTTLMinutes int
+}
+
+func (i ImpersonationConfig) TokenTTL() time.Duration {
+	return time.Duration(i.TokenTTLMinutes) * time.Minute
+}
+
 func Load(files ...string) (*Config, error) {
 	// Try to load .env file, but don't fail if it doesn't exist
 	_ = godotenv.Load(files...)
@@ -118,6 +131,9 @@ func Load(files ...string) (*Config, error) {
 			PublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 			Subject:    getEnv("VAPID_SUBJECT", ""),
+		},
+		Impersonation: ImpersonationConfig{
+			TokenTTLMinutes: getEnvAsInt("IMPERSONATION_TOKEN_TTL_MINUTES", 30),
 		},
 	}
 

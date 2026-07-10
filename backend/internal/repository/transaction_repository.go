@@ -512,3 +512,33 @@ func (r *transactionRepository) ReassignCategory(ctx context.Context, fromID, to
 		Where("category_id = ?", fromID).
 		Update("category_id", toID).Error
 }
+
+// Count returns the number of non-deleted transactions matching the filter.
+// Soft-deleted rows are excluded automatically by GORM's DeletedAt scope.
+func (r *transactionRepository) Count(ctx context.Context, filter domain.TransactionFilter) (int64, error) {
+	var count int64
+	query := GetTxFromContext(ctx, r.db).Model(&entity.Transaction{})
+
+	if len(filter.IDs) > 0 {
+		query = query.Where("id IN ?", filter.IDs)
+	}
+	if len(filter.AccountIDs) > 0 {
+		query = query.Where("account_id IN ?", filter.AccountIDs)
+	}
+	if len(filter.CategoryIDs) > 0 {
+		query = query.Where("category_id IN ?", filter.CategoryIDs)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// ReassignAccount moves all non-deleted transactions from one account to another.
+func (r *transactionRepository) ReassignAccount(ctx context.Context, fromAccountID, toAccountID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Transaction{}).
+		Where("account_id = ?", fromAccountID).
+		Update("account_id", toAccountID).Error
+}

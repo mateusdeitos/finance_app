@@ -16,6 +16,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated.transactions'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated.onboarding'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated.notifications'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated.home'
 import { Route as AuthenticatedChargesRouteImport } from './routes/_authenticated.charges'
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated.categories'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated.accounts'
@@ -58,6 +59,11 @@ const AuthenticatedNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedChargesRoute = AuthenticatedChargesRouteImport.update({
   id: '/charges',
   path: '/charges',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AuthenticatedAccountsRoute
   '/categories': typeof AuthenticatedCategoriesRoute
   '/charges': typeof AuthenticatedChargesRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AuthenticatedAccountsRoute
   '/categories': typeof AuthenticatedCategoriesRoute
   '/charges': typeof AuthenticatedChargesRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/categories': typeof AuthenticatedCategoriesRoute
   '/_authenticated/charges': typeof AuthenticatedChargesRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/categories'
     | '/charges'
+    | '/home'
     | '/notifications'
     | '/onboarding'
     | '/transactions'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/categories'
     | '/charges'
+    | '/home'
     | '/notifications'
     | '/onboarding'
     | '/transactions'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_authenticated/accounts'
     | '/_authenticated/categories'
     | '/_authenticated/charges'
+    | '/_authenticated/home'
     | '/_authenticated/notifications'
     | '/_authenticated/onboarding'
     | '/_authenticated/transactions'
@@ -228,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/charges': {
       id: '/_authenticated/charges'
       path: '/charges'
@@ -270,6 +289,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedCategoriesRoute: typeof AuthenticatedCategoriesRoute
   AuthenticatedChargesRoute: typeof AuthenticatedChargesRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
@@ -281,6 +301,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedCategoriesRoute: AuthenticatedCategoriesRoute,
   AuthenticatedChargesRoute: AuthenticatedChargesRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,

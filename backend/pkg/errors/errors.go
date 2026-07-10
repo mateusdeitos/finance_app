@@ -64,6 +64,10 @@ const (
 	ErrorTagChargeTransactionTypeCannotChange                        ErrorTag = "TRANSACTION.CHARGE_TYPE_CANNOT_CHANGE"
 	ErrorTagChargeTransactionRecurrenceNotAllowed                    ErrorTag = "TRANSACTION.CHARGE_RECURRENCE_NOT_ALLOWED"
 
+	ErrorTagAccountCannotDeleteConnectionAccount ErrorTag = "ACCOUNT.CANNOT_DELETE_CONNECTION_ACCOUNT"
+	ErrorTagAccountHasLinkedTransactions         ErrorTag = "ACCOUNT.HAS_LINKED_TRANSACTIONS"
+	ErrorTagAccountInvalidMigrationTarget        ErrorTag = "ACCOUNT.INVALID_MIGRATION_TARGET"
+
 	ErrorTagChargeCannotDeletePaid ErrorTag = "CHARGE.CANNOT_DELETE_PAID"
 
 	ErrorTagTagNameCannotBeEmpty ErrorTag = "TAG.NAME_CANNOT_BE_EMPTY"
@@ -83,6 +87,14 @@ const (
 
 	ErrorTagNoActivePushSubscription ErrorTag = "NOTIFICATION.NO_ACTIVE_PUSH_SUBSCRIPTION"
 	ErrorTagPushDeliveryFailed       ErrorTag = "NOTIFICATION.PUSH_DELIVERY_FAILED"
+
+	ErrorTagImpersonationForbidden      ErrorTag = "IMPERSONATION.FORBIDDEN"
+	ErrorTagImpersonationReasonRequired ErrorTag = "IMPERSONATION.REASON_REQUIRED"
+	ErrorTagImpersonationTargetIsSelf   ErrorTag = "IMPERSONATION.TARGET_IS_SELF"
+	ErrorTagImpersonationTargetIsAdmin  ErrorTag = "IMPERSONATION.TARGET_IS_ADMIN"
+	ErrorTagImpersonationTargetNotFound ErrorTag = "IMPERSONATION.TARGET_NOT_FOUND"
+	ErrorTagImpersonationNotActive      ErrorTag = "IMPERSONATION.NOT_ACTIVE"
+	ErrorTagImpersonationNesting        ErrorTag = "IMPERSONATION.NESTING_NOT_ALLOWED"
 )
 
 var (
@@ -146,6 +158,18 @@ var (
 	ErrChargeCannotDeletePaid                      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagChargeCannotDeletePaid)}, "paid charges cannot be deleted")
 	ErrSettlementForbidden                         = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagSettlementForbidden)}, "settlement belongs to another user")
 	ErrSettlementDateIsRequired                    = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagSettlementDateIsRequired)}, "date is required")
+
+	ErrAccountCannotDeleteConnectionAccount = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountCannotDeleteConnectionAccount)}, "connection accounts cannot be deleted")
+	ErrAccountHasLinkedTransactions         = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountHasLinkedTransactions)}, "account has linked transactions; choose a deletion strategy")
+	ErrAccountInvalidMigrationTarget        = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagAccountInvalidMigrationTarget)}, "invalid migration target account")
+
+	ErrImpersonationForbidden      = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagImpersonationForbidden)}, "admin privileges are required to impersonate users")
+	ErrImpersonationReasonRequired = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImpersonationReasonRequired)}, "a reason is required to start impersonation")
+	ErrImpersonationTargetIsSelf   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImpersonationTargetIsSelf)}, "you cannot impersonate yourself")
+	ErrImpersonationTargetIsAdmin  = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagImpersonationTargetIsAdmin)}, "admins cannot be impersonated")
+	ErrImpersonationTargetNotFound = NewWithTag(ErrCodeNotFound, []string{string(ErrorTagImpersonationTargetNotFound)}, "target user not found")
+	ErrImpersonationNotActive      = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagImpersonationNotActive)}, "no active impersonation session")
+	ErrImpersonationNesting        = NewWithTag(ErrCodeForbidden, []string{string(ErrorTagImpersonationNesting)}, "cannot start impersonation while already impersonating")
 
 	ErrNoActivePushSubscription = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagNoActivePushSubscription)}, "no active push subscription for this user")
 	ErrPushDeliveryFailed       = func(status int, reason string) *ServiceError {

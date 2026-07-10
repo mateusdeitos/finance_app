@@ -3,6 +3,7 @@ export const QueryKeys = {
   Transactions: 'transactions',
   Balance: 'balance',
   Accounts: 'accounts',
+  AccountDeletionInfo: 'account-deletion-info',
   Categories: 'categories',
   Tags: 'tags',
   InviteInfo: 'invite-info',
@@ -16,4 +17,5 @@ export const QueryKeys = {
   NotificationUnreadCount: 'notification-unread-count',
   NotificationChargesById: 'notification-charges-by-id',
   NotificationTransactionsById: 'notification-transactions-by-id',
+  AdminUsers: 'admin-users',
 } as const

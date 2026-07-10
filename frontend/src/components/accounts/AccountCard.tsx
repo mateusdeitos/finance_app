@@ -1,5 +1,12 @@
 import { Card, Group, Text, ActionIcon, Badge, Stack } from '@mantine/core'
-import { IconPencil, IconTrash, IconRefresh } from '@tabler/icons-react'
+import {
+  IconPencil,
+  IconTrash,
+  IconRefresh,
+  IconArchive,
+  IconChevronUp,
+  IconChevronDown,
+} from '@tabler/icons-react'
 import { Transactions } from '@/types/transactions'
 import { formatBalance } from '@/utils/formatCents'
 import { AccountAvatar } from '@/components/AccountAvatar'
@@ -7,12 +14,29 @@ import { AccountsTestIds } from '@/testIds'
 
 interface Props {
   account: Transactions.Account
-  onEdit: (account: Transactions.Account) => void
-  onDelete: (account: Transactions.Account) => void
+  onEdit?: (account: Transactions.Account) => void
+  onDeactivate?: (account: Transactions.Account) => void
+  onActivate?: (account: Transactions.Account) => void
+  onDelete?: (account: Transactions.Account) => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  canMoveUp?: boolean
+  canMoveDown?: boolean
 }
 
-export function AccountCard({ account, onEdit, onDelete }: Props) {
+export function AccountCard({
+  account,
+  onEdit,
+  onDeactivate,
+  onActivate,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+}: Props) {
   const isShared = !!account.user_connection
+  const reorderable = !isShared && account.is_active && (!!onMoveUp || !!onMoveDown)
 
   return (
     <Card withBorder radius="md" p="md" data-account-name={account.name} data-testid={AccountsTestIds.Card}>
@@ -33,29 +57,76 @@ export function AccountCard({ account, onEdit, onDelete }: Props) {
           </Text>
         </Stack>
 
-        {!isShared && (
-          <Group gap="xs" wrap="nowrap">
-            {account.is_active && (
-              <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid={AccountsTestIds.BtnEdit}>
-                <IconPencil size={16} />
+        <Group gap="xs" wrap="nowrap">
+          {reorderable && (
+            <Stack gap={2}>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                disabled={!canMoveUp}
+                onClick={onMoveUp}
+                aria-label="Mover para cima"
+                data-testid={AccountsTestIds.BtnMoveUp}
+              >
+                <IconChevronUp size={16} />
               </ActionIcon>
-            )}
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                disabled={!canMoveDown}
+                onClick={onMoveDown}
+                aria-label="Mover para baixo"
+                data-testid={AccountsTestIds.BtnMoveDown}
+              >
+                <IconChevronDown size={16} />
+              </ActionIcon>
+            </Stack>
+          )}
+
+          {onEdit && account.is_active && (
+            <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid={AccountsTestIds.BtnEdit}>
+              <IconPencil size={16} />
+            </ActionIcon>
+          )}
+
+          {onActivate && !account.is_active && (
             <ActionIcon
               variant="subtle"
-              color={account.is_active ? 'red' : 'teal'}
-              onClick={() => onDelete(account)}
-              data-testid={AccountsTestIds.BtnAction}
+              color="teal"
+              onClick={() => onActivate(account)}
+              aria-label="Reativar conta"
+              data-testid={AccountsTestIds.BtnActivate}
             >
-              {account.is_active ? <IconTrash size={16} /> : <IconRefresh size={16} />}
+              <IconRefresh size={16} />
             </ActionIcon>
-          </Group>
-        )}
+          )}
 
-        {isShared && account.is_active && (
-          <ActionIcon variant="subtle" color="gray" onClick={() => onEdit(account)} data-testid={AccountsTestIds.BtnEdit}>
-            <IconPencil size={16} />
-          </ActionIcon>
-        )}
+          {onDeactivate && account.is_active && (
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={() => onDeactivate(account)}
+              aria-label="Inativar conta"
+              data-testid={AccountsTestIds.BtnDeactivate}
+            >
+              <IconArchive size={16} />
+            </ActionIcon>
+          )}
+
+          {onDelete && (
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              onClick={() => onDelete(account)}
+              aria-label="Excluir conta"
+              data-testid={AccountsTestIds.BtnDelete}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          )}
+        </Group>
       </Group>
     </Card>
   )

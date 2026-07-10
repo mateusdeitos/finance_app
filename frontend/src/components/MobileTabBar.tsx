@@ -1,5 +1,6 @@
 import { Badge, Indicator, UnstyledButton } from '@mantine/core'
 import {
+  IconHome,
   IconReceipt2,
   IconWallet,
   IconTree,
@@ -24,6 +25,7 @@ type Tab = {
 }
 
 const tabs: Tab[] = [
+  { to: '/home', label: 'Início', icon: IconHome },
   { to: '/transactions', label: 'Transações', icon: IconReceipt2 },
   { to: '/accounts', label: 'Contas', icon: IconWallet },
   { to: '/categories', label: 'Categorias', icon: IconTree },

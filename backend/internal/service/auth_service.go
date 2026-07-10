@@ -15,6 +15,7 @@ import (
 type authService struct {
 	userRepo            repository.UserRepository
 	userSocialRepo      repository.UserSocialRepository
+	impersonationRepo   repository.ImpersonationRepository
 	config              *config.Config
 	passwordResetTokens map[string]passwordResetToken // In production, use Redis or DB
 }
@@ -28,6 +29,7 @@ func NewAuthService(repos *repository.Repositories, cfg *config.Config) AuthServ
 	return &authService{
 		userRepo:            repos.User,
 		userSocialRepo:      repos.UserSocial,
+		impersonationRepo:   repos.Impersonation,
 		config:              cfg,
 		passwordResetTokens: make(map[string]passwordResetToken),
 	}
@@ -140,7 +142,7 @@ func (s *authService) TestLogin(ctx context.Context, email string) (string, erro
 	return token, nil
 }
 
-func (s *authService) ValidateToken(ctx context.Context, tokenString string) (*domain.User, error) {
+func (s *authService) ValidateToken(ctx context.Context, tokenString string) (*domain.User, *domain.Impersonator, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, apperrors.Unauthorized(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
@@ -149,32 +151,82 @@ func (s *authService) ValidateToken(ctx context.Context, tokenString string) (*d
 	})
 
 	if err != nil {
-		return nil, apperrors.Unauthorized("invalid token")
+		return nil, nil, apperrors.Unauthorized("invalid token")
 	}
 
 	if !token.Valid {
-		return nil, apperrors.Unauthorized("invalid token")
+		return nil, nil, apperrors.Unauthorized("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, apperrors.Unauthorized("invalid token claims")
+		return nil, nil, apperrors.Unauthorized("invalid token claims")
 	}
 
 	userID, ok := claims["user_id"].(float64)
 	if !ok {
-		return nil, apperrors.Unauthorized("invalid user ID in token")
+		return nil, nil, apperrors.Unauthorized("invalid user ID in token")
+	}
+
+	// An impersonation token carries an `act` (actor) claim identifying the real
+	// admin. Validate the backing session before honoring the token so a stopped
+	// or expired impersonation cannot keep acting as the target user.
+	impersonator, err := s.resolveImpersonator(ctx, claims, int(userID))
+	if err != nil {
+		return nil, nil, err
 	}
 
 	user, err := s.userRepo.GetByID(ctx, int(userID))
 	if err != nil {
-		return nil, apperrors.Internal("failed to get user", err)
+		return nil, nil, apperrors.Internal("failed to get user", err)
 	}
 	if user == nil {
-		return nil, apperrors.NotFound("user")
+		return nil, nil, apperrors.NotFound("user")
 	}
 
-	return user, nil
+	return user, impersonator, nil
+}
+
+// resolveImpersonator inspects the `act` claim. It returns nil for ordinary
+// tokens. For impersonation tokens it loads the audit session by `jti` and
+// rejects the token unless the session is still active and its admin/target
+// match the claims — server-side revocation is the source of truth, not just
+// the JWT expiry.
+func (s *authService) resolveImpersonator(ctx context.Context, claims jwt.MapClaims, targetUserID int) (*domain.Impersonator, error) {
+	actRaw, ok := claims["act"]
+	if !ok {
+		return nil, nil
+	}
+	act, ok := actRaw.(map[string]interface{})
+	if !ok {
+		return nil, apperrors.Unauthorized("invalid actor claim")
+	}
+
+	sessionID, _ := claims["jti"].(string)
+	adminIDFloat, _ := act["sub"].(float64)
+	adminEmail, _ := act["email"].(string)
+	if sessionID == "" || adminIDFloat == 0 {
+		return nil, apperrors.Unauthorized("invalid impersonation token")
+	}
+	adminID := int(adminIDFloat)
+
+	session, err := s.impersonationRepo.GetByID(ctx, sessionID)
+	if err != nil {
+		return nil, apperrors.Internal("failed to load impersonation session", err)
+	}
+	if session == nil || !session.IsActive(time.Now()) {
+		return nil, apperrors.Unauthorized("impersonation session is no longer active")
+	}
+	// Defense in depth: the token's claims must match the persisted session.
+	if session.AdminUserID != adminID || session.TargetUserID != targetUserID {
+		return nil, apperrors.Unauthorized("impersonation token does not match session")
+	}
+
+	return &domain.Impersonator{
+		SessionID:   sessionID,
+		AdminUserID: adminID,
+		AdminEmail:  adminEmail,
+	}, nil
 }
 
 func (s *authService) generateToken(user *domain.User) (string, error) {

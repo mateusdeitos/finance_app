@@ -2,10 +2,14 @@ import { Stack, Group, Button, Text, Skeleton } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useActivateAccount } from '@/hooks/useActivateAccount'
+import { useDeactivateAccount } from '@/hooks/useDeactivateAccount'
 import { useDeleteAccount } from '@/hooks/useDeleteAccount'
+import { useReorderAccounts } from '@/hooks/useReorderAccounts'
+import { useAccountDeletionInfo } from '@/hooks/useAccountDeletionInfo'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useHotkey } from '@/hooks/useHotkey'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
+import { DeleteAccountDrawer } from '@/components/accounts/DeleteAccountDrawer'
 import { EditConnectionDrawer } from '@/components/connections/EditConnectionDrawer'
 import { AccountSection } from '@/components/accounts/AccountSection'
 import { Fab } from '@/components/Fab'
@@ -27,8 +31,11 @@ export function AccountsPage() {
     accounts.filter((a) => !a.is_active),
   )
 
-  const { mutation: deactivateMutation } = useDeleteAccount({ onSuccess: invalidate })
+  const { mutation: deactivateMutation } = useDeactivateAccount({ onSuccess: invalidate })
   const { mutation: activateMutation } = useActivateAccount({ onSuccess: invalidate })
+  const { mutation: deleteMutation } = useDeleteAccount({ onSuccess: invalidate })
+  const { mutation: reorderMutation } = useReorderAccounts({ onSuccess: invalidate })
+  const { fetchInfo } = useAccountDeletionInfo()
 
   function handleEdit(account: Transactions.Account) {
     if (account.user_connection) {
@@ -36,6 +43,21 @@ export function AccountsPage() {
     } else {
       void renderDrawer(() => <AccountDrawer account={account} />)
     }
+  }
+
+  async function handleDelete(account: Transactions.Account) {
+    const info = await fetchInfo(account.id)
+    if (info.transaction_count === 0) {
+      deleteMutation.mutate({ id: account.id })
+      return
+    }
+    await renderDrawer<'confirmed' | void>(() => (
+      <DeleteAccountDrawer account={account} transactionCount={info.transaction_count} />
+    )).catch(() => undefined)
+  }
+
+  function handleReorder(orderedIds: number[]) {
+    reorderMutation.mutate(orderedIds)
   }
 
   function handleAdd() {
@@ -76,20 +98,21 @@ export function AccountsPage() {
             label="Minhas contas"
             accounts={activeOwnQuery.data ?? []}
             onEdit={handleEdit}
-            onAction={(a) => deactivateMutation.mutate(a.id)}
+            onDeactivate={(a) => deactivateMutation.mutate(a.id)}
+            onDelete={handleDelete}
+            onReorder={handleReorder}
             testId={AccountsTestIds.SectionActive}
           />
           <AccountSection
             label="Contas compartilhadas"
             accounts={activeSharedQuery.data ?? []}
             onEdit={handleEdit}
-            onAction={(a) => deactivateMutation.mutate(a.id)}
           />
           <AccountSection
             label="Inativas"
             accounts={inactiveQuery.data ?? []}
-            onEdit={handleEdit}
-            onAction={(a) => activateMutation.mutate(a.id)}
+            onActivate={(a) => activateMutation.mutate(a.id)}
+            onDelete={handleDelete}
             testId={AccountsTestIds.SectionInactive}
           />
           {!hasAccounts && (

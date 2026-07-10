@@ -1,13 +1,17 @@
 import { useMutation } from '@tanstack/react-query'
-import { deleteAccount } from '@/api/accounts'
+import { deleteAccount, type DeleteAccountOptions } from '@/api/accounts'
 
 interface Options {
   onSuccess?: () => void
 }
 
+export interface DeleteAccountVariables extends DeleteAccountOptions {
+  id: number
+}
+
 export function useDeleteAccount({ onSuccess }: Options = {}) {
   const mutation = useMutation({
-    mutationFn: (id: number) => deleteAccount(id),
+    mutationFn: ({ id, ...options }: DeleteAccountVariables) => deleteAccount(id, options),
     onSuccess,
   })
   return { mutation }

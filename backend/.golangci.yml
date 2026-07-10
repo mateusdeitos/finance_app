@@ -136,6 +136,14 @@ linters:
           - gocritic         # 1 issue: exitAfterDefer (log.Fatal in main is intentional)
           - errorlint        # 1 issue: err != http.ErrServerClosed (sentinel comparison ok)
           - noinlineerr      # 2 issues: inline err in server start/shutdown (idiomatic Go)
+      # cmd/migrate-check — CI/deploy helper CLI: fmt.Print writes GitHub Actions
+      # `::error::` annotations to stdout by design; defer Close / inline err are
+      # idiomatic for a short-lived single-file command.
+      - path: cmd/migrate-check/
+        linters:
+          - forbidigo        # fmt.Print used for GitHub Actions ::error:: annotations
+          - errcheck         # defer db.Close() in a short-lived CLI
+          - noinlineerr      # if err := db.PingContext(...); err != nil (idiomatic)
       # internal/middleware — noinlineerr: inline err in JSON response is idiomatic
       - path: internal/middleware/
         linters:

@@ -91,24 +91,28 @@ func main() {
 		UserSettings:          repository.NewUserSettingsRepository(db),
 		PushSubscription:      repository.NewPushSubscriptionRepository(db),
 		Notification:          repository.NewNotificationRepository(db),
+		Impersonation:         repository.NewImpersonationRepository(db),
 	}
 
 	// Initialize services
 	services := &service.Services{
 		Auth:       service.NewAuthService(repos, cfg),
 		User:       service.NewUserService(repos),
-		Account:    service.NewAccountService(repos),
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
 		Settlement: service.NewSettlementService(repos),
 	}
 
+	// Account delete tears down transactions via the transaction service, so it
+	// needs the Services pointer (resolved lazily at call time).
+	services.Account = service.NewAccountService(repos, services)
 	services.UserConnection = service.NewUserConnectionService(repos, services)
 	services.Transaction = service.NewTransactionService(repos, services)
 	services.Charge = service.NewChargeService(repos, services)
 	services.Onboarding = service.NewOnboardingService(repos)
 	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
 	services.Notification = service.NewNotificationService(repos, cfg)
+	services.Impersonation = service.NewImpersonationService(repos, cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -121,6 +125,7 @@ func main() {
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
+	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
 
 	// Setup Echo
 	e := echo.New()
@@ -157,9 +162,10 @@ func main() {
 	}
 
 	// Protected routes
+	authMiddleware := middleware.NewAuthMiddleware(services)
 	api := e.Group("/api")
-	api.Use(middleware.NewAuthMiddleware(services).RequireAuth)
-	registerAPIRoutes(api, services, apiHandlers{
+	api.Use(authMiddleware.RequireAuth)
+	registerAPIRoutes(api, services, authMiddleware, apiHandlers{
 		auth:           authHandler,
 		account:        accountHandler,
 		category:       categoryHandler,
@@ -170,6 +176,7 @@ func main() {
 		onboarding:     onboardingHandler,
 		pushSub:        pushSubHandler,
 		notification:   notifHandler,
+		impersonation:  impersonationHandler,
 	})
 
 	// Start server
@@ -212,20 +219,36 @@ type apiHandlers struct {
 	onboarding     *handler.OnboardingHandler
 	pushSub        *handler.PushSubscriptionHandler
 	notification   *handler.NotificationHandler
+	impersonation  *handler.ImpersonationHandler
 }
 
 // registerAPIRoutes wires every authenticated route group under the /api group.
-func registerAPIRoutes(api *echo.Group, services *service.Services, h apiHandlers) {
+func registerAPIRoutes(api *echo.Group, services *service.Services, authMiddleware *middleware.AuthMiddleware, h apiHandlers) {
 	// Auth
 	api.GET("/auth/me", h.auth.Me)
+
+	// Admin-only impersonation controls. The whole /admin subtree requires a real
+	// admin (RequireAdmin also rejects impersonated requests, so no nesting).
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware.RequireAdmin)
+	admin.GET("/users", h.impersonation.SearchUsers)
+	admin.POST("/impersonation", h.impersonation.Start)
+
+	// Stop lives outside /admin: it is called *while* impersonating (the caller
+	// is authenticated as the non-admin target), so it only requires auth plus a
+	// live impersonator in context (enforced in the handler).
+	api.POST("/impersonation/stop", h.impersonation.Stop)
 
 	// Accounts
 	accounts := api.Group("/accounts")
 	accounts.GET("", h.account.Search)
 	accounts.POST("", h.account.Create)
+	accounts.PUT("/reorder", h.account.Reorder)
 	accounts.PUT("/:id", h.account.Update)
+	accounts.GET("/:id/deletion-info", h.account.GetDeletionInfo)
 	accounts.DELETE("/:id", h.account.Delete)
 	accounts.POST("/:id/activate", h.account.Activate)
+	accounts.POST("/:id/deactivate", h.account.Deactivate)
 
 	// User connections
 	userConnections := api.Group("/user-connections")
