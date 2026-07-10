@@ -85,6 +85,13 @@ export const TransactionsTestIds = {
   TemplateBtnSave: 'btn_template_save',
   TemplateFormError: 'alert_template_form_error',
 
+  // Save as template (MNG-02): create-form footer button + confirm-name mini drawer
+  BtnSaveAsTemplate: 'btn_save_as_template',
+  SaveAsTemplateDrawer: 'drawer_save_as_template',
+  SaveAsTemplateInputName: 'input_save_as_template_name',
+  TemplateBtnConfirmSaveAsTemplate: 'btn_confirm_save_as_template',
+  SaveAsTemplateError: 'alert_save_as_template_error',
+
   // Split
   InputSplitAmount: 'input_split_amount',
   InputSplitPercentage: 'input_split_percentage',
