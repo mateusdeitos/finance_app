@@ -228,6 +228,12 @@ definitions:
     - ImportRowStatusPending
   domain.Notification:
     properties:
+      amount:
+        description: |-
+          Amount é o valor (em centavos) associado à notificação. Persistido para que
+          o corpo mostre o valor mesmo quando a entidade referenciada foi apagada
+          (ex.: exclusão de transação compartilhada, onde não há mais o que resolver).
+        type: integer
       created_at:
         type: string
       description:
@@ -465,6 +471,13 @@ definitions:
       userConnection:
         $ref: '#/definitions/domain.UserConnection'
     type: object
+  domain.StartImpersonationRequest:
+    properties:
+      reason:
+        type: string
+      target_user_id:
+        type: integer
+    type: object
   domain.SubscribePushRequest:
     properties:
       endpoint:
@@ -654,6 +667,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_admin:
+        type: boolean
       name:
         type: string
       updated_at:
@@ -739,6 +754,54 @@ definitions:
           created when the other participant splits a transaction with them. nil clears
           the preference (the linked transaction inherits the source transaction date).
         type: integer
+    type: object
+  handler.adminUserView:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      is_admin:
+        type: boolean
+      name:
+        type: string
+    type: object
+  handler.meImpersonator:
+    properties:
+      admin_email:
+        type: string
+      admin_user_id:
+        type: integer
+    type: object
+  handler.meResponse:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      external_id:
+        type: string
+      id:
+        type: integer
+      impersonator:
+        $ref: '#/definitions/handler.meImpersonator'
+      is_admin:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  handler.startImpersonationResponse:
+    properties:
+      expires_at:
+        type: string
+      target_user:
+        $ref: '#/definitions/domain.User'
     type: object
   handler.testLoginRequest:
     properties:
@@ -1007,6 +1070,81 @@ paths:
       summary: Reorder accounts
       tags:
       - accounts
+  /api/admin/impersonation:
+    post:
+      consumes:
+      - application/json
+      description: 'Issues a short-lived token to act as the target user. Admin only.
+        The token must be sent as `Authorization: Bearer` on subsequent requests;
+        the admin''s own session cookie stays intact.'
+      parameters:
+      - description: Impersonation target and reason
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.StartImpersonationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.startImpersonationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Start impersonation (admin)
+      tags:
+      - admin
+  /api/admin/users:
+    get:
+      description: Returns users matching a name/email query for the impersonation
+        picker. Admin only.
+      parameters:
+      - description: Search query (name or email)
+        in: query
+        name: q
+        type: string
+      - description: Max results (default 20)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.adminUserView'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Search users (admin)
+      tags:
+      - admin
   /api/auth/me:
     get:
       produces:
@@ -1015,7 +1153,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/handler.meResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1404,7 +1542,6 @@ paths:
           description: OK
           schema:
             additionalProperties:
-              format: int64
               type: integer
             type: object
         "401":
@@ -1417,6 +1554,33 @@ paths:
       summary: Count pending charges requiring caller's action
       tags:
       - charges
+  /api/impersonation/stop:
+    post:
+      description: Revokes the current impersonation session server-side. Must be
+        called with the impersonation token active.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Stop impersonation
+      tags:
+      - admin
   /api/notifications:
     get:
       description: Returns paginated notifications for the authenticated user, newest
@@ -1720,6 +1884,50 @@ paths:
       tags:
       - push-subscriptions
   /api/settlements/{id}:
+    delete:
+      description: 'Removes a settlement''s division: deletes the partner''s linked
+        transaction and the settlement, keeping the author''s source transaction.
+        Only the settlement owner may do this. For a recurring split, propagation_settings
+        controls how many installments are affected.'
+      parameters:
+      - description: Settlement ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: How to handle recurring installments
+        enum:
+        - all
+        - current
+        - current_and_future
+        in: query
+        name: propagation_settings
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Delete settlement (remove a shared division)
+      tags:
+      - settlements
     patch:
       consumes:
       - application/json

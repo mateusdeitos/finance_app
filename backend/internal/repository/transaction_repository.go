@@ -228,20 +228,21 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 	}
 
 	type row struct {
-		SettlementID        int            `gorm:"column:settlement_id"`
-		SettlementType      string         `gorm:"column:settlement_type"`
-		UserID              int            `gorm:"column:user_id"`
-		OriginalUserID      *int           `gorm:"column:original_user_id"`
-		AccountID           int            `gorm:"column:account_id"`
-		CategoryID          *int           `gorm:"column:category_id"`
-		Amount              int64          `gorm:"column:amount"`
-		Date                time.Time      `gorm:"column:date"`
-		Description         string         `gorm:"column:description"`
-		SourceTransactionID int            `gorm:"column:source_transaction_id"`
-		CreatedAt           *time.Time     `gorm:"column:created_at"`
-		UpdatedAt           *time.Time     `gorm:"column:updated_at"`
-		_                   gorm.DeletedAt `gorm:"-"`
-		_                   struct{}       `gorm:"-"`
+		SettlementID            int            `gorm:"column:settlement_id"`
+		SettlementType          string         `gorm:"column:settlement_type"`
+		UserID                  int            `gorm:"column:user_id"`
+		OriginalUserID          *int           `gorm:"column:original_user_id"`
+		AccountID               int            `gorm:"column:account_id"`
+		CategoryID              *int           `gorm:"column:category_id"`
+		Amount                  int64          `gorm:"column:amount"`
+		Date                    time.Time      `gorm:"column:date"`
+		Description             string         `gorm:"column:description"`
+		SourceTransactionID     int            `gorm:"column:source_transaction_id"`
+		TransactionRecurrenceID *int           `gorm:"column:transaction_recurrence_id"`
+		CreatedAt               *time.Time     `gorm:"column:created_at"`
+		UpdatedAt               *time.Time     `gorm:"column:updated_at"`
+		_                       gorm.DeletedAt `gorm:"-"`
+		_                       struct{}       `gorm:"-"`
 	}
 
 	var rows []row
@@ -257,6 +258,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 			s.date AS date,
 			t.description AS description,
 			s.source_transaction_id AS source_transaction_id,
+			t.transaction_recurrence_id AS transaction_recurrence_id,
 			s.created_at AS created_at,
 			s.updated_at AS updated_at`).
 		Joins("JOIN transactions t ON t.id = s.source_transaction_id").
@@ -280,8 +282,8 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 	for _, r := range rows {
 		settlementType := domain.SettlementType(r.SettlementType)
 		var (
-			opType  domain.OperationType
-			txType  domain.TransactionType
+			opType domain.OperationType
+			txType domain.TransactionType
 		)
 		if settlementType == domain.SettlementTypeCredit {
 			opType = domain.OperationTypeCredit
@@ -294,20 +296,21 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 		settlementID := r.SettlementID
 		sourceTxID := r.SourceTransactionID
 		result = append(result, &domain.Transaction{
-			ID:                  -(settlementID + orphanedSettlementSyntheticIDOffset),
-			OriginSettlementID:  &settlementID,
-			SourceTransactionID: &sourceTxID,
-			UserID:              r.UserID,
-			OriginalUserID:      r.OriginalUserID,
-			Type:                txType,
-			OperationType:       opType,
-			AccountID:           r.AccountID,
-			CategoryID:          r.CategoryID,
-			Amount:              r.Amount,
-			Date:                r.Date,
-			Description:         r.Description,
-			CreatedAt:           r.CreatedAt,
-			UpdatedAt:           r.UpdatedAt,
+			ID:                      -(settlementID + orphanedSettlementSyntheticIDOffset),
+			OriginSettlementID:      &settlementID,
+			SourceTransactionID:     &sourceTxID,
+			UserID:                  r.UserID,
+			OriginalUserID:          r.OriginalUserID,
+			Type:                    txType,
+			OperationType:           opType,
+			AccountID:               r.AccountID,
+			CategoryID:              r.CategoryID,
+			Amount:                  r.Amount,
+			Date:                    r.Date,
+			Description:             r.Description,
+			TransactionRecurrenceID: r.TransactionRecurrenceID,
+			CreatedAt:               r.CreatedAt,
+			UpdatedAt:               r.UpdatedAt,
 		})
 	}
 

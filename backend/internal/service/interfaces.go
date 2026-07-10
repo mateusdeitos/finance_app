@@ -41,6 +41,7 @@ type TransactionService interface {
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
+	DeleteSettlement(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	ParseImportCSV(ctx context.Context, userID, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
 	CheckDuplicatesBulk(ctx context.Context, userID int, accountID *int, rows []domain.CheckDuplicateRowInput) ([]domain.CheckDuplicateRowResult, error)

@@ -312,6 +312,7 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, authMiddlewa
 
 	// Settlements
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
+	api.DELETE("/settlements/:id", handler.NewSettlementHandler(services).Delete)
 }
 
 func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {

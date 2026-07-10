@@ -64,6 +64,103 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	return nil
 }
 
+// DeleteSettlement removes a settlement's division: it deletes the partner's
+// linked transaction (settlement.parent_transaction_id) and the settlement
+// itself, while KEEPING the author's source transaction. Only the settlement
+// owner (the author) may do this. For a recurring split each installment has its
+// own settlement + partner tx (scoped to the same connection account), so
+// propagation controls how many installments' divisions are removed. The partner
+// is notified after commit.
+func (s *transactionService) DeleteSettlement(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings) error {
+	if !propagation.IsValid() {
+		return pkgErrors.ErrInvalidPropagationSettings(propagation)
+	}
+
+	ctx, err := s.dbTransaction.Begin(ctx)
+	if err != nil {
+		return pkgErrors.Internal("failed to begin transaction", err)
+	}
+	defer s.dbTransaction.Rollback(ctx)
+
+	targets, err := s.settlementRepo.Search(ctx, domain.SettlementFilter{IDs: []int{settlementID}})
+	if err != nil {
+		return pkgErrors.Internal("failed to search settlement", err)
+	}
+	if len(targets) == 0 {
+		return pkgErrors.NotFound("settlement")
+	}
+	target := targets[0]
+
+	// Author-only: the settlement belongs to the author who created the split.
+	if target.UserID != userID {
+		return pkgErrors.ErrSettlementForbidden
+	}
+
+	// The author's source transaction drives the recurrence scope + notification copy.
+	source, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{target.SourceTransactionID}})
+	if err != nil {
+		return err
+	}
+
+	// Settlements in scope. For a recurring split, propagation walks the author's
+	// installments and collects the sibling settlements for the SAME partner
+	// (same connection account), never other splits of the same transaction.
+	scope := []*domain.Settlement{target}
+	if propagation != domain.TransactionPropagationSettingsCurrent && source.TransactionRecurrenceID != nil {
+		installments, err := s.collectInstallments(ctx, source.UserID, source, propagation == domain.TransactionPropagationSettingsCurrentAndFuture)
+		if err != nil {
+			return err
+		}
+		installmentIDs := lo.Map(installments, func(t *domain.Transaction, _ int) int { return t.ID })
+		scope, err = s.settlementRepo.Search(ctx, domain.SettlementFilter{
+			SourceTransactionIDs: installmentIDs,
+			UserIDs:              []int{userID},
+			AccountIDs:           []int{target.AccountID},
+		})
+		if err != nil {
+			return pkgErrors.Internal("failed to search settlements in scope", err)
+		}
+	}
+
+	// The partner transactions to delete are the settlements' parent transactions.
+	pontaTxIDs := lo.Uniq(lo.Map(scope, func(st *domain.Settlement, _ int) int { return st.ParentTransactionID }))
+	pontaTxs, err := s.transactionRepo.Search(ctx, domain.TransactionFilter{IDs: pontaTxIDs})
+	if err != nil {
+		return pkgErrors.Internal("failed to search partner transactions", err)
+	}
+
+	// deleteTransactions soft-deletes the partner txs, hard-deletes their
+	// settlements (by parent_transaction_id) and cleans the partner's now-empty
+	// recurrence. pullLinked=false keeps the author's source transaction(s) intact.
+	if err := s.deleteTransactions(ctx, pontaTxs, false); err != nil {
+		return err
+	}
+
+	if err := s.dbTransaction.Commit(ctx); err != nil {
+		return pkgErrors.Internal("failed to commit transaction", err)
+	}
+
+	// Notify the partner that the author removed the shared division. Their
+	// transaction is gone, so there is no navigation target (EntityID 0); the body
+	// carries description + amount (persisted on the notification row).
+	if len(pontaTxs) > 0 {
+		event := domain.NotificationEvent{
+			RecipientUserID: pontaTxs[0].UserID,
+			ActorUserID:     userID,
+			Type:            domain.NotificationTypeSharedTransactionDeleted,
+			EntityType:      "transaction",
+			EntityID:        0,
+			Amount:          target.Amount,
+			Description:     source.Description,
+			TxKind:          string(source.Type),
+		}
+		//nolint:gosec,contextcheck // G118: detached context on purpose — the post-commit push must outlive the request ctx (NOTIF-06)
+		go s.services.Notification.Dispatch(context.Background(), []domain.NotificationEvent{event})
+	}
+
+	return nil
+}
+
 // deleteAsAuthor preserves the pre-existing behavior: delete both sides plus
 // installments. If the author passed the id of a linked (partner) transaction,
 // swap to the source first. The swap is no longer scoped to the deleting user.

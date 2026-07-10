@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -312,6 +313,260 @@ func (suite *SettlementServiceWithDBTestSuite) TestUpdateDateAmountChangeDoesNot
 	suite.Require().Len(settlements, 1)
 	suite.Assert().Equal(customDate, settlements[0].Date)
 	suite.Assert().Equal(newAmount/2, settlements[0].Amount, "settlement amount tracks split")
+}
+
+// TestDeleteSettlementCurrentRemovesPartnerTxKeepsSource: deleting a settlement
+// removes the partner's linked tx and the settlement, keeps the author's source,
+// and notifies the partner.
+func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementCurrentRemovesPartnerTxKeepsSource() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	ponta, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, ponta.ID, 50)
+	suite.Require().NoError(err)
+
+	d := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	source := suite.createSharedExpense(ctx, author, ponta, account, connection, 10000, d)
+	settlement := source.SettlementsFromSource[0]
+
+	pontaTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &ponta.ID})
+	suite.Require().NoError(err)
+	suite.Require().Len(pontaTxs, 1)
+
+	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, settlement.ID, domain.TransactionPropagationSettingsCurrent)
+	suite.Require().NoError(err)
+
+	remaining, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{IDs: []int{settlement.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(remaining, 0, "settlement removed")
+
+	pontaTxs, err = suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &ponta.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaTxs, 0, "partner linked tx removed")
+
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, 1, "author source transaction survives")
+
+	time.Sleep(200 * time.Millisecond)
+	notifs, err := suite.Services.Notification.List(ctx, ponta.ID, domain.NotificationFilter{Limit: 100})
+	suite.Require().NoError(err)
+	var found *domain.Notification
+	for _, n := range notifs.Items {
+		if n.Type == domain.NotificationTypeSharedTransactionDeleted {
+			found = n
+			break
+		}
+	}
+	suite.Require().NotNil(found, "partner receives shared_transaction_deleted")
+	suite.Assert().Equal(settlement.Amount, lo.FromPtr(found.Amount))
+	suite.Assert().Equal("shared expense", lo.FromPtr(found.Description))
+}
+
+// TestDeleteSettlementForbiddenForNonOwner: only the settlement owner (author) may delete it.
+func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementForbiddenForNonOwner() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	ponta, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, ponta.ID, 50)
+	suite.Require().NoError(err)
+
+	source := suite.createSharedExpense(ctx, author, ponta, account, connection, 10000, time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC))
+	settlement := source.SettlementsFromSource[0]
+
+	err = suite.Services.Transaction.DeleteSettlement(ctx, ponta.ID, settlement.ID, domain.TransactionPropagationSettingsCurrent)
+	suite.Require().Error(err)
+	svcErr, ok := pkgErrors.AsServiceError(err)
+	suite.Require().True(ok, "expected *ServiceError, got %T", err)
+	suite.Assert().Equal(pkgErrors.ErrCodeForbidden, svcErr.Code)
+	suite.Assert().Contains(svcErr.Tags, string(pkgErrors.ErrorTagSettlementForbidden))
+}
+
+// TestDeleteSettlementAllRecurring: with propagation=all, every installment's
+// settlement + partner tx is removed; the author's installments survive.
+func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementAllRecurring() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	ponta, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, ponta.ID, 50)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, author)
+	suite.Require().NoError(err)
+
+	installments := 12
+	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          10000,
+		Date:            domain.Date{Time: time.Now().UTC()},
+		Description:     "recurring shared",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlements, installments)
+
+	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, settlements[0].ID, domain.TransactionPropagationSettingsAll)
+	suite.Require().NoError(err)
+
+	settlements, err = suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(settlements, 0, "all settlements removed")
+
+	pontaTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &ponta.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaTxs, 0, "all partner txs removed")
+
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, installments, "author installments survive")
+}
+
+// TestDeleteSettlementCurrentAndFutureRecurring: with current_and_future from
+// installment 7, settlements/partner txs for 7..12 are removed, 1..6 remain, and
+// the author keeps all installments.
+func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementCurrentAndFutureRecurring() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	ponta, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connection, err := suite.createAcceptedTestUserConnection(ctx, author.ID, ponta.ID, 50)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, author)
+	suite.Require().NoError(err)
+
+	installments := 12
+	keep := 6
+	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          10000,
+		Date:            domain.Date{Time: time.Now().UTC()},
+		Description:     "recurring shared",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
+		},
+		SplitSettings: []domain.SplitSettings{{ConnectionID: connection.ID, Percentage: lo.ToPtr(50)}},
+	})
+	suite.Require().NoError(err)
+
+	settlements, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlements, installments)
+	slices.SortFunc(settlements, func(a, b *domain.Settlement) int { return a.Date.Compare(b.Date) })
+
+	target := settlements[keep] // installment 7 (index 6)
+	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, target.ID, domain.TransactionPropagationSettingsCurrentAndFuture)
+	suite.Require().NoError(err)
+
+	settlements, err = suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(settlements, keep, "settlements 1..6 remain")
+
+	pontaTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &ponta.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaTxs, keep, "partner txs 1..6 remain")
+
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, installments, "author keeps all installments")
+}
+
+// TestDeleteSettlementAllScopedToSamePartner: on a recurring expense split with
+// TWO partners, deleting partner A's settlement with propagation=all removes only
+// A's settlements + txs, leaving partner B untouched.
+func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementAllScopedToSamePartner() {
+	ctx := context.Background()
+	author, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	pontaA, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	pontaB, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+	account, err := suite.createTestAccount(ctx, author)
+	suite.Require().NoError(err)
+	connA, err := suite.createAcceptedTestUserConnection(ctx, author.ID, pontaA.ID, 30)
+	suite.Require().NoError(err)
+	connB, err := suite.createAcceptedTestUserConnection(ctx, author.ID, pontaB.ID, 30)
+	suite.Require().NoError(err)
+	category, err := suite.createTestCategory(ctx, author)
+	suite.Require().NoError(err)
+
+	installments := 3
+	_, err = suite.Services.Transaction.Create(ctx, author.ID, &domain.TransactionCreateRequest{
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          10000,
+		Date:            domain.Date{Time: time.Now().UTC()},
+		Description:     "recurring shared two partners",
+		TransactionType: domain.TransactionTypeExpense,
+		RecurrenceSettings: &domain.RecurrenceSettings{
+			Type:               domain.RecurrenceTypeMonthly,
+			CurrentInstallment: 1,
+			TotalInstallments:  installments,
+		},
+		SplitSettings: []domain.SplitSettings{
+			{ConnectionID: connA.ID, Percentage: lo.ToPtr(30)},
+			{ConnectionID: connB.ID, Percentage: lo.ToPtr(30)},
+		},
+	})
+	suite.Require().NoError(err)
+
+	// Partner A's settlements live on connA.FromAccountID (the author's shared
+	// account for that connection).
+	settlementsA, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}, AccountIDs: []int{connA.FromAccountID}})
+	suite.Require().NoError(err)
+	suite.Require().Len(settlementsA, installments)
+
+	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, settlementsA[0].ID, domain.TransactionPropagationSettingsAll)
+	suite.Require().NoError(err)
+
+	// A's settlements + txs gone.
+	settlementsA, err = suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}, AccountIDs: []int{connA.FromAccountID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(settlementsA, 0, "partner A settlements removed")
+	pontaATxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &pontaA.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaATxs, 0, "partner A txs removed")
+
+	// B's settlements + txs untouched.
+	settlementsB, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{UserIDs: []int{author.ID}, AccountIDs: []int{connB.FromAccountID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(settlementsB, installments, "partner B settlements untouched")
+	pontaBTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &pontaB.ID})
+	suite.Require().NoError(err)
+	suite.Assert().Len(pontaBTxs, installments, "partner B txs untouched")
+
+	// Author keeps all installments.
+	authorTxs, err := suite.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &author.ID, AccountIDs: []int{account.ID}})
+	suite.Require().NoError(err)
+	suite.Assert().Len(authorTxs, installments, "author installments survive")
 }
 
 func TestSettlementServiceWithDB(t *testing.T) {
