@@ -29,6 +29,7 @@ import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useTags } from "@/hooks/useTags";
 import { useTransactionTemplates } from "@/hooks/useTransactionTemplates";
+import { renderDrawer } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
@@ -36,6 +37,8 @@ import { TransactionAccordionSections } from "./TransactionAccordionSections";
 import { DateQuickChips } from "./DateQuickChips";
 import { TemplateQuickChips } from "./TemplateQuickChips";
 import { buildTemplateFormPatch } from "./applyTemplate";
+import { buildTemplatePayloadFromForm } from "./buildTemplatePayload";
+import { SaveAsTemplateDrawer } from "@/components/transactions/templates/SaveAsTemplateDrawer";
 import { TransactionFormFooter } from "./TransactionFormFooter";
 import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
@@ -187,6 +190,7 @@ export const TransactionForm = ({
     setError,
     clearErrors,
     setFocus,
+    getValues,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
@@ -268,6 +272,21 @@ export const TransactionForm = ({
     setValue("amount", 0);
     setFocus("amount");
   }
+
+  /**
+   * MNG-02: snapshots the current form values, builds a `TemplatePayload`,
+   * and opens the confirm-name mini drawer. Backend also enforces the
+   * 3-template cap (defense in depth) — `atCap` below disables the trigger.
+   */
+  function handleSaveAsTemplate() {
+    const values = getValues();
+    const payload = buildTemplatePayloadFromForm(values, tags);
+    void renderDrawer(() => (
+      <SaveAsTemplateDrawer payload={payload} suggestedName={values.description ?? ""} />
+    ));
+  }
+
+  const atCap = templates.length >= 3;
 
   // Transfer source: personal accounts only (flat list)
   const personalAccountOptions = accounts
@@ -571,6 +590,8 @@ export const TransactionForm = ({
         onSaveAndCreateAnother={
           onSaveAndCreateAnother ? handleSubmit(onSaveAndCreateAnother, onInvalid) : undefined
         }
+        onSaveAsTemplate={showTemplateChips ? handleSaveAsTemplate : undefined}
+        saveAsTemplateDisabled={showTemplateChips ? atCap : undefined}
       />
       <Suspense>
         <DevTool control={control} />
