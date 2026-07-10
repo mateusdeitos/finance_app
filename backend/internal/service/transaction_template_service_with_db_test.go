@@ -55,7 +55,7 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapSequential() {
 	user, err := s.createTestUser(ctx)
 	s.Require().NoError(err)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("seq-template-%d", i), validTemplatePayload())
 		s.Require().NoError(err)
 	}
@@ -88,7 +88,7 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapRace_SAFE01() {
 	s.Require().NoError(err)
 
 	// Seed exactly 2 templates for this user.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("race-seed-%d", i), validTemplatePayload())
 		s.Require().NoError(err)
 	}
@@ -96,7 +96,7 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapRace_SAFE01() {
 	var wg sync.WaitGroup
 	results := make([]error, 2)
 	wg.Add(2)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		go func(i int) {
 			defer wg.Done()
 			_, results[i] = s.Services.TransactionTemplate.Create(context.Background(), user.ID, fmt.Sprintf("race-%d", i), validTemplatePayload())
@@ -299,7 +299,7 @@ func (s *TransactionTemplateServiceWithDBSuite) TestIsolation_P26_TemplatesDoNot
 	s.Require().NoError(err)
 
 	// Create up to the 3-template cap for this user.
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("isolation-template-%d", i), validTemplatePayload())
 		s.Require().NoError(err)
 	}

@@ -16,6 +16,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// rentUpdateBody is a valid create/update request body reused across the
+// Update/OwnerMismatch cases; hoisted to a constant to satisfy goconst.
+const rentUpdateBody = `{"name":"Rent","payload":{"type":"expense"}}`
+
 func setupTemplateHandlerTest(t *testing.T) (*echo.Echo, *mocks.MockTransactionTemplateService, *TransactionTemplateHandler) {
 	t.Helper()
 	mockSvc := mocks.NewMockTransactionTemplateService(t)
@@ -92,7 +96,7 @@ func TestTransactionTemplateHandler_Create_Success_UsesContextUserID(t *testing.
 func TestTransactionTemplateHandler_Create_BadBody(t *testing.T) {
 	e, _, h := setupTemplateHandlerTest(t)
 
-	body := `{not-valid-json}`
+	body := `not-json`
 	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/transaction-templates", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -133,7 +137,7 @@ func TestTransactionTemplateHandler_Update_InvalidID(t *testing.T) {
 	// unexpected call would fail the mock's assertion in t.Cleanup.
 	_ = mockSvc
 
-	body := `{"name":"Rent","payload":{"type":"expense"}}`
+	body := rentUpdateBody
 	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/transaction-templates/abc", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -155,7 +159,7 @@ func TestTransactionTemplateHandler_Update_OwnerMismatch_NotFound(t *testing.T) 
 		Return(pkgErrors.NotFound("transaction template")).
 		Once()
 
-	body := `{"name":"Rent","payload":{"type":"expense"}}`
+	body := rentUpdateBody
 	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/transaction-templates/7", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -177,7 +181,7 @@ func TestTransactionTemplateHandler_Update_Success(t *testing.T) {
 		Return(nil).
 		Once()
 
-	body := `{"name":"Rent","payload":{"type":"expense"}}`
+	body := rentUpdateBody
 	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/transaction-templates/7", bytes.NewBufferString(body)), 42)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
