@@ -3,8 +3,8 @@ import { Transactions } from "@/types/transactions";
 import { buildTemplateFormPatch } from "./applyTemplate";
 
 const accounts: Transactions.Account[] = [
-  { id: 1, user_id: 1, name: "Wallet", initial_balance: 0, is_active: true },
-  { id: 2, user_id: 1, name: "Bank", initial_balance: 0, is_active: true },
+  { id: 1, user_id: 1, name: "Wallet", initial_balance: 0, is_active: true, position: 0 },
+  { id: 2, user_id: 1, name: "Bank", initial_balance: 0, is_active: true, position: 1 },
 ];
 
 const categories: Transactions.Category[] = [
