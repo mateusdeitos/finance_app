@@ -55,18 +55,36 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       .map((s) => [s.parent_transaction_id, s]),
   );
 
-  const initialSplitSettings = (transaction.linked_transactions ?? [])
-    .filter((lt) => lt.user_id !== transaction.user_id)
-    .flatMap((lt) => {
-      const acc = accounts.find(
-        (a) =>
-          a.user_connection?.from_account_id === lt.account_id || a.user_connection?.to_account_id === lt.account_id,
-      );
-      if (!acc?.user_connection) return [];
-      const settlement = settlementByParentId.get(lt.id);
-      const date = settlement?.date ? localDateStr(parseDate(settlement.date)) : null;
-      return [{ connection_id: acc.user_connection.id, amount: lt.amount, date }];
-    });
+  // Resolve the transaction's own ("from") account, matching shared accounts by
+  // their underlying connection account ids the same way the destination does.
+  const sourceAccount = accounts.find((a) => {
+    const ids = [a.id];
+    if (a.user_connection) {
+      ids.push(a.user_connection.from_account_id, a.user_connection.to_account_id);
+    }
+    return ids.includes(transaction.account_id);
+  });
+
+  // A transaction created on a shared (connection) account is mirrored to the
+  // partner, so it carries partner-owned linked_transactions on the connection
+  // account. Those mirrors are NOT splits — a shared-account transaction can
+  // never have splits (the backend rejects them) — so never seed split_settings
+  // from them. Only private-account transactions get their real splits hydrated.
+  const initialSplitSettings = sourceAccount?.user_connection
+    ? []
+    : (transaction.linked_transactions ?? [])
+        .filter((lt) => lt.user_id !== transaction.user_id)
+        .flatMap((lt) => {
+          const acc = accounts.find(
+            (a) =>
+              a.user_connection?.from_account_id === lt.account_id ||
+              a.user_connection?.to_account_id === lt.account_id,
+          );
+          if (!acc?.user_connection) return [];
+          const settlement = settlementByParentId.get(lt.id);
+          const date = settlement?.date ? localDateStr(parseDate(settlement.date)) : null;
+          return [{ connection_id: acc.user_connection.id, amount: lt.amount, date }];
+        });
 
   const {
     query: { data: destinationAccount },
@@ -118,16 +136,6 @@ export function UpdateTransactionDrawer({ transaction, focusField }: Props) {
       description: "Conta compartilhada",
     };
   };
-
-  // Resolve the transaction's own ("from") account, matching shared accounts by
-  // their underlying connection account ids the same way the destination does.
-  const sourceAccount = accounts.find((a) => {
-    const ids = [a.id];
-    if (a.user_connection) {
-      ids.push(a.user_connection.from_account_id, a.user_connection.to_account_id);
-    }
-    return ids.includes(transaction.account_id);
-  });
 
   const ownsSourceAccount = accounts.some((a) => a.id === transaction.account_id);
   const lockedSourceAccount =
