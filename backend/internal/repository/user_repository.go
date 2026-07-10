@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
@@ -65,4 +66,26 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 
 func (r *userRepository) Delete(ctx context.Context, id int) error {
 	return GetTxFromContext(ctx, r.db).Delete(&entity.User{}, id).Error
+}
+
+func (r *userRepository) Search(ctx context.Context, query string, limit int) ([]*domain.User, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	q := GetTxFromContext(ctx, r.db).Model(&entity.User{}).Order("name ASC").Limit(limit)
+	if trimmed := strings.TrimSpace(query); trimmed != "" {
+		like := "%" + strings.ToLower(trimmed) + "%"
+		q = q.Where("LOWER(name) LIKE ? OR LOWER(email) LIKE ?", like, like)
+	}
+
+	var ents []entity.User
+	if err := q.Find(&ents).Error; err != nil {
+		return nil, err
+	}
+
+	users := make([]*domain.User, 0, len(ents))
+	for i := range ents {
+		users = append(users, ents[i].ToDomain())
+	}
+	return users, nil
 }

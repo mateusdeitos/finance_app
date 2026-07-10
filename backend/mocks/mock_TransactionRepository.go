@@ -22,6 +22,63 @@ func (_m *MockTransactionRepository) EXPECT() *MockTransactionRepository_Expecte
 	return &MockTransactionRepository_Expecter{mock: &_m.Mock}
 }
 
+// Count provides a mock function with given fields: ctx, filter
+func (_m *MockTransactionRepository) Count(ctx context.Context, filter domain.TransactionFilter) (int64, error) {
+	ret := _m.Called(ctx, filter)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Count")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) (int64, error)); ok {
+		return rf(ctx, filter)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.TransactionFilter) int64); ok {
+		r0 = rf(ctx, filter)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.TransactionFilter) error); ok {
+		r1 = rf(ctx, filter)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTransactionRepository_Count_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Count'
+type MockTransactionRepository_Count_Call struct {
+	*mock.Call
+}
+
+// Count is a helper method to define mock.On call
+//   - ctx context.Context
+//   - filter domain.TransactionFilter
+func (_e *MockTransactionRepository_Expecter) Count(ctx interface{}, filter interface{}) *MockTransactionRepository_Count_Call {
+	return &MockTransactionRepository_Count_Call{Call: _e.mock.On("Count", ctx, filter)}
+}
+
+func (_c *MockTransactionRepository_Count_Call) Run(run func(ctx context.Context, filter domain.TransactionFilter)) *MockTransactionRepository_Count_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.TransactionFilter))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_Count_Call) Return(_a0 int64, _a1 error) *MockTransactionRepository_Count_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTransactionRepository_Count_Call) RunAndReturn(run func(context.Context, domain.TransactionFilter) (int64, error)) *MockTransactionRepository_Count_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: ctx, transaction
 func (_m *MockTransactionRepository) Create(ctx context.Context, transaction *domain.Transaction) (*domain.Transaction, error) {
 	ret := _m.Called(ctx, transaction)
@@ -412,6 +469,54 @@ func (_c *MockTransactionRepository_NullifyCategory_Call) RunAndReturn(run func(
 	return _c
 }
 
+// ReassignAccount provides a mock function with given fields: ctx, fromAccountID, toAccountID
+func (_m *MockTransactionRepository) ReassignAccount(ctx context.Context, fromAccountID int, toAccountID int) error {
+	ret := _m.Called(ctx, fromAccountID, toAccountID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReassignAccount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, fromAccountID, toAccountID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRepository_ReassignAccount_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReassignAccount'
+type MockTransactionRepository_ReassignAccount_Call struct {
+	*mock.Call
+}
+
+// ReassignAccount is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fromAccountID int
+//   - toAccountID int
+func (_e *MockTransactionRepository_Expecter) ReassignAccount(ctx interface{}, fromAccountID interface{}, toAccountID interface{}) *MockTransactionRepository_ReassignAccount_Call {
+	return &MockTransactionRepository_ReassignAccount_Call{Call: _e.mock.On("ReassignAccount", ctx, fromAccountID, toAccountID)}
+}
+
+func (_c *MockTransactionRepository_ReassignAccount_Call) Run(run func(ctx context.Context, fromAccountID int, toAccountID int)) *MockTransactionRepository_ReassignAccount_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_ReassignAccount_Call) Return(_a0 error) *MockTransactionRepository_ReassignAccount_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRepository_ReassignAccount_Call) RunAndReturn(run func(context.Context, int, int) error) *MockTransactionRepository_ReassignAccount_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ReassignCategory provides a mock function with given fields: ctx, fromID, toID
 func (_m *MockTransactionRepository) ReassignCategory(ctx context.Context, fromID int, toID int) error {
 	ret := _m.Called(ctx, fromID, toID)
@@ -621,6 +726,54 @@ func (_c *MockTransactionRepository_Update_Call) Return(_a0 error) *MockTransact
 }
 
 func (_c *MockTransactionRepository_Update_Call) RunAndReturn(run func(context.Context, *domain.Transaction) error) *MockTransactionRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateAmountByIDs provides a mock function with given fields: ctx, ids, amount
+func (_m *MockTransactionRepository) UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error {
+	ret := _m.Called(ctx, ids, amount)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAmountByIDs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, []int, int64) error); ok {
+		r0 = rf(ctx, ids, amount)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionRepository_UpdateAmountByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAmountByIDs'
+type MockTransactionRepository_UpdateAmountByIDs_Call struct {
+	*mock.Call
+}
+
+// UpdateAmountByIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []int
+//   - amount int64
+func (_e *MockTransactionRepository_Expecter) UpdateAmountByIDs(ctx interface{}, ids interface{}, amount interface{}) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	return &MockTransactionRepository_UpdateAmountByIDs_Call{Call: _e.mock.On("UpdateAmountByIDs", ctx, ids, amount)}
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) Run(run func(ctx context.Context, ids []int, amount int64)) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]int), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) Return(_a0 error) *MockTransactionRepository_UpdateAmountByIDs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionRepository_UpdateAmountByIDs_Call) RunAndReturn(run func(context.Context, []int, int64) error) *MockTransactionRepository_UpdateAmountByIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }

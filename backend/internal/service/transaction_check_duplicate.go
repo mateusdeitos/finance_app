@@ -56,7 +56,7 @@ func checkDuplicatesByWindow(ctx context.Context, s *transactionService, userID 
 			}
 			txWindows[key] = txs
 		}
-		txResult[row.RowIndex] = filterDuplicateMatches(txs, row.Amount, row.Description)
+		txResult[row.RowIndex] = filterDuplicateMatches(txs, row.Date.Time, row.Amount, row.Description)
 
 		// Settlement lookup only when the row type can plausibly match one.
 		if _, ok := allowedSettlementTypeFor(row.Type); !ok {
@@ -70,7 +70,7 @@ func checkDuplicatesByWindow(ctx context.Context, s *transactionService, userID 
 			settlementWindows[key] = settlements
 			settlementWindowLoaded[key] = true
 		}
-		if matches := filterSettlementDuplicateMatches(settlementWindows[key], row.Amount, row.Description, row.Type); len(matches) > 0 {
+		if matches := filterSettlementDuplicateMatches(settlementWindows[key], row.Date.Time, row.Amount, row.Description, row.Type); len(matches) > 0 {
 			settlementResult[row.RowIndex] = matches
 		}
 	}

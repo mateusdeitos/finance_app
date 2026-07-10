@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 )
@@ -19,6 +20,18 @@ type UserRepository interface {
 	GetByExternalID(ctx context.Context, externalID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	Delete(ctx context.Context, id int) error
+	// Search returns users whose name or email matches query (case-insensitive),
+	// capped at limit. An empty query returns the first `limit` users. Used by
+	// the admin impersonation user picker.
+	Search(ctx context.Context, query string, limit int) ([]*domain.User, error)
+}
+
+// ImpersonationRepository persists the admin impersonation audit trail.
+type ImpersonationRepository interface {
+	Create(ctx context.Context, session *domain.ImpersonationSession) error
+	GetByID(ctx context.Context, id string) (*domain.ImpersonationSession, error)
+	// Revoke marks the session ended at the given time. No-op if already revoked.
+	Revoke(ctx context.Context, id string, at time.Time) error
 }
 
 type UserSocialRepository interface {
@@ -44,6 +57,9 @@ type AccountRepository interface {
 	Delete(ctx context.Context, id int) error
 	Deactivate(ctx context.Context, id int) error
 	Activate(ctx context.Context, id int) error
+	// Reorder persists the given account order (by position) for the user.
+	// IDs not owned by the user are ignored.
+	Reorder(ctx context.Context, userID int, orderedIDs []int) error
 	Search(ctx context.Context, options domain.AccountSearchOptions) ([]*domain.Account, error)
 }
 
@@ -66,10 +82,14 @@ type TransactionRepository interface { //nolint:interfacebloat // transaction is
 	Update(ctx context.Context, transaction *domain.Transaction) error
 	Search(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	SearchOne(ctx context.Context, filter domain.TransactionFilter) (*domain.Transaction, error)
+	Count(ctx context.Context, filter domain.TransactionFilter) (int64, error)
 	FindOrphanedSettlementTransactions(ctx context.Context, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, ids []int) error
+	// ReassignAccount moves all non-deleted transactions from one account to another.
+	ReassignAccount(ctx context.Context, fromAccountID, toAccountID int) error
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
+	UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	NullifyCategory(ctx context.Context, categoryID int) error
 	ReassignCategory(ctx context.Context, fromID, toID int) error
@@ -99,8 +119,13 @@ type ChargeRepository interface {
 	GetByID(ctx context.Context, id int) (*domain.Charge, error)
 	Search(ctx context.Context, options domain.ChargeSearchOptions) ([]*domain.Charge, error)
 	Update(ctx context.Context, charge *domain.Charge) error
+	Delete(ctx context.Context, id int) error
 	Count(ctx context.Context, options domain.ChargeSearchOptions) (int64, error)
 	ConditionalAccept(ctx context.Context, id int) error
+	// ReassignAccountRefs repoints charger/payer account references from one
+	// account to another (used when an account's data is migrated on delete).
+	// On a plain hard delete the FK (ON DELETE SET NULL) clears the refs instead.
+	ReassignAccountRefs(ctx context.Context, fromAccountID, toAccountID int) error
 }
 
 // PushSubscriptionRepository manages push subscription persistence.
@@ -168,4 +193,5 @@ type Repositories struct {
 	PushSubscription      PushSubscriptionRepository
 	Notification          NotificationRepository
 	TransactionTemplate   TransactionTemplateRepository
+	Impersonation         ImpersonationRepository
 }

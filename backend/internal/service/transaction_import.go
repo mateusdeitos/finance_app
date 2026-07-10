@@ -212,7 +212,7 @@ func parseCSVRow(
 		for _, format := range formats {
 			t, err := time.Parse(format, dateStr)
 			if err == nil {
-				row.Date = &t
+				row.Date = &domain.Date{Time: t}
 				break
 			}
 		}
@@ -359,6 +359,25 @@ func parseAmountSigned(s string) (int64, error) {
 // transaction amounts to be considered a possible duplicate.
 const duplicateAmountThreshold = int64(2)
 
+// sameCalendarDay reports whether a and b fall on the same year-month-day.
+// All times are UTC across the wire (time.Local is set to UTC at startup), so a
+// plain calendar-component comparison is unambiguous here.
+func sameCalendarDay(a, b time.Time) bool {
+	ay, am, ad := a.Date()
+	by, bm, bd := b.Date()
+	return ay == by && am == bm && ad == bd
+}
+
+// isExactDateAmountMatch reports whether a candidate with candidateDate and
+// candidateAmount is an exact duplicate of a row on (date, amount): same
+// calendar day and identical amount. This is a description-independent signal —
+// re-imported statements frequently carry garbled or missing descriptions but
+// keep the date and amount intact, so an exact match on both flags a duplicate
+// on its own.
+func isExactDateAmountMatch(candidateDate, date time.Time, candidateAmount, amount int64) bool {
+	return candidateAmount == amount && sameCalendarDay(candidateDate, date)
+}
+
 // searchMonthWindow fetches every transaction for the user in the calendar
 // month of date, optionally scoped to a single account.
 func searchMonthWindow(ctx context.Context, s *transactionService, userID int, date time.Time, accountID *int) ([]*domain.Transaction, error) {
@@ -415,10 +434,12 @@ func allowedSettlementTypeFor(t domain.TransactionType) (domain.SettlementType, 
 // filterSettlementDuplicateMatches mirrors filterDuplicateMatches but for
 // settlements: amount within ±duplicateAmountThreshold, a similar description
 // (against the preloaded source transaction description), and the settlement
-// type aligned with the row type.
+// type aligned with the row type. As with transactions, an exact match on both
+// calendar day and amount flags a duplicate regardless of description.
 // Settlements without a preloaded SourceTransaction contribute an empty
-// description — they only match when the row description is also empty.
-func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
+// description — they only match when the row description is also empty (or the
+// exact date+amount signal fires).
+func filterSettlementDuplicateMatches(candidates []*domain.Settlement, date time.Time, amount int64, description string, rowType domain.TransactionType) []domain.SettlementMatch {
 	allowedType, ok := allowedSettlementTypeFor(rowType)
 	if !ok {
 		return nil
@@ -438,7 +459,8 @@ func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount in
 		if st.SourceTransaction != nil {
 			sourceDesc = st.SourceTransaction.Description
 		}
-		if description != "" && !descriptionsAreSimilar(sourceDesc, description) {
+		if !isExactDateAmountMatch(st.Date, date, st.Amount, amount) &&
+			description != "" && !descriptionsAreSimilar(sourceDesc, description) {
 			continue
 		}
 		matches = append(matches, domain.SettlementMatch{
@@ -455,10 +477,11 @@ func filterSettlementDuplicateMatches(candidates []*domain.Settlement, amount in
 }
 
 // filterDuplicateMatches keeps only the candidates that are possible
-// duplicates of (amount, description): amount within ±2 cents and, when a
+// duplicates of (date, amount, description): amount within ±2 cents and either
+// an exact match on calendar day and amount (description ignored) or, when a
 // description is supplied, a similar description (accent-folded trigram
 // similarity or a shared significant word).
-func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, description string) []domain.Transaction {
+func filterDuplicateMatches(candidates []*domain.Transaction, date time.Time, amount int64, description string) []domain.Transaction {
 	matches := make([]domain.Transaction, 0)
 	for _, tx := range candidates {
 		if tx == nil {
@@ -467,7 +490,8 @@ func filterDuplicateMatches(candidates []*domain.Transaction, amount int64, desc
 		if diff := tx.Amount - amount; diff < -duplicateAmountThreshold || diff > duplicateAmountThreshold {
 			continue
 		}
-		if description != "" && !descriptionsAreSimilar(tx.Description, description) {
+		if !isExactDateAmountMatch(tx.Date, date, tx.Amount, amount) &&
+			description != "" && !descriptionsAreSimilar(tx.Description, description) {
 			continue
 		}
 		matches = append(matches, *tx)
@@ -485,7 +509,7 @@ func detectDuplicateRows(ctx context.Context, s *transactionService, userID, acc
 		if row.Date != nil && row.Amount > 0 {
 			inputs = append(inputs, domain.CheckDuplicateRowInput{
 				RowIndex:    i,
-				Date:        domain.Date{Time: *row.Date},
+				Date:        *row.Date,
 				Amount:      row.Amount,
 				Description: row.Description,
 				Type:        row.Type,

@@ -327,9 +327,14 @@ func (s *transactionService) createTransactions(ctx context.Context, userID int,
 	}
 
 	firstID := 0
+	// One recurrence per linked user, shared across the author's installments.
+	// Created lazily inside injectLinkedTransactions so a recurring split/shared
+	// account/transfer does NOT spawn one recurrence per installment for the
+	// linked user.
+	linkedRecurrenceByUserID := make(map[int]*domain.TransactionRecurrence)
 	for i := range transactions {
 		tr := &transactions[i]
-		if err := s.injectLinkedTransactions(ctx, userID, tr, req, req.SplitSettings, req.RecurrenceSettings); err != nil {
+		if err := s.injectLinkedTransactions(ctx, userID, tr, req, req.SplitSettings, req.RecurrenceSettings, linkedRecurrenceByUserID); err != nil {
 			return 0, err
 		}
 
@@ -450,13 +455,33 @@ func (s *transactionService) injectUserConnectionsOnSplitSettings(ctx context.Co
 	return nil
 }
 
+// getOrCreateLinkedRecurrence returns a single recurrence per linked user,
+// created once and reused across the author's installments. Without this, a
+// recurring split / shared-account / cross-user transfer creates one recurrence
+// PER installment for the linked user — each reporting the full
+// TotalInstallments but backed by a single row — which later makes installment
+// normalization create phantom duplicate installments when that user edits their
+// side.
+func (s *transactionService) getOrCreateLinkedRecurrence(ctx context.Context, cache map[int]*domain.TransactionRecurrence, userID int, settings domain.RecurrenceSettings) (*domain.TransactionRecurrence, error) {
+	if r, ok := cache[userID]; ok {
+		return r, nil
+	}
+	r, err := s.createRecurrence(ctx, userID, settings)
+	if err != nil {
+		return nil, err
+	}
+	cache[userID] = r
+	return r, nil
+}
+
 func (s *transactionService) injectLinkedTransactions(
 	ctx context.Context,
 	userID int,
 	transaction *domain.Transaction,
 	req *domain.TransactionCreateRequest,
 	splitSettings []domain.SplitSettings,
-	recurrenceSettings *domain.RecurrenceSettings) error {
+	recurrenceSettings *domain.RecurrenceSettings,
+	linkedRecurrenceByUserID map[int]*domain.TransactionRecurrence) error {
 
 	hasRecurrence := recurrenceSettings != nil
 
@@ -480,7 +505,7 @@ func (s *transactionService) injectLinkedTransactions(
 			TransactionRecurrenceID: transaction.TransactionRecurrenceID,
 		}
 		if hasRecurrence {
-			r, err := s.createRecurrence(ctx, conn.ToUserID, *recurrenceSettings)
+			r, err := s.getOrCreateLinkedRecurrence(ctx, linkedRecurrenceByUserID, conn.ToUserID, *recurrenceSettings)
 			if err != nil {
 				return err
 			}
@@ -520,7 +545,7 @@ func (s *transactionService) injectLinkedTransactions(
 			// transferência entre contas do mesmo usuário
 			var recurrenceID *int
 			if hasRecurrence {
-				r, err := s.createRecurrence(ctx, userID, *recurrenceSettings)
+				r, err := s.getOrCreateLinkedRecurrence(ctx, linkedRecurrenceByUserID, userID, *recurrenceSettings)
 				if err != nil {
 					return err
 				}
@@ -621,7 +646,7 @@ func (s *transactionService) injectLinkedTransactions(
 		}
 
 		if hasRecurrence {
-			r, err := s.createRecurrence(ctx, connection.ToUserID, *recurrenceSettings)
+			r, err := s.getOrCreateLinkedRecurrence(ctx, linkedRecurrenceByUserID, connection.ToUserID, *recurrenceSettings)
 			if err != nil {
 				return err
 			}

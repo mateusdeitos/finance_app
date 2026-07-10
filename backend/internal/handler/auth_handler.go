@@ -184,22 +184,46 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+// meImpersonator surfaces the acting admin when the current session is an
+// impersonation, so the client can render the "you are impersonating" banner.
+type meImpersonator struct {
+	AdminUserID int    `json:"admin_user_id"`
+	AdminEmail  string `json:"admin_email"`
+}
+
+// meResponse embeds the (possibly impersonated) user and, when applicable, the
+// admin acting behind the session.
+type meResponse struct {
+	domain.User
+
+	Impersonator *meImpersonator `json:"impersonator,omitempty"`
+}
+
 // Me godoc
 // @Summary      Get current user
 // @Tags         auth
 // @Produce      json
 // @Security     CookieAuth
 // @Security     BearerAuth
-// @Success      200  {object}  domain.User
+// @Success      200  {object}  handler.meResponse
 // @Failure      401  {object}  middleware.ErrorResponse
 // @Router       /api/auth/me [get]
 func (h *AuthHandler) Me(c echo.Context) error {
-	user := appcontext.GetUserFromContext(c.Request().Context())
+	ctx := c.Request().Context()
+	user := appcontext.GetUserFromContext(ctx)
 	if user == nil {
 		return echo.NewHTTPError(http.StatusUnauthorized, "user not found")
 	}
 
-	return c.JSON(http.StatusOK, user)
+	resp := meResponse{User: *user}
+	if imp := appcontext.GetImpersonatorFromContext(ctx); imp != nil {
+		resp.Impersonator = &meImpersonator{
+			AdminUserID: imp.AdminUserID,
+			AdminEmail:  imp.AdminEmail,
+		}
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 // TestLogin godoc

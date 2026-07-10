@@ -126,22 +126,11 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      - name: Install goose
-        run: go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
-
       - name: Check pending migrations
         working-directory: backend
         env:
           DB_DSN: ${{ secrets.DB_DSN_PROD }}
-        run: |
-          STATUS=$(goose -dir migrations postgres "$DB_DSN" status)
-          echo "$STATUS"
-          PENDING=$(echo "$STATUS" | grep -c "Pending" || true)
-          if [ "$PENDING" -gt 0 ]; then
-            echo "::error::Found $PENDING pending migration(s). Run the 'Run DB Migrations' workflow before deploying, or rerun this workflow with skip_migration_check=true."
-            exit 1
-          fi
-          echo "No pending migrations. Deploy can proceed."
+        run: go run ./cmd/migrate-check
 
   backend-deploy:
     name: Backend → Cloud Run
@@ -226,10 +215,44 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
+        id: firebase_deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
+        continue-on-error: true
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ vars.FIREBASE_PROJECT_ID }}
           channelId: live
           entryPoint: frontend
+
+      # In CI the Hosting CLI's HTTP keep-alive connections premature-close and
+      # every request is retried. Idempotent calls recover, but the
+      # channels/live release POST is retried non-idempotently: the first attempt
+      # already publishes the version (it becomes the live/active one), the
+      # response is lost, and the retry fails with "is the current active
+      # version". So that specific failure means the deploy actually went live.
+      # On failure, re-run the deploy directly and treat only that error as
+      # success; any other error still fails the job.
+      - name: Deploy to Firebase Hosting (idempotent fallback)
+        if: steps.firebase_deploy.outcome == 'failure'
+        working-directory: frontend
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          set +e
+          out="$(npx -y firebase-tools@latest deploy --only hosting --project "$FIREBASE_PROJECT_ID" --non-interactive 2>&1)"
+          status=$?
+          set -e
+          echo "$out"
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+          if echo "$out" | grep -q "is the current active version"; then
+            echo "::notice::Hosting release already live (non-idempotent CLI retry after premature close); treating as success."
+            exit 0
+          fi
+          echo "::error::Firebase Hosting deploy failed (exit $status)."
+          exit "$status"

@@ -35,6 +35,23 @@ export class TransactionsPage {
     await this.page.waitForLoadState("networkidle");
   }
 
+  /**
+   * Navigate via a PWA app-shortcut deep link (`?new=<type>`), which should open
+   * the create-transaction drawer pre-set to that type. Waits for the drawer.
+   */
+  async gotoCreateShortcut(type: TransactionType) {
+    await this.page.goto(`/transactions?new=${type}`);
+    await expect(this.formDrawer).toBeVisible({ timeout: 8000 });
+  }
+
+  /** Assert the create drawer's type SegmentedControl has `type` selected. */
+  async assertCreateTypeSelected(type: TransactionType) {
+    const segmented = this.formDrawer.getByTestId(
+      TransactionsTestIds.SegmentedTransactionType,
+    );
+    await expect(segmented.locator("input:checked")).toHaveValue(type);
+  }
+
   async openAdvancedFilters() {
     await this.page.getByTestId(TransactionsTestIds.BtnOpenAdvancedFilters).click();
   }
@@ -72,9 +89,10 @@ export class TransactionsPage {
     }
   }
 
-  /** Clear the description input and type a new value. */
-  async clearAndFillDescription(description: string) {
-    await new TextField(this.updateDrawer, TransactionsTestIds.InputDescription).fill(description);
+  /** Clear the description input and type a new value. Defaults to update drawer. */
+  async clearAndFillDescription(description: string, drawer?: Locator) {
+    const container = drawer ?? this.updateDrawer;
+    await new TextField(container, TransactionsTestIds.InputDescription).fill(description);
   }
 
   /** Replace amount by clearing the input then typing digits. Defaults to update drawer. */

@@ -6,6 +6,7 @@ import { useNotificationUnreadCount } from '@/hooks/useNotificationUnreadCount'
 import { UserAvatar } from '@/components/UserAvatar'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
 import { InviteDrawer } from '@/components/InviteDrawer'
+import { ImpersonationNotice } from '@/components/admin/ImpersonationNotice'
 import { NotificationToggleRow } from '@/components/notifications/NotificationToggleRow'
 import { openNotificationInboxDrawer } from '@/components/notifications/NotificationInboxDrawer'
 import { router } from '@/router'
@@ -100,6 +101,7 @@ export function MobileMoreDrawer() {
           <Divider />
         </>
       )}
+      <ImpersonationNotice />
       <Stack gap={0} py="xs">
         {items
           .filter((item) => !item.danger)

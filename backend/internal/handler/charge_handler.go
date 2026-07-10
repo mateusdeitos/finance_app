@@ -156,6 +156,34 @@ func (h *ChargeHandler) Reject(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Delete godoc
+// @Summary      Delete a charge (either party)
+// @Description  Permanently deletes a charge. Allowed only while the charge is pending, rejected, or cancelled; paid charges cannot be deleted.
+// @Tags         charges
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Charge ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      403  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/charges/{id} [delete]
+func (h *ChargeHandler) Delete(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid charge ID")
+	}
+
+	if err := h.chargeService.Delete(c.Request().Context(), userID, id); err != nil {
+		return HandleServiceError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Accept godoc
 // @Summary      Accept a charge (non-initiating party only)
 // @Description  Atomically settles a pending charge by creating two linked transfer transactions. Caller must be the non-initiating party (the one whose account field is nil on the charge).

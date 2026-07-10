@@ -80,36 +80,39 @@ func TestChargeRepository_Search_IDsFilter(t *testing.T) {
 
 	// Seed two charges owned by userA (as charger)
 	chargeA1, err := chargeRepo.Create(context.Background(), &domain.Charge{
-		ChargerUserID: userA.ID,
-		PayerUserID:   userB.ID,
-		ConnectionID:  conn.ID,
-		PeriodMonth:   periodMonth,
-		PeriodYear:    periodYear,
-		Status:        domain.ChargeStatusPending,
-		Date:          &now,
+		ChargerUserID:   userA.ID,
+		PayerUserID:     userB.ID,
+		InitiatorUserID: userA.ID,
+		ConnectionID:    conn.ID,
+		PeriodMonth:     periodMonth,
+		PeriodYear:      periodYear,
+		Status:          domain.ChargeStatusPending,
+		Date:            &now,
 	})
 	require.NoError(t, err)
 
 	chargeA2, err := chargeRepo.Create(context.Background(), &domain.Charge{
-		ChargerUserID: userA.ID,
-		PayerUserID:   userB.ID,
-		ConnectionID:  conn.ID,
-		PeriodMonth:   periodMonth,
-		PeriodYear:    periodYear,
-		Status:        domain.ChargeStatusPending,
-		Date:          &now,
+		ChargerUserID:   userA.ID,
+		PayerUserID:     userB.ID,
+		InitiatorUserID: userA.ID,
+		ConnectionID:    conn.ID,
+		PeriodMonth:     periodMonth,
+		PeriodYear:      periodYear,
+		Status:          domain.ChargeStatusPending,
+		Date:            &now,
 	})
 	require.NoError(t, err)
 
 	// Seed one charge owned by userB (as charger) — userA is only the payer
 	chargeB1, err := chargeRepo.Create(context.Background(), &domain.Charge{
-		ChargerUserID: userB.ID,
-		PayerUserID:   userA.ID,
-		ConnectionID:  conn.ID,
-		PeriodMonth:   periodMonth,
-		PeriodYear:    periodYear,
-		Status:        domain.ChargeStatusPending,
-		Date:          &now,
+		ChargerUserID:   userB.ID,
+		PayerUserID:     userA.ID,
+		InitiatorUserID: userB.ID,
+		ConnectionID:    conn.ID,
+		PeriodMonth:     periodMonth,
+		PeriodYear:      periodYear,
+		Status:          domain.ChargeStatusPending,
+		Date:            &now,
 	})
 	require.NoError(t, err)
 

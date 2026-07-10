@@ -41,6 +41,7 @@ export namespace Transactions {
     initial_balance: number;
     is_active: boolean;
     avatar_background_color?: string;
+    position: number;
     created_at?: string;
     updated_at?: string;
     user_connection?: UserConnection;
@@ -220,7 +221,7 @@ export namespace Transactions {
   export interface ParsedImportRow {
     row_index: number;
     status: ImportRowStatus;
-    date?: string; // ISO string (backend sends time.Time serialised)
+    date?: string; // YYYY-MM-DD (date-only; no timezone shift on display)
     description: string;
     type: TransactionType;
     amount: number; // cents

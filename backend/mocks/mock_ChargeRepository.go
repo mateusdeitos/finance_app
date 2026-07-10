@@ -185,6 +185,53 @@ func (_c *MockChargeRepository_Create_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// Delete provides a mock function with given fields: ctx, id
+func (_m *MockChargeRepository) Delete(ctx context.Context, id int) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockChargeRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockChargeRepository_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int
+func (_e *MockChargeRepository_Expecter) Delete(ctx interface{}, id interface{}) *MockChargeRepository_Delete_Call {
+	return &MockChargeRepository_Delete_Call{Call: _e.mock.On("Delete", ctx, id)}
+}
+
+func (_c *MockChargeRepository_Delete_Call) Run(run func(ctx context.Context, id int)) *MockChargeRepository_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int))
+	})
+	return _c
+}
+
+func (_c *MockChargeRepository_Delete_Call) Return(_a0 error) *MockChargeRepository_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockChargeRepository_Delete_Call) RunAndReturn(run func(context.Context, int) error) *MockChargeRepository_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetByID provides a mock function with given fields: ctx, id
 func (_m *MockChargeRepository) GetByID(ctx context.Context, id int) (*domain.Charge, error) {
 	ret := _m.Called(ctx, id)
@@ -240,6 +287,54 @@ func (_c *MockChargeRepository_GetByID_Call) Return(_a0 *domain.Charge, _a1 erro
 }
 
 func (_c *MockChargeRepository_GetByID_Call) RunAndReturn(run func(context.Context, int) (*domain.Charge, error)) *MockChargeRepository_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReassignAccountRefs provides a mock function with given fields: ctx, fromAccountID, toAccountID
+func (_m *MockChargeRepository) ReassignAccountRefs(ctx context.Context, fromAccountID int, toAccountID int) error {
+	ret := _m.Called(ctx, fromAccountID, toAccountID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReassignAccountRefs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, fromAccountID, toAccountID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockChargeRepository_ReassignAccountRefs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReassignAccountRefs'
+type MockChargeRepository_ReassignAccountRefs_Call struct {
+	*mock.Call
+}
+
+// ReassignAccountRefs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fromAccountID int
+//   - toAccountID int
+func (_e *MockChargeRepository_Expecter) ReassignAccountRefs(ctx interface{}, fromAccountID interface{}, toAccountID interface{}) *MockChargeRepository_ReassignAccountRefs_Call {
+	return &MockChargeRepository_ReassignAccountRefs_Call{Call: _e.mock.On("ReassignAccountRefs", ctx, fromAccountID, toAccountID)}
+}
+
+func (_c *MockChargeRepository_ReassignAccountRefs_Call) Run(run func(ctx context.Context, fromAccountID int, toAccountID int)) *MockChargeRepository_ReassignAccountRefs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockChargeRepository_ReassignAccountRefs_Call) Return(_a0 error) *MockChargeRepository_ReassignAccountRefs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockChargeRepository_ReassignAccountRefs_Call) RunAndReturn(run func(context.Context, int, int) error) *MockChargeRepository_ReassignAccountRefs_Call {
 	_c.Call.Return(run)
 	return _c
 }

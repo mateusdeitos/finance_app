@@ -16,6 +16,10 @@ export const transactionSearchSchema = z.object({
   groupBy: z.enum(['date', 'category', 'account']).default('date'),
   accumulated: z.coerce.boolean().default(false),
   hideSettlements: z.coerce.boolean().default(false),
+  // Deep-link target for the PWA app shortcuts (long-press the installed icon).
+  // When present, the page opens the create-transaction drawer pre-set to this
+  // type, then strips the param so a refresh/back-nav doesn't reopen it.
+  new: z.enum(['expense', 'income', 'transfer']).optional(),
 })
 
 export type TransactionsSearch = z.infer<typeof transactionSearchSchema>

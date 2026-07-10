@@ -63,3 +63,11 @@ export async function cancelCharge(id: number): Promise<void> {
   })
   if (!res.ok) throw res
 }
+
+export async function deleteCharge(id: number): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/charges/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) throw res
+}

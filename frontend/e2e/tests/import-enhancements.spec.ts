@@ -233,7 +233,7 @@ test.describe("Import: installment inference from description", () => {
 // ─── Duplicate detection criteria ───────────────────────────────────────────
 
 test.describe("Import: duplicate detection criteria", () => {
-  test("same date+amount but unrelated description is NOT flagged", async ({ browser }) => {
+  test("same date+amount IS flagged even with an unrelated description", async ({ browser }) => {
     const user = await createTestUser("dup-desc");
     const txDate = new Date(2026, 8, 10);
 
@@ -255,10 +255,11 @@ test.describe("Import: duplicate detection criteria", () => {
 
     await importPage.uploadCSV(csv, user.accountId);
 
-    // Description similarity is now part of the match — an unrelated
-    // description means no duplicate warning even with same date + amount.
+    // Exact same date and amount flags a duplicate regardless of how different
+    // the descriptions are: re-imported statements often carry garbled or
+    // missing descriptions but keep the date and amount intact.
     await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
-    await expect(importPage.duplicateWarning(0)).not.toBeVisible();
+    await expect(importPage.duplicateWarning(0)).toBeVisible();
 
     await page.close();
   });
@@ -289,6 +290,36 @@ test.describe("Import: duplicate detection criteria", () => {
     // The amount is far outside the ±2 cent range → no duplicate warning.
     await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
     await expect(importPage.duplicateWarning(0)).not.toBeVisible();
+
+    await page.close();
+  });
+});
+
+// ─── Date parsing (timezone regression) ────────────────────────────────────
+// Regression for the bug where a CSV date in DD/MM/YYYY was displayed one day
+// earlier in the review table. The backend serialized the date as a UTC
+// timestamp (e.g. 2026-05-04T00:00:00Z), which the DatePickerInput then
+// re-interpreted in the browser's local timezone (UTC-3 → 2026-05-03). The fix
+// makes the API emit a date-only string (YYYY-MM-DD) so no shift occurs.
+
+test.describe("Import: date parsing", () => {
+  test("CSV date DD/MM/YYYY is displayed exactly, with no off-by-one shift", async ({ browser }) => {
+    const user = await createTestUser("date-shift");
+    const page = await openAuthedPage(browser, user.token);
+    const importPage = new ImportPage(page);
+    await importPage.goto();
+
+    // The exact date from the original bug report: 04/05/2026.
+    const csv = buildCsvContent([
+      ["04/05/2026", `Date Shift ${Date.now()}`, "-100,00"],
+    ]);
+
+    await importPage.uploadCSV(csv, user.accountId);
+
+    await expect(importPage.reviewStep.getByTestId(ImportTestIds.Row(0))).toBeVisible();
+    await expect
+      .poll(() => importPage.getRowDateValue(0), { timeout: 10000 })
+      .toBe("04/05/2026");
 
     await page.close();
   });

@@ -61,6 +61,32 @@ export default defineConfig({
             purpose: "any maskable",
           },
         ],
+        // App shortcuts surface in the long-press menu of the installed icon.
+        // Each deep-links into the transactions page with the create drawer
+        // pre-set to a type (see useCreateTransactionShortcut).
+        shortcuts: [
+          {
+            name: "Nova despesa",
+            short_name: "Despesa",
+            description: "Registrar uma nova despesa",
+            url: "/transactions?new=expense",
+            icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+          {
+            name: "Nova receita",
+            short_name: "Receita",
+            description: "Registrar uma nova receita",
+            url: "/transactions?new=income",
+            icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+          {
+            name: "Nova transferência",
+            short_name: "Transferência",
+            description: "Registrar uma nova transferência",
+            url: "/transactions?new=transfer",
+            icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+          },
+        ],
       },
     }),
   ],

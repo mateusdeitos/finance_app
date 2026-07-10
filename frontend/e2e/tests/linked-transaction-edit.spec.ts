@@ -8,6 +8,7 @@ import {
   apiAcceptConnection,
   apiCreateTransaction,
   apiGetTransaction,
+  apiListTransactions,
   apiDeleteTransaction,
   getAuthTokenForUser,
   openAuthedPage,
@@ -19,8 +20,12 @@ import { TransactionsTestIds } from "@/testIds";
  *
  * When a user edits a transaction whose `original_user_id` belongs to another
  * user, the form enters a restricted mode:
- *   - 'split'    — shows only date, amount, and category
- *   - 'transfer' — shows only date and amount
+ *   - 'split'    — shows date, amount, description, and category
+ *   - 'transfer' — shows date, amount, and description
+ *
+ * Issue #205: the partner (to_user) may also edit the date/description of their
+ * own linked tx, and (when the linked tx is recurring) propagate the change to
+ * all of their installments. Those edits stay scoped to the partner's side.
  *
  * Amount edits on a linked transaction stay scoped to that linked tx — they do
  * NOT propagate back to the source transaction. For splits, the partner-side
@@ -108,7 +113,7 @@ test.describe("Linked Transaction Edit", () => {
 
   // ─── Split linked tx — restricted to date + amount + category ───────────────
 
-  test("split linked tx: form shows only date, amount, and category", async () => {
+  test("split linked tx: form shows date, amount, description, and category", async () => {
     const today = new Date().toISOString();
     const desc = `LinkedSplit Restrict ${Date.now()}`;
 
@@ -146,12 +151,17 @@ test.describe("Linked Transaction Edit", () => {
 
     // These fields must NOT appear in split-restricted mode
     await expect(drawer.getByTestId(TransactionsTestIds.SegmentedTransactionType)).not.toBeVisible();
-    await expect(drawer.getByTestId(TransactionsTestIds.InputDescription)).not.toBeVisible();
     await expect(drawer.getByTestId(TransactionsTestIds.SelectAccount)).not.toBeVisible();
 
-    // These fields MUST be visible in split mode
+    // These fields MUST be visible in split mode (issue #205 adds description)
     await expect(drawer.getByTestId(TransactionsTestIds.InputAmount)).toBeVisible();
+    await expect(drawer.getByTestId(TransactionsTestIds.InputDescription)).toBeVisible();
     await expect(drawer.getByTestId(TransactionsTestIds.SelectCategory)).toBeVisible();
+
+    // Non-recurring linked tx → no propagation selector
+    await expect(
+      drawer.getByTestId(TransactionsTestIds.PropagationUpdateOption("all")),
+    ).not.toBeVisible();
   });
 
   test("split linked tx: editing amount mutates only the linked tx, not the source", async () => {
@@ -189,23 +199,27 @@ test.describe("Linked Transaction Edit", () => {
     await transactionsPage.waitForLinkedSplitDrawer();
 
     const drawer = transactionsPage.linkedSplitDrawer;
+    const localDesc = `LinkedSplit Local ${Date.now()}`;
     await transactionsPage.clearAndFillAmount(8000, drawer);
+    await transactionsPage.clearAndFillDescription(localDesc, drawer);
     await transactionsPage.selectCategory(primaryCategoryId, drawer);
     await transactionsPage.submitUpdate(drawer);
 
-    // Primary user's linked tx must reflect the new amount
+    // Primary user's linked tx must reflect the new amount and local description
     const updatedLinkedTx = await apiGetTransaction(primaryLinkedTxId!, { token: primaryToken });
     expect(updatedLinkedTx.amount).toBe(8000);
+    expect(updatedLinkedTx.description).toBe(localDesc);
 
-    // The source tx (partner's original) must keep the value the author chose;
-    // amount edits on a linked-tx side do NOT propagate to the source.
+    // The source tx (partner's original) must keep the value AND description the
+    // author chose; edits on a linked-tx side do NOT propagate to the source.
     const updatedSourceTx = await apiGetTransaction(partnerTx.id, { token: partnerToken });
     expect(updatedSourceTx.amount).toBe(10000);
+    expect(updatedSourceTx.description).toBe(desc);
   });
 
   // ─── Transfer linked tx — restricted to date + amount only ──────────────────
 
-  test("transfer linked tx: form shows only date and amount", async () => {
+  test("transfer linked tx: form shows date, amount, and description", async () => {
     const today = new Date().toISOString();
     const desc = `LinkedXfer Restrict ${Date.now()}`;
 
@@ -244,12 +258,12 @@ test.describe("Linked Transaction Edit", () => {
 
     // These fields must NOT appear in transfer-restricted mode
     await expect(drawer.getByTestId(TransactionsTestIds.SegmentedTransactionType)).not.toBeVisible();
-    await expect(drawer.getByTestId(TransactionsTestIds.InputDescription)).not.toBeVisible();
     await expect(drawer.getByTestId(TransactionsTestIds.SelectAccount)).not.toBeVisible();
     await expect(drawer.getByTestId(TransactionsTestIds.SelectCategory)).not.toBeVisible();
 
-    // Only date and amount may be changed in transfer mode
+    // date, amount and description may be changed in transfer mode (issue #205)
     await expect(drawer.getByTestId(TransactionsTestIds.InputAmount)).toBeVisible();
+    await expect(drawer.getByTestId(TransactionsTestIds.InputDescription)).toBeVisible();
   });
 
   test("transfer linked tx: editing amount mutates only the credit side, not the source", async () => {
@@ -285,16 +299,109 @@ test.describe("Linked Transaction Edit", () => {
     await transactionsPage.waitForLinkedTransferDrawer();
 
     const drawer = transactionsPage.linkedTransferDrawer;
+    const localDesc = `LinkedXfer Local ${Date.now()}`;
     await transactionsPage.clearAndFillAmount(9000, drawer);
+    await transactionsPage.clearAndFillDescription(localDesc, drawer);
     await transactionsPage.submitUpdate(drawer);
 
-    // Verify primary user's credit side carries the new amount
+    // Verify primary user's credit side carries the new amount and local description
     const updatedCreditTx = await apiGetTransaction(primaryCreditTxId!, { token: primaryToken });
     expect(updatedCreditTx.amount).toBe(9000);
+    expect(updatedCreditTx.description).toBe(localDesc);
 
-    // The partner's source (debit) side keeps the original amount — linked-tx
-    // amount edits do not propagate to the source.
+    // The partner's source (debit) side keeps the original amount and description —
+    // linked-tx edits do not propagate to the source.
     const updatedPartnerTx = await apiGetTransaction(partnerTx.id, { token: partnerToken });
     expect(updatedPartnerTx.amount).toBe(7500);
+    expect(updatedPartnerTx.description).toBe(desc);
+  });
+
+  // ─── Recurring split linked tx — propagation across the partner's installments ─
+
+  test("recurring split linked tx: propagation=all updates every installment on the partner's side", async () => {
+    const base = new Date();
+    const today = base.toISOString();
+    const desc = `LinkedSplit Recurring ${Date.now()}`;
+
+    // The 3 monthly installments span the current month and the two that follow.
+    const periods = [0, 1, 2].map((offset) => {
+      const d = new Date(base.getFullYear(), base.getMonth() + offset, 1);
+      return { month: d.getMonth() + 1, year: d.getFullYear() };
+    });
+
+    // Partner creates a 3x monthly split expense — the primary user receives a
+    // linked tx (with its own recurrence) on each installment.
+    const { id: partnerTxId } = await apiCreateTransaction(
+      {
+        transaction_type: "expense",
+        account_id: partnerAccountId,
+        category_id: partnerCategoryId,
+        amount: 10000,
+        date: today,
+        description: desc,
+        recurrence_settings: { type: "monthly", current_installment: 1, total_installments: 3 },
+        split_settings: [{ connection_id: connectionId, amount: 5000 }],
+      },
+      { token: partnerToken },
+    );
+    createdTransactionIds.push(partnerTxId);
+
+    // Resolve the primary user's linked installment in a given period by its
+    // (unique) description on their connection-backed account. Each installment
+    // carries its own recurrence record, so we match on description rather than a
+    // shared recurrence id.
+    const findLinkedInstallment = async (month: number, year: number, matchDesc: string) => {
+      const txs = await apiListTransactions(month, year, { token: primaryToken });
+      return txs.find(
+        (t) =>
+          t.account_id === primaryConnAccountId &&
+          t.original_user_id != null &&
+          t.description === matchDesc,
+      );
+    };
+
+    const firstInstallment = await findLinkedInstallment(periods[0].month, periods[0].year, desc);
+    expect(firstInstallment, "expected primary linked installment in month 1").toBeTruthy();
+    expect(
+      firstInstallment!.transaction_recurrence_id,
+      "linked installment should be part of a recurrence",
+    ).toBeTruthy();
+
+    await transactionsPage.goto();
+    await expect(customPage.getByText(desc).first()).toBeVisible({ timeout: 8000 });
+
+    // Open the first linked installment, change the description, propagate to all.
+    await customPage
+      .locator(`[data-transaction-id="${firstInstallment!.id}"]`)
+      .getByText(desc)
+      .first()
+      .click();
+    await transactionsPage.waitForLinkedSplitDrawer();
+
+    const drawer = transactionsPage.linkedSplitDrawer;
+    // Recurring linked tx → propagation selector must be visible.
+    await expect(
+      drawer.getByTestId(TransactionsTestIds.PropagationUpdateOption("all")),
+    ).toBeVisible();
+
+    const newDesc = `${desc} EDITED`;
+    await transactionsPage.clearAndFillDescription(newDesc, drawer);
+    await transactionsPage.selectCategory(primaryCategoryId, drawer);
+    await drawer.getByTestId(TransactionsTestIds.PropagationUpdateOption("all")).click();
+    await transactionsPage.submitUpdate(drawer);
+
+    // Every primary-side installment adopts the new description.
+    for (const period of periods) {
+      const inst = await findLinkedInstallment(period.month, period.year, newDesc);
+      expect(
+        inst,
+        `expected primary linked installment in ${period.month}/${period.year}`,
+      ).toBeTruthy();
+      expect(inst!.description).toBe(newDesc);
+    }
+
+    // The partner's source installments keep their original description.
+    const updatedSource = await apiGetTransaction(partnerTxId, { token: partnerToken });
+    expect(updatedSource.description).toBe(desc);
   });
 });

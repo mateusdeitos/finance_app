@@ -38,15 +38,48 @@ type Charge struct {
 	PayerUserID      int          `json:"payer_user_id"`
 	ChargerAccountID *int         `json:"charger_account_id"`
 	PayerAccountID   *int         `json:"payer_account_id"`
-	ConnectionID     int          `json:"connection_id"`
-	PeriodMonth      int          `json:"period_month"`
-	PeriodYear       int          `json:"period_year"`
-	Description      *string      `json:"description"`
-	Amount           *int64       `json:"amount,omitempty"`
-	Status           ChargeStatus `json:"status"`
-	Date             *time.Time   `json:"date"`
-	CreatedAt        *time.Time   `json:"created_at"`
-	UpdatedAt        *time.Time   `json:"updated_at"`
+	// InitiatorUserID is the user who created the charge. It is independent of
+	// the charger/payer roles: a payer can initiate ("I'll pay you") just as a
+	// charger can ("you owe me"). The OTHER party is the one who must accept or
+	// reject; the initiator is the one who can cancel.
+	InitiatorUserID int          `json:"initiator_user_id"`
+	ConnectionID    int          `json:"connection_id"`
+	PeriodMonth     int          `json:"period_month"`
+	PeriodYear      int          `json:"period_year"`
+	Description     *string      `json:"description"`
+	Amount          *int64       `json:"amount,omitempty"`
+	Status          ChargeStatus `json:"status"`
+	Date            *time.Time   `json:"date"`
+	CreatedAt       *time.Time   `json:"created_at"`
+	UpdatedAt       *time.Time   `json:"updated_at"`
+}
+
+// CounterpartyUserID returns the party that did NOT initiate the charge — the
+// one expected to accept or reject it.
+func (c *Charge) CounterpartyUserID() int {
+	if c.InitiatorUserID == c.ChargerUserID {
+		return c.PayerUserID
+	}
+	return c.ChargerUserID
+}
+
+// IsInitiator reports whether the given user created the charge.
+func (c *Charge) IsInitiator(userID int) bool {
+	return c.InitiatorUserID == userID
+}
+
+// IsParty reports whether the given user is the charger or the payer.
+func (c *Charge) IsParty(userID int) bool {
+	return c.ChargerUserID == userID || c.PayerUserID == userID
+}
+
+// IsDeletable reports whether the charge can be permanently deleted. Paid
+// charges are never deletable because accepting one created settlement
+// transfer transactions that must be preserved.
+func (c *Charge) IsDeletable() bool {
+	return c.Status == ChargeStatusPending ||
+		c.Status == ChargeStatusRejected ||
+		c.Status == ChargeStatusCancelled
 }
 
 func (c *Charge) ValidateTransition(newStatus ChargeStatus) error {

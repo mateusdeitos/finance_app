@@ -130,17 +130,65 @@ func (_c *MockAccountService_Create_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
-// Delete provides a mock function with given fields: ctx, userID, id
-func (_m *MockAccountService) Delete(ctx context.Context, userID int, id int) error {
+// Deactivate provides a mock function with given fields: ctx, userID, id
+func (_m *MockAccountService) Deactivate(ctx context.Context, userID int, id int) error {
 	ret := _m.Called(ctx, userID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Deactivate")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, userID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAccountService_Deactivate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Deactivate'
+type MockAccountService_Deactivate_Call struct {
+	*mock.Call
+}
+
+// Deactivate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+func (_e *MockAccountService_Expecter) Deactivate(ctx interface{}, userID interface{}, id interface{}) *MockAccountService_Deactivate_Call {
+	return &MockAccountService_Deactivate_Call{Call: _e.mock.On("Deactivate", ctx, userID, id)}
+}
+
+func (_c *MockAccountService_Deactivate_Call) Run(run func(ctx context.Context, userID int, id int)) *MockAccountService_Deactivate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockAccountService_Deactivate_Call) Return(_a0 error) *MockAccountService_Deactivate_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAccountService_Deactivate_Call) RunAndReturn(run func(context.Context, int, int) error) *MockAccountService_Deactivate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function with given fields: ctx, userID, id, strategy, targetAccountID
+func (_m *MockAccountService) Delete(ctx context.Context, userID int, id int, strategy domain.AccountDeletionStrategy, targetAccountID *int) error {
+	ret := _m.Called(ctx, userID, id, strategy, targetAccountID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Delete")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
-		r0 = rf(ctx, userID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.AccountDeletionStrategy, *int) error); ok {
+		r0 = rf(ctx, userID, id, strategy, targetAccountID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -157,13 +205,15 @@ type MockAccountService_Delete_Call struct {
 //   - ctx context.Context
 //   - userID int
 //   - id int
-func (_e *MockAccountService_Expecter) Delete(ctx interface{}, userID interface{}, id interface{}) *MockAccountService_Delete_Call {
-	return &MockAccountService_Delete_Call{Call: _e.mock.On("Delete", ctx, userID, id)}
+//   - strategy domain.AccountDeletionStrategy
+//   - targetAccountID *int
+func (_e *MockAccountService_Expecter) Delete(ctx interface{}, userID interface{}, id interface{}, strategy interface{}, targetAccountID interface{}) *MockAccountService_Delete_Call {
+	return &MockAccountService_Delete_Call{Call: _e.mock.On("Delete", ctx, userID, id, strategy, targetAccountID)}
 }
 
-func (_c *MockAccountService_Delete_Call) Run(run func(ctx context.Context, userID int, id int)) *MockAccountService_Delete_Call {
+func (_c *MockAccountService_Delete_Call) Run(run func(ctx context.Context, userID int, id int, strategy domain.AccountDeletionStrategy, targetAccountID *int)) *MockAccountService_Delete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(int))
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.AccountDeletionStrategy), args[4].(*int))
 	})
 	return _c
 }
@@ -173,7 +223,7 @@ func (_c *MockAccountService_Delete_Call) Return(_a0 error) *MockAccountService_
 	return _c
 }
 
-func (_c *MockAccountService_Delete_Call) RunAndReturn(run func(context.Context, int, int) error) *MockAccountService_Delete_Call {
+func (_c *MockAccountService_Delete_Call) RunAndReturn(run func(context.Context, int, int, domain.AccountDeletionStrategy, *int) error) *MockAccountService_Delete_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -234,6 +284,114 @@ func (_c *MockAccountService_GetByID_Call) Return(_a0 *domain.Account, _a1 error
 }
 
 func (_c *MockAccountService_GetByID_Call) RunAndReturn(run func(context.Context, int, int) (*domain.Account, error)) *MockAccountService_GetByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetDeletionInfo provides a mock function with given fields: ctx, userID, id
+func (_m *MockAccountService) GetDeletionInfo(ctx context.Context, userID int, id int) (*domain.AccountDeletionInfo, error) {
+	ret := _m.Called(ctx, userID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDeletionInfo")
+	}
+
+	var r0 *domain.AccountDeletionInfo
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*domain.AccountDeletionInfo, error)); ok {
+		return rf(ctx, userID, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) *domain.AccountDeletionInfo); ok {
+		r0 = rf(ctx, userID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.AccountDeletionInfo)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int, int) error); ok {
+		r1 = rf(ctx, userID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockAccountService_GetDeletionInfo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDeletionInfo'
+type MockAccountService_GetDeletionInfo_Call struct {
+	*mock.Call
+}
+
+// GetDeletionInfo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+func (_e *MockAccountService_Expecter) GetDeletionInfo(ctx interface{}, userID interface{}, id interface{}) *MockAccountService_GetDeletionInfo_Call {
+	return &MockAccountService_GetDeletionInfo_Call{Call: _e.mock.On("GetDeletionInfo", ctx, userID, id)}
+}
+
+func (_c *MockAccountService_GetDeletionInfo_Call) Run(run func(ctx context.Context, userID int, id int)) *MockAccountService_GetDeletionInfo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockAccountService_GetDeletionInfo_Call) Return(_a0 *domain.AccountDeletionInfo, _a1 error) *MockAccountService_GetDeletionInfo_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockAccountService_GetDeletionInfo_Call) RunAndReturn(run func(context.Context, int, int) (*domain.AccountDeletionInfo, error)) *MockAccountService_GetDeletionInfo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Reorder provides a mock function with given fields: ctx, userID, orderedIDs
+func (_m *MockAccountService) Reorder(ctx context.Context, userID int, orderedIDs []int) error {
+	ret := _m.Called(ctx, userID, orderedIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reorder")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int) error); ok {
+		r0 = rf(ctx, userID, orderedIDs)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockAccountService_Reorder_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reorder'
+type MockAccountService_Reorder_Call struct {
+	*mock.Call
+}
+
+// Reorder is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - orderedIDs []int
+func (_e *MockAccountService_Expecter) Reorder(ctx interface{}, userID interface{}, orderedIDs interface{}) *MockAccountService_Reorder_Call {
+	return &MockAccountService_Reorder_Call{Call: _e.mock.On("Reorder", ctx, userID, orderedIDs)}
+}
+
+func (_c *MockAccountService_Reorder_Call) Run(run func(ctx context.Context, userID int, orderedIDs []int)) *MockAccountService_Reorder_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].([]int))
+	})
+	return _c
+}
+
+func (_c *MockAccountService_Reorder_Call) Return(_a0 error) *MockAccountService_Reorder_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockAccountService_Reorder_Call) RunAndReturn(run func(context.Context, int, []int) error) *MockAccountService_Reorder_Call {
 	_c.Call.Return(run)
 	return _c
 }

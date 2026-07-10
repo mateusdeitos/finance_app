@@ -37,3 +37,5 @@ export { OnboardingTestIds } from "./onboarding";
 export { MobileNavTestIds } from "./mobileNav";
 export { LoginTestIds } from "./login";
 export { NotificationsTestIds } from "./notifications";
+export { HomeTestIds } from "./home";
+export { AdminTestIds } from "./admin";

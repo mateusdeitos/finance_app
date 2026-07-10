@@ -1,4 +1,5 @@
-import { Button, Card, Group, Stack, Text } from '@mantine/core'
+import { ActionIcon, Button, Card, Group, Stack, Text } from '@mantine/core'
+import { IconTrash } from '@tabler/icons-react'
 import { Charges } from '@/types/charges'
 import { formatBalance } from '@/utils/formatCents'
 import { ChargeStatusBadge } from './ChargeStatusBadge'
@@ -13,11 +14,17 @@ interface Props {
   onAccept?: () => void
   onReject?: () => void
   onCancel?: () => void
+  onDelete?: () => void
 }
 
-export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, onAccept, onReject, onCancel }: Props) {
-  const isReceived = charge.payer_user_id === currentUserId
+export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, onAccept, onReject, onCancel, onDelete }: Props) {
+  // "Received" means the charge is awaiting MY action: I'm a party but I did
+  // not initiate it. The initiator (whatever their charger/payer role) is the
+  // one who can cancel; the counterparty is the one who accepts/rejects.
+  const isReceived = charge.initiator_user_id !== currentUserId
   const isPending = charge.status === 'pending'
+  // Paid charges own settlement transfers and cannot be deleted.
+  const isDeletable = charge.status !== 'paid'
 
   const period =
     String(charge.period_month).padStart(2, '0') + '/' + charge.period_year
@@ -66,6 +73,18 @@ export function ChargeCard({ charge, currentUserId, partnerName, balanceAmount, 
             <Button size="xs" color="red" variant="light" onClick={onCancel} data-testid={ChargesTestIds.BtnCancel}>
               Cancelar
             </Button>
+          )}
+          {isDeletable && onDelete && (
+            <ActionIcon
+              size="lg"
+              color="red"
+              variant="subtle"
+              onClick={onDelete}
+              aria-label="Excluir cobrança"
+              data-testid={ChargesTestIds.BtnDelete}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
           )}
         </Group>
       </Group>

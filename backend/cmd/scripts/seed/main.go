@@ -116,11 +116,11 @@ func main() {
 	}
 
 	svcs := &service.Services{
-		Account:    service.NewAccountService(repos),
 		Category:   service.NewCategoryService(repos),
 		Tag:        service.NewTagService(repos),
 		Settlement: service.NewSettlementService(repos),
 	}
+	svcs.Account = service.NewAccountService(repos, svcs)
 	svcs.UserConnection = service.NewUserConnectionService(repos, svcs)
 	svcs.Transaction = service.NewTransactionService(repos, svcs)
 

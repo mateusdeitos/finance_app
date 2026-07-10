@@ -12,6 +12,7 @@ export function useTransactions<T = Transactions.Transaction[]>(
     queryKey: [QueryKeys.Transactions, params],
     queryFn: () => fetchTransactions(params),
     select,
+    refetchOnWindowFocus: true,
   })
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: [QueryKeys.Transactions] })
