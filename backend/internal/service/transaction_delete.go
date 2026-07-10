@@ -72,6 +72,11 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 // propagation controls how many installments' divisions are removed. The partner
 // is notified after commit.
 func (s *transactionService) DeleteSettlement(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings) error {
+	// An absent propagation param means "current" — the natural default for a
+	// non-recurring settlement delete, where the client omits it entirely.
+	if propagation == "" {
+		propagation = domain.TransactionPropagationSettingsCurrent
+	}
 	if !propagation.IsValid() {
 		return pkgErrors.ErrInvalidPropagationSettings(propagation)
 	}

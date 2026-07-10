@@ -337,7 +337,9 @@ func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementCurrentRemove
 	suite.Require().NoError(err)
 	suite.Require().Len(pontaTxs, 1)
 
-	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, settlement.ID, domain.TransactionPropagationSettingsCurrent)
+	// Empty propagation (the client omits the query param for a non-recurring
+	// settlement) must be treated as "current", not rejected as invalid.
+	err = suite.Services.Transaction.DeleteSettlement(ctx, author.ID, settlement.ID, "")
 	suite.Require().NoError(err)
 
 	remaining, err := suite.Repos.Settlement.Search(ctx, domain.SettlementFilter{IDs: []int{settlement.ID}})
