@@ -26,7 +26,7 @@ Requirements for this milestone. Each maps to exactly one roadmap phase.
 ### Template Management (MNG)
 
 - [x] **MNG-01**: User can open a dedicated management surface (drawer/screen) to create, edit, and delete templates
-- [ ] **MNG-02**: User can save the current transaction form's values as a new template via a "Save as template" action
+- [x] **MNG-02**: User can save the current transaction form's values as a new template via a "Save as template" action
 - [x] **MNG-03**: The template editor presents the split configuration sensibly with no amount present (no misleading "R$0,00" live display)
 
 ### Safety & Limits (SAFE)
@@ -75,7 +75,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | APPLY-03 | Phase 29 | Complete (29-02) |
 | APPLY-04 | Phase 29 | Complete (29-02) |
 | MNG-01 | Phase 30 | Complete (30-02) |
-| MNG-02 | Phase 30 | Pending |
+| MNG-02 | Phase 30 | Complete (30-03) |
 | MNG-03 | Phase 28 | Complete (28-01) |
 | SAFE-01 | Phase 27 | Complete (27-04) |
 | SAFE-02 | Phase 27 | Complete (27-04) |

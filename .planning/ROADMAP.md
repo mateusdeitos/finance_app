@@ -95,7 +95,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
 - [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
 - [x] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 2/2 plans complete
-- [~] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template — 2/3 plans complete
+- [x] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template — 3/3 plans complete
 - [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
 
 ## Phase Details
@@ -298,7 +298,7 @@ Plans:
   4. A user can delete a template from the management drawer; the corresponding chip disappears immediately
   5. A user can click "Save as template" inside the create-transaction form to save the current form's fields as a new template (name auto-suggested from description); the action is disabled when the user already has 3 templates
 **UI hint**: yes
-**Plans**: 2/3 plans complete (30-01: mutation data layer done; 30-02: TemplateForm + TemplatesManagementDrawer done; 30-03: Save-as-template)
+**Plans**: 3/3 plans complete (30-01: mutation data layer done; 30-02: TemplateForm + TemplatesManagementDrawer done; 30-03: Save-as-template mini-drawer + footer button done)
 
 ### Phase 31: E2E Acceptance
 **Goal**: Playwright end-to-end tests verify the complete template lifecycle — chip apply, management CRUD, cap enforcement, and stale-reference degradation — across real browser interactions, providing an acceptance gate before shipping v1.7
@@ -345,7 +345,7 @@ Plans:
 | 27. Backend CRUD API | v1.7 | 4/4 | Complete | 2026-07-09 |
 | 28. SplitSettingsFields Template Mode | v1.7 | 1/1 | Complete | 2026-07-09 |
 | 29. Frontend Chip Apply Flow | v1.7 | 2/2 | Complete | 2026-07-09 |
-| 30. Frontend Management UI | v1.7 | 1/3 | In progress | - |
+| 30. Frontend Management UI | v1.7 | 3/3 | Complete | 2026-07-10 |
 | 31. E2E Acceptance | v1.7 | 0/? | Not started | - |
 
 ---
