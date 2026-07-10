@@ -1,5 +1,5 @@
 import { ActionIcon, Box, Button, Group, Menu, Stack } from "@mantine/core";
-import { IconDots, IconPlus, IconTableImport } from "@tabler/icons-react";
+import { IconDots, IconLayoutGrid, IconPlus, IconTableImport } from "@tabler/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { useMe } from "@/hooks/useMe";
@@ -37,6 +37,7 @@ import { BulkProgressDrawer, BulkProgressItem } from "@/components/transactions/
 import { BulkDivisionDrawer } from "@/components/transactions/BulkDivisionDrawer";
 import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDrawer";
 import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
+import { TemplatesManagementDrawer } from "@/components/transactions/templates/TemplatesManagementDrawer";
 import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
 import { TransactionsTestIds } from "@/testIds";
@@ -736,6 +737,13 @@ export function TransactionsPage() {
                     data-testid={TransactionsTestIds.MenuItemImportTransactions}
                   >
                     Importar transações
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={<IconLayoutGrid size={14} />}
+                    onClick={() => void renderDrawer(() => <TemplatesManagementDrawer />)}
+                    data-testid={TransactionsTestIds.MenuItemManageTemplates}
+                  >
+                    Gerenciar modelos
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>

@@ -137,19 +137,32 @@ type NotificationService interface {
 	DeleteAllRead(ctx context.Context, userID int) error
 }
 
+// TransactionTemplateService is the security + validation boundary for
+// per-user transaction templates. userID is always the second parameter
+// (first after ctx) — SEE the SECURITY (IDOR) comment on every method in
+// transaction_template_service.go: userID must come from the auth context,
+// never from the request/DTO.
+type TransactionTemplateService interface {
+	List(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error)
+	Create(ctx context.Context, userID int, name string, payload domain.TransactionTemplatePayload) (*domain.TransactionTemplate, error)
+	Update(ctx context.Context, userID, id int, name string, payload domain.TransactionTemplatePayload) error
+	Delete(ctx context.Context, userID, id int) error
+}
+
 // Services contains all service interfaces
 type Services struct {
-	Auth             AuthService
-	User             UserService
-	Account          AccountService
-	Category         CategoryService
-	Tag              TagService
-	Transaction      TransactionService
-	UserConnection   UserConnectionService
-	Settlement       SettlementService
-	Charge           ChargeService
-	Onboarding       OnboardingService
-	PushSubscription PushSubscriptionService
-	Notification     NotificationService
-	Impersonation    ImpersonationService
+	Auth                AuthService
+	User                UserService
+	Account             AccountService
+	Category            CategoryService
+	Tag                 TagService
+	Transaction         TransactionService
+	UserConnection      UserConnectionService
+	Settlement          SettlementService
+	Charge              ChargeService
+	Onboarding          OnboardingService
+	PushSubscription    PushSubscriptionService
+	Notification        NotificationService
+	TransactionTemplate TransactionTemplateService
+	Impersonation       ImpersonationService
 }

@@ -9,6 +9,7 @@
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
 - ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 - 🚧 **v1.6 Push Notifications** — Phases 22–25 (in progress)
+- 🚧 **v1.7 Transaction Templates** — Phases 26–31 (in progress)
 
 ## Phases
 
@@ -88,6 +89,15 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [ ] **Phase 24: Frontend Permission, Subscribe & Service Worker** - permission prompt, subscribe/unsubscribe toggle, SW push handler, deep-link navigation
 - [ ] **Phase 25: Frontend Notification Inbox** - inbox UI, unread badge, open-entity navigation, mark-read actions
 
+### v1.7 Transaction Templates (Phases 26–31)
+
+- [x] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — 2/2 plans complete
+- [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
+- [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
+- [x] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 2/2 plans complete
+- [x] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template — 3/3 plans complete
+- [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
+
 ## Phase Details
 
 ### Phase 11: Backend Validation & Propagation
@@ -154,7 +164,7 @@ Plans:
 - [x] 23-01-PLAN.md — Notification data layer: repository methods (Create/List-cursor/UnreadCount/MarkRead/MarkAllRead), ListByUserID, domain types, cursor index migration, mocks
 
 **Wave 2** *(blocked on Wave 1)*
-- [x] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + swagger
+- [x] 23-02-PLAN.md — NotificationService (post-commit dispatch + D-08 coalescing + pt-BR push + 404/410 prune) + inbox handler (4 endpoints) + DI wiring + route registration (/unread-count, /read-all before /:id/read); MockNotificationService + MockPushSender regenerated; swagger regenerated with 4 /api/notifications paths; go build ./... + go vet green.
 
 **Wave 3** *(blocked on Wave 2)*
 - [x] 23-03-PLAN.md — Event-source hooks (NOTIF-01..04) + DB test-suite wiring + integration tests (NOTIF-01..06, inbox, IDOR, mock PushSender)
@@ -209,6 +219,99 @@ Plans:
 - [ ] 25-05-PLAN.md — Nav wiring: DesktopSidebar link + blue badge, MobileTabBar Mais-tab dot, MobileMoreDrawer item; authored Playwright e2e spec
 **UI hint**: yes
 
+### Phase 26: Backend Foundation
+**Goal**: The database schema for templates is live and the Go domain/entity types exist — template form fields stored in a JSONB `payload` column with a strict `domain.TransactionTemplatePayload` struct as the typed write boundary — isolating templates from all financial query paths from the first deploy, with existence/stale validation deferred to apply (Phase 29)
+**Depends on**: Nothing (first phase of v1.7; additive schema change with no existing queries affected)
+**Requirements**: TMPL-01, TMPL-05
+**Success Criteria** (what must be TRUE):
+  1. A `transaction_templates` table exists with columns `id`, `user_id` (NOT NULL), `name` (NOT NULL, `UNIQUE(user_id, name)`), `payload` (JSONB NOT NULL), `created_at`, `updated_at` — no `amount`, no `date`, no `deleted_at`, no per-field FK columns, and no FK to `transactions`
+  2. `domain.TransactionTemplate` (`ID`, `UserID`, `Name`, `Payload`) and `domain.TransactionTemplatePayload` (type, account_id, category_id, destination_account_id, description, tag_ids, split_settings) exist; a unit test proves a payload unmarshals into the strict struct and re-marshals preserving all fields including percentage vs fixed-amount split rows (TMPL-05); `amount`/`date` keys are dropped by the strict unmarshal
+  3. The backend validates payload SHAPE via the strict struct on write, but performs NO existence check — deleting a category/account/tag requires no template cleanup (stale ids filtered at apply time, Phase 29; no CategoryService.Delete extension)
+  4. All existing financial queries (`Search`, `GetBalance`, `FindOrphanedSettlementTransactions`) are unaffected — no template rows appear in transaction lists or balance calculations
+**Plans**: 2 plans
+Plans:
+
+**Wave 1**
+- [x] 26-01-PLAN.md — transaction_templates migration + domain.TransactionTemplate/TransactionTemplatePayload types + payload round-trip test (both split modes, amount/date drop) (TMPL-01, TMPL-05)
+
+**Wave 2** *(blocked on 26-01)*
+- [x] 26-02-PLAN.md — entity.TransactionTemplate JSONB Scan/Value + domain<->entity converters + hooks + converter round-trip test; isolation from financial queries (TMPL-01, TMPL-05)
+
+### Phase 27: Backend CRUD API
+**Goal**: A fully functional, IDOR-scoped template API exists at `/api/transaction-templates` with cap enforcement that is race-safe — any authenticated user can create up to 3 personal templates, list, update, and delete them, and no user can access another user's templates
+**Depends on**: Phase 26
+**Requirements**: TMPL-02, TMPL-03, TMPL-04, SAFE-01, SAFE-02
+**Success Criteria** (what must be TRUE):
+  1. GET /api/transaction-templates returns only the authenticated user's templates (never another user's), ordered by created_at ASC
+  2. POST /api/transaction-templates creates a template and returns it; a second concurrent POST when count is already 3 returns an error with tag `TEMPLATE.LIMIT_REACHED` (race-safe via conditional INSERT)
+  3. PUT /api/transaction-templates/:id updates the template's fields including tag replacement; requesting with another user's template ID returns 404, not 403
+  4. DELETE /api/transaction-templates/:id removes the template and its tag associations; requesting with another user's template ID returns 404
+  5. Swagger documentation is generated and reflects all four endpoints with correct request/response schemas
+**Plans**: 4 plans
+Plans:
+
+**Wave 1**
+- [x] 27-01-PLAN.md — TEMPLATE.* errors + request DTOs + TransactionTemplateRepository (race-safe cap + IDOR scoping) + mocks
+
+**Wave 2** *(blocked on 27-01)*
+- [x] 27-02-PLAN.md — TransactionTemplateService (IDOR arg, validation, duplicate-name 409, cap translation) + suite wiring + service mock
+
+**Wave 3** *(blocked on 27-02)*
+- [x] 27-03-PLAN.md — TransactionTemplateHandler (4 routes + Swagger) + main.go DI/routes + generate-docs + handler tests
+- [x] 27-04-PLAN.md — testcontainers integration suite: cap race (SAFE-01), IDOR 404 (SAFE-02), duplicate, validation, ordering, isolation
+
+### Phase 28: SplitSettingsFields Template Mode
+**Goal**: The `SplitSettingsFields` component works correctly in a no-amount context — the template form can embed it without displaying a misleading "R$0,00" live calculation or causing confusing UX when no amount is present
+**Depends on**: Phase 26 (domain types must exist for the frontend schema to reference)
+**Requirements**: MNG-03
+**Success Criteria** (what must be TRUE):
+  1. When `SplitSettingsFields` is rendered inside the template form (where no amount field exists), the live percentage-of-total or amount calculation display is suppressed or replaced with a neutral indicator — no "R$0,00" is shown to the user
+  2. The split mode toggle (percentage vs fixed-amount) still works correctly in template context, allowing the user to choose how the split is saved
+  3. The existing transaction form's `SplitSettingsFields` behavior is unchanged — the prop or conditional is additive, not a breaking change
+**UI hint**: yes
+**Plans**: 1 plan
+Plans:
+
+**Wave 1**
+- [x] 28-01-PLAN.md — templateMode prop threaded through SplitRow → SplitRowControls; previews suppressed (D-01: hidden, no placeholder); %/R$ toggle preserved; testids + vitest coverage
+
+### Phase 29: Frontend Chip Apply Flow
+**Goal**: Users see a row of template chips at the top of the transaction form; clicking a chip fills the form with the template's saved values, leaves the amount blank and focused, and handles stale references (deleted account, category, connection) without errors or crashes
+**Depends on**: Phase 27 (API must exist), Phase 28 (SplitSettingsFields mode resolved before split apply can be tested)
+**Requirements**: APPLY-01, APPLY-02, APPLY-03, APPLY-04
+**Success Criteria** (what must be TRUE):
+  1. The chip row is visible at the top of the transaction form when the user has at least one template; it is absent when the user has no templates (conditional render)
+  2. Clicking a chip calls `reset()` with the template's fields, sets `amount: 0` and `date: today`, and moves keyboard focus to the amount field — the user's next keystroke enters the amount
+  3. The split configuration from the template is applied to the form on chip click, preserving percentage vs fixed-amount mode so the form shows the correct split UI without requiring re-selection
+  4. Clicking a chip when the template's account has been deleted clears the account field but preserves all other fields; clicking when the template's category or tags have been deleted silently clears only those fields — no error, no blank form, no crash
+**UI hint**: yes
+**Plans**: TBD
+
+### Phase 30: Frontend Management UI
+**Goal**: Users can create, edit, and delete templates from a dedicated management drawer and can save the current transaction form's state as a new template via a "Save as template" action — completing the full self-service lifecycle
+**Depends on**: Phase 28 (SplitSettingsFields mode resolved for TemplateForm), Phase 29 (chip row exists so mutations immediately reflect in chips)
+**Requirements**: MNG-01, MNG-02
+**Success Criteria** (what must be TRUE):
+  1. A user can open the template management drawer from within the transactions area; inside it they can see all their templates listed by name with type and account visible
+  2. A user can create a new template from the management drawer with a name, type, account, category, tags, description, and split config — the chip row updates immediately after creation
+  3. A user can edit an existing template's saved fields from the management drawer; changes are reflected in the chip row without a page reload
+  4. A user can delete a template from the management drawer; the corresponding chip disappears immediately
+  5. A user can click "Save as template" inside the create-transaction form to save the current form's fields as a new template (name auto-suggested from description); the action is disabled when the user already has 3 templates
+**UI hint**: yes
+**Plans**: 3/3 plans complete (30-01: mutation data layer done; 30-02: TemplateForm + TemplatesManagementDrawer done; 30-03: Save-as-template mini-drawer + footer button done)
+
+### Phase 31: E2E Acceptance
+**Goal**: Playwright end-to-end tests verify the complete template lifecycle — chip apply, management CRUD, cap enforcement, and stale-reference degradation — across real browser interactions, providing an acceptance gate before shipping v1.7
+**Depends on**: Phase 29, Phase 30
+**Requirements**: (cross-cutting acceptance coverage for TMPL-01..05, APPLY-01..04, MNG-01..03, SAFE-01..02)
+**Success Criteria** (what must be TRUE):
+  1. E2E test: create a template → chip appears in the transaction form; click chip → form is filled, amount field is blank and focused, date is today
+  2. E2E test: edit a template → chip label updates; delete a template → chip disappears
+  3. E2E test: attempt to create a 4th template → "Save as template" is disabled and the management drawer's create button is disabled
+  4. E2E test: apply a template whose account was deleted → account field is blank, all other fields are filled, no error shown
+  5. E2E test: create 3 templates, create several transactions → account balances are unaffected (templates are isolated from financial queries)
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -234,11 +337,17 @@ Plans:
 | 19. Scope & Debounce Duplicate Check | v1.5 | ad-hoc | Complete | 2026-05-07 |
 | 20. Virtualize Import Review Table | v1.5 | — | Skipped | 2026-05-07 |
 | 21. Verification & E2E Coverage | v1.5 | ad-hoc | Complete | 2026-05-07 |
-| 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete    | 2026-05-30 |
-| 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete   | 2026-05-30 |
+| 22. Backend Subscription Foundation | v1.6 | 3/3 | Complete | 2026-05-30 |
+| 23. Backend Notification Events & Inbox API | v1.6 | 3/3 | Complete | 2026-05-30 |
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
+| 26. Backend Foundation | v1.7 | 2/2 | Complete    | 2026-06-14 |
+| 27. Backend CRUD API | v1.7 | 4/4 | Complete | 2026-07-09 |
+| 28. SplitSettingsFields Template Mode | v1.7 | 1/1 | Complete | 2026-07-09 |
+| 29. Frontend Chip Apply Flow | v1.7 | 2/2 | Complete | 2026-07-09 |
+| 30. Frontend Management UI | v1.7 | 3/3 | Complete | 2026-07-10 |
+| 31. E2E Acceptance | v1.7 | 0/? | Not started | - |
 
 ---
 
-_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 shipped: 2026-05-07 · v1.6 started: 2026-05-30_
+_Roadmap started: 2026-04-09 · v1.0 shipped: 2026-04-10 · v1.1 shipped: 2026-04-16 · v1.2 shipped: 2026-04-17 · v1.3 shipped: 2026-04-20 · v1.4 shipped: 2026-05-05 · v1.5 shipped: 2026-05-07 · v1.6 started: 2026-05-30 · v1.7 planned: 2026-06-08_

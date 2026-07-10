@@ -1,4 +1,4 @@
-import { Box, Button, Group } from "@mantine/core";
+import { Box, Button, Group, Tooltip } from "@mantine/core";
 import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { TransactionsTestIds } from "@/testIds";
@@ -7,6 +7,10 @@ interface Props {
   loading: boolean;
   /** Optional "Salvar e criar outra" handler — a wrapped RHF submit. */
   onSaveAndCreateAnother?: () => void;
+  /** Create-form only (MNG-02): opens the SaveAsTemplateDrawer. Absent on the edit form. */
+  onSaveAsTemplate?: () => void;
+  /** Disables the "Salvar como modelo" button when the user is at the 3-template cap. */
+  saveAsTemplateDisabled?: boolean;
 }
 
 const desktopFooterStyle: React.CSSProperties = {
@@ -26,26 +30,53 @@ const mobileFooterStyle: React.CSSProperties = {
   marginTop: "var(--mantine-spacing-md)",
 };
 
-export function TransactionFormFooter({ loading, onSaveAndCreateAnother }: Props) {
+export function TransactionFormFooter({
+  loading,
+  onSaveAndCreateAnother,
+  onSaveAsTemplate,
+  saveAsTemplateDisabled,
+}: Props) {
   const isMobile = useIsMobile();
+
+  const saveAsTemplateButton = onSaveAsTemplate && (
+    <Tooltip label="Você já tem 3 modelos" disabled={!saveAsTemplateDisabled}>
+      <Button
+        type="button"
+        variant="subtle"
+        size={isMobile ? "sm" : undefined}
+        fullWidth={isMobile}
+        disabled={saveAsTemplateDisabled}
+        onClick={onSaveAsTemplate}
+        data-testid={TransactionsTestIds.BtnSaveAsTemplate}
+      >
+        Salvar como modelo
+      </Button>
+    </Tooltip>
+  );
 
   if (isMobile) {
     // Salvar lives in the drawer header on mobile. Footer only carries the
-    // secondary "Salvar e criar outra" action and is not sticky so it doesn't
-    // overlap form fields when the on-screen keyboard opens.
-    if (!onSaveAndCreateAnother) return null;
+    // secondary "Salvar e criar outra" / "Salvar como modelo" actions and is
+    // not sticky so it doesn't overlap form fields when the on-screen
+    // keyboard opens.
+    if (!onSaveAndCreateAnother && !onSaveAsTemplate) return null;
     return (
       <Box style={mobileFooterStyle}>
-        <Button
-          type="button"
-          variant="subtle"
-          fullWidth
-          size="sm"
-          loading={loading}
-          onClick={onSaveAndCreateAnother}
-        >
-          Salvar e criar outra
-        </Button>
+        <Group gap="xs" grow={!!(onSaveAndCreateAnother && onSaveAsTemplate)}>
+          {onSaveAndCreateAnother && (
+            <Button
+              type="button"
+              variant="subtle"
+              fullWidth={!onSaveAsTemplate}
+              size="sm"
+              loading={loading}
+              onClick={onSaveAndCreateAnother}
+            >
+              Salvar e criar outra
+            </Button>
+          )}
+          {saveAsTemplateButton}
+        </Group>
       </Box>
     );
   }
@@ -53,19 +84,22 @@ export function TransactionFormFooter({ loading, onSaveAndCreateAnother }: Props
   return (
     <Box style={desktopFooterStyle}>
       <Group justify="space-between">
-        {onSaveAndCreateAnother ? (
-          <Button
-            type="button"
-            variant="subtle"
-            loading={loading}
-            onClick={onSaveAndCreateAnother}
-            rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
-          >
-            Salvar e criar outra
-          </Button>
-        ) : (
-          <span />
-        )}
+        <Group gap="xs">
+          {onSaveAndCreateAnother ? (
+            <Button
+              type="button"
+              variant="subtle"
+              loading={loading}
+              onClick={onSaveAndCreateAnother}
+              rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
+            >
+              Salvar e criar outra
+            </Button>
+          ) : (
+            <span />
+          )}
+          {saveAsTemplateButton}
+        </Group>
         <Button
           type="submit"
           loading={loading}

@@ -155,6 +155,7 @@ export function CreateTransactionDrawer({ initialType = "expense" }: CreateTrans
           onSaveAndCreateAnother={handleSaveAndCreateAnother}
           isPending={mutation.isPending}
           submitError={submitError}
+          showTemplateChips
         />
       </FormProvider>
     </ResponsiveDrawer>

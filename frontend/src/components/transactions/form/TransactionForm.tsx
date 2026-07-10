@@ -27,11 +27,18 @@ import { AccountAvatar } from "@/components/AccountAvatar";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
+import { useTags } from "@/hooks/useTags";
+import { useTransactionTemplates } from "@/hooks/useTransactionTemplates";
+import { renderDrawer } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionAccordionSections } from "./TransactionAccordionSections";
 import { DateQuickChips } from "./DateQuickChips";
+import { TemplateQuickChips } from "./TemplateQuickChips";
+import { buildTemplateFormPatch } from "./applyTemplate";
+import { buildTemplatePayloadFromForm } from "./buildTemplatePayload";
+import { SaveAsTemplateDrawer } from "@/components/transactions/templates/SaveAsTemplateDrawer";
 import { TransactionFormFooter } from "./TransactionFormFooter";
 import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
@@ -138,6 +145,8 @@ interface Props {
   lockTransactionType?: boolean;
   /** Hides the recurrence section entirely (e.g. charge-generated transfers). */
   hideRecurrence?: boolean;
+  /** Show the template quick-apply chip row (create mode only). */
+  showTemplateChips?: boolean;
 }
 
 export interface LockedAccountInfo {
@@ -160,14 +169,19 @@ export const TransactionForm = ({
   lockedDestinationAccount,
   lockTransactionType = false,
   hideRecurrence = false,
+  showTemplateChips = false,
 }: Props) => {
   const fallbackId = useId();
   const resolvedFormId = formId ?? fallbackId;
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
+  const { query: tagsQuery } = useTags();
+  const { query: templatesQuery } = useTransactionTemplates();
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const tags = tagsQuery.data ?? [];
+  const templates = templatesQuery.data ?? [];
 
   const {
     control,
@@ -176,6 +190,7 @@ export const TransactionForm = ({
     setError,
     clearErrors,
     setFocus,
+    getValues,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
@@ -238,6 +253,41 @@ export const TransactionForm = ({
     setValue("split_settings", []);
   }
 
+  /**
+   * Applies a saved template to the form (APPLY-02): overwrites the current
+   * input with the template's fields, leaves the amount blank, and moves
+   * focus there so the next keystroke enters the amount. Stale references
+   * (deleted account/category/tag) are cleared by buildTemplateFormPatch
+   * (APPLY-04); split_settings are prefilled and remain editable (APPLY-03).
+   */
+  function handleApplyTemplate(template: Transactions.Template) {
+    const patch = buildTemplateFormPatch(template.payload, { accounts, categories, tags });
+    setValue("transaction_type", patch.transaction_type);
+    setValue("description", patch.description);
+    setValue("account_id", patch.account_id);
+    setValue("category_id", patch.category_id);
+    setValue("destination_account_id", patch.destination_account_id);
+    setValue("tags", patch.tags);
+    setValue("split_settings", patch.split_settings);
+    setValue("amount", 0);
+    setFocus("amount");
+  }
+
+  /**
+   * MNG-02: snapshots the current form values, builds a `TemplatePayload`,
+   * and opens the confirm-name mini drawer. Backend also enforces the
+   * 3-template cap (defense in depth) — `atCap` below disables the trigger.
+   */
+  function handleSaveAsTemplate() {
+    const values = getValues();
+    const payload = buildTemplatePayloadFromForm(values, tags);
+    void renderDrawer(() => (
+      <SaveAsTemplateDrawer payload={payload} suggestedName={values.description ?? ""} />
+    ));
+  }
+
+  const atCap = templates.length >= 3;
+
   // Transfer source: personal accounts only (flat list)
   const personalAccountOptions = accounts
     .filter((a) => !a.user_connection)
@@ -289,6 +339,9 @@ export const TransactionForm = ({
     <form id={resolvedFormId} onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
         {headerContent}
+        {showTemplateChips && (
+          <TemplateQuickChips templates={templates} onApply={handleApplyTemplate} />
+        )}
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
             {generalError}
@@ -537,6 +590,8 @@ export const TransactionForm = ({
         onSaveAndCreateAnother={
           onSaveAndCreateAnother ? handleSubmit(onSaveAndCreateAnother, onInvalid) : undefined
         }
+        onSaveAsTemplate={showTemplateChips ? handleSaveAsTemplate : undefined}
+        saveAsTemplateDisabled={showTemplateChips ? atCap : undefined}
       />
       <Suspense>
         <DevTool control={control} />
