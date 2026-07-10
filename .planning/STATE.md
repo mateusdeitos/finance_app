@@ -3,25 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 29 complete (2/2 plans) -- TemplateQuickChips + apply flow wired into TransactionForm
-last_updated: "2026-07-09T19:55:54Z"
-last_activity: 2026-07-09 -- 29-02 (buildTemplateFormPatch, TemplateQuickChips, TransactionForm showTemplateChips wiring) executed -- Phase 29 (Frontend Chip Apply Flow) complete, APPLY-01..04 done
+stopped_at: Phase 30 in progress (1/3 plans) -- template mutation data layer (API + hooks + buildTemplatePayloadFromForm) landed
+last_updated: "2026-07-10T00:00:00Z"
+last_activity: 2026-07-10 -- 30-01 (createTransactionTemplate/updateTransactionTemplate/deleteTransactionTemplate API fns, useCreate/Update/DeleteTransactionTemplate mutation hooks, buildTemplatePayloadFromForm pure builder + 5 vitest cases) executed
 progress:
   total_phases: 15
   completed_phases: 8
-  total_plans: 25
-  completed_plans: 25
-  percent: 100
+  total_plans: 28
+  completed_plans: 26
+  percent: 93
 ---
 
 ## Current Position
 
-Phase: 29 complete (2/2 plans) -- next up: Phase 30 (Frontend Management UI)
-Plan: 29-02 complete
+Phase: 30 in progress (1/3 plans) -- TemplateForm + TemplatesManagementDrawer (30-02) and Save-as-template (30-03) remain
+Plan: 30-01 complete
 Status: Executing
-Last activity: 2026-07-09 -- 29-02 (buildTemplateFormPatch, TemplateQuickChips, TransactionForm showTemplateChips wiring) executed
+Last activity: 2026-07-10 -- 30-01 (template mutation API/hooks + buildTemplatePayloadFromForm) executed
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Project Reference
 
@@ -64,6 +64,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [28-01] templateMode is additive (default false) threaded through SplitSettingsFields -> SplitRow -> SplitRowControls; per-row `= R$ X` preview and `Soma X%` footer suppressed via explicit `&& !templateMode` guards (not just the pre-existing `totalAmount > 0` guard) per locked decision D-01 (suppress, no placeholder); %/R$ SegmentedControl toggle stays functional — Phase 28 (SplitSettingsFields Template Mode) is now complete, unblocking Phase 29/30
 - [29-01] Data layer only (read-only): Transactions.Template/TemplatePayload types reuse SplitSetting/TransactionType verbatim (no redeclaration); fetchTransactionTemplates mirrors fetchAccounts exactly (no Content-Type header on GET, credentials:'include' only) instead of the plan's illustrative snippet which included the header; useTransactionTemplates mirrors useAccounts's select-generic + invalidate + 5min staleTime shape — no mutation hooks yet (Phase 30 scope)
 - [29-02] buildTemplateFormPatch clears a stale account_id to 0 (the form's existing "unselected" sentinel), not undefined/null — TransactionFormValues.account_id is a strict non-nullable number in the zod schema; category_id/destination_account_id clear to null (nullable in schema); stale tag_ids are dropped, valid ones mapped to names. Return type is Pick<TransactionFormValues, ...> (fully-required 7-field subset) rather than the plan's illustrative Partial<TransactionFormValues>, avoiding non-null assertions at the TransactionForm call site. TemplateQuickChips is gated to create mode only via an additive showTemplateChips prop on TransactionForm (default false); CreateTransactionDrawer passes it, UpdateTransactionDrawer does not — Phase 29 (Frontend Chip Apply Flow) is now complete, APPLY-01..04 all done
+- [30-01] Data layer write side only (no UI yet): createTransactionTemplate/updateTransactionTemplate/deleteTransactionTemplate mirror categories.ts's exact fetch options + `data.message ?? 'fallback'` error-body parsing (including on DELETE, which the plan's illustrative snippet omitted); the 3 mutation hooks return `{ mutation }` only, caller owns `onSuccess`/invalidation, matching useCategories.ts. buildTemplatePayloadFromForm maps each split_settings row explicitly (`connection_id`/`percentage`/`amount`/`date: s.date ?? undefined`) instead of assigning `values.split_settings` directly — TransactionFormValues' split date is `string | null | undefined` (zod `.nullable().optional()`) while Transactions.SplitSetting.date is `string | undefined`, so a direct assignment fails tsc; mirrors buildTransactionPayload.ts's existing per-row date normalization. MNG-01/MNG-02 stay open (Pending) until 30-02/30-03 land the actual UI — this plan only unblocks them.
 
 ### Todos
 
@@ -71,7 +72,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - Run Phase 27 (27-04) testcontainers integration suite with Docker in CI to confirm SAFE-01/SAFE-02 assertions pass against a live PostgreSQL container
 - v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
 - v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
-- Phase 30 (Frontend Management UI): TemplatesManagementDrawer, TemplateForm, "Save as template" action, template mutation hooks (create/update/delete) — none exist yet, chip row will need to react to their invalidation
+- Phase 30 (Frontend Management UI), plans 02/03 remaining: TemplateForm, TemplatesManagementDrawer, toolbar "Gerenciar modelos" entry point (30-02); "Save as template" mini-drawer + footer button, 3-cap disable (30-03) — the mutation data layer (create/update/delete API + hooks + buildTemplatePayloadFromForm) landed in 30-01 and is ready to consume
 
 ### Blockers
 
@@ -90,6 +91,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-09T19:55:54Z
-Stopped at: Phase 29 complete (2/2 plans) -- TemplateQuickChips + apply flow wired into TransactionForm
-Resume file: None -- next up is Phase 30 (Frontend Management UI), not yet planned
+Last session: 2026-07-10T00:00:00Z
+Stopped at: Phase 30 in progress (1/3 plans) -- template mutation data layer landed
+Resume file: None -- next up is 30-02 (TemplateForm + TemplatesManagementDrawer + toolbar entry point)

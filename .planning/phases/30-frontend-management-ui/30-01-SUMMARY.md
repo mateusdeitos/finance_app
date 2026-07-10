@@ -120,3 +120,7 @@ None - no external service configuration required.
 ---
 *Phase: 30-frontend-management-ui*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+All created/modified files found on disk; all 4 task/summary commit hashes (`a031ace`, `239deef`, `76ae12e`, `f80d8ce`) found in git history.
