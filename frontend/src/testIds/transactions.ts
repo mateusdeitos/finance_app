@@ -72,6 +72,19 @@ export const TransactionsTestIds = {
   TemplateChipsRow: 'row_template_chips',
   TemplateChip: (id: number) => `chip_template_${id}` as const,
 
+  // Template management (MNG-01): entry point + management drawer + form drawer
+  MenuItemManageTemplates: 'menu_item_manage_templates',
+  TemplatesManagementDrawer: 'drawer_templates_management',
+  TemplateBtnNew: 'btn_template_new',
+  TemplateRow: (id: number) => `row_template_${id}` as const,
+  TemplateBtnEdit: (id: number) => `btn_template_edit_${id}` as const,
+  TemplateBtnDelete: (id: number) => `btn_template_delete_${id}` as const,
+  TemplateBtnConfirmDelete: (id: number) => `btn_template_confirm_delete_${id}` as const,
+  TemplateFormDrawer: 'drawer_template_form',
+  TemplateInputName: 'input_template_name',
+  TemplateBtnSave: 'btn_template_save',
+  TemplateFormError: 'alert_template_form_error',
+
   // Split
   InputSplitAmount: 'input_split_amount',
   InputSplitPercentage: 'input_split_percentage',
