@@ -167,17 +167,31 @@ export function TransactionsPage() {
   });
   const allTransactions = txQuery.data ?? [];
 
+  // Maps a settlement id -> its source transaction's recurrence id (or null).
+  // A settlement's recurrence lives on its SOURCE transaction, reachable two ways:
+  // inline settlements ride under the source tx (settlements_from_source), and the
+  // backend's synthetic orphan rows carry the source's recurrence on themselves.
+  // Covering both is required because a settlement can be selected from either
+  // rendering path — matching only origin_settlement_id misses the inline case.
+  const settlementRecurrenceById = useMemo(() => {
+    const m = new Map<number, number | null>();
+    for (const tx of txQuery.data ?? []) {
+      for (const s of tx.settlements_from_source ?? []) {
+        m.set(s.id, tx.transaction_recurrence_id ?? null);
+      }
+      if (tx.origin_settlement_id !== undefined) {
+        m.set(tx.origin_settlement_id, tx.transaction_recurrence_id ?? null);
+      }
+    }
+    return m;
+  }, [txQuery.data]);
+
   const hasRecurring =
     [...selectedIds].some((id) => {
       const tx = allTransactions.find((t) => t.id === id);
       return tx?.transaction_recurrence_id != null;
     }) ||
-    // A selected settlement belongs to a recurrence when its synthetic row
-    // (matched by origin_settlement_id) carries a transaction_recurrence_id.
-    [...selectedSettlementIds].some((sid) => {
-      const st = allTransactions.find((t) => t.origin_settlement_id === sid);
-      return st?.transaction_recurrence_id != null;
-    });
+    [...selectedSettlementIds].some((sid) => settlementRecurrenceById.get(sid) != null);
 
   // Filter out linked transactions where user is not the original creator (SEL-02 silent skip).
   // Used for bulk division, which the partner (to_user) is NOT allowed to perform on their
@@ -331,8 +345,8 @@ export function TransactionsPage() {
             if (item.id < 0) {
               const settlementId = -item.id;
               if (!settlementIdSet.has(settlementId)) return;
-              const st = allTransactions.find((t) => t.origin_settlement_id === settlementId);
-              const prop = st?.transaction_recurrence_id != null ? propagation : undefined;
+              const prop =
+                settlementRecurrenceById.get(settlementId) != null ? propagation : undefined;
               await deleteSettlement(settlementId, prop);
               return;
             }
