@@ -103,3 +103,7 @@ None - no external service configuration required.
 ---
 *Phase: 30-frontend-management-ui*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+All created files found on disk (`SaveAsTemplateDrawer.tsx`, `30-03-SUMMARY.md`); all 3 commit hashes (`ea30191`, `5f69a54`, `5bf446d`) found in git history.
