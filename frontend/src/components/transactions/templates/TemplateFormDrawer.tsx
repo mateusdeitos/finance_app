@@ -131,6 +131,9 @@ export function TemplateFormDrawer({ template }: Props) {
               data-testid={TransactionsTestIds.TemplateInputName}
             />
 
+            {/* Type/account/category/tags/description + SplitSettingsFields
+                (rendered with templateMode, so no R$0,00 preview) live in
+                TemplateFormFields — split out to keep this file under ~200 lines. */}
             <TemplateFormFields />
 
             <Group justify="flex-end" mt="sm">
