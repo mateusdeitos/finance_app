@@ -39,6 +39,7 @@ import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDr
 import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
 import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
+import { canDeleteTransaction } from "@/utils/transactionEligibility";
 import { TransactionsTestIds } from "@/testIds";
 
 // A selectable row within a group. Transactions and settlements interleave
@@ -172,9 +173,9 @@ export function TransactionsPage() {
   });
 
   // Filter out linked transactions where user is not the original creator (SEL-02 silent skip).
-  // Used for actions that the partner (to_user) is NOT allowed to perform on their own
-  // linked side: bulk delete (the backend cascades a partner delete onto the author's
-  // source) and bulk division (split_settings is a disallowed field for linked txs).
+  // Used for bulk division, which the partner (to_user) is NOT allowed to perform on their
+  // own linked side (split_settings is a disallowed field for linked txs). Delete uses the
+  // partner-inclusive getDeletableIds; date/category use getFieldEditEligibleIds.
   function getEligibleIds(): number[] {
     return [...selectedIds].filter((id) => {
       const tx = allTransactions.find((t) => t.id === id);
@@ -199,6 +200,18 @@ export function TransactionsPage() {
         tx.original_user_id === currentUserId
       );
     });
+  }
+
+  // Delete-specific eligibility: the backend now lets the "ponta" delete their own side
+  // of a shared transaction, so a row the user owns is deletable even when they didn't
+  // author it (original_user_id === partner). See canDeleteTransaction.
+  function getDeletableIds(): number[] {
+    return [...selectedIds].filter((id) =>
+      canDeleteTransaction(
+        allTransactions.find((t) => t.id === id),
+        currentUserId,
+      ),
+    );
   }
 
   // Division-specific eligibility: also excludes transfers (D-10).
@@ -283,7 +296,7 @@ export function TransactionsPage() {
         propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />);
       }
 
-      const eligibleIds = getEligibleIds();
+      const eligibleIds = getDeletableIds();
       const items: BulkProgressItem[] = eligibleIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id);
         return { id, label: tx?.description ?? String(id) };
