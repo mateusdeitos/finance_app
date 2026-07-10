@@ -3,25 +3,25 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 27 Plan 04 executed (Phase 27 complete)
-last_updated: "2026-07-09T00:01:40Z"
-last_activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
+stopped_at: Phase 29 complete (2/2 plans) -- TemplateQuickChips + apply flow wired into TransactionForm
+last_updated: "2026-07-09T19:55:54Z"
+last_activity: 2026-07-09 -- 29-02 (buildTemplateFormPatch, TemplateQuickChips, TransactionForm showTemplateChips wiring) executed -- Phase 29 (Frontend Chip Apply Flow) complete, APPLY-01..04 done
 progress:
   total_phases: 15
-  completed_phases: 6
-  total_plans: 23
-  completed_plans: 22
-  percent: 96
+  completed_phases: 8
+  total_plans: 25
+  completed_plans: 25
+  percent: 100
 ---
 
 ## Current Position
 
-Phase: 27 (complete) -- Phase 28 next
-Plan: 04 complete (Phase 27 finished: 4/4 plans)
+Phase: 29 complete (2/2 plans) -- next up: Phase 30 (Frontend Management UI)
+Plan: 29-02 complete
 Status: Executing
-Last activity: 2026-07-09 -- 27-04 (testcontainers integration suite: cap race SAFE-01, IDOR 404 SAFE-02, duplicate, validation, ordering, isolation) executed -- Phase 27 complete
+Last activity: 2026-07-09 -- 29-02 (buildTemplateFormPatch, TemplateQuickChips, TransactionForm showTemplateChips wiring) executed
 
-Progress: [██████████] 96%
+Progress: [██████████] 100%
 
 ## Project Reference
 
@@ -61,6 +61,9 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [27-03] PUT /api/transaction-templates/:id returns 204 (no re-fetch) since this phase has no GET /:id endpoint; client already holds the full replacement payload it sent
 - [27-03] Handler tests prove IDOR by sending a spoofed `user_id` in the Create request body (silently dropped by lenient unmarshal, no UserID field on the DTO) and asserting the mock receives the CONTEXT userID instead
 - [27-04] testcontainers integration suite (no `//go:build integration` tag, matching `user_connection_service_test.go` precedent) proves SAFE-01 (concurrent double-create at count=2 -> exactly one success + one TEMPLATE.LIMIT_REACHED, final count==3) and SAFE-02 (cross-user Update/Delete -> pkgErrors.IsNotFound, never Forbidden) against real PostgreSQL; Docker unavailable in this execution environment ("rootless Docker not found"), so the suite compiles/vets clean but actual execution is deferred to CI — Phase 27 (Backend CRUD API) is now fully complete
+- [28-01] templateMode is additive (default false) threaded through SplitSettingsFields -> SplitRow -> SplitRowControls; per-row `= R$ X` preview and `Soma X%` footer suppressed via explicit `&& !templateMode` guards (not just the pre-existing `totalAmount > 0` guard) per locked decision D-01 (suppress, no placeholder); %/R$ SegmentedControl toggle stays functional — Phase 28 (SplitSettingsFields Template Mode) is now complete, unblocking Phase 29/30
+- [29-01] Data layer only (read-only): Transactions.Template/TemplatePayload types reuse SplitSetting/TransactionType verbatim (no redeclaration); fetchTransactionTemplates mirrors fetchAccounts exactly (no Content-Type header on GET, credentials:'include' only) instead of the plan's illustrative snippet which included the header; useTransactionTemplates mirrors useAccounts's select-generic + invalidate + 5min staleTime shape — no mutation hooks yet (Phase 30 scope)
+- [29-02] buildTemplateFormPatch clears a stale account_id to 0 (the form's existing "unselected" sentinel), not undefined/null — TransactionFormValues.account_id is a strict non-nullable number in the zod schema; category_id/destination_account_id clear to null (nullable in schema); stale tag_ids are dropped, valid ones mapped to names. Return type is Pick<TransactionFormValues, ...> (fully-required 7-field subset) rather than the plan's illustrative Partial<TransactionFormValues>, avoiding non-null assertions at the TransactionForm call site. TemplateQuickChips is gated to create mode only via an additive showTemplateChips prop on TransactionForm (default false); CreateTransactionDrawer passes it, UpdateTransactionDrawer does not — Phase 29 (Frontend Chip Apply Flow) is now complete, APPLY-01..04 all done
 
 ### Todos
 
@@ -68,7 +71,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - Run Phase 27 (27-04) testcontainers integration suite with Docker in CI to confirm SAFE-01/SAFE-02 assertions pass against a live PostgreSQL container
 - v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
 - v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
-- Phase 29: Read `CurrencyInput.tsx` before implementing `reset({ amount: 0 })` to confirm blank display behavior
+- Phase 30 (Frontend Management UI): TemplatesManagementDrawer, TemplateForm, "Save as template" action, template mutation hooks (create/update/delete) — none exist yet, chip row will need to react to their invalidation
 
 ### Blockers
 
@@ -87,6 +90,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-09T00:01:40Z
-Stopped at: Phase 27 Plan 04 executed (Phase 27 complete)
-Resume file: .planning/phases/28-splitsettingsfields-template-mode (Phase 28 not yet planned)
+Last session: 2026-07-09T19:55:54Z
+Stopped at: Phase 29 complete (2/2 plans) -- TemplateQuickChips + apply flow wired into TransactionForm
+Resume file: None -- next up is Phase 30 (Frontend Management UI), not yet planned

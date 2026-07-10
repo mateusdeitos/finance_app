@@ -184,6 +184,25 @@ export namespace Transactions {
     date?: string;
   }
 
+  export interface TemplatePayload {
+    type: TransactionType;
+    account_id?: number | null;
+    category_id?: number | null;
+    destination_account_id?: number | null;
+    description: string;
+    tag_ids?: number[];
+    split_settings?: SplitSetting[];
+  }
+
+  export interface Template {
+    id: number;
+    user_id: number;
+    name: string;
+    payload: TemplatePayload;
+    created_at?: string;
+    updated_at?: string;
+  }
+
   export interface CreateTransactionPayload {
     transaction_type: TransactionType;
     account_id?: number;

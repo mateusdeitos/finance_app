@@ -68,10 +68,18 @@ export const TransactionsTestIds = {
   DateChip: (key: 'today' | 'yesterday' | 'day_before') =>
     `chip_date_${key}` as const,
 
+  // Template quick-apply chips at the top of the create form.
+  TemplateChipsRow: 'row_template_chips',
+  TemplateChip: (id: number) => `chip_template_${id}` as const,
+
   // Split
   InputSplitAmount: 'input_split_amount',
   InputSplitPercentage: 'input_split_percentage',
   BtnAddSplitRow: 'btn_add_split_row',
+  SplitRowPreview: (rowIndex: number | string) => `text_split_preview_${rowIndex}` as const,
+  SplitSumFooter: 'text_split_sum_footer',
+  SegmentedSplitMode: 'segmented_split_mode',
+  SegmentSplitMode: (mode: 'percentage' | 'amount') => `segment_split_mode_${mode}` as const,
 
   // Transfer row avatar pair
   TransferAvatarGroup: 'transfer_avatar_group',

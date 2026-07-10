@@ -9,7 +9,7 @@
 - ✅ **v1.4 Bulk Update Split Settings** — Phases 13–15 (shipped 2026-05-05)
 - ✅ **v1.5 Import Transactions Performance** — Phases 16–21 (shipped 2026-05-07; Phase 20 skipped)
 - 🚧 **v1.6 Push Notifications** — Phases 22–25 (in progress)
-- 📋 **v1.7 Transaction Templates** — Phases 26–31 (planned)
+- 🚧 **v1.7 Transaction Templates** — Phases 26–31 (in progress)
 
 ## Phases
 
@@ -93,8 +93,8 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 
 - [x] **Phase 26: Backend Foundation** - DB migration (JSONB payload + typed write-boundary struct), domain/entity types, financial-query isolation — 2/2 plans complete
 - [x] **Phase 27: Backend CRUD API** - repository, service (cap + IDOR), handler, wiring, Swagger — 4/4 plans complete
-- [ ] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context
-- [ ] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling
+- [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
+- [x] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 2/2 plans complete
 - [ ] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template
 - [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
 
@@ -269,7 +269,11 @@ Plans:
   2. The split mode toggle (percentage vs fixed-amount) still works correctly in template context, allowing the user to choose how the split is saved
   3. The existing transaction form's `SplitSettingsFields` behavior is unchanged — the prop or conditional is additive, not a breaking change
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+
+**Wave 1**
+- [x] 28-01-PLAN.md — templateMode prop threaded through SplitRow → SplitRowControls; previews suppressed (D-01: hidden, no placeholder); %/R$ toggle preserved; testids + vitest coverage
 
 ### Phase 29: Frontend Chip Apply Flow
 **Goal**: Users see a row of template chips at the top of the transaction form; clicking a chip fills the form with the template's saved values, leaves the amount blank and focused, and handles stale references (deleted account, category, connection) without errors or crashes
@@ -338,9 +342,9 @@ Plans:
 | 24. Frontend Permission, Subscribe & Service Worker | v1.6 | 5/5 | Complete (UAT pending) | 2026-05-30 |
 | 25. Frontend Notification Inbox | v1.6 | 5/5 | Complete (e2e CI-deferred) | 2026-05-30 |
 | 26. Backend Foundation | v1.7 | 2/2 | Complete    | 2026-06-14 |
-| 27. Backend CRUD API | v1.7 | 2/4 | In Progress | - |
-| 28. SplitSettingsFields Template Mode | v1.7 | 0/? | Not started | - |
-| 29. Frontend Chip Apply Flow | v1.7 | 0/? | Not started | - |
+| 27. Backend CRUD API | v1.7 | 4/4 | Complete | 2026-07-09 |
+| 28. SplitSettingsFields Template Mode | v1.7 | 1/1 | Complete | 2026-07-09 |
+| 29. Frontend Chip Apply Flow | v1.7 | 2/2 | Complete | 2026-07-09 |
 | 30. Frontend Management UI | v1.7 | 0/? | Not started | - |
 | 31. E2E Acceptance | v1.7 | 0/? | Not started | - |
 
