@@ -15,6 +15,7 @@ type Notification struct {
 	Read        bool    `gorm:"not null;default:false"`
 	Description *string `gorm:"column:description"`
 	Amount      *int64  `gorm:"column:amount"`
+	TxType      *string `gorm:"column:tx_type"`
 	CreatedAt   *time.Time
 }
 
@@ -28,6 +29,7 @@ func (e *Notification) ToDomain() *domain.Notification {
 		Read:        e.Read,
 		Description: e.Description,
 		Amount:      e.Amount,
+		TxType:      e.TxType,
 		CreatedAt:   e.CreatedAt,
 	}
 }
@@ -42,5 +44,6 @@ func NotificationFromDomain(d *domain.Notification) *Notification {
 		Read:        d.Read,
 		Description: d.Description,
 		Amount:      d.Amount,
+		TxType:      d.TxType,
 	}
 }

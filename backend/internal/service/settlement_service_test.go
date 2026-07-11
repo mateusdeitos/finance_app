@@ -367,6 +367,8 @@ func (suite *SettlementServiceWithDBTestSuite) TestDeleteSettlementCurrentRemove
 	suite.Require().NotNil(found, "partner receives shared_transaction_deleted")
 	suite.Assert().Equal(settlement.Amount, lo.FromPtr(found.Amount))
 	suite.Assert().Equal("shared expense", lo.FromPtr(found.Description))
+	suite.Assert().Equal(string(domain.TransactionTypeExpense), lo.FromPtr(found.TxType),
+		"tx_type persisted so the inbox renders the gendered noun")
 }
 
 // TestDeleteSettlementForbiddenForNonOwner: only the settlement owner (author) may delete it.

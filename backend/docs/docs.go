@@ -3593,6 +3593,10 @@ const docTemplate = `{
                 "read": {
                     "type": "boolean"
                 },
+                "tx_type": {
+                    "description": "TxType is the underlying transaction type (\"expense\" | \"income\" | \"transfer\")\npersisted so the in-app inbox can render the gendered noun (despesa/receita)\nmatching the push copy, even after the referenced entity is gone.",
+                    "type": "string"
+                },
                 "type": {
                     "type": "string"
                 },

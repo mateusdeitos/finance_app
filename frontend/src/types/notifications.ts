@@ -24,6 +24,12 @@ export namespace Notifications {
      * different (full) amount than the removed share.
      */
     amount?: number
+    /**
+     * Underlying transaction type ('expense' | 'income' | 'transfer'); omitted
+     * when null. Used to render the gendered noun (despesa/receita) in the inbox
+     * copy, matching the push notification.
+     */
+    tx_type?: 'expense' | 'income' | 'transfer'
     created_at: string // ISO 8601
   }
 

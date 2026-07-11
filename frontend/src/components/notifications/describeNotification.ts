@@ -59,11 +59,15 @@ export function describeNotification(
       return `${who} te transferiu ${amountState === 'missing' ? DASH : amt}`
 
     case 'shared_transaction_deleted': {
-      if (amountState === 'loading') return `${who} removeu uma transação compartilhada`
+      // Gendered noun mirrors the push copy; falls back to the generic
+      // "transação" when the type is unknown.
+      const noun =
+        n.tx_type === 'expense' ? 'despesa' : n.tx_type === 'income' ? 'receita' : 'transação'
+      if (amountState === 'loading') return `${who} removeu uma ${noun} compartilhada`
       const value = amountState === 'missing' ? DASH : amt
       return ctx.description
-        ? `${who} removeu uma transação compartilhada de ${value}: ${ctx.description}`
-        : `${who} removeu uma transação compartilhada de ${value}`
+        ? `${who} removeu uma ${noun} compartilhada de ${value}: ${ctx.description}`
+        : `${who} removeu uma ${noun} compartilhada de ${value}`
     }
 
     default:

@@ -40,7 +40,11 @@ type Notification struct {
 	// Amount é o valor (em centavos) associado à notificação. Persistido para que
 	// o corpo mostre o valor mesmo quando a entidade referenciada foi apagada
 	// (ex.: exclusão de transação compartilhada, onde não há mais o que resolver).
-	Amount    *int64     `json:"amount,omitempty"`
+	Amount *int64 `json:"amount,omitempty"`
+	// TxType is the underlying transaction type ("expense" | "income" | "transfer")
+	// persisted so the in-app inbox can render the gendered noun (despesa/receita)
+	// matching the push copy, even after the referenced entity is gone.
+	TxType    *string    `json:"tx_type,omitempty"`
 	CreatedAt *time.Time `json:"created_at"`
 }
 

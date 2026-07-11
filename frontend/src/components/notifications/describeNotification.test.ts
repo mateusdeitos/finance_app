@@ -193,6 +193,24 @@ describe('describeNotification', () => {
       )
       expect(result).toBe(`${PARTNER} removeu uma transação compartilhada`)
     })
+
+    it('renders the gendered noun from tx_type (expense)', () => {
+      const result = describeNotification(
+        { ...makeNotification('shared_transaction_deleted', 'transaction'), tx_type: 'expense' },
+        { amount: AMOUNT, amountState: 'known', partnerName: PARTNER, description: 'Mercado' },
+      )
+      expect(result).toBe(
+        `${PARTNER} removeu uma despesa compartilhada de ${formatBalance(AMOUNT)}: Mercado`,
+      )
+    })
+
+    it('renders the gendered noun from tx_type (income)', () => {
+      const result = describeNotification(
+        { ...makeNotification('shared_transaction_deleted', 'transaction'), tx_type: 'income' },
+        { amount: AMOUNT, amountState: 'known', partnerName: PARTNER, description: null },
+      )
+      expect(result).toBe(`${PARTNER} removeu uma receita compartilhada de ${formatBalance(AMOUNT)}`)
+    })
   })
 
   // fallbacks

@@ -76,6 +76,14 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 			a := ev.Amount
 			amount = &a
 		}
+		// Persist the transaction type so the inbox can render the gendered noun
+		// (despesa/receita) matching the push copy. Store nil for an empty kind to
+		// keep the column NULL.
+		var txType *string
+		if ev.TxKind != "" {
+			k := ev.TxKind
+			txType = &k
+		}
 		_, err := s.notifRepo.Create(ctx, &domain.Notification{
 			UserID:      ev.RecipientUserID,
 			Type:        ev.Type,
@@ -83,6 +91,7 @@ func (s *notificationService) Dispatch(ctx context.Context, events []domain.Noti
 			EntityID:    ev.EntityID,
 			Description: description,
 			Amount:      amount,
+			TxType:      txType,
 		})
 		if err != nil {
 			log.Printf("[notification] failed to persist row: %v", err)

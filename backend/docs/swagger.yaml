@@ -246,6 +246,12 @@ definitions:
         type: integer
       read:
         type: boolean
+      tx_type:
+        description: |-
+          TxType is the underlying transaction type ("expense" | "income" | "transfer")
+          persisted so the in-app inbox can render the gendered noun (despesa/receita)
+          matching the push copy, even after the referenced entity is gone.
+        type: string
       type:
         type: string
       user_id:
