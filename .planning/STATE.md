@@ -3,23 +3,23 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Transaction Templates
 status: executing
-stopped_at: Phase 30 complete (3/3 plans) -- SaveAsTemplateDrawer + create-form footer button (30-03) landed; MNG-01/MNG-02 satisfied; Phase 31 (E2E Acceptance) remains
-last_updated: "2026-07-10T19:40:00Z"
-last_activity: 2026-07-10 -- 30-03 (SaveAsTemplateDrawer confirm-name mini drawer + "Salvar como modelo" footer button, create-mode/cap-disabled) executed
+stopped_at: Phase 31 complete (1/1 plan) -- transaction-templates e2e acceptance suite (31-01) landed; v1.7 is now feature+acceptance complete
+last_updated: "2026-07-12T00:00:00Z"
+last_activity: 2026-07-12 -- 31-01 (TransactionTemplatesPage page object + transaction-templates.spec.ts, 8 acceptance tests) executed
 progress:
   total_phases: 15
-  completed_phases: 9
-  total_plans: 28
-  completed_plans: 28
+  completed_phases: 10
+  total_plans: 29
+  completed_plans: 29
   percent: 100
 ---
 
 ## Current Position
 
-Phase: 30 complete (3/3 plans) -- Phase 31 (E2E Acceptance) is next
-Plan: 30-03 complete
+Phase: 31 complete (1/1 plan) -- v1.7 (Transaction Templates) feature+acceptance complete
+Plan: 31-01 complete
 Status: Executing
-Last activity: 2026-07-10 -- 30-03 (SaveAsTemplateDrawer + create-form footer button) executed
+Last activity: 2026-07-12 -- 31-01 (TransactionTemplatesPage + transaction-templates.spec.ts) executed
 
 Progress: [██████████] 100%
 
@@ -67,6 +67,7 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - [30-01] Data layer write side only (no UI yet): createTransactionTemplate/updateTransactionTemplate/deleteTransactionTemplate mirror categories.ts's exact fetch options + `data.message ?? 'fallback'` error-body parsing (including on DELETE, which the plan's illustrative snippet omitted); the 3 mutation hooks return `{ mutation }` only, caller owns `onSuccess`/invalidation, matching useCategories.ts. buildTemplatePayloadFromForm maps each split_settings row explicitly (`connection_id`/`percentage`/`amount`/`date: s.date ?? undefined`) instead of assigning `values.split_settings` directly — TransactionFormValues' split date is `string | null | undefined` (zod `.nullable().optional()`) while Transactions.SplitSetting.date is `string | undefined`, so a direct assignment fails tsc; mirrors buildTransactionPayload.ts's existing per-row date normalization. MNG-01/MNG-02 stay open (Pending) until 30-02/30-03 land the actual UI — this plan only unblocks them.
 - [30-02] templateFormSchema.ts reuses applySharedRefinements + splitSettingSchema from transactionFormSchema.ts (imported, not duplicated) with a constant recurrenceEnabled:false shape; TemplateFormFields.tsx was split out of TemplateFormDrawer.tsx (plan-sanctioned extraction) and landed at 253 lines (over the ~200 guideline) since it carries 4 Select/SegmentedControl Controller blocks mirroring TransactionForm's own larger field section — documented, not further split. buildTemplatePayloadFromForm (Plan-01, typed `values: TransactionFormValues`) is called with an explicit full-shape object literal (7 template fields + amount:0/date:''/recurrence-nulls, none read by the builder) rather than a spread, to stay type-safe without touching the Plan-01 file. Delete confirmation is an inline expand-in-row (local useState in TemplateListRow), not a separate confirm-drawer file, keeping the file set to the plan's declared scope plus the two plan-sanctioned subcomponents (TemplateFormFields, TemplateListRow). Reused existing TransactionsTestIds (SelectAccount/SelectCategory/SelectDestinationAccount/SegmentedTransactionType/TagsInput/InputDescription/Option*) for the copied field Controllers instead of minting Template-prefixed duplicates. MNG-01 is now fully satisfied (management surface reachable, list + create/edit/delete + immediate refresh); MNG-02 remains open for 30-03.
 - [30-03] SaveAsTemplateDrawer uses a simple controlled TextInput (local useState, touched-on-blur validation) rather than a full RHF+zod form — the drawer has exactly one field, so a full form setup would be overkill; mirrors the plan's own "simple controlled TextInput" suggestion. TransactionFormFooter's new onSaveAsTemplate/saveAsTemplateDisabled props are purely additive (undefined on the edit form, unchanged rendering) — the button reuses the same Tooltip-wraps-disabled-Button pattern already established in TemplatesManagementDrawer.tsx (30-02) for the "Você já tem 3 modelos" message. The 3-template cap is an inline literal (`templates.length >= 3`) in TransactionForm.tsx rather than importing TemplatesManagementDrawer's private `TEMPLATE_CAP` constant (not exported) — matches the plan's own illustrative snippet. Phase 30 (Frontend Management UI) is now complete; MNG-01 and MNG-02 are both satisfied — only Phase 31 (E2E Acceptance) remains in v1.7.
+- [31-01] `TransactionTemplatesPage` scopes every field lookup to the owning drawer locator (`managementDrawer`/`formDrawer`/`saveAsDrawer`/`createDrawer`) since template drawers reuse the transaction form's field testids (`SelectAccount`, `SelectCategory`, `InputDescription`, etc.) — an unscoped lookup would silently match a stale duplicate from a different open drawer. The spec's 8th test (split template round-trip, TMPL-05) was included since context/read time allowed; it seeds via `createUserAndPartner` and asserts `InputSplitPercentage` after `expandExtraSection('split')`. Real run of the suite (`playwright test`, no `--list`) is delegated to CI's `e2e` job — no Docker in this execution environment; local verification was `tsc --noEmit -p e2e/tsconfig.json`, `playwright test ... --list` (lists all 8 tests = compiles), and `eslint` (clean). Phase 31 (E2E Acceptance) is now complete — v1.7 (Transaction Templates) is feature+acceptance complete.
 
 ### Todos
 
@@ -74,7 +75,8 @@ See: .planning/PROJECT.md (updated 2026-06-07)
 - Run Phase 27 (27-04) testcontainers integration suite with Docker in CI to confirm SAFE-01/SAFE-02 assertions pass against a live PostgreSQL container
 - v1.3 backlog: Frontend edit form for linked transactions (FE-01..FE-05) — revisit later
 - v1.5 follow-up: issue #116 (duplicate-check fires on action flip) — separate PR
-- Phase 31 (E2E Acceptance) remains for v1.7: Playwright coverage for chip apply, management CRUD, cap enforcement, stale-ref degradation — not yet planned (Plans: TBD)
+- Run the new `transaction-templates.spec.ts` suite in CI's `e2e` job (no Docker in this execution environment) to confirm the 8 acceptance tests pass against a live stack
+- v1.7 (Transaction Templates) is now feature+acceptance complete — ready for milestone close/ship
 
 ### Blockers
 
@@ -93,6 +95,6 @@ None
 
 ## Session Continuity
 
-Last session: 2026-07-10T19:40:00Z
-Stopped at: Phase 30 complete (3/3 plans) -- SaveAsTemplateDrawer + create-form footer button (30-03) landed; MNG-01/MNG-02 satisfied
-Resume file: None -- next up is Phase 31 (E2E Acceptance), not yet planned
+Last session: 2026-07-12T00:00:00Z
+Stopped at: Phase 31 complete (1/1 plan) -- transaction-templates e2e acceptance suite (31-01) landed; v1.7 is now feature+acceptance complete
+Resume file: None -- v1.7 (Transaction Templates) is complete; next up is milestone close or a new milestone

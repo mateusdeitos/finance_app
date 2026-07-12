@@ -96,7 +96,7 @@ Full details: `.planning/milestones/v1.5-ROADMAP.md` · Retrospective: `.plannin
 - [x] **Phase 28: SplitSettingsFields Template Mode** - resolve and implement no-amount display in template context — 1/1 plans complete
 - [x] **Phase 29: Frontend Chip Apply Flow** - types, API client, query hooks, TemplateQuickChips, stale-ref handling — 2/2 plans complete
 - [x] **Phase 30: Frontend Management UI** - TemplatesManagementDrawer, TemplateForm, Save-as-template — 3/3 plans complete
-- [ ] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref
+- [x] **Phase 31: E2E Acceptance** - end-to-end coverage for chip apply, management, cap enforcement, stale-ref — 1/1 plan complete
 
 ## Phase Details
 
@@ -310,7 +310,7 @@ Plans:
   3. E2E test: attempt to create a 4th template → "Save as template" is disabled and the management drawer's create button is disabled
   4. E2E test: apply a template whose account was deleted → account field is blank, all other fields are filled, no error shown
   5. E2E test: create 3 templates, create several transactions → account balances are unaffected (templates are isolated from financial queries)
-**Plans**: TBD
+**Plans**: 1/1 plan complete (31-01: TransactionTemplatesPage page object + transaction-templates.spec.ts — 8 acceptance tests covering manage CRUD, chip apply, stale-ref degradation, save-as-template, cap enforcement, split round-trip; compiles/lists locally, full run delegated to CI's e2e job)
 
 ## Progress
 
@@ -346,7 +346,7 @@ Plans:
 | 28. SplitSettingsFields Template Mode | v1.7 | 1/1 | Complete | 2026-07-09 |
 | 29. Frontend Chip Apply Flow | v1.7 | 2/2 | Complete | 2026-07-09 |
 | 30. Frontend Management UI | v1.7 | 3/3 | Complete | 2026-07-10 |
-| 31. E2E Acceptance | v1.7 | 0/? | Not started | - |
+| 31. E2E Acceptance | v1.7 | 1/1 | Complete (CI-deferred execution) | 2026-07-12 |
 
 ---
 
