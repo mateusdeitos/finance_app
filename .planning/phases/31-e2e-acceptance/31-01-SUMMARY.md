@@ -100,3 +100,12 @@ None - no external service configuration required.
 ---
 *Phase: 31-e2e-acceptance*
 *Completed: 2026-07-12*
+
+## Self-Check: PASSED
+
+- FOUND: frontend/e2e/pages/TransactionTemplatesPage.ts
+- FOUND: frontend/e2e/tests/transaction-templates.spec.ts
+- FOUND: .planning/phases/31-e2e-acceptance/31-01-SUMMARY.md
+- FOUND commit: 07baa6c (Task 1)
+- FOUND commit: e0b0452 (Task 2)
+- FOUND commit: e1bddbf (plan metadata)
