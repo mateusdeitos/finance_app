@@ -76,6 +76,17 @@ export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonEleme
           disabled={disabled}
           value={value ?? ""}
           onChange={(e) => onChange(e.currentTarget.value)}
+          // Open the OS date picker as soon as the field gets focus (e.g. a tap)
+          // instead of forcing the user to hit the small calendar glyph. showPicker
+          // needs a user gesture, so programmatic focus (mount autofocus, focus on
+          // error) throws NotAllowedError — swallow it and just keep the field focused.
+          onFocus={(e) => {
+            try {
+              e.currentTarget.showPicker?.();
+            } catch {
+              /* no user activation — leave the field focused without the picker */
+            }
+          }}
           error={error}
           placeholder={placeholder}
           leftSection={leftSection}
