@@ -126,16 +126,20 @@ test.describe("Transaction form on mobile (native inputs)", () => {
     await transactionsPage.selectDestinationAccountNative(destination.id);
     await transactionsPage.submitForm();
 
-    await expect(page.getByText(description)).toBeVisible();
+    // A transfer between two own accounts shows on both (debit + credit), so the
+    // description appears more than once — assert the first occurrence.
+    await expect(page.getByText(description).first()).toBeVisible();
 
     const { month, year } = targetDateThisMonth();
     const txs = (await (
       await apiFetchAs(token, `/api/transactions?month=${month}&year=${year}`)
     ).json()) as Transactions.Transaction[];
-    const created = txs.find((t) => t.description === description && t.type === "transfer");
-    expect(created).toBeTruthy();
-    expect(created?.amount).toBe(2500);
-    expect(created?.account_id).toBe(source.id);
+    // The list returns both sides of the transfer; assert the source (debit) side.
+    const transfers = txs.filter((t) => t.description === description && t.type === "transfer");
+    expect(transfers.length).toBeGreaterThan(0);
+    const debit = transfers.find((t) => t.account_id === source.id);
+    expect(debit).toBeTruthy();
+    expect(debit?.amount).toBe(2500);
 
     await page.close();
   });
