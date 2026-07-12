@@ -317,6 +317,7 @@ export const TransactionForm = ({
                   value={field.value}
                   onChange={field.onChange}
                   error={errors.date?.message}
+                  data-testid={TransactionsTestIds.InputDate}
                 />
                 <DateQuickChips value={field.value} onChange={field.onChange} />
               </div>

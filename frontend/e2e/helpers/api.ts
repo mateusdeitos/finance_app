@@ -214,11 +214,22 @@ export async function getAuthTokenForUser(email: string): Promise<string> {
   return token;
 }
 
-/** Open a new Playwright page authenticated as the given user token. */
-export async function openAuthedPage(browser: import("@playwright/test").Browser, token: string) {
+/**
+ * Open a new Playwright page authenticated as the given user token.
+ *
+ * `contextOptions` are forwarded to `browser.newContext` (e.g. `viewport` /
+ * `hasTouch` to emulate a mobile device); `storageState` is always set to the
+ * auth cookie and cannot be overridden.
+ */
+export async function openAuthedPage(
+  browser: import("@playwright/test").Browser,
+  token: string,
+  contextOptions: Parameters<import("@playwright/test").Browser["newContext"]>[0] = {},
+) {
   const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
   const url = new URL(baseURL);
   const context = await browser.newContext({
+    ...contextOptions,
     storageState: {
       cookies: [
         {

@@ -29,6 +29,7 @@ export const TransactionsTestIds = {
 
   // Form fields
   InputAmount: 'input_amount',
+  InputDate: 'input_date',
   InputDescription: 'input_description',
   SelectAccount: 'select_account',
   SelectDestinationAccount: 'select_destination_account',
