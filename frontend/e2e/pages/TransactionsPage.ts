@@ -3,6 +3,8 @@ import { TransactionsTestIds, type PropagationOption, type TransactionType } fro
 import {
   AutocompleteField,
   CurrencyField,
+  NativeDateField,
+  NativeSelectField,
   SegmentedField,
   SelectField,
   TextField,
@@ -203,6 +205,23 @@ export class TransactionsPage {
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
+  /**
+   * Click "Salvar e criar outra". The transaction is saved but the drawer stays
+   * open, seeded with the previous entry's values (minus amount/description/
+   * recurrence) for the next transaction.
+   */
+  async saveAndCreateAnother() {
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSaveAndCreateAnother).click();
+    await this.assertNoFormErrors();
+    await expect(this.formDrawer).toBeVisible();
+  }
+
+  /** Check the single-account filter checkbox in the always-open desktop sidebar. */
+  async filterByAccount(accountId: number) {
+    await this.page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountId)).check();
+    await this.page.waitForLoadState("networkidle");
+  }
+
   /** Current displayed value of the create-form amount input (e.g. "15,00"). */
   async getAmountValue(): Promise<string> {
     return this.formDrawer.getByTestId(TransactionsTestIds.InputAmount).inputValue();
@@ -302,6 +321,54 @@ export class TransactionsPage {
     await this.fillAmount(amountCents);
     await this.selectAccount(sourceAccountId);
     await this.selectDestinationAccount(destAccountId);
+  }
+
+  // ─── Mobile-native field variants ───────────────────────────────────────────
+  // On mobile (<= 48em) the date field and the account/category selects render
+  // as native controls (<input type="date"> / <select>), so they're driven with
+  // the native field helpers instead of the Mantine DateField/SelectField.
+
+  /** Fill the native date input with an ISO date (YYYY-MM-DD). Mobile only. */
+  async fillDateNative(isoDate: string) {
+    await new NativeDateField(this.formDrawer, TransactionsTestIds.InputDate).fill(isoDate);
+  }
+
+  /** Pick an account from the native <select>. Mobile only. */
+  async selectAccountNative(accountId: number) {
+    await new NativeSelectField(this.formDrawer, TransactionsTestIds.SelectAccount).selectByValue(
+      accountId,
+    );
+  }
+
+  /** Pick a category from the native <select>. Mobile only. */
+  async selectCategoryNative(categoryId: number) {
+    await new NativeSelectField(this.formDrawer, TransactionsTestIds.SelectCategory).selectByValue(
+      categoryId,
+    );
+  }
+
+  /** Pick the destination account from the native <select>. Mobile only. */
+  async selectDestinationAccountNative(accountId: number) {
+    await new NativeSelectField(
+      this.formDrawer,
+      TransactionsTestIds.SelectDestinationAccount,
+    ).selectByValue(accountId);
+  }
+
+  /** Fill the whole expense form using the mobile-native controls. */
+  async fillExpenseNative(
+    amountCents: number,
+    description: string,
+    accountId: number,
+    categoryId: number,
+    isoDate?: string,
+  ) {
+    await this.selectType("expense");
+    await this.fillDescription(description);
+    await this.fillAmount(amountCents);
+    if (isoDate) await this.fillDateNative(isoDate);
+    await this.selectAccountNative(accountId);
+    await this.selectCategoryNative(categoryId);
   }
 
   async selectTransaction(transactionId: number) {

@@ -16,6 +16,7 @@ import { parseApiError, mapTagsToFieldErrors } from "@/utils/apiErrors";
 import { QueryKeys } from "@/utils/queryKeys";
 import { useDrawerContext } from "@/utils/renderDrawer";
 import { transactionFormSchema, TransactionFormValues } from "./form/transactionFormSchema";
+import { nextValuesForCreateAnother } from "./form/nextValuesForCreateAnother";
 import { TransactionForm } from "./form/TransactionForm";
 import { MobileFormHeader } from "./form/MobileFormHeader";
 import { parseDate, localDateStr } from "@/utils/parseDate";
@@ -34,9 +35,18 @@ interface CreateTransactionDrawerProps {
    * "Nova Receita" and "Nova Transferência" each land on the right type.
    */
   initialType?: Transactions.TransactionType;
+  /**
+   * Account to pre-select, taking priority over the localStorage prefill.
+   * Set when the transactions list is filtered to a single account, so a new
+   * transaction defaults to the account the user is currently looking at.
+   */
+  initialAccountId?: number;
 }
 
-export function CreateTransactionDrawer({ initialType = "expense" }: CreateTransactionDrawerProps = {}) {
+export function CreateTransactionDrawer({
+  initialType = "expense",
+  initialAccountId,
+}: CreateTransactionDrawerProps = {}) {
   const { opened, close } = useDrawerContext<void>();
   const [submitError, setSubmitError] = useState<string | undefined>();
   const isMobile = useIsMobile();
@@ -64,7 +74,7 @@ export function CreateTransactionDrawer({ initialType = "expense" }: CreateTrans
       date: prefill.date ? localDateStr(parseDate(prefill.date)) : localDateStr(new Date()),
       description: "",
       amount: 0,
-      account_id: prefill.accountId ?? undefined,
+      account_id: initialAccountId ?? prefill.accountId ?? undefined,
       category_id: prefill.categoryId ?? null,
       destination_account_id: null,
       tags: [],
@@ -120,7 +130,9 @@ export function CreateTransactionDrawer({ initialType = "expense" }: CreateTrans
   }
 
   function handleSaveAndCreateAnother(values: TransactionFormValues) {
-    submitTransaction(values, () => methods.reset());
+    submitTransaction(values, () =>
+      methods.reset(nextValuesForCreateAnother(values, { accounts, currentUserId })),
+    );
   }
 
   return (

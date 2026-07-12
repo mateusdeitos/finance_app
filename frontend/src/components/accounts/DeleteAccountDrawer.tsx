@@ -7,12 +7,12 @@ import {
   type ComboboxItem,
   Group,
   SegmentedControl,
-  Select,
   Stack,
   Text,
 } from '@mantine/core'
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
+import { ResponsiveSelect } from '@/components/ResponsiveSelect'
 import { AccountAvatar } from '@/components/AccountAvatar'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -128,7 +128,7 @@ export function DeleteAccountDrawer({ account, transactionCount }: Props) {
               control={control}
               name="target_account_id"
               render={({ field }) => (
-                <Select
+                <ResponsiveSelect
                   label="Conta de destino"
                   placeholder="Selecione uma conta"
                   value={field.value ?? null}

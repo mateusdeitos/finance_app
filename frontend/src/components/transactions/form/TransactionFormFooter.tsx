@@ -43,6 +43,7 @@ export function TransactionFormFooter({ loading, onSaveAndCreateAnother }: Props
           size="sm"
           loading={loading}
           onClick={onSaveAndCreateAnother}
+          data-testid={TransactionsTestIds.BtnSaveAndCreateAnother}
         >
           Salvar e criar outra
         </Button>
@@ -60,6 +61,7 @@ export function TransactionFormFooter({ loading, onSaveAndCreateAnother }: Props
             loading={loading}
             onClick={onSaveAndCreateAnother}
             rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
+            data-testid={TransactionsTestIds.BtnSaveAndCreateAnother}
           >
             Salvar e criar outra
           </Button>

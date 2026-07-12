@@ -15,8 +15,10 @@ import {
   Textarea,
 } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { CurrencyInput } from "@/components/transactions/form/CurrencyInput";
-import { DateInput, MonthPickerInput } from "@mantine/dates";
+import { MonthPickerInput } from "@mantine/dates";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
 import { useDrawerContext } from "@/utils/renderDrawer";
@@ -230,7 +232,7 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             name="my_account_id"
             control={form.control}
             render={({ field, fieldState }) => (
-              <Select
+              <ResponsiveSelect
                 label="Minha conta"
                 placeholder="Selecione uma conta"
                 data={myAccounts}
@@ -273,12 +275,11 @@ export function CreateChargeDrawer({ periodMonth, periodYear }: CreateChargeDraw
             name="date"
             control={form.control}
             render={({ field, fieldState }) => (
-              <DateInput
+              <ResponsiveDateInput
                 label="Data"
                 placeholder="Selecione uma data"
-                valueFormat="DD/MM/YYYY"
-                value={field.value || null}
-                onChange={(date) => field.onChange(date ?? "")}
+                value={field.value}
+                onChange={field.onChange}
                 error={fieldState.error?.message}
                 required
               />

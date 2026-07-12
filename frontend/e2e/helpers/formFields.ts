@@ -106,6 +106,34 @@ export class DateField extends FieldBase {
   }
 }
 
+// ─── Native <input type="date"> (mobile date field) ──────────────────────────
+
+/**
+ * Wraps a native `<input type="date">` — the control the transaction form
+ * renders on mobile instead of Mantine's popover calendar. Playwright fills
+ * date inputs using the ISO `YYYY-MM-DD` format regardless of the locale the
+ * browser displays.
+ */
+export class NativeDateField extends FieldBase {
+  async fill(isoDate: string): Promise<void> {
+    await this.locator().fill(isoDate)
+  }
+}
+
+// ─── Native <select> (mobile account / category field) ───────────────────────
+
+/**
+ * Wraps a native `<select>` — the control the transaction form renders on
+ * mobile instead of the Mantine combobox. Options are selected by their
+ * `value` (the entity id), which is the native form API, not a Mantine
+ * internal — no option testid is needed.
+ */
+export class NativeSelectField extends FieldBase {
+  async selectByValue(value: string | number): Promise<void> {
+    await this.locator().selectOption(String(value))
+  }
+}
+
 // ─── Select (Mantine combobox) ────────────────────────────────────────────────
 
 interface SelectPickOptions {

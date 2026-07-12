@@ -1,5 +1,5 @@
 import { Button, Drawer, Stack } from '@mantine/core'
-import { DateInput } from '@mantine/dates'
+import { ResponsiveDateInput } from '@/components/ResponsiveDateInput'
 import { useState } from 'react'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { TransactionsTestIds } from '@/testIds'
@@ -33,12 +33,11 @@ export function SelectDateDrawer({ initialDate, title = 'Alterar data' }: Select
       }}
     >
       <Stack gap="md">
-        <DateInput
+        <ResponsiveDateInput
           value={date}
-          onChange={setDate}
+          onChange={(value) => setDate(value || null)}
           label="Nova data"
           placeholder="Selecione uma data"
-          valueFormat="DD/MM/YYYY"
           data-testid={TransactionsTestIds.InputBulkDate}
         />
         <Button
