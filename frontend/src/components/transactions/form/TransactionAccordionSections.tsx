@@ -20,6 +20,12 @@ interface Props {
   forceOpen: TransactionExtraPanel[];
   /** Whether the "Divisão" panel applies (non-transfer, personal account, has connections). */
   splitApplicable: boolean;
+  /**
+   * Whether the selected account is a shared (connection) account. A transaction
+   * on a shared account can never have splits, so the "already has splits"
+   * fallback below must not re-show the panel for it.
+   */
+  isSharedAccount: boolean;
   /** Forwarded to RecurrenceFields — disables the current installment input on updates. */
   isUpdate: boolean;
   /** Hides the "Recorrência" panel entirely (e.g. charge-generated transfers). */
@@ -136,6 +142,7 @@ function TagsSummary() {
 export function TransactionAccordionSections({
   forceOpen,
   splitApplicable,
+  isSharedAccount,
   isUpdate,
   hideRecurrence = false,
 }: Props) {
@@ -159,10 +166,12 @@ export function TransactionAccordionSections({
   const tagsError = !!errors.tags;
   const splitError = !!errors.split_settings;
 
-  // Show the Divisão accordion when the user *can* create splits OR when
-  // the form already carries existing splits (Update flow for an expense
-  // whose linked partner connection is now inactive, shared account, etc.).
-  const splitVisible = splitApplicable || (splitSettings?.length ?? 0) > 0;
+  // Show the Divisão accordion when the user *can* create splits OR when the
+  // form already carries existing splits (Update flow for a private-account
+  // expense whose linked partner connection is now inactive). A transaction on
+  // a shared account can never have splits, so the fallback must not re-show the
+  // panel for it — even if split_settings arrived non-empty for any reason.
+  const splitVisible = splitApplicable || (!isSharedAccount && (splitSettings?.length ?? 0) > 0);
 
   // The accordion runs in `multiple` mode (uncontrolled): Mantine manages
   // toggling internally. We only seed the *initial* open set:

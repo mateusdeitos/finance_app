@@ -31,3 +31,25 @@ export async function updateSettlement(
   });
   if (!res.ok) throw res;
 }
+
+/**
+ * Deletes a settlement (removes a shared division): the partner's linked
+ * transaction and the settlement are removed, while the author's source
+ * transaction is kept. For a recurring split, propagationSettings controls how
+ * many installments are affected. A 404 is treated as success (already gone).
+ */
+export async function deleteSettlement(
+  id: number,
+  propagationSettings?: "current" | "current_and_future" | "all",
+): Promise<void> {
+  const url = new URL(`${apiUrl}/api/settlements/${id}`, window.location.origin);
+  if (propagationSettings) {
+    url.searchParams.set("propagation_settings", propagationSettings);
+  }
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (res.status === 404) return;
+  if (!res.ok) throw res;
+}

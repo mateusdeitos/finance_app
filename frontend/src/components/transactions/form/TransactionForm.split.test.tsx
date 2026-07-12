@@ -1,11 +1,12 @@
-import { expect, test } from "vitest";
-import { render } from "@testing-library/react";
+import { afterEach, expect, test } from "vitest";
+import { cleanup, render } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { QueryKeys } from "@/utils/queryKeys";
 import { Transactions } from "@/types/transactions";
+import { TransactionsTestIds } from "@/testIds";
 import { TransactionForm } from "./TransactionForm";
 import { transactionFormSchema, type TransactionFormValues } from "./transactionFormSchema";
 
@@ -46,7 +47,7 @@ function makeClient() {
   return qc;
 }
 
-function Harness() {
+function Harness({ accountId = 1 }: { accountId?: number }) {
   const methods = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
@@ -54,7 +55,7 @@ function Harness() {
       date: "2026-05-10",
       description: "x",
       amount: 10000,
-      account_id: 1,
+      account_id: accountId,
       category_id: null,
       destination_account_id: null,
       tags: [],
@@ -72,17 +73,38 @@ function Harness() {
   );
 }
 
+// Testing Library's cleanup is not automatic here; without it, DOM from earlier
+// renders accumulates and pollutes testid queries across tests.
+afterEach(cleanup);
+
+function renderHarness(accountId?: number) {
+  return render(
+    <QueryClientProvider client={makeClient()}>
+      <MantineProvider>
+        <Harness accountId={accountId} />
+      </MantineProvider>
+    </QueryClientProvider>,
+  );
+}
+
 // Regression: a split row that opens in fixed-amount mode renders a CurrencyInput
 // bound to the RHF field ref. If CurrencyInput's imperative handle is recreated
 // every render, the ref churn drives an infinite setValue → re-render loop.
 test("renders update form for a transaction with split settings without an update loop", () => {
-  expect(() =>
-    render(
-      <QueryClientProvider client={makeClient()}>
-        <MantineProvider>
-          <Harness />
-        </MantineProvider>
-      </QueryClientProvider>,
-    ),
-  ).not.toThrow();
+  expect(() => renderHarness()).not.toThrow();
+});
+
+// A transaction on a shared (connection) account can never have splits. Even when
+// split_settings arrives populated (e.g. the edit flow misreading the partner's
+// mirrored linked transactions), the "Divisão" section must stay hidden.
+test("hides the Divisão section when the selected account is shared, even with split_settings", () => {
+  const { queryByTestId } = renderHarness(connAccount.id);
+  expect(queryByTestId(TransactionsTestIds.SegmentExtraSection("split"))).toBeNull();
+});
+
+// Regression: a private-account transaction that already carries splits must
+// still show the "Divisão" section.
+test("shows the Divisão section for a private account that already has split_settings", () => {
+  const { queryByTestId } = renderHarness(privateAccount.id);
+  expect(queryByTestId(TransactionsTestIds.SegmentExtraSection("split"))).not.toBeNull();
 });

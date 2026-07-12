@@ -525,6 +525,7 @@ export const TransactionForm = ({
         <TransactionAccordionSections
           forceOpen={panelsWithErrors}
           splitApplicable={splitApplicable}
+          isSharedAccount={isSharedAccount}
           isUpdate={isUpdate}
           hideRecurrence={hideRecurrence}
         />

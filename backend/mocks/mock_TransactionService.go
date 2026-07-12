@@ -190,6 +190,55 @@ func (_c *MockTransactionService_Delete_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// DeleteSettlement provides a mock function with given fields: ctx, userID, settlementID, propagation
+func (_m *MockTransactionService) DeleteSettlement(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings) error {
+	ret := _m.Called(ctx, userID, settlementID, propagation)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSettlement")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, domain.TransactionPropagationSettings) error); ok {
+		r0 = rf(ctx, userID, settlementID, propagation)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionService_DeleteSettlement_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSettlement'
+type MockTransactionService_DeleteSettlement_Call struct {
+	*mock.Call
+}
+
+// DeleteSettlement is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - settlementID int
+//   - propagation domain.TransactionPropagationSettings
+func (_e *MockTransactionService_Expecter) DeleteSettlement(ctx interface{}, userID interface{}, settlementID interface{}, propagation interface{}) *MockTransactionService_DeleteSettlement_Call {
+	return &MockTransactionService_DeleteSettlement_Call{Call: _e.mock.On("DeleteSettlement", ctx, userID, settlementID, propagation)}
+}
+
+func (_c *MockTransactionService_DeleteSettlement_Call) Run(run func(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings)) *MockTransactionService_DeleteSettlement_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(domain.TransactionPropagationSettings))
+	})
+	return _c
+}
+
+func (_c *MockTransactionService_DeleteSettlement_Call) Return(_a0 error) *MockTransactionService_DeleteSettlement_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionService_DeleteSettlement_Call) RunAndReturn(run func(context.Context, int, int, domain.TransactionPropagationSettings) error) *MockTransactionService_DeleteSettlement_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetBalance provides a mock function with given fields: ctx, userID, period, filter
 func (_m *MockTransactionService) GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
 	ret := _m.Called(ctx, userID, period, filter)

@@ -12,7 +12,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { deleteTransaction, updateTransaction } from "@/api/transactions";
-import { updateSettlement } from "@/api/settlements";
+import { deleteSettlement, updateSettlement } from "@/api/settlements";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
 import { TransactionFab } from "@/components/transactions/TransactionFab";
@@ -39,6 +39,7 @@ import { SelectCategoryDrawer } from "@/components/transactions/SelectCategoryDr
 import { SelectDateDrawer } from "@/components/transactions/SelectDateDrawer";
 import { Transactions } from "@/types/transactions";
 import { splitPercentagesToCents } from "@/utils/splitMath";
+import { canDeleteTransaction } from "@/utils/transactionEligibility";
 import { TransactionsTestIds } from "@/testIds";
 
 // A selectable row within a group. Transactions and settlements interleave
@@ -166,15 +167,36 @@ export function TransactionsPage() {
   });
   const allTransactions = txQuery.data ?? [];
 
-  const hasRecurring = [...selectedIds].some((id) => {
-    const tx = allTransactions.find((t) => t.id === id);
-    return tx?.transaction_recurrence_id != null;
-  });
+  // Maps a settlement id -> its source transaction's recurrence id (or null).
+  // A settlement's recurrence lives on its SOURCE transaction, reachable two ways:
+  // inline settlements ride under the source tx (settlements_from_source), and the
+  // backend's synthetic orphan rows carry the source's recurrence on themselves.
+  // Covering both is required because a settlement can be selected from either
+  // rendering path — matching only origin_settlement_id misses the inline case.
+  const settlementRecurrenceById = useMemo(() => {
+    const m = new Map<number, number | null>();
+    for (const tx of txQuery.data ?? []) {
+      for (const s of tx.settlements_from_source ?? []) {
+        m.set(s.id, tx.transaction_recurrence_id ?? null);
+      }
+      if (tx.origin_settlement_id !== undefined) {
+        m.set(tx.origin_settlement_id, tx.transaction_recurrence_id ?? null);
+      }
+    }
+    return m;
+  }, [txQuery.data]);
+
+  const hasRecurring =
+    [...selectedIds].some((id) => {
+      const tx = allTransactions.find((t) => t.id === id);
+      return tx?.transaction_recurrence_id != null;
+    }) ||
+    [...selectedSettlementIds].some((sid) => settlementRecurrenceById.get(sid) != null);
 
   // Filter out linked transactions where user is not the original creator (SEL-02 silent skip).
-  // Used for actions that the partner (to_user) is NOT allowed to perform on their own
-  // linked side: bulk delete (the backend cascades a partner delete onto the author's
-  // source) and bulk division (split_settings is a disallowed field for linked txs).
+  // Used for bulk division, which the partner (to_user) is NOT allowed to perform on their
+  // own linked side (split_settings is a disallowed field for linked txs). Delete uses the
+  // partner-inclusive getDeletableIds; date/category use getFieldEditEligibleIds.
   function getEligibleIds(): number[] {
     return [...selectedIds].filter((id) => {
       const tx = allTransactions.find((t) => t.id === id);
@@ -199,6 +221,18 @@ export function TransactionsPage() {
         tx.original_user_id === currentUserId
       );
     });
+  }
+
+  // Delete-specific eligibility: the backend now lets the "ponta" delete their own side
+  // of a shared transaction, so a row the user owns is deletable even when they didn't
+  // author it (original_user_id === partner). See canDeleteTransaction.
+  function getDeletableIds(): number[] {
+    return [...selectedIds].filter((id) =>
+      canDeleteTransaction(
+        allTransactions.find((t) => t.id === id),
+        currentUserId,
+      ),
+    );
   }
 
   // Division-specific eligibility: also excludes transfers (D-10).
@@ -283,28 +317,50 @@ export function TransactionsPage() {
         propagation = await renderDrawer<PropagationSetting>(() => <PropagationSettingsDrawer />);
       }
 
-      const eligibleIds = getEligibleIds();
-      const items: BulkProgressItem[] = eligibleIds.map((id) => {
+      // Build a unified item list: tx items first, then settlement items.
+      // Settlement IDs are negated to keep them distinct from transaction IDs
+      // (they live in different tables and can collide) while reusing the same
+      // progress drawer — the action callback dispatches each kind to the right
+      // endpoint. This mirrors handleDateChange.
+      const eligibleIds = getDeletableIds();
+      const txItems: BulkProgressItem[] = eligibleIds.map((id) => {
         const tx = allTransactions.find((t) => t.id === id);
         return { id, label: tx?.description ?? String(id) };
       });
+
+      const settlementIds = [...selectedSettlementIds];
+      const settlementIdSet = new Set(settlementIds);
+      const settlementItems: BulkProgressItem[] = settlementIds.map((id) => {
+        const st = allTransactions.find((t) => t.origin_settlement_id === id);
+        return { id: -id, label: st?.description ?? "Acerto" };
+      });
+
+      const items = [...txItems, ...settlementItems];
       if (items.length === 0) return;
 
       void renderDrawer(() => (
         <BulkProgressDrawer
           items={items}
           action={async (item) => {
+            if (item.id < 0) {
+              const settlementId = -item.id;
+              if (!settlementIdSet.has(settlementId)) return;
+              const prop =
+                settlementRecurrenceById.get(settlementId) != null ? propagation : undefined;
+              await deleteSettlement(settlementId, prop);
+              return;
+            }
             const tx = allTransactions.find((t) => t.id === item.id);
             const prop = tx?.transaction_recurrence_id != null && propagation ? propagation : undefined;
             await deleteTransaction(item.id, prop);
           }}
           titles={{
-            processing: "Excluindo transações...",
-            success: "Transações excluídas",
+            processing: "Excluindo...",
+            success: "Itens excluídos",
             error: "Erro ao excluir",
           }}
           successMessage={(n) =>
-            n === 1 ? "1 transação excluída com sucesso" : `${n} transações excluídas com sucesso`
+            n === 1 ? "1 item excluído com sucesso" : `${n} itens excluídos com sucesso`
           }
           onInvalidate={invalidateTransactions}
           onSuccess={clearSelection}
