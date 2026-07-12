@@ -205,6 +205,23 @@ export class TransactionsPage {
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
+  /**
+   * Click "Salvar e criar outra". The transaction is saved but the drawer stays
+   * open, seeded with the previous entry's values (minus amount/description/
+   * recurrence) for the next transaction.
+   */
+  async saveAndCreateAnother() {
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSaveAndCreateAnother).click();
+    await this.assertNoFormErrors();
+    await expect(this.formDrawer).toBeVisible();
+  }
+
+  /** Check the single-account filter checkbox in the always-open desktop sidebar. */
+  async filterByAccount(accountId: number) {
+    await this.page.getByTestId(TransactionsTestIds.CheckboxFilterAccount(accountId)).check();
+    await this.page.waitForLoadState("networkidle");
+  }
+
   /** Current displayed value of the create-form amount input (e.g. "15,00"). */
   async getAmountValue(): Promise<string> {
     return this.formDrawer.getByTestId(TransactionsTestIds.InputAmount).inputValue();

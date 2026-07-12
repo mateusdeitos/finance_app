@@ -7,6 +7,7 @@ export const TransactionsTestIds = {
   // Page-level
   BtnNew: 'btn_new_transaction',
   BtnSave: 'btn_save_transaction',
+  BtnSaveAndCreateAnother: 'btn_save_and_create_another',
   BtnMoreOptions: 'btn_more_options',
   MenuItemImportTransactions: 'menu_item_import_transactions',
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,

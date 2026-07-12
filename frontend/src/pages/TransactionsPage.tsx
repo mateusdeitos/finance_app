@@ -597,8 +597,11 @@ export function TransactionsPage() {
   }, [selectedIds, selectedSettlementIds, txById, settlementById]);
 
   const openCreateTransaction = useCallback(() => {
-    void renderDrawer(() => <CreateTransactionDrawer />);
-  }, []);
+    // When the list is filtered to a single account, default the new
+    // transaction to that account (overrides the localStorage prefill).
+    const initialAccountId = filters.accountIds.length === 1 ? filters.accountIds[0] : undefined;
+    void renderDrawer(() => <CreateTransactionDrawer initialAccountId={initialAccountId} />);
+  }, [filters.accountIds]);
   useHotkey("n", openCreateTransaction, { enabled: !isSelecting });
 
   // Open the create drawer from a PWA app-shortcut deep link (?new=<type>).

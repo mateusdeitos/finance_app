@@ -130,6 +130,53 @@ test.describe('Description autocomplete — dirty-field preservation', () => {
     await page.close()
   })
 
+  // ── AC5: an account already present on the form is never overwritten ───────
+  // Uses the single-account list filter to pre-fill the account as a *default*
+  // (not user-touched / not dirty) — the case the suggestion used to clobber.
+  test('preserves the pre-filled default account before choosing a suggestion', async ({ browser }) => {
+    const token = await getAuthTokenForUser(`e2e-autocomplete-account-${Date.now()}@financeapp.local`)
+    const sourceAccount = await apiCreateAccount({ name: 'Conta Fonte', initial_balance: 0 }, { token })
+    const defaultAccount = await apiCreateAccount({ name: 'Conta Padrao', initial_balance: 0 }, { token })
+    const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
+    const sourceDesc = `Fonte Account ${Date.now()}`
+    // The suggested source transaction lives on `sourceAccount`.
+    await apiCreateTransaction(
+      {
+        transaction_type: 'expense',
+        account_id: sourceAccount.id,
+        category_id: sourceCategory.id,
+        amount: 12345,
+        date: today,
+        description: sourceDesc,
+      },
+      { token },
+    )
+
+    const page = await openAuthedPage(browser, token)
+    const txPage = new TransactionsPage(page)
+    await txPage.goto()
+
+    // Filter to `defaultAccount`, so the create form opens defaulted to it.
+    await txPage.filterByAccount(defaultAccount.id)
+    await txPage.openCreateForm()
+    await expect(txPage.formDrawer.getByTestId(TransactionsTestIds.SelectAccount)).toHaveValue(
+      'Conta Padrao',
+    )
+
+    // Pick a suggestion whose source is a different account.
+    await txPage.pickDescriptionSuggestion(sourceDesc)
+
+    // The pre-filled default account is preserved; the untouched category fills.
+    await expect(txPage.formDrawer.getByTestId(TransactionsTestIds.SelectAccount)).toHaveValue(
+      'Conta Padrao',
+    )
+    await expect(txPage.formDrawer.getByTestId(TransactionsTestIds.SelectCategory)).toHaveValue(
+      'Categoria Fonte',
+    )
+
+    await page.close()
+  })
+
   // ── AC4: the same rule holds while editing an existing transaction ─────────
   test('preserves a manually-edited field when editing a transaction', async ({ browser }) => {
     const token = await getAuthTokenForUser(`e2e-autocomplete-edit-${Date.now()}@financeapp.local`)

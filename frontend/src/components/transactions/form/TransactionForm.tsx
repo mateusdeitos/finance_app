@@ -199,7 +199,10 @@ export const TransactionForm = ({
     // overwrites a value the user already set on purpose.
     if (!dirtyFields.transaction_type) setValue("transaction_type", suggestion.type);
     if (!dirtyFields.amount) setValue("amount", suggestion.amount);
-    if (!dirtyFields.account_id && suggestion.account_id) setValue("account_id", suggestion.account_id);
+    // Never override an account that's already set on the form (from a prefill,
+    // the single-account list filter, or the user) — only fill it when empty.
+    if (!dirtyFields.account_id && !accountId && suggestion.account_id)
+      setValue("account_id", suggestion.account_id);
     if (!dirtyFields.category_id && suggestion.category_id) setValue("category_id", suggestion.category_id);
     if (!dirtyFields.tags && suggestion.tags)
       setValue(
