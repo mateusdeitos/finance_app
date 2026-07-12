@@ -3,7 +3,7 @@ import { Select, NativeSelect, Group, Text, Badge, type ComboboxItem } from "@ma
 import { AccountAvatar } from "@/components/AccountAvatar";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Transactions } from "@/types/transactions";
-import { dropEmptyGroups, matchOptionByLabel, type ComboboxOptions } from "./selectMatch";
+import { dropEmptyGroups, matchOptionByLabel, type ComboboxOptions } from "@/utils/selectMatch";
 
 interface Props {
   label: ReactNode;

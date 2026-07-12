@@ -1,21 +1,13 @@
 import { forwardRef, type ReactNode } from "react";
-import {
-  Select,
-  NativeSelect,
-  type ComboboxItem,
-  type ComboboxItemGroup,
-  type MantineSize,
-  type SelectProps,
-} from "@mantine/core";
+import { Select, NativeSelect, type MantineSize, type SelectProps } from "@mantine/core";
 import { useIsMobile } from "@/hooks/useIsMobile";
-
-type Options = ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[];
+import { dropEmptyGroups, type ComboboxOptions } from "@/utils/selectMatch";
 
 interface Props {
   label?: ReactNode;
   description?: ReactNode;
   placeholder?: string;
-  data: Options;
+  data: ComboboxOptions;
   /** Selected option value, or `null` when nothing is selected. */
   value: string | null;
   /** Called with the option value, or `null` when cleared. */
@@ -38,20 +30,6 @@ interface Props {
   /** Desktop-only: called on the combobox input blur. */
   onBlur?: SelectProps["onBlur"];
   "data-testid"?: string;
-}
-
-function isGroup(
-  option: ComboboxItem | ComboboxItemGroup<ComboboxItem>,
-): option is ComboboxItemGroup<ComboboxItem> {
-  return "group" in option;
-}
-
-/** Drops empty groups so a native `<optgroup>` never renders with no options. */
-function dropEmptyGroups(data: Options): Options {
-  if (data.length > 0 && isGroup(data[0])) {
-    return (data as ComboboxItemGroup<ComboboxItem>[]).filter((g) => g.items.length > 0);
-  }
-  return data;
 }
 
 /**

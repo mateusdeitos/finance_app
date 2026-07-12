@@ -14,9 +14,13 @@ export function flattenComboboxOptions(options: ComboboxOptions): ComboboxItem[]
 }
 
 /**
- * Finds the option whose label exactly matches the typed text (case-insensitive).
- * Used by searchable Selects to commit a value on blur when the user typed a
- * full option label but didn't click an item.
+ * Finds the option whose label exactly matches the typed text (case-insensitive),
+ * but only when the match is **unambiguous**. Used by searchable Selects to commit
+ * a value on blur when the user typed a full option label without clicking an item.
+ *
+ * If two or more options share the label (e.g. two accounts both named "Nubank"
+ * in different groups), it returns `undefined` rather than guessing the first one —
+ * the user has to pick explicitly from the dropdown.
  */
 export function matchOptionByLabel(
   options: ComboboxOptions,
@@ -24,7 +28,10 @@ export function matchOptionByLabel(
 ): ComboboxItem | undefined {
   const query = typed.trim().toLowerCase();
   if (!query) return undefined;
-  return flattenComboboxOptions(options).find((option) => option.label.toLowerCase() === query);
+  const matches = flattenComboboxOptions(options).filter(
+    (option) => option.label.toLowerCase() === query,
+  );
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 /** Drops empty groups so a native `<optgroup>` never renders with no options. */

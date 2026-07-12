@@ -2,7 +2,7 @@ import { forwardRef, type FocusEvent, type ReactNode } from "react";
 import { Select, NativeSelect, type ComboboxItem } from "@mantine/core";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { TransactionsTestIds } from "@/testIds";
-import { matchOptionByLabel } from "./selectMatch";
+import { matchOptionByLabel } from "@/utils/selectMatch";
 
 interface Props {
   label: ReactNode;
