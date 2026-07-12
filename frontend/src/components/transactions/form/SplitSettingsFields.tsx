@@ -14,9 +14,9 @@ import {
   Select,
   UnstyledButton,
 } from "@mantine/core";
-import { DateInput } from "@mantine/dates";
 import { IconX, IconPlus, IconCheck, IconCalendar } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
+import { ResponsiveDateInput } from "./ResponsiveDateInput";
 import {
   Controller,
   useWatch,
@@ -115,15 +115,15 @@ function SplitRowControls({
         control={control}
         name={dateFieldName}
         render={({ field }) => (
-          <DateInput
+          <ResponsiveDateInput
             value={(field.value as string | null) ?? null}
-            onChange={(value) => field.onChange(value)}
-            valueFormat="DD/MM/YYYY"
+            onChange={(value) => field.onChange(value || null)}
+            desktopVariant="input"
             placeholder="Acerto"
             leftSection={<IconCalendar size={14} />}
             clearable
             size="sm"
-            classNames={{ input: classes.dateInput }}
+            inputClassName={classes.dateInput}
             data-testid={TransactionsTestIds.InputSplitDate(rowIndex)}
           />
         )}

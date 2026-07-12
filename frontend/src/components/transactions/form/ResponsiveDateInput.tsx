@@ -1,15 +1,30 @@
 import { forwardRef, type ReactNode } from "react";
-import { TextInput } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { TextInput, type MantineSize } from "@mantine/core";
+import { DateInput, DatePickerInput } from "@mantine/dates";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Props {
   label?: ReactNode;
   required?: boolean;
-  /** Date value as `YYYY-MM-DD`, or `""` when empty. */
-  value: string;
+  /** Date value as `YYYY-MM-DD`, or `""`/`null` when empty. */
+  value: string | null;
+  /** Called with the `YYYY-MM-DD` value, or `""` when cleared. */
   onChange: (value: string) => void;
   error?: ReactNode;
+  placeholder?: string;
+  leftSection?: ReactNode;
+  size?: MantineSize;
+  clearable?: boolean;
+  /** Applied to the underlying `<input>` element across every variant. */
+  inputClassName?: string;
+  /**
+   * Desktop rendering. `"picker"` (default) is the `DatePickerInput` popover
+   * calendar; `"input"` is the typeable `DateInput` text field — used for
+   * compact inline fields (e.g. the split settlement date) and where an e2e
+   * reads the value off a real `<input>`. Mobile always renders the native
+   * `<input type="date">` regardless of this.
+   */
+  desktopVariant?: "picker" | "input";
   "data-testid"?: string;
 }
 
@@ -22,11 +37,29 @@ interface Props {
  *   jump around and hard to navigate on touch devices — the native control has
  *   none of that. Its value format is already `YYYY-MM-DD`, matching the form
  *   schema, so no conversion is needed.
- * - **Desktop**: the richer `DatePickerInput` popover, formatted `DD/MM/YYYY`.
+ * - **Desktop**: the richer `DatePickerInput` popover (or a typeable `DateInput`
+ *   when `desktopVariant="input"`), formatted `DD/MM/YYYY`.
  */
 export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonElement, Props>(
-  function ResponsiveDateInput({ label, required, value, onChange, error, ...rest }, ref) {
+  function ResponsiveDateInput(
+    {
+      label,
+      required,
+      value,
+      onChange,
+      error,
+      placeholder,
+      leftSection,
+      size,
+      clearable,
+      inputClassName,
+      desktopVariant = "picker",
+      ...rest
+    },
+    ref,
+  ) {
     const isMobile = useIsMobile();
+    const classNames = inputClassName ? { input: inputClassName } : undefined;
 
     if (isMobile) {
       return (
@@ -35,25 +68,37 @@ export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonEleme
           type="date"
           label={label}
           required={required}
-          value={value}
+          value={value ?? ""}
           onChange={(e) => onChange(e.currentTarget.value)}
           error={error}
+          placeholder={placeholder}
+          leftSection={leftSection}
+          size={size}
+          classNames={classNames}
           {...rest}
         />
       );
     }
 
-    return (
-      <DatePickerInput
-        ref={ref as React.Ref<HTMLButtonElement>}
-        label={label}
-        required={required}
-        value={value || null}
-        onChange={(date) => onChange(date ?? "")}
-        error={error}
-        valueFormat="DD/MM/YYYY"
-        {...rest}
-      />
-    );
+    const commonDesktopProps = {
+      label,
+      required,
+      value: value || null,
+      onChange: (date: string | null) => onChange(date ?? ""),
+      error,
+      placeholder,
+      leftSection,
+      size,
+      clearable,
+      classNames,
+      valueFormat: "DD/MM/YYYY",
+      ...rest,
+    };
+
+    if (desktopVariant === "input") {
+      return <DateInput ref={ref as React.Ref<HTMLInputElement>} {...commonDesktopProps} />;
+    }
+
+    return <DatePickerInput ref={ref as React.Ref<HTMLButtonElement>} {...commonDesktopProps} />;
   },
 );
