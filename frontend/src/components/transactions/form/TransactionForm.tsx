@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type FocusEvent, type ReactNode, useId } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode, useId } from "react";
 import {
   useFormContext,
   Controller,
@@ -11,19 +11,12 @@ import { useFocusFieldOnMount } from "@/hooks/useFocusFieldOnMount";
 import {
   Stack,
   SegmentedControl,
-  Select,
   Alert,
-  Badge,
   SimpleGrid,
   Group,
-  Text,
   TextInput,
-  ComboboxItemGroup,
-  ComboboxItem,
 } from "@mantine/core";
 import { IconTrendingDown, IconTrendingUp, IconArrowRight } from "@tabler/icons-react";
-import { DatePickerInput } from "@mantine/dates";
-import { AccountAvatar } from "@/components/AccountAvatar";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
@@ -32,6 +25,9 @@ import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionAccordionSections } from "./TransactionAccordionSections";
 import { DateQuickChips } from "./DateQuickChips";
+import { ResponsiveDateInput } from "./ResponsiveDateInput";
+import { AccountSelectField } from "./AccountSelectField";
+import { CategorySelectField } from "./CategorySelectField";
 import { TransactionFormFooter } from "./TransactionFormFooter";
 import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
@@ -60,30 +56,6 @@ const PANEL_ERROR_FIELDS: Record<TransactionExtraPanel, (keyof TransactionFormVa
   split: ["split_settings"],
   tags: ["tags"],
 };
-
-/** Renders an account Select option with avatar + name + shared badge. */
-function renderAccountOption(
-  accounts: Transactions.Account[],
-  testIdFor: (id: string) => string,
-) {
-  const Component = ({ option }: { option: ComboboxItem }) => {
-    const acc = accounts.find((a) => String(a.id) === option.value);
-    return (
-      <Group gap={8} wrap="nowrap" style={{ minWidth: 0 }} data-testid={testIdFor(option.value)}>
-        <AccountAvatar account={acc} size={22} />
-        <Text size="sm" style={{ flex: 1, minWidth: 0 }} truncate>
-          {acc?.name ?? option.label}
-        </Text>
-        {acc?.user_connection && (
-          <Badge size="xs" color="grape" variant="light">
-            Compartilhada
-          </Badge>
-        )}
-      </Group>
-    );
-  };
-  return Component;
-}
 
 /** Mantine color associated with each transaction type — drives the segmented indicator. */
 const TYPE_COLOR: Record<TransactionType, string> = {
@@ -251,29 +223,6 @@ export const TransactionForm = ({
     label: c.emoji ? `${c.emoji} ${c.name}` : c.name,
   }));
 
-  function makeSelectBlurHandler(
-    options: ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[],
-    onChange: (val: number | null) => void,
-  ) {
-    const isItemGroup = (o: ComboboxItem | ComboboxItemGroup<ComboboxItem>): o is ComboboxItemGroup<ComboboxItem> =>
-      "group" in o;
-
-    return (e: FocusEvent<HTMLInputElement>) => {
-      const typed = e.target.value.trim().toLowerCase();
-      if (!typed) return;
-      const items: ComboboxItem[] = [];
-      options.forEach((o) => {
-        if (isItemGroup(o)) {
-          items.push(...o.items);
-        } else {
-          items.push(o);
-        }
-      });
-      const match = items.find((o) => o.label.toLowerCase() === typed);
-      if (match) onChange(Number(match.value));
-    };
-  }
-
   const submit = handleSubmit(onSubmit, onInvalid);
 
   function handleFormKeyDown(e: React.KeyboardEvent<HTMLFormElement>) {
@@ -361,14 +310,13 @@ export const TransactionForm = ({
             name="date"
             render={({ field }) => (
               <div>
-                <DatePickerInput
+                <ResponsiveDateInput
                   ref={field.ref}
                   label="Data"
                   required
-                  value={field.value || null}
-                  onChange={(date) => field.onChange(date ?? "")}
+                  value={field.value}
+                  onChange={field.onChange}
                   error={errors.date?.message}
-                  valueFormat="DD/MM/YYYY"
                 />
                 <DateQuickChips value={field.value} onChange={field.onChange} />
               </div>
@@ -389,57 +337,47 @@ export const TransactionForm = ({
               key="account-personal"
               control={control}
               name="account_id"
-              render={({ field }) => {
-                const selected = accounts.find((a) => a.id === field.value);
-                return (
-                  <Select
-                    ref={field.ref}
-                    label="Conta"
-                    required
-                    data={personalAccountOptions}
-                    value={field.value ? String(field.value) : null}
-                    onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(personalAccountOptions, (val) => field.onChange(val))}
-                    error={errors.account_id?.message}
-                    searchable
-                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
-                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionAccount)}
-                    data-testid={TransactionsTestIds.SelectAccount}
-                  />
-                );
-              }}
+              render={({ field }) => (
+                <AccountSelectField
+                  ref={field.ref}
+                  label="Conta"
+                  required
+                  data={personalAccountOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  accounts={accounts}
+                  error={errors.account_id?.message}
+                  optionTestId={TransactionsTestIds.OptionAccount}
+                  data-testid={TransactionsTestIds.SelectAccount}
+                />
+              )}
             />
           ) : (
             <Controller
               key="account-grouped"
               control={control}
               name="account_id"
-              render={({ field }) => {
-                const selected = accounts.find((a) => a.id === field.value);
-                return (
-                  <Select
-                    ref={field.ref}
-                    label="Conta"
-                    required
-                    data={groupedAccountOptions}
-                    value={field.value ? String(field.value) : null}
-                    onChange={(val) => {
-                      field.onChange(val ? Number(val) : null);
-                      // Clear split settings when selecting a shared account
-                      const acct = accounts.find((a) => a.id === Number(val));
-                      if (acct?.user_connection) {
-                        setValue("split_settings", []);
-                      }
-                    }}
-                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                    error={errors.account_id?.message}
-                    searchable
-                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
-                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionAccount)}
-                    data-testid={TransactionsTestIds.SelectAccount}
-                  />
-                );
-              }}
+              render={({ field }) => (
+                <AccountSelectField
+                  ref={field.ref}
+                  label="Conta"
+                  required
+                  data={groupedAccountOptions}
+                  value={field.value}
+                  onChange={(val) => {
+                    field.onChange(val);
+                    // Clear split settings when selecting a shared account
+                    const acct = accounts.find((a) => a.id === val);
+                    if (acct?.user_connection) {
+                      setValue("split_settings", []);
+                    }
+                  }}
+                  accounts={accounts}
+                  error={errors.account_id?.message}
+                  optionTestId={TransactionsTestIds.OptionAccount}
+                  data-testid={TransactionsTestIds.SelectAccount}
+                />
+              )}
             />
           )}
         </SimpleGrid>
@@ -474,25 +412,20 @@ export const TransactionForm = ({
               key="destination-account"
               control={control}
               name="destination_account_id"
-              render={({ field }) => {
-                const selected = accounts.find((a) => a.id === field.value);
-                return (
-                  <Select
-                    ref={field.ref}
-                    label="Conta de destino"
-                    required
-                    data={groupedAccountOptions}
-                    value={field.value ? String(field.value) : null}
-                    onChange={(val) => field.onChange(val ? Number(val) : null)}
-                    onBlur={makeSelectBlurHandler(groupedAccountOptions, (val) => field.onChange(val))}
-                    error={errors.destination_account_id?.message}
-                    searchable
-                    leftSection={selected ? <AccountAvatar account={selected} size={20} /> : null}
-                    renderOption={renderAccountOption(accounts, TransactionsTestIds.OptionDestinationAccount)}
-                    data-testid={TransactionsTestIds.SelectDestinationAccount}
-                  />
-                );
-              }}
+              render={({ field }) => (
+                <AccountSelectField
+                  ref={field.ref}
+                  label="Conta de destino"
+                  required
+                  data={groupedAccountOptions}
+                  value={field.value}
+                  onChange={field.onChange}
+                  accounts={accounts}
+                  error={errors.destination_account_id?.message}
+                  optionTestId={TransactionsTestIds.OptionDestinationAccount}
+                  data-testid={TransactionsTestIds.SelectDestinationAccount}
+                />
+              )}
             />
           )
         ) : (
@@ -501,21 +434,13 @@ export const TransactionForm = ({
             control={control}
             name="category_id"
             render={({ field }) => (
-              <Select
+              <CategorySelectField
                 ref={field.ref}
                 label="Categoria"
                 data={categoryOptions}
-                value={field.value ? String(field.value) : null}
-                onChange={(val) => field.onChange(val ? Number(val) : null)}
-                onBlur={makeSelectBlurHandler(categoryOptions, (val) => field.onChange(val))}
+                value={field.value}
+                onChange={field.onChange}
                 error={errors.category_id?.message}
-                searchable
-                clearable
-                renderOption={({ option }) => (
-                  <span data-testid={TransactionsTestIds.OptionCategory(option.value)}>
-                    {option.label}
-                  </span>
-                )}
                 data-testid={TransactionsTestIds.SelectCategory}
               />
             )}

@@ -21,6 +21,7 @@ export default defineConfig({
       "**/node_modules/**",
       "src/utils/splitMath.test.ts",
       "src/utils/groupTransactions.test.ts",
+      "src/utils/matchesTransactionSearch.test.ts",
       "src/components/transactions/form/calculator/calculatorMath.test.ts",
     ],
   },
