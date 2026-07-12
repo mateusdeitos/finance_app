@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Alert, Button, Select, Stack, Text } from "@mantine/core";
+import { Alert, Button, Stack, Text } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
-import { DateInput } from "@mantine/dates";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { notifications } from "@mantine/notifications";
 import "@mantine/dates/styles.css";
 import { useDrawerContext } from "@/utils/renderDrawer";
@@ -153,7 +154,7 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             name="account_id"
             control={form.control}
             render={({ field, fieldState }) => (
-              <Select
+              <ResponsiveSelect
                 label="Conta"
                 description={roleMsg(
                   "Uma conta sua que será utilizada para creditar o valor da cobrança",
@@ -179,13 +180,12 @@ export function AcceptChargeDrawer({ charge, partnerName }: AcceptChargeDrawerPr
             name="date"
             control={form.control}
             render={({ field, fieldState }) => (
-              <DateInput
+              <ResponsiveDateInput
                 label="Data da transferência"
                 description="Data utilizada na transferência entre contas para quitação da cobrança"
                 placeholder="Selecione uma data"
-                valueFormat="DD/MM/YYYY"
-                value={field.value || null}
-                onChange={(date) => field.onChange(date ?? "")}
+                value={field.value}
+                onChange={field.onChange}
                 error={fieldState.error?.message}
                 required
               />

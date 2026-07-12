@@ -25,7 +25,7 @@ import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
 import { TransactionAccordionSections } from "./TransactionAccordionSections";
 import { DateQuickChips } from "./DateQuickChips";
-import { ResponsiveDateInput } from "./ResponsiveDateInput";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
 import { AccountSelectField } from "./AccountSelectField";
 import { CategorySelectField } from "./CategorySelectField";
 import { TransactionFormFooter } from "./TransactionFormFooter";

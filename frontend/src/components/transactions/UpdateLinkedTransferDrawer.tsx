@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Alert, Box, Button, Divider, Group, Stack, TextInput } from "@mantine/core";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
-import { DatePickerInput } from "@mantine/dates";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdateTransaction } from "@/hooks/useUpdateTransaction";
 import { Transactions } from "@/types/transactions";
@@ -93,14 +93,13 @@ export function UpdateLinkedTransferDrawer({ transaction }: Props) {
             control={control}
             name="date"
             render={({ field }) => (
-              <DatePickerInput
+              <ResponsiveDateInput
                 ref={field.ref}
                 label="Data"
                 required
-                value={field.value || null}
-                onChange={(date) => field.onChange(date ?? "")}
+                value={field.value}
+                onChange={field.onChange}
                 error={errors.date?.message}
-                valueFormat="DD/MM/YYYY"
               />
             )}
           />

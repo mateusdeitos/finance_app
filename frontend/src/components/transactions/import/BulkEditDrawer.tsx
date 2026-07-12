@@ -1,7 +1,8 @@
 import { Button, Select, Stack, TextInput } from '@mantine/core'
-import { DatePickerInput } from '@mantine/dates'
 import { Controller, FormProvider, useForm, useWatch } from 'react-hook-form'
 import { ResponsiveDrawer } from '@/components/ResponsiveDrawer'
+import { ResponsiveDateInput } from '@/components/ResponsiveDateInput'
+import { ResponsiveSelect } from '@/components/ResponsiveSelect'
 import { useDrawerContext } from '@/utils/renderDrawer'
 import { useFlattenCategories } from '@/hooks/useCategories'
 import { SplitSettingsFields } from '../form/SplitSettingsFields'
@@ -139,11 +140,10 @@ export function BulkEditDrawer({ actionType }: Props) {
               name="date"
               control={form.control}
               render={({ field }) => (
-                <DatePickerInput
+                <ResponsiveDateInput
                   label="Data"
-                  valueFormat="DD/MM/YYYY"
-                  value={field.value || null}
-                  onChange={(v) => field.onChange(v ?? '')}
+                  value={field.value}
+                  onChange={field.onChange}
                   data-testid={ImportTestIds.InputBulkDate}
                 />
               )}
@@ -155,7 +155,7 @@ export function BulkEditDrawer({ actionType }: Props) {
               name="category_id"
               control={form.control}
               render={({ field }) => (
-                <Select
+                <ResponsiveSelect
                   label="Categoria"
                   data={categoryOptions}
                   searchable

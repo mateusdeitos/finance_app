@@ -5,7 +5,9 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface Props {
   label?: ReactNode;
+  description?: ReactNode;
   required?: boolean;
+  disabled?: boolean;
   /** Date value as `YYYY-MM-DD`, or `""`/`null` when empty. */
   value: string | null;
   /** Called with the `YYYY-MM-DD` value, or `""` when cleared. */
@@ -44,7 +46,9 @@ export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonEleme
   function ResponsiveDateInput(
     {
       label,
+      description,
       required,
+      disabled,
       value,
       onChange,
       error,
@@ -67,7 +71,9 @@ export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonEleme
           ref={ref as React.Ref<HTMLInputElement>}
           type="date"
           label={label}
+          description={description}
           required={required}
+          disabled={disabled}
           value={value ?? ""}
           onChange={(e) => onChange(e.currentTarget.value)}
           error={error}
@@ -82,7 +88,9 @@ export const ResponsiveDateInput = forwardRef<HTMLInputElement | HTMLButtonEleme
 
     const commonDesktopProps = {
       label,
+      description,
       required,
+      disabled,
       value: value || null,
       onChange: (date: string | null) => onChange(date ?? ""),
       error,

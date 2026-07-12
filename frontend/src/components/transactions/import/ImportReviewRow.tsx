@@ -1,6 +1,7 @@
 import { forwardRef, memo } from "react";
 import { ActionIcon, Box, Button, Checkbox, Group, Loader, Popover, Select, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
-import { DatePickerInput } from "@mantine/dates";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
+import { ResponsiveSelect } from "@/components/ResponsiveSelect";
 import { IconAlertCircle, IconAlertTriangle, IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useFormContext, useWatch, Controller, useForm, FormProvider } from "react-hook-form";
 import { useCategoryOptions, useAccountOptions, usePersonalAccountOptions, useSharedAccounts } from "@/hooks/import/useImportOptions";
@@ -202,15 +203,13 @@ export const ImportReviewRow = memo(
           <Controller
             name={`rows.${rowIndex}.date`}
             render={({ field }) => (
-              <DatePickerInput
+              <ResponsiveDateInput
                 ref={field.ref}
                 size="xs"
-                valueFormat="DD/MM/YYYY"
                 value={(field.value as string) || null}
-                onChange={(d) => field.onChange(d ?? "")}
+                onChange={field.onChange}
                 disabled={disabled || isSkipped}
                 error={rowErrors?.date?.message}
-                popoverProps={{ withinPortal: true }}
                 data-testid={ImportTestIds.RowInputDate(rowIndex)}
               />
             )}
@@ -292,7 +291,7 @@ export const ImportReviewRow = memo(
               <Controller
                 name={`rows.${rowIndex}.category_id`}
                 render={({ field }) => (
-                  <Select
+                  <ResponsiveSelect
                     ref={field.ref}
                     size="xs"
                     data={categoryOptions}
@@ -347,7 +346,7 @@ export const ImportReviewRow = memo(
               <Controller
                 name={`rows.${rowIndex}.account_id`}
                 render={({ field }) => (
-                  <Select
+                  <ResponsiveSelect
                     ref={field.ref}
                     size="xs"
                     data={personalAccountOptions.filter(
@@ -376,7 +375,7 @@ export const ImportReviewRow = memo(
                 <Controller
                   name={`rows.${rowIndex}.destination_account_id`}
                   render={({ field }) => (
-                    <Select
+                    <ResponsiveSelect
                       ref={field.ref}
                       size="xs"
                       data={accountOptions.filter(

@@ -16,7 +16,7 @@ import {
 } from "@mantine/core";
 import { IconX, IconPlus, IconCheck, IconCalendar } from "@tabler/icons-react";
 import { CurrencyInput } from "./CurrencyInput";
-import { ResponsiveDateInput } from "./ResponsiveDateInput";
+import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
 import {
   Controller,
   useWatch,

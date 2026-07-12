@@ -17,6 +17,7 @@ import {
 } from '@mantine/core'
 import { IconAlertCircle, IconArrowLeft, IconFileTypeCsv, IconPlus } from '@tabler/icons-react'
 import { AccountDrawer } from '@/components/accounts/AccountDrawer'
+import { ResponsiveSelect } from '@/components/ResponsiveSelect'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useGroupedAccountOptions } from '@/hooks/useGroupedAccountOptions'
 import { useParseImportCSV } from '@/hooks/useParseImportCSV'
@@ -94,7 +95,7 @@ export function UploadStep({ onParsed, onBack }: Props) {
       </Group>
 
       <Flex direction="row" gap="xs" align="flex-end">
-        <Select
+        <ResponsiveSelect
           label="Conta"
           placeholder="Selecione uma conta"
           required
