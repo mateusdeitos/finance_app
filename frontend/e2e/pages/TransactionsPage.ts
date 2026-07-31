@@ -56,6 +56,9 @@ export class TransactionsPage {
 
   async openAdvancedFilters() {
     await this.page.getByTestId(TransactionsTestIds.BtnOpenAdvancedFilters).click();
+    await this.page
+      .getByTestId(TransactionsTestIds.AdvancedFiltersPopover)
+      .waitFor({ state: "visible", timeout: 5000 });
   }
 
   /**

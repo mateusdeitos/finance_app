@@ -234,7 +234,6 @@ test.describe("Transaction Filters", () => {
     // Open advanced filter and toggle "Apenas despesas"
     // getByTestId finds the Mantine Switch root <label> element, which is visible
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
 
@@ -270,7 +269,6 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(incomeDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('income'));
     await page.waitForLoadState("networkidle");
 
@@ -306,7 +304,6 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(expenseDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('transfer'));
     await page.waitForLoadState("networkidle");
 
@@ -341,7 +338,6 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(uncategorizedDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
 
@@ -390,7 +386,6 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(uncategorizedIncomeDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
 
     // "Sem categoria" alone: both uncategorized transactions remain.
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
@@ -453,7 +448,6 @@ test.describe("Transaction Filters", () => {
 
     // "Sem categoria" alone: both uncategorized transactions show, regardless of account.
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
@@ -514,7 +508,6 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByTestId(TransactionsTestIds.StatNetMonth)).toHaveText(/\+R\$\s*20,00/, { timeout: 8000 });
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
@@ -550,7 +543,6 @@ test.describe("Transaction Filters", () => {
 
     await transactionsPage.goto();
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
@@ -709,7 +701,6 @@ test.describe("Transaction Filters", () => {
 
     // Apply expense type filter
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
     await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
