@@ -235,10 +235,7 @@ test.describe("Transaction Filters", () => {
     // getByTestId finds the Mantine Switch root <label> element, which is visible
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('expense'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(expenseDesc)).toBeVisible({ timeout: 8000 });
@@ -274,7 +271,7 @@ test.describe("Transaction Filters", () => {
 
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId(TransactionsTestIds.SwitchType('income')).locator("xpath=ancestor::label").click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('income'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(incomeDesc)).toBeVisible({ timeout: 8000 });
@@ -310,10 +307,7 @@ test.describe("Transaction Filters", () => {
 
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('transfer'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('transfer'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(transferDesc).first()).toBeVisible({ timeout: 8000 });
@@ -348,20 +342,14 @@ test.describe("Transaction Filters", () => {
 
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(uncategorizedDesc)).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(categorizedDesc)).not.toBeVisible({ timeout: 8000 });
 
     // Toggling back off restores the categorized transaction.
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await expect(page.getByText(categorizedDesc)).toBeVisible({ timeout: 8000 });
   });
@@ -405,20 +393,14 @@ test.describe("Transaction Filters", () => {
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
 
     // "Sem categoria" alone: both uncategorized transactions remain.
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await expect(page.getByText(uncategorizedExpenseDesc)).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(uncategorizedIncomeDesc)).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(categorizedExpenseDesc)).not.toBeVisible({ timeout: 8000 });
 
     // Adding "Apenas despesas" on top narrows to only the uncategorized expense.
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('expense'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
@@ -472,10 +454,7 @@ test.describe("Transaction Filters", () => {
     // "Sem categoria" alone: both uncategorized transactions show, regardless of account.
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
@@ -536,10 +515,7 @@ test.describe("Transaction Filters", () => {
 
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
@@ -575,10 +551,7 @@ test.describe("Transaction Filters", () => {
     await transactionsPage.goto();
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchNoCategory)
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
@@ -737,10 +710,7 @@ test.describe("Transaction Filters", () => {
     // Apply expense type filter
     await transactionsPage.openAdvancedFilters();
     await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('expense'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 

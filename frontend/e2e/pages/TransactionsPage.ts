@@ -58,6 +58,19 @@ export class TransactionsPage {
     await this.page.getByTestId(TransactionsTestIds.BtnOpenAdvancedFilters).click();
   }
 
+  /**
+   * Toggle a Switch inside the advanced filters popover/drawer (Tipo, Ocultar
+   * acertos, Sem categoria, ...) by its testid. getByTestId lands on the
+   * Mantine Switch's hidden input, so the click is redirected to its
+   * ancestor <label> (the actually-visible, clickable element).
+   */
+  async toggleAdvancedFilterSwitch(testId: string) {
+    await this.page
+      .getByTestId(testId)
+      .locator("xpath=ancestor::label")
+      .click({ timeout: 3000, force: true });
+  }
+
   async selectGroupBy(option: 'date' | 'category' | 'account') {
     await this.page.getByTestId(TransactionsTestIds.BtnGroupByMenu).click();
     await this.page.getByTestId(TransactionsTestIds.MenuItemGroupBy(option)).click();
