@@ -92,6 +92,11 @@ export const TransactionsTestIds = {
   SwitchNoCategory: 'switch_no_category',
   BtnClearFilters: 'btn_clear_filters',
 
+  // Desktop summary strip (Receitas | Despesas | Saldo do mês)
+  StatIncome: 'stat_income',
+  StatExpense: 'stat_expense',
+  StatNetMonth: 'stat_net_month',
+
   // Mobile filter row (search + 2 icon buttons that open drawers)
   BtnOpenFiltersDrawer: 'btn_open_filters_drawer',
   BtnOpenCategoriesFilterDrawer: 'btn_open_categories_filter_drawer',

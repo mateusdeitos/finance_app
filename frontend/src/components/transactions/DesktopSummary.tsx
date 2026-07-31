@@ -6,6 +6,7 @@ import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useOpeningBalance } from "@/hooks/useOpeningBalance";
 import { Transactions } from "@/types/transactions";
 import { formatSignedCents } from "@/utils/formatCents";
+import { TransactionsTestIds } from "@/testIds";
 
 interface Totals {
   income: number;
@@ -50,9 +51,10 @@ interface StatProps {
   color: string;
   hero?: boolean;
   loading?: boolean;
+  testId?: string;
 }
 
-function Stat({ label, amount, color, hero, loading }: StatProps) {
+function Stat({ label, amount, color, hero, loading, testId }: StatProps) {
   return (
     <Stack gap={2} px="lg">
       <Text
@@ -72,6 +74,7 @@ function Stat({ label, amount, color, hero, loading }: StatProps) {
           c={color}
           size={hero ? "xl" : "md"}
           style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" }}
+          data-testid={testId}
         >
           {formatSignedCents(amount)}
         </Text>
@@ -117,9 +120,21 @@ export function DesktopSummary() {
     <Card withBorder radius="md" padding="sm">
       <Group justify="space-between" align="center" wrap="nowrap">
         <Group gap={0} wrap="nowrap" align="center">
-          <Stat label="Receitas" amount={income} color="teal" loading={isLoading} />
+          <Stat
+            label="Receitas"
+            amount={income}
+            color="teal"
+            loading={isLoading}
+            testId={TransactionsTestIds.StatIncome}
+          />
           <Divider orientation="vertical" />
-          <Stat label="Despesas" amount={-expense} color="red" loading={isLoading} />
+          <Stat
+            label="Despesas"
+            amount={-expense}
+            color="red"
+            loading={isLoading}
+            testId={TransactionsTestIds.StatExpense}
+          />
           <Divider orientation="vertical" />
           <Stat
             label="Saldo do mês"
@@ -127,6 +142,7 @@ export function DesktopSummary() {
             color={displayedNet < 0 ? "red" : "teal"}
             hero
             loading={isLoading}
+            testId={TransactionsTestIds.StatNetMonth}
           />
         </Group>
         <SegmentedControl
