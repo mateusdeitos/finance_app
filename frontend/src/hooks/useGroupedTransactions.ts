@@ -31,9 +31,15 @@ export function useGroupedTransactions<T = Transactions.TransactionGroup[]>(
   const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
 
   const filtered = useMemo(() => {
-    if (!search.query) return transactions;
-    return transactions.filter((tx) => matchesTransactionSearch(tx, search.query));
-  }, [transactions, search.query]);
+    let result = transactions;
+    if (search.noCategory) {
+      result = result.filter((tx) => tx.category_id == null);
+    }
+    if (search.query) {
+      result = result.filter((tx) => matchesTransactionSearch(tx, search.query));
+    }
+    return result;
+  }, [transactions, search.query, search.noCategory]);
 
   const groups = useMemo(
     () => groupTransactions(filtered, search.groupBy, accounts, categories, filters.accountIds),

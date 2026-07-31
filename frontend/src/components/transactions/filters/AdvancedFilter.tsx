@@ -43,6 +43,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
 
   const selected: Transactions.TransactionType[] = search.types ?? [];
   const hideSettlements = search.hideSettlements ?? false;
+  const noCategory = search.noCategory ?? false;
 
   function toggle(value: Transactions.TransactionType) {
     const next = selected.includes(value)
@@ -55,7 +56,11 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
     update((prev) => ({ ...prev, hideSettlements: !hideSettlements }));
   }
 
-  const advancedCount = selected.length + (hideSettlements ? 1 : 0);
+  function toggleNoCategory() {
+    update((prev) => ({ ...prev, noCategory: !noCategory }));
+  }
+
+  const advancedCount = selected.length + (hideSettlements ? 1 : 0) + (noCategory ? 1 : 0);
 
   if (inline) {
     return (
@@ -68,6 +73,12 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
           label="Ocultar acertos"
           checked={hideSettlements}
           onChange={toggleHideSettlements}
+        />
+        <Switch
+          label="Sem categoria"
+          checked={noCategory}
+          onChange={toggleNoCategory}
+          data-testid={TransactionsTestIds.SwitchNoCategory}
         />
       </Stack>
     );
@@ -101,6 +112,12 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             checked={hideSettlements}
             onChange={toggleHideSettlements}
             data-testid={TransactionsTestIds.SwitchHideSettlements}
+          />
+          <Switch
+            label="Sem categoria"
+            checked={noCategory}
+            onChange={toggleNoCategory}
+            data-testid={TransactionsTestIds.SwitchNoCategory}
           />
         </Stack>
       </Popover.Dropdown>

@@ -89,6 +89,7 @@ export const TransactionsTestIds = {
   BtnOpenAdvancedFilters: 'open_advanced_filters',
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
+  SwitchNoCategory: 'switch_no_category',
   BtnClearFilters: 'btn_clear_filters',
 
   // Mobile filter row (search + 2 icon buttons that open drawers)
