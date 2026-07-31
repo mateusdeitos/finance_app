@@ -82,7 +82,8 @@ export function BulkDivisionDrawer() {
       const only = connectedAccounts[0];
       const conn = only.user_connection!;
       const isFrom = conn.from_user_id === currentUserId;
-      const defaultPct = isFrom ? conn.from_default_split_percentage : conn.to_default_split_percentage;
+      // This row represents the *partner's* share, so use the other side's default.
+      const defaultPct = isFrom ? conn.to_default_split_percentage : conn.from_default_split_percentage;
       return { connection_id: conn.id, percentage: defaultPct };
     }
     return { connection_id: 0, percentage: 0 };
