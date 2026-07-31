@@ -12,6 +12,26 @@ import { TransactionsTestIds } from '@/testIds'
 
 const today = new Date().toISOString().slice(0, 10);
 
+/**
+ * The create-transaction API requires a category_id for non-transfer types
+ * (TRANSACTION.INVALID_CATEGORY_ID) — there is no way to POST a transaction
+ * directly without one. A real "no category" transaction only exists after
+ * its category gets deleted without a replacement, which nullifies
+ * category_id on every transaction that referenced it. This helper
+ * reproduces that path: create a disposable category, create the
+ * transaction under it, then delete the category.
+ */
+async function createUncategorizedTransaction(
+  payload: Omit<Parameters<typeof apiCreateTransaction>[0], "category_id">,
+): Promise<{ id: number }> {
+  const tempCategory = await apiCreateCategory({
+    name: `Temp NoCat ${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  });
+  const tx = await apiCreateTransaction({ ...payload, category_id: tempCategory.id });
+  await apiDeleteCategory(tempCategory.id);
+  return tx;
+}
+
 test.describe("Transaction Filters", () => {
   let transactionsPage: TransactionsPage;
   let accountAId: number;
@@ -313,7 +333,7 @@ test.describe("Transaction Filters", () => {
       date: today,
       description: categorizedDesc,
     });
-    const uncategorizedTx = await apiCreateTransaction({
+    const uncategorizedTx = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: accountAId,
       amount: 2000,
@@ -360,14 +380,14 @@ test.describe("Transaction Filters", () => {
       date: today,
       description: categorizedExpenseDesc,
     });
-    const uncategorizedExpense = await apiCreateTransaction({
+    const uncategorizedExpense = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: accountAId,
       amount: 1500,
       date: today,
       description: uncategorizedExpenseDesc,
     });
-    const uncategorizedIncome = await apiCreateTransaction({
+    const uncategorizedIncome = await createUncategorizedTransaction({
       transaction_type: "income",
       account_id: accountAId,
       amount: 2500,
@@ -420,7 +440,7 @@ test.describe("Transaction Filters", () => {
     const categorizedInIsolatedDesc = `NoCatAccount Isolada Cat ${Date.now()}`;
     const uncategorizedInSharedDesc = `NoCatAccount Shared NoCat ${Date.now()}`;
 
-    const uncategorizedInIsolated = await apiCreateTransaction({
+    const uncategorizedInIsolated = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: isolatedAccount.id,
       amount: 1000,
@@ -435,7 +455,7 @@ test.describe("Transaction Filters", () => {
       date: today,
       description: categorizedInIsolatedDesc,
     });
-    const uncategorizedInShared = await apiCreateTransaction({
+    const uncategorizedInShared = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: accountAId,
       amount: 3000,
@@ -490,14 +510,14 @@ test.describe("Transaction Filters", () => {
       date: today,
       description: `NoCatSaldo CatExp ${Date.now()}`,
     });
-    const uncategorizedExpense = await apiCreateTransaction({
+    const uncategorizedExpense = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: isolatedAccount.id,
       amount: 1000, // R$ 10,00
       date: today,
       description: `NoCatSaldo NoCatExp ${Date.now()}`,
     });
-    const uncategorizedIncome = await apiCreateTransaction({
+    const uncategorizedIncome = await createUncategorizedTransaction({
       transaction_type: "income",
       account_id: isolatedAccount.id,
       amount: 5000, // R$ 50,00
@@ -543,7 +563,7 @@ test.describe("Transaction Filters", () => {
       date: today,
       description: categorizedDesc,
     });
-    const uncategorizedTx = await apiCreateTransaction({
+    const uncategorizedTx = await createUncategorizedTransaction({
       transaction_type: "expense",
       account_id: accountAId,
       amount: 2000,
