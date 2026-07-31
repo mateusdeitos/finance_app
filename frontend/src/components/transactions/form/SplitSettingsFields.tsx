@@ -69,7 +69,8 @@ function SplitRowControls({
 
   const conn = account.user_connection!;
   const isFrom = conn.from_user_id === currentUserId;
-  const defaultPercentage = isFrom ? conn.from_default_split_percentage : conn.to_default_split_percentage;
+  // This row represents the *partner's* share, so use the other side's default.
+  const defaultPercentage = isFrom ? conn.to_default_split_percentage : conn.from_default_split_percentage;
 
   const [percentage, setPercentage] = useState(defaultPercentage);
 

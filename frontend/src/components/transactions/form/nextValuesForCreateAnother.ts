@@ -9,8 +9,9 @@ interface CreateAnotherContext {
 }
 
 /**
- * The default split percentage for a connection, from the current user's
- * perspective — mirrors the logic in `SplitSettingsFields`/`SplitRowControls`.
+ * The default split percentage for a connection, from the partner's
+ * perspective (the share this split row sends to them) — mirrors the logic
+ * in `SplitSettingsFields`/`SplitRowControls`.
  */
 function defaultSplitPercentage(
   accounts: Transactions.Account[],
@@ -20,8 +21,8 @@ function defaultSplitPercentage(
   const conn = accounts.find((a) => a.user_connection?.id === connectionId)?.user_connection;
   if (!conn) return undefined;
   return conn.from_user_id === currentUserId
-    ? conn.from_default_split_percentage
-    : conn.to_default_split_percentage;
+    ? conn.to_default_split_percentage
+    : conn.from_default_split_percentage;
 }
 
 /**

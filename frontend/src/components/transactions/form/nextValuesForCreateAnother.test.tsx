@@ -5,8 +5,9 @@ import type { Transactions } from "@/types/transactions";
 
 const CURRENT_USER_ID = 1;
 
-// The current user is the `from` side of the connection, so its default split
-// percentage is `from_default_split_percentage` (70).
+// The current user is the `from` side of the connection. The split row
+// represents the partner's (the `to` side's) share, so the expected default
+// is `to_default_split_percentage` (30).
 const partnerAccount: Transactions.Account = {
   id: 2,
   user_id: 1,
@@ -74,13 +75,13 @@ test("keeps the division but zeroes each split amount and applies the default pe
   const next = nextValuesForCreateAnother(submitted, ctx);
 
   expect(next.split_settings).toEqual([
-    { connection_id: 10, amount: 0, percentage: 70, date: "2026-05-01" },
+    { connection_id: 10, amount: 0, percentage: 30, date: "2026-05-01" },
   ]);
 });
 
-test("uses the `to` side default percentage when the current user is the partner", () => {
+test("uses the `from` side default percentage when the current user is the partner", () => {
   const next = nextValuesForCreateAnother(submitted, { accounts, currentUserId: 2 });
-  expect(next.split_settings[0].percentage).toBe(30);
+  expect(next.split_settings[0].percentage).toBe(70);
 });
 
 test("falls back to the existing percentage when the connection is unknown", () => {
