@@ -89,7 +89,13 @@ export const TransactionsTestIds = {
   BtnOpenAdvancedFilters: 'open_advanced_filters',
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
+  SwitchNoCategory: 'switch_no_category',
   BtnClearFilters: 'btn_clear_filters',
+
+  // Desktop summary strip (Receitas | Despesas | Saldo do mês)
+  StatIncome: 'stat_income',
+  StatExpense: 'stat_expense',
+  StatNetMonth: 'stat_net_month',
 
   // Mobile filter row (search + 2 icon buttons that open drawers)
   BtnOpenFiltersDrawer: 'btn_open_filters_drawer',

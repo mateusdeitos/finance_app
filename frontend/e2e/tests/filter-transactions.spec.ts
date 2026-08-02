@@ -12,6 +12,26 @@ import { TransactionsTestIds } from '@/testIds'
 
 const today = new Date().toISOString().slice(0, 10);
 
+/**
+ * The create-transaction API requires a category_id for non-transfer types
+ * (TRANSACTION.INVALID_CATEGORY_ID) — there is no way to POST a transaction
+ * directly without one. A real "no category" transaction only exists after
+ * its category gets deleted without a replacement, which nullifies
+ * category_id on every transaction that referenced it. This helper
+ * reproduces that path: create a disposable category, create the
+ * transaction under it, then delete the category.
+ */
+async function createUncategorizedTransaction(
+  payload: Omit<Parameters<typeof apiCreateTransaction>[0], "category_id">,
+): Promise<{ id: number }> {
+  const tempCategory = await apiCreateCategory({
+    name: `Temp NoCat ${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  });
+  const tx = await apiCreateTransaction({ ...payload, category_id: tempCategory.id });
+  await apiDeleteCategory(tempCategory.id);
+  return tx;
+}
+
 test.describe("Transaction Filters", () => {
   let transactionsPage: TransactionsPage;
   let accountAId: number;
@@ -23,6 +43,10 @@ test.describe("Transaction Filters", () => {
   let categoryBId: number;
   let categoryBName: string;
   const createdTransactionIds: number[] = [];
+  // Accounts created inside individual tests (isolated from accountA/accountB
+  // so saldo assertions aren't polluted by other tests' transactions sharing
+  // the same account/month), cleaned up alongside accountA/accountB.
+  const extraAccountIds: number[] = [];
 
   test.beforeAll(async () => {
     accountAName = `Filtro Conta A ${Date.now()}`;
@@ -54,6 +78,9 @@ test.describe("Transaction Filters", () => {
     }
     await apiDeleteAccount(accountAId).catch(() => undefined);
     await apiDeleteAccount(accountBId).catch(() => undefined);
+    for (const id of extraAccountIds) {
+      await apiDeleteAccount(id).catch(() => undefined);
+    }
     await apiDeleteCategory(categoryAId).catch(() => undefined);
     await apiDeleteCategory(categoryBId).catch(() => undefined);
   });
@@ -207,11 +234,7 @@ test.describe("Transaction Filters", () => {
     // Open advanced filter and toggle "Apenas despesas"
     // getByTestId finds the Mantine Switch root <label> element, which is visible
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('expense'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(expenseDesc)).toBeVisible({ timeout: 8000 });
@@ -246,8 +269,7 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(incomeDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page.getByTestId(TransactionsTestIds.SwitchType('income')).locator("xpath=ancestor::label").click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('income'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(incomeDesc)).toBeVisible({ timeout: 8000 });
@@ -282,15 +304,257 @@ test.describe("Transaction Filters", () => {
     await expect(page.getByText(expenseDesc)).toBeVisible();
 
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('transfer'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('transfer'));
     await page.waitForLoadState("networkidle");
 
     await expect(page.getByText(transferDesc).first()).toBeVisible({ timeout: 8000 });
     await expect(page.getByText(expenseDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── No category filter (advanced) ─────────────────────────────────────────
+  test("no category filter shows only transactions without a category", async ({ page }) => {
+    const categorizedDesc = `NoCategoryFilter Cat ${Date.now()}`;
+    const uncategorizedDesc = `NoCategoryFilter NoCat ${Date.now()}`;
+
+    const categorizedTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: categorizedDesc,
+    });
+    const uncategorizedTx = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      amount: 2000,
+      date: today,
+      description: uncategorizedDesc,
+    });
+    createdTransactionIds.push(categorizedTx.id, uncategorizedTx.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(categorizedDesc)).toBeVisible();
+    await expect(page.getByText(uncategorizedDesc)).toBeVisible();
+
+    await transactionsPage.openAdvancedFilters();
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(uncategorizedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categorizedDesc)).not.toBeVisible({ timeout: 8000 });
+
+    // Toggling back off restores the categorized transaction.
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText(categorizedDesc)).toBeVisible({ timeout: 8000 });
+  });
+
+  // ── No category filter combined with type filter ────────────────────────────
+  test("no category filter combined with type filter narrows further", async ({ page }) => {
+    const categorizedExpenseDesc = `NoCatType CatExp ${Date.now()}`;
+    const uncategorizedExpenseDesc = `NoCatType NoCatExp ${Date.now()}`;
+    const uncategorizedIncomeDesc = `NoCatType NoCatInc ${Date.now()}`;
+
+    const categorizedExpense = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: categorizedExpenseDesc,
+    });
+    const uncategorizedExpense = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      amount: 1500,
+      date: today,
+      description: uncategorizedExpenseDesc,
+    });
+    const uncategorizedIncome = await createUncategorizedTransaction({
+      transaction_type: "income",
+      account_id: accountAId,
+      amount: 2500,
+      date: today,
+      description: uncategorizedIncomeDesc,
+    });
+    createdTransactionIds.push(categorizedExpense.id, uncategorizedExpense.id, uncategorizedIncome.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(categorizedExpenseDesc)).toBeVisible();
+    await expect(page.getByText(uncategorizedExpenseDesc)).toBeVisible();
+    await expect(page.getByText(uncategorizedIncomeDesc)).toBeVisible();
+
+    await transactionsPage.openAdvancedFilters();
+
+    // "Sem categoria" alone: both uncategorized transactions remain.
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText(uncategorizedExpenseDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(uncategorizedIncomeDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categorizedExpenseDesc)).not.toBeVisible({ timeout: 8000 });
+
+    // Adding "Apenas despesas" on top narrows to only the uncategorized expense.
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByText(uncategorizedExpenseDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(uncategorizedIncomeDesc)).not.toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categorizedExpenseDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── No category filter combined with account filter ─────────────────────────
+  test("no category filter combined with account filter narrows correctly", async ({ page }) => {
+    const isolatedAccountName = `NoCatAccount Isolada ${Date.now()}`;
+    const isolatedAccount = await apiCreateAccount({
+      name: isolatedAccountName,
+      initial_balance: 0,
+    });
+    extraAccountIds.push(isolatedAccount.id);
+
+    const uncategorizedInIsolatedDesc = `NoCatAccount Isolada NoCat ${Date.now()}`;
+    const categorizedInIsolatedDesc = `NoCatAccount Isolada Cat ${Date.now()}`;
+    const uncategorizedInSharedDesc = `NoCatAccount Shared NoCat ${Date.now()}`;
+
+    const uncategorizedInIsolated = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: isolatedAccount.id,
+      amount: 1000,
+      date: today,
+      description: uncategorizedInIsolatedDesc,
+    });
+    const categorizedInIsolated = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: isolatedAccount.id,
+      category_id: categoryAId,
+      amount: 2000,
+      date: today,
+      description: categorizedInIsolatedDesc,
+    });
+    const uncategorizedInShared = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      amount: 3000,
+      date: today,
+      description: uncategorizedInSharedDesc,
+    });
+    createdTransactionIds.push(uncategorizedInIsolated.id, categorizedInIsolated.id, uncategorizedInShared.id);
+
+    await transactionsPage.goto();
+    await expect(page.getByText(uncategorizedInIsolatedDesc)).toBeVisible();
+    await expect(page.getByText(categorizedInIsolatedDesc)).toBeVisible();
+    await expect(page.getByText(uncategorizedInSharedDesc)).toBeVisible();
+
+    // "Sem categoria" alone: both uncategorized transactions show, regardless of account.
+    await transactionsPage.openAdvancedFilters();
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByText(uncategorizedInIsolatedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(uncategorizedInSharedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categorizedInIsolatedDesc)).not.toBeVisible({ timeout: 8000 });
+
+    // Narrowing to the isolated account on top hides the shared-account transaction too.
+    await transactionsPage.filterByAccount(isolatedAccount.id);
+
+    await expect(page.getByText(uncategorizedInIsolatedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(uncategorizedInSharedDesc)).not.toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(categorizedInIsolatedDesc)).not.toBeVisible({ timeout: 8000 });
+  });
+
+  // ── No category filter — saldo do mês ────────────────────────────────────────
+  test("no category filter updates saldo, receitas and despesas to reflect only uncategorized transactions", async ({ page }) => {
+    // Uses its own account so the summary totals aren't polluted by other
+    // tests' transactions sharing accountA within the same month.
+    const isolatedAccountName = `NoCatSaldo Isolada ${Date.now()}`;
+    const isolatedAccount = await apiCreateAccount({
+      name: isolatedAccountName,
+      initial_balance: 0,
+    });
+    extraAccountIds.push(isolatedAccount.id);
+
+    const categorizedExpense = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: isolatedAccount.id,
+      category_id: categoryAId,
+      amount: 2000, // R$ 20,00
+      date: today,
+      description: `NoCatSaldo CatExp ${Date.now()}`,
+    });
+    const uncategorizedExpense = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: isolatedAccount.id,
+      amount: 1000, // R$ 10,00
+      date: today,
+      description: `NoCatSaldo NoCatExp ${Date.now()}`,
+    });
+    const uncategorizedIncome = await createUncategorizedTransaction({
+      transaction_type: "income",
+      account_id: isolatedAccount.id,
+      amount: 5000, // R$ 50,00
+      date: today,
+      description: `NoCatSaldo NoCatInc ${Date.now()}`,
+    });
+    createdTransactionIds.push(categorizedExpense.id, uncategorizedExpense.id, uncategorizedIncome.id);
+
+    await transactionsPage.goto();
+    await transactionsPage.filterByAccount(isolatedAccount.id);
+
+    // Before "Sem categoria": Receitas 50,00 / Despesas 30,00 (20 + 10) / Saldo +20,00.
+    await expect(page.getByTestId(TransactionsTestIds.StatIncome)).toHaveText(/\+R\$\s*50,00/, { timeout: 8000 });
+    await expect(page.getByTestId(TransactionsTestIds.StatExpense)).toHaveText(/-R\$\s*30,00/, { timeout: 8000 });
+    await expect(page.getByTestId(TransactionsTestIds.StatNetMonth)).toHaveText(/\+R\$\s*20,00/, { timeout: 8000 });
+
+    await transactionsPage.openAdvancedFilters();
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Escape");
+
+    // After "Sem categoria": the categorized expense drops out — Receitas
+    // stays 50,00, Despesas becomes 10,00, Saldo becomes +40,00.
+    await expect(page.getByTestId(TransactionsTestIds.StatIncome)).toHaveText(/\+R\$\s*50,00/, { timeout: 8000 });
+    await expect(page.getByTestId(TransactionsTestIds.StatExpense)).toHaveText(/-R\$\s*10,00/, { timeout: 8000 });
+    await expect(page.getByTestId(TransactionsTestIds.StatNetMonth)).toHaveText(/\+R\$\s*40,00/, { timeout: 8000 });
+  });
+
+  // ── No category filter — clear filters ───────────────────────────────────────
+  test("clear filters button also resets the no category filter", async ({ page }) => {
+    const categorizedDesc = `NoCatClear Cat ${Date.now()}`;
+    const uncategorizedDesc = `NoCatClear NoCat ${Date.now()}`;
+
+    const categorizedTx = await apiCreateTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      category_id: categoryAId,
+      amount: 1000,
+      date: today,
+      description: categorizedDesc,
+    });
+    const uncategorizedTx = await createUncategorizedTransaction({
+      transaction_type: "expense",
+      account_id: accountAId,
+      amount: 2000,
+      date: today,
+      description: uncategorizedDesc,
+    });
+    createdTransactionIds.push(categorizedTx.id, uncategorizedTx.id);
+
+    await transactionsPage.goto();
+    await transactionsPage.openAdvancedFilters();
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchNoCategory);
+    await page.waitForLoadState("networkidle");
+    await page.keyboard.press("Escape");
+
+    await expect(page.getByText(categorizedDesc)).not.toBeVisible({ timeout: 8000 });
+    await expect(page.getByTestId(TransactionsTestIds.BtnClearFilters)).toBeVisible();
+
+    await page.getByTestId(TransactionsTestIds.BtnClearFilters).click();
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText(categorizedDesc)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(uncategorizedDesc)).toBeVisible({ timeout: 8000 });
   });
 
   // ── Tag filter ────────────────────────────────────────────────────────────
@@ -437,11 +701,7 @@ test.describe("Transaction Filters", () => {
 
     // Apply expense type filter
     await transactionsPage.openAdvancedFilters();
-    await page.getByTestId(TransactionsTestIds.AdvancedFiltersPopover).waitFor({ state: "visible", timeout: 5000 });
-    await page
-      .getByTestId(TransactionsTestIds.SwitchType('expense'))
-      .locator("xpath=ancestor::label")
-      .click({ timeout: 3000, force: true });
+    await transactionsPage.toggleAdvancedFilterSwitch(TransactionsTestIds.SwitchType('expense'));
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 

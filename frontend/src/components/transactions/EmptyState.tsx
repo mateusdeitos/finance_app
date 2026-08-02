@@ -20,7 +20,8 @@ export function EmptyState() {
     filters.categoryIds.length > 0 ||
     filters.tagIds.length > 0 ||
     filters.types.length > 0 ||
-    search.hideSettlements;
+    search.hideSettlements ||
+    search.noCategory;
 
   function clearFilters() {
     void navigate({
@@ -32,6 +33,7 @@ export function EmptyState() {
         tagIds: [],
         types: [],
         hideSettlements: false,
+        noCategory: false,
       }),
     });
   }
