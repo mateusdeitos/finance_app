@@ -1,0 +1,20 @@
+---
+import AccountsCategoriesAnimation from '@/components/islands/AccountsCategoriesAnimation'
+---
+
+<section class="px-4 py-14 sm:px-6 sm:py-20">
+  <div class="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-16">
+    <div>
+      <h2 class="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">
+        Contas e categorias, do jeito de vocês.
+      </h2>
+      <p class="mt-3 text-neutral-600">
+        Contas privadas e conjuntas, categorias com emoji e hierarquia — tudo organizado do jeito que
+        vocês já pensam sobre o próprio dinheiro.
+      </p>
+    </div>
+    <div>
+      <AccountsCategoriesAnimation client:visible />
+    </div>
+  </div>
+</section>

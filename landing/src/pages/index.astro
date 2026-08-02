@@ -1,0 +1,24 @@
+---
+import AccountsCategoriesShowcase from '@/components/AccountsCategoriesShowcase.astro'
+import ChartsShowcase from '@/components/ChartsShowcase.astro'
+import CtaSection from '@/components/CtaSection.astro'
+import ExpenseSplitShowcase from '@/components/ExpenseSplitShowcase.astro'
+import FeatureHighlights from '@/components/FeatureHighlights.astro'
+import Footer from '@/components/Footer.astro'
+import Header from '@/components/Header.astro'
+import Hero from '@/components/Hero.astro'
+import BaseLayout from '@/layouts/BaseLayout.astro'
+---
+
+<BaseLayout>
+  <Header />
+  <main>
+    <Hero />
+    <FeatureHighlights />
+    <ExpenseSplitShowcase />
+    <ChartsShowcase />
+    <AccountsCategoriesShowcase />
+    <CtaSection />
+  </main>
+  <Footer />
+</BaseLayout>

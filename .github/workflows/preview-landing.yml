@@ -1,0 +1,64 @@
+name: Preview Landing (PR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to deploy as preview"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-landing-pr-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Build & deploy preview
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Install dependencies
+        working-directory: landing
+        run: npm ci
+
+      - name: Build landing page
+        working-directory: landing
+        env:
+          PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
+        run: npm run build
+
+      - name: Deploy preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy landing/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=pr-${{ inputs.pr_number }}
+
+      - name: Comment preview URL on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          gh pr comment "$PR_NUMBER" --body "Preview da landing: $URL
+
+          Branch: \`pr-$PR_NUMBER\`."

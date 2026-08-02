@@ -1,0 +1,35 @@
+---
+import '@/styles/global.css'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const {
+  title = 'FinanceApp — As finanças do casal, num lugar só.',
+  description = 'Gestão financeira a dois: dividam despesas, acompanhem contas, categorias e gráficos de gastos em um só lugar.',
+} = Astro.props
+
+const ogImage = new URL('/og-image.png', Astro.site ?? Astro.url).toString()
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body class="bg-white text-neutral-900 antialiased">
+    <slot />
+  </body>
+</html>
