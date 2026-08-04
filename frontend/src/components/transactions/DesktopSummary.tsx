@@ -28,10 +28,11 @@ function computeTotals(
       if (hideSettlements && tx.origin_settlement_id !== undefined) continue;
       const sign = tx.operation_type === "credit" ? 1 : -1;
       net += sign * tx.amount;
-      if (tx.type !== "transfer") {
-        if (tx.operation_type === "credit") income += tx.amount;
-        else expense += tx.amount;
-      }
+      // Transfers count toward entradas/saídas too (a transfer out of one
+      // account is an outflow, into another an inflow), even though they
+      // net to zero on the balance.
+      if (tx.operation_type === "credit") income += tx.amount;
+      else expense += tx.amount;
       if (!hideSettlements) {
         for (const s of tx.settlements_from_source ?? []) {
           if (filterSet && !filterSet.has(s.account_id)) continue;
@@ -84,10 +85,11 @@ function Stat({ label, amount, color, hero, loading, testId }: StatProps) {
 }
 
 /**
- * Desktop slim summary strip — one-line consolidated layout with Receitas |
- * Despesas | Saldo (hero) on the left and a Mês/Acumulado segmented toggle
- * on the right. Replaces the separate MonthlyStats + NetSummary stack used
- * on mobile so the desktop toolbar above stays uncluttered.
+ * Desktop slim summary strip — one-line consolidated layout with Entradas |
+ * Saídas | (Inicial, when accumulated) | Saldo (hero) on the left and a
+ * Mês/Acumulado segmented toggle on the right. Replaces the separate
+ * MonthlyStats + NetSummary stack used on mobile so the desktop toolbar
+ * above stays uncluttered.
  */
 export function DesktopSummary() {
   const search = useSearch({ from: "/_authenticated/transactions" });
@@ -121,7 +123,7 @@ export function DesktopSummary() {
       <Group justify="space-between" align="center" wrap="nowrap">
         <Group gap={0} wrap="nowrap" align="center">
           <Stat
-            label="Receitas"
+            label="Entradas"
             amount={income}
             color="teal"
             loading={isLoading}
@@ -129,15 +131,27 @@ export function DesktopSummary() {
           />
           <Divider orientation="vertical" />
           <Stat
-            label="Despesas"
+            label="Saídas"
             amount={-expense}
             color="red"
             loading={isLoading}
             testId={TransactionsTestIds.StatExpense}
           />
           <Divider orientation="vertical" />
+          {search.accumulated && (
+            <>
+              <Stat
+                label="Inicial"
+                amount={openingBalance}
+                color="dimmed"
+                loading={isLoading}
+                testId={TransactionsTestIds.StatOpeningBalance}
+              />
+              <Divider orientation="vertical" />
+            </>
+          )}
           <Stat
-            label="Saldo do mês"
+            label={search.accumulated ? "Saldo acumulado" : "Saldo do mês"}
             amount={displayedNet}
             color={displayedNet < 0 ? "red" : "teal"}
             hero
