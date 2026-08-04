@@ -92,10 +92,12 @@ export const TransactionsTestIds = {
   SwitchNoCategory: 'switch_no_category',
   BtnClearFilters: 'btn_clear_filters',
 
-  // Desktop summary strip (Receitas | Despesas | Saldo do mês)
+  // Balance summary (Entradas | Saídas | [Inicial] | Saldo do mês/acumulado)
   StatIncome: 'stat_income',
   StatExpense: 'stat_expense',
   StatNetMonth: 'stat_net_month',
+  // Opening balance column, shown only in "Acumulado" mode (desktop + mobile)
+  StatOpeningBalance: 'stat_opening_balance',
 
   // Mobile filter row (search + 2 icon buttons that open drawers)
   BtnOpenFiltersDrawer: 'btn_open_filters_drawer',

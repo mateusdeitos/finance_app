@@ -465,7 +465,7 @@ test.describe("Transaction Filters", () => {
   });
 
   // ── No category filter — saldo do mês ────────────────────────────────────────
-  test("no category filter updates saldo, receitas and despesas to reflect only uncategorized transactions", async ({ page }) => {
+  test("no category filter updates saldo, entradas and saídas to reflect only uncategorized transactions", async ({ page }) => {
     // Uses its own account so the summary totals aren't polluted by other
     // tests' transactions sharing accountA within the same month.
     const isolatedAccountName = `NoCatSaldo Isolada ${Date.now()}`;
@@ -502,7 +502,7 @@ test.describe("Transaction Filters", () => {
     await transactionsPage.goto();
     await transactionsPage.filterByAccount(isolatedAccount.id);
 
-    // Before "Sem categoria": Receitas 50,00 / Despesas 30,00 (20 + 10) / Saldo +20,00.
+    // Before "Sem categoria": Entradas 50,00 / Saídas 30,00 (20 + 10) / Saldo +20,00.
     await expect(page.getByTestId(TransactionsTestIds.StatIncome)).toHaveText(/\+R\$\s*50,00/, { timeout: 8000 });
     await expect(page.getByTestId(TransactionsTestIds.StatExpense)).toHaveText(/-R\$\s*30,00/, { timeout: 8000 });
     await expect(page.getByTestId(TransactionsTestIds.StatNetMonth)).toHaveText(/\+R\$\s*20,00/, { timeout: 8000 });
@@ -512,8 +512,8 @@ test.describe("Transaction Filters", () => {
     await page.waitForLoadState("networkidle");
     await page.keyboard.press("Escape");
 
-    // After "Sem categoria": the categorized expense drops out — Receitas
-    // stays 50,00, Despesas becomes 10,00, Saldo becomes +40,00.
+    // After "Sem categoria": the categorized expense drops out — Entradas
+    // stays 50,00, Saídas becomes 10,00, Saldo becomes +40,00.
     await expect(page.getByTestId(TransactionsTestIds.StatIncome)).toHaveText(/\+R\$\s*50,00/, { timeout: 8000 });
     await expect(page.getByTestId(TransactionsTestIds.StatExpense)).toHaveText(/-R\$\s*10,00/, { timeout: 8000 });
     await expect(page.getByTestId(TransactionsTestIds.StatNetMonth)).toHaveText(/\+R\$\s*40,00/, { timeout: 8000 });
