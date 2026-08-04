@@ -1,0 +1,10 @@
+# Copie este arquivo para terraform.tfvars e preencha com valores reais.
+# terraform.tfvars é gitignored — nunca commitar.
+#
+# Autenticação do provider Cloudflare NÃO fica aqui: exporte
+#   export CLOUDFLARE_API_TOKEN="..."
+# antes de rodar `terraform apply` (o provider lê a env var automaticamente).
+
+cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Dashboard → canto superior direito → Account ID
+pages_project_name    = "financeapp-landing"                # vira financeapp-landing.pages.dev
+production_branch     = "main"

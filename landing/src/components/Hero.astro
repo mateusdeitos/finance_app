@@ -1,0 +1,36 @@
+---
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://finance-app.mateusdeitos.dev'
+---
+
+<section id="top" class="relative overflow-hidden px-4 pb-14 pt-14 sm:px-6 sm:pb-20 sm:pt-20">
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-200/50 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite] sm:h-96 sm:w-96"
+  >
+  </div>
+
+  <div class="relative mx-auto flex max-w-3xl flex-col items-center text-center">
+    <h1 class="text-3xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl">
+      As finanças do casal, num lugar só.
+    </h1>
+    <p class="mt-4 max-w-xl text-base text-neutral-700 sm:text-lg">
+      Despesas, transferências e acertos compartilhados — simples e transparente, a dois.
+    </p>
+
+    <a
+      href={`${appUrl}/login`}
+      class="mt-8 inline-flex min-h-11 items-center rounded-full bg-brand-600 px-6 py-3 text-base font-semibold text-white shadow-md transition-colors active:bg-brand-700 sm:hover:bg-brand-700"
+    >
+      Começar agora
+    </a>
+
+    <p class="mt-4 flex items-center gap-2 text-sm text-neutral-500">
+      <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path
+          d="M12 2 2 6.5V11c0 5 3.4 8.9 10 11 6.6-2.1 10-6 10-11V6.5L12 2Zm-1.2 13.6L6.6 11.4l1.4-1.4 2.8 2.8 5.4-5.4 1.4 1.4-6.8 6.8Z"
+        ></path>
+      </svg>
+      Login seguro com sua conta Google
+    </p>
+  </div>
+</section>

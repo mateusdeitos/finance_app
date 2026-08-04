@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/manrope';
+
+@theme {
+  --font-sans: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* brand (blue) — transcrito de frontend/src/theme.ts, mid tone bate com o fundo da logo */
+  --color-brand-50: #e9f7ff;
+  --color-brand-100: #dbeaf3;
+  --color-brand-200: #bad2e1;
+  --color-brand-300: #95b8cf;
+  --color-brand-400: #77a3bf;
+  --color-brand-500: #6295b6;
+  --color-brand-600: #568fb3;
+  --color-brand-700: #457b9d;
+  --color-brand-800: #396e8e;
+  --color-brand-900: #265f7f;
+
+  /* positive (green) — receitas, saldos positivos */
+  --color-positive-50: #e8fcfa;
+  --color-positive-100: #daf5f2;
+  --color-positive-200: #b4e9e3;
+  --color-positive-300: #8cddd3;
+  --color-positive-400: #6bd3c6;
+  --color-positive-500: #56cdbe;
+  --color-positive-600: #49caba;
+  --color-positive-700: #39b2a3;
+  --color-positive-800: #2a9d8f;
+  --color-positive-900: #0c8a7d;
+
+  /* negative (red) — despesas, alertas */
+  --color-negative-50: #ffe9ec;
+  --color-negative-100: #ffd3d6;
+  --color-negative-200: #f6a6ac;
+  --color-negative-300: #ef757e;
+  --color-negative-400: #e84c58;
+  --color-negative-500: #e63946;
+  --color-negative-600: #e42332;
+  --color-negative-700: #cb1425;
+  --color-negative-800: #b60c20;
+  --color-negative-900: #a00019;
+
+  /* warning/accent (yellow) */
+  --color-warning-50: #fff2e3;
+  --color-warning-100: #ffe4cf;
+  --color-warning-200: #f9c8a1;
+  --color-warning-300: #f4a261;
+  --color-warning-400: #f19044;
+  --color-warning-500: #ef8029;
+  --color-warning-600: #ef7819;
+  --color-warning-700: #d5660c;
+  --color-warning-800: #be5906;
+  --color-warning-900: #a64b00;
+
+  /* neutral (grey) */
+  --color-neutral-50: #f5f5f5;
+  --color-neutral-100: #e7e7e7;
+  --color-neutral-200: #cdcdcd;
+  --color-neutral-300: #b2b2b2;
+  --color-neutral-400: #9a9a9a;
+  --color-neutral-500: #8b8b8b;
+  --color-neutral-600: #848484;
+  --color-neutral-700: #717171;
+  --color-neutral-800: #656565;
+  --color-neutral-900: #1a1a1a;
+
+  /* acento raro (dourado da logo) — nunca usar como fundo/área grande */
+  --color-gold: #ffd700;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,106 @@
+name: Deploy Landing
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      force_landing:
+        description: "Force landing deploy (skip change detection)"
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag to deploy (set by the Publish Release workflow; enables release-style change detection)"
+        type: string
+        default: ""
+
+jobs:
+  detect-changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      landing: ${{ steps.filter.outputs.landing }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        id: prev-tag
+        run: |
+          CURRENT_TAG=${{ github.event.release.tag_name || inputs.release_tag }}
+          PREV_TAG=$(git tag --sort=-version:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | awk -v cur="${CURRENT_TAG}" 'found { print; exit } $0 == cur { found = 1 }')
+          echo "prev_tag=${PREV_TAG}" >> $GITHUB_OUTPUT
+          echo "current_tag=${CURRENT_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Check changed paths
+        id: filter
+        run: |
+          if [ "${{ inputs.force_landing }}" = "true" ]; then
+            echo "Force landing deploy requested"
+            FORCE_LANDING=true
+          fi
+
+          # Manual workflow_dispatch without a release tag: deploy nothing unless forced.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${{ inputs.release_tag }}" ]; then
+            echo "landing=${FORCE_LANDING:-false}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          PREV_TAG=${{ steps.prev-tag.outputs.prev_tag }}
+          CURRENT_TAG=${{ steps.prev-tag.outputs.current_tag }}
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, deploying landing"
+            echo "landing=true" >> $GITHUB_OUTPUT
+          else
+            CHANGED=$(git diff --name-only "${PREV_TAG}..${CURRENT_TAG}")
+            echo "Changed files:"
+            echo "$CHANGED"
+
+            if [ "${FORCE_LANDING}" = "true" ] || echo "$CHANGED" | grep -qE '^(landing|\.github)/'; then
+              echo "landing=true" >> $GITHUB_OUTPUT
+            else
+              echo "landing=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  deploy:
+    name: Landing → Cloudflare Pages
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: detect-changes
+    if: needs.detect-changes.outputs.landing == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.release_tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Install dependencies
+        working-directory: landing
+        run: npm ci
+
+      - name: Build landing page
+        working-directory: landing
+        env:
+          PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy landing/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=main

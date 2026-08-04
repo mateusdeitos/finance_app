@@ -1,0 +1,19 @@
+---
+const appUrl = import.meta.env.PUBLIC_APP_URL ?? 'https://finance-app.mateusdeitos.dev'
+---
+
+<header class="sticky top-0 z-50 border-b border-neutral-100 bg-white/80 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <a href="#top" class="flex items-center gap-2">
+      <img src="/favicon.svg" alt="" width="32" height="32" class="rounded-lg" />
+      <span class="text-lg font-bold tracking-tight text-neutral-900">FinanceApp</span>
+    </a>
+
+    <a
+      href={`${appUrl}/login`}
+      class="inline-flex min-h-11 items-center rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors active:bg-brand-700 sm:hover:bg-brand-700"
+    >
+      Começar agora
+    </a>
+  </div>
+</header>

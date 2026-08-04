@@ -6,6 +6,14 @@ infra/.terraform.lock.hcl
 infra/*.tfstate
 infra/*.tfstate.backup
 infra/terraform.tfvars
+
+# Terraform (landing)
+landing/terraform/.terraform/
+landing/terraform/.terraform.lock.hcl
+landing/terraform/*.tfstate
+landing/terraform/*.tfstate.backup
+landing/terraform/terraform.tfvars
+
 openspec
 .ai-jail
 

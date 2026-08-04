@@ -4,17 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Monorepo for a couples' finance management app. Two top-level code directories:
+Monorepo for a couples' finance management app. Three top-level code directories:
 
 - `backend/` — Go service (Echo + GORM + PostgreSQL), deployed on Google Cloud Run.
 - `frontend/` — React 19 + TypeScript + Vite SPA (Mantine, TanStack Router/Query, React Hook Form).
+- `landing/` — Astro + Tailwind marketing landing page, deployed to Cloudflare Pages.
 
-Additional top-level folders: `e2e/` lives inside `frontend/`; `infra/` holds deployment config; `openspec/` holds OpenSpec change proposals; root-level `Dockerfile.claude`, `docker-compose.yml`, `docker-compose.e2e.yml`, and `justfile` orchestrate the full stack.
+Additional top-level folders: `e2e/` lives inside `frontend/`; `infra/` holds GCP deployment config (backend/frontend); `landing/terraform/` holds the separate Cloudflare Terraform config for the landing page; `openspec/` holds OpenSpec change proposals; root-level `Dockerfile.claude`, `docker-compose.yml`, `docker-compose.e2e.yml`, and `justfile` orchestrate the full stack.
 
 **Before working on a task, read the scoped `CLAUDE.md` for the area you're touching:**
 
 - `backend/CLAUDE.md` — Go architecture, layered design, testing with testcontainers, domain model, mocks.
 - `frontend/CLAUDE.md` — React stack, routing, data fetching, component conventions, Playwright e2e.
+- `landing/CLAUDE.md` — Astro/Tailwind conventions, static-first/mobile-first rules, brand tokens, Cloudflare Terraform.
 
 Tasks that span both layers (e.g. adding a field to an API response + consuming it in the UI) must honor both files. Do **not** assume this repo is single-stack; claims like "there is no frontend here" or "there is no backend here" are wrong.
 
