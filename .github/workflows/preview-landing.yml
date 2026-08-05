@@ -45,13 +45,19 @@ jobs:
           PUBLIC_APP_URL: ${{ vars.PUBLIC_APP_URL }}
         run: npm run build
 
+      - name: Resolve Cloudflare Pages project name
+        id: cf-project
+        run: |
+          NAME=$(printf '%s' "${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}" | tr -d '\n\r')
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Deploy preview to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy landing/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }} --branch=pr-${{ inputs.pr_number }}
+          command: pages deploy landing/dist --project-name=${{ steps.cf-project.outputs.name }} --branch=pr-${{ inputs.pr_number }}
 
       - name: Comment preview URL on PR
         env:
