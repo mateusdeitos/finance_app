@@ -1,0 +1,16 @@
+# Copie este arquivo para terraform.tfvars e preencha com valores reais.
+# terraform.tfvars é gitignored — nunca commitar.
+#
+# Autenticação do provider Cloudflare NÃO fica aqui: exporte
+#   export CLOUDFLARE_API_TOKEN="..."
+# antes de rodar `terraform apply` (o provider lê a env var automaticamente).
+
+cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # mesma conta de landing/terraform
+pages_project_name    = "financeapp-frontend"                # vira financeapp-frontend.pages.dev
+production_branch     = "main"
+
+# Deixe vazio no primeiro apply para validar o app na URL *.pages.dev antes de
+# apontar o domínio. Depois preencha os dois e reaplique — o registro DNS é
+# criado junto (CNAME proxied para <projeto>.pages.dev).
+custom_domain      = "app.dividim.app"
+cloudflare_zone_id = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" # dividim.app → Overview → Zone ID

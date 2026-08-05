@@ -41,6 +41,34 @@ src/
   utils/         # Pure utility functions (and renderDrawer portal helper)
 ```
 
+## Deploy
+
+Cloudflare Pages, direct-upload via `wrangler pages deploy` (see `terraform/`
+and `.github/workflows/deploy.yml`'s `frontend-deploy` job / `preview.yml` at
+the repo root). SPA fallback is `public/_redirects` (`/* -> /index.html 200`);
+cache headers for the PWA service worker and hashed static assets are
+`public/_headers` — both are copied into `dist/` automatically by Vite's
+`public/` passthrough.
+
+The app is served from `app.dividim.app`, a **different origin** from the
+marketing landing page at `dividim.app` (`landing/`). That separation is
+deliberate: the PWA service worker registers at `/sw.js` with scope `/` and its
+`NavigationRoute` fallback would otherwise intercept navigations to the landing
+page and serve the app shell from cache. Do not put the two behind one origin
+(path-based routing) without first denylisting the landing's paths in
+`src/sw.ts` and neutralizing the precache `directoryIndex`.
+
+The API lives at `api.dividim.app` — same registrable domain as the app, so the
+two are same-site and the `auth_token` cookie works with `SameSite=Lax`. Keep it
+that way: moving the API back under a different registrable domain would force
+`SameSite=None`, which reopens a CSRF vector. Preview deployments on
+`*.pages.dev` are genuinely cross-site, which is what the `crossOrigin` branch
+in the backend's `OAuthCallback` handles.
+
+Previously deployed to Firebase Hosting (`firebase.json`, `.firebaserc`) —
+those files are kept temporarily for reference and will be removed in a
+follow-up once the old `finance-app.mateusdeitos.dev` domain is retired.
+
 ## Core Conventions
 
 The rules below are mandatory. Code that violates them either gets refactored in the same PR or flagged as a known migration (see "Known divergences" at the bottom).

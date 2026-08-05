@@ -94,6 +94,36 @@ variable "app_url" {
   type        = string
 }
 
+variable "api_custom_domain" {
+  description = "Additional custom domain mapped to the same Cloud Run service (e.g. api.dividim.app), so the API shares a registrable domain with the frontend and auth cookies stay same-site. Leave empty until the domain is verified in Google Search Console for this project — the apply fails otherwise."
+  type        = string
+  default     = ""
+}
+
+# ── DNS (zona hospedada na Cloudflare) ────────────────────────────────────────
+#
+# O provider Cloudflare lê CLOUDFLARE_API_TOKEN do ambiente, como nos outros
+# roots. Com estas variáveis vazias nenhum recurso Cloudflare é criado, então
+# `terraform apply` continua funcionando só com credenciais do GCP.
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID de dividim.app (dashboard → dividim.app → Overview → Zone ID). Vazio = não gerencia DNS por aqui."
+  type        = string
+  default     = ""
+}
+
+variable "dns_zone_name" {
+  description = "Nome da zona / domínio raiz (ex.: dividim.app). Usado como nome do registro TXT de verificação do Google."
+  type        = string
+  default     = ""
+}
+
+variable "google_site_verification" {
+  description = "Token de verificação do Google Search Console (só o valor, sem o prefixo 'google-site-verification='). Necessário antes de criar o domain mapping do Cloud Run para o domínio novo."
+  type        = string
+  default     = ""
+}
+
 variable "frontend_url" {
   description = "Public URL of the frontend app (e.g. https://app.example.com)."
   type        = string

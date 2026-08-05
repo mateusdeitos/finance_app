@@ -14,3 +14,8 @@ output "cloudflare_pages_default_url" {
   description = "Default *.pages.dev URL (informational — production alias for the direct-upload project)"
   value       = "https://${cloudflare_pages_project.landing.name}.pages.dev"
 }
+
+output "landing_url" {
+  description = "URL pública da landing (domínio customizado quando configurado)"
+  value       = var.custom_domain != "" ? "https://${var.custom_domain}" : "https://${cloudflare_pages_project.landing.name}.pages.dev"
+}

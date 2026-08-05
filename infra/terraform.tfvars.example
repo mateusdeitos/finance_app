@@ -29,8 +29,36 @@ microsoft_client_id    = ""            # Leave empty to disable Microsoft OAuth
 microsoft_callback_url = "https://api.example.com/auth/microsoft/callback"
 
 # ── Application ───────────────────────────────────────────────────────────────
+#
+# Migração para dividim.app (ver o PR "Migrate frontend to Cloudflare Pages"):
+# a ordem importa. app_url/google_callback_url só mudam para api.dividim.app
+# DEPOIS que o mapping novo estiver ativo, e o VITE_API_URL (GitHub variable)
+# tem que virar junto — é o host do callback que seta o cookie auth_token, então
+# se um mudar sem o outro o cookie nasce no domínio errado.
 app_url      = "https://api.finance-app.mateusdeitos.dev"
 frontend_url = "https://finance-app.mateusdeitos.dev"
+
+# Domínio adicional apontando para o mesmo serviço Cloud Run. Serve para que a
+# API compartilhe o domínio registrável com o app (app.dividim.app), mantendo os
+# dois same-site — é o que permite o cookie de auth continuar com SameSite=Lax.
+# Deixe vazio até verificar dividim.app no Google Search Console para o projeto.
+api_custom_domain = "api.dividim.app"
+
+# ── DNS (zona na Cloudflare) ──────────────────────────────────────────────────
+#
+# Só o DNS de api.dividim.app é gerenciado aqui — os registros da landing e do
+# app ficam em landing/terraform e frontend/terraform, junto dos projetos Pages
+# a que pertencem. Exporte CLOUDFLARE_API_TOKEN antes do apply.
+#
+# Com estas três vazias nenhum recurso Cloudflare é criado e o apply roda só com
+# credenciais do GCP, como antes.
+#
+# Ordem: primeiro apply com api_custom_domain VAZIO e google_site_verification
+# preenchido (cria o TXT); confirme a verificação no Search Console; só então
+# preencha api_custom_domain e reaplique.
+cloudflare_zone_id       = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" # dividim.app → Overview → Zone ID
+dns_zone_name            = "dividim.app"
+google_site_verification = ""                                  # valor do TXT, sem o prefixo "google-site-verification="
 
 # ── Web Push / VAPID (public key + subject são NÃO-sensíveis) ─────────────────
 # Gere o par com:  npx web-push generate-vapid-keys

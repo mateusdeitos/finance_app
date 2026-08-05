@@ -30,6 +30,19 @@ output "api_custom_domain" {
   value       = "https://${google_cloud_run_domain_mapping.backend.name}"
 }
 
+output "api_new_custom_domain" {
+  description = "Additional API domain (dividim.app) → once live, set as GitHub variable VITE_API_URL and as app_url/google_callback_url in terraform.tfvars"
+  value       = length(google_cloud_run_domain_mapping.backend_new_domain) > 0 ? "https://${google_cloud_run_domain_mapping.backend_new_domain[0].name}" : ""
+}
+
+# Lista autoritativa devolvida pelo Cloud Run. O CNAME é criado estaticamente em
+# main.tf (resource_records não é conhecido no plan), então confira aqui depois
+# do apply que o que o Google pediu bate com o que foi criado.
+output "api_new_domain_required_dns_records" {
+  description = "DNS records Cloud Run requires for the new API domain — verify these match the cloudflare_dns_record.api created in main.tf"
+  value       = length(google_cloud_run_domain_mapping.backend_new_domain) > 0 ? google_cloud_run_domain_mapping.backend_new_domain[0].status[0].resource_records : []
+}
+
 output "cicd_sa_email" {
   description = "CI/CD service account email (for reference)"
   value       = google_service_account.cicd.email

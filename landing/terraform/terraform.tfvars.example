@@ -8,3 +8,9 @@
 cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Dashboard → canto superior direito → Account ID
 pages_project_name    = "financeapp-landing"                # vira financeapp-landing.pages.dev
 production_branch     = "main"
+
+# A landing fica no apex; o app vai para app.dividim.app (ver frontend/terraform).
+# Com os dois preenchidos o registro DNS é criado junto (CNAME proxied, com
+# flattening no apex).
+custom_domain      = "dividim.app"
+cloudflare_zone_id = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz" # dividim.app → Overview → Zone ID
