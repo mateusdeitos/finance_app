@@ -323,9 +323,8 @@ resource "google_cloud_run_domain_mapping" "backend_new_domain" {
 # proxied = false (nuvem cinza) é obrigatório: com o proxy da Cloudflare na
 # frente, o Google não consegue emitir/validar o certificado do domain mapping.
 #
-# NOTE: nome/schema do recurso a verificar contra a doc do provider ~> 5.0 antes
-# do apply (na v4 este recurso se chamava cloudflare_record e o valor ficava em
-# `value`, não `content`).
+# Na v4 do provider este recurso se chamava cloudflare_record e o valor ficava em
+# `value`; na v5 é cloudflare_dns_record com `content`.
 resource "cloudflare_dns_record" "api" {
   count = var.api_custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
 
