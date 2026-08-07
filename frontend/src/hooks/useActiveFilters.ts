@@ -25,5 +25,6 @@ export function useActiveFilters(): Transactions.ActiveFilters {
     categoryIds: categoriesQuery.data ?? [],
     tagIds: tagsQuery.data ?? [],
     types: search.types,
+    reviewed: search.reviewed,
   };
 }

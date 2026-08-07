@@ -16,7 +16,8 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
     search.types.length > 0 ||
     search.query !== '' ||
     search.hideSettlements === true ||
-    search.noCategory === true
+    search.noCategory === true ||
+    search.reviewed !== undefined
 
   if (!hasActiveFilters) return null
 
@@ -30,6 +31,7 @@ export function ClearFiltersButton({ variant = 'button' }: ClearFiltersButtonPro
       query: '',
       hideSettlements: false,
       noCategory: false,
+      reviewed: undefined,
     }))
   }
 

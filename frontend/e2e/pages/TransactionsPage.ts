@@ -427,6 +427,16 @@ export class TransactionsPage {
     await this.page.getByTestId(TransactionsTestIds.BtnBulkActionsMenu).click();
   }
 
+  /** Open the bulk menu and mark (or unmark) the current selection as reviewed. */
+  async bulkSetReviewed(reviewed: boolean) {
+    await this.openBulkActionsMenu();
+    const testId = reviewed
+      ? TransactionsTestIds.BtnBulkMarkReviewed
+      : TransactionsTestIds.BtnBulkUnmarkReviewed;
+    await this.page.getByTestId(testId).click();
+    await this.page.waitForLoadState("networkidle");
+  }
+
   async confirmBulkDelete() {
     await this.openBulkActionsMenu();
     await this.page.getByTestId(TransactionsTestIds.BtnBulkDelete).click();

@@ -936,7 +936,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int64"
                             }
                         }
                     },
@@ -2144,6 +2145,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "Filter by review status (true = reviewed, false = unreviewed)",
+                        "name": "reviewed",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "description": "Limit",
                         "name": "limit",
@@ -2300,6 +2307,12 @@ const docTemplate = `{
                         "type": "boolean",
                         "description": "Exclude settlements from balance",
                         "name": "hide_settlements",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by review status (true = reviewed, false = unreviewed)",
+                        "name": "reviewed",
                         "in": "query"
                     }
                 ],
@@ -2471,6 +2484,54 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/domain.ImportCSVResponse"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transactions/review": {
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Marks (reviewed=true) or unmarks (reviewed=false) the listed transactions as reviewed for the caller. IDs the caller does not own are silently skipped.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Bulk mark transactions as reviewed",
+                "parameters": [
+                    {
+                        "description": "Transaction IDs and target review status",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.BulkReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -3301,6 +3362,20 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.BulkReviewRequest": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "reviewed": {
+                    "type": "boolean"
+                }
+            }
+        },
         "domain.Category": {
             "type": "object",
             "properties": {
@@ -4019,6 +4094,10 @@ const docTemplate = `{
                 },
                 "original_user_id": {
                     "type": "integer"
+                },
+                "reviewed_at": {
+                    "description": "ReviewedAt marks when the user reviewed (reconciled) this transaction.\nnil means the transaction has not been reviewed yet.",
+                    "type": "string"
                 },
                 "settlements_from_source": {
                     "type": "array",

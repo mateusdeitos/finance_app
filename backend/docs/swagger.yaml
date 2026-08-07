@@ -44,6 +44,15 @@ definitions:
       balance:
         type: integer
     type: object
+  domain.BulkReviewRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+      reviewed:
+        type: boolean
+    type: object
   domain.Category:
     properties:
       children:
@@ -542,6 +551,11 @@ definitions:
         type: integer
       original_user_id:
         type: integer
+      reviewed_at:
+        description: |-
+          ReviewedAt marks when the user reviewed (reconciled) this transaction.
+          nil means the transaction has not been reviewed yet.
+        type: string
       settlements_from_source:
         items:
           $ref: '#/definitions/domain.Settlement'
@@ -1548,6 +1562,7 @@ paths:
           description: OK
           schema:
             additionalProperties:
+              format: int64
               type: integer
             type: object
         "401":
@@ -2146,6 +2161,10 @@ paths:
         in: query
         name: with_settlements
         type: boolean
+      - description: Filter by review status (true = reviewed, false = unreviewed)
+        in: query
+        name: reviewed
+        type: boolean
       - description: Limit
         in: query
         name: limit
@@ -2357,6 +2376,10 @@ paths:
         in: query
         name: hide_settlements
         type: boolean
+      - description: Filter by review status (true = reviewed, false = unreviewed)
+        in: query
+        name: reviewed
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2487,6 +2510,36 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Parse and enrich a CSV, XLSX or XLS file for import
+      tags:
+      - transactions
+  /api/transactions/review:
+    patch:
+      consumes:
+      - application/json
+      description: Marks (reviewed=true) or unmarks (reviewed=false) the listed transactions
+        as reviewed for the caller. IDs the caller does not own are silently skipped.
+      parameters:
+      - description: Transaction IDs and target review status
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.BulkReviewRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Bulk mark transactions as reviewed
       tags:
       - transactions
   /api/transactions/suggestions:

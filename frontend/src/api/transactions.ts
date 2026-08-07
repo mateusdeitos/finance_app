@@ -33,6 +33,9 @@ export async function fetchBalance(params: Transactions.FetchBalanceParams): Pro
   if (params.hideSettlements) {
     url.searchParams.set("hide_settlements", "true");
   }
+  if (params.reviewed) {
+    url.searchParams.set("reviewed", params.reviewed === "reviewed" ? "true" : "false");
+  }
 
   const res = await fetch(url.toString(), { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch balance");
@@ -57,6 +60,9 @@ export async function fetchTransactions(params: Transactions.FetchParams): Promi
   }
   if (params.types?.length) {
     params.types.forEach((t) => url.searchParams.append("type[]", t));
+  }
+  if (params.reviewed) {
+    url.searchParams.set("reviewed", params.reviewed === "reviewed" ? "true" : "false");
   }
   if (params.query) {
     url.searchParams.set("description.query", params.query);
@@ -161,6 +167,17 @@ export async function checkDuplicatesBulk(params: {
   });
   if (!res.ok) throw res;
   return res.json() as Promise<{ rows: Transactions.CheckDuplicateRowResult[] }>;
+}
+
+/** Bulk marks (or unmarks) the given transactions as reviewed. Returns 204 on success. */
+export async function bulkReviewTransactions(ids: number[], reviewed: boolean): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/transactions/review`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ ids, reviewed }),
+  });
+  if (!res.ok) throw res;
 }
 
 export async function createTransaction(payload: Transactions.CreateTransactionPayload): Promise<Response> {

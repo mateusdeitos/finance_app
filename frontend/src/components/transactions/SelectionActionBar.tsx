@@ -1,5 +1,5 @@
 import { Button, Group, Menu, Stack, Text } from '@mantine/core'
-import { IconCalendar, IconCategory, IconChevronDown, IconShare, IconTrash } from '@tabler/icons-react'
+import { IconCalendar, IconCategory, IconCheck, IconChevronDown, IconShare, IconTrash, IconX } from '@tabler/icons-react'
 import classes from './SelectionActionBar.module.css'
 import { TransactionsTestIds } from '@/testIds'
 import { formatSignedCents } from '@/utils/formatCents'
@@ -13,6 +13,8 @@ interface SelectionActionBarProps {
   onCategoryChange: () => void
   onDateChange: () => void
   onDivisaoChange: () => void
+  onMarkReviewed: () => void
+  onUnmarkReviewed: () => void
   connectedAccountsCount: number
   onDelete: () => void
   /** `inline` flows in the document; `fixed` (default) pins to the viewport bottom. */
@@ -34,6 +36,8 @@ export function SelectionActionBar({
   onCategoryChange,
   onDateChange,
   onDivisaoChange,
+  onMarkReviewed,
+  onUnmarkReviewed,
   connectedAccountsCount,
   onDelete,
   variant = 'fixed',
@@ -118,6 +122,21 @@ export function SelectionActionBar({
                 Conecte uma conta para usar esta ação.
               </Text>
             )}
+            <Menu.Divider />
+            <Menu.Item
+              leftSection={<IconCheck size={14} />}
+              onClick={() => { tapHaptic(); onMarkReviewed(); }}
+              data-testid={TransactionsTestIds.BtnBulkMarkReviewed}
+            >
+              Marcar como revisada
+            </Menu.Item>
+            <Menu.Item
+              leftSection={<IconX size={14} />}
+              onClick={() => { tapHaptic(); onUnmarkReviewed(); }}
+              data-testid={TransactionsTestIds.BtnBulkUnmarkReviewed}
+            >
+              Desmarcar revisão
+            </Menu.Item>
             <Menu.Divider />
             <Menu.Item
               leftSection={<IconTrash size={14} color="var(--mantine-color-red-5)" />}

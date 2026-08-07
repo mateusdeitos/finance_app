@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/finance_app/backend/internal/domain"
@@ -166,4 +167,31 @@ func TestTransactionHandler_GetByID_PreloadsSettlements(t *testing.T) {
 	err := h.GetByID(c)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+// TestTransactionHandler_BulkReview verifies that the review payload binds into
+// ids + reviewed, the caller's user id is passed through, and a 204 is returned.
+func TestTransactionHandler_BulkReview(t *testing.T) {
+	e, mockSvc, h := setupTransactionHandlerTest(t)
+
+	const callerUserID = 42
+
+	mockSvc.EXPECT().
+		BulkReview(mock.Anything, callerUserID, []int{5, 9}, true).
+		Return(nil).
+		Once()
+
+	req := httptest.NewRequestWithContext(
+		appcontext.WithUserID(t.Context(), callerUserID),
+		http.MethodPatch,
+		"/api/transactions/review",
+		strings.NewReader(`{"ids":[5,9],"reviewed":true}`),
+	)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := h.BulkReview(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
 }

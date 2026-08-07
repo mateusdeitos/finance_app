@@ -86,6 +86,33 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// BulkReview godoc
+// @Summary      Bulk mark transactions as reviewed
+// @Description  Marks (reviewed=true) or unmarks (reviewed=false) the listed transactions as reviewed for the caller. IDs the caller does not own are silently skipped.
+// @Tags         transactions
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        request  body  domain.BulkReviewRequest  true  "Transaction IDs and target review status"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/transactions/review [patch]
+func (h *TransactionHandler) BulkReview(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	var req domain.BulkReviewRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := h.transactionService.BulkReview(c.Request().Context(), userID, req.IDs, req.Reviewed); err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Search godoc
 // @Summary      List transactions for a period
 // @Tags         transactions
@@ -101,6 +128,7 @@ func (h *TransactionHandler) Update(c echo.Context) error {
 // @Param        description.query  query  string    false  "Search description text"
 // @Param        description.exact  query  bool      false  "Exact description match"
 // @Param        with_settlements   query  bool      false  "Include settlements"
+// @Param        reviewed           query  bool      false  "Filter by review status (true = reviewed, false = unreviewed)"
 // @Param        limit              query  int       false  "Limit"
 // @Param        offset             query  int       false  "Offset"
 // @Success      200  {array}   domain.Transaction
@@ -135,6 +163,12 @@ func (h *TransactionHandler) Search(c echo.Context) error {
 	}
 
 	filter.UserID = &userID
+
+	if reviewed := c.QueryParam("reviewed"); reviewed != "" {
+		if parsed, parseErr := strconv.ParseBool(reviewed); parseErr == nil {
+			filter.Reviewed = &parsed
+		}
+	}
 
 	// Manually parse description query parameters
 	descriptionQuery := c.QueryParam("description.query")
@@ -208,6 +242,7 @@ func (h *TransactionHandler) GetByID(c echo.Context) error {
 // @Param        tag_id[]       query  []int  false  "Filter by tag IDs"       collectionFormat(multi)
 // @Param        accumulated       query  bool   false  "Include all prior periods"
 // @Param        hide_settlements  query  bool   false  "Exclude settlements from balance"
+// @Param        reviewed          query  bool   false  "Filter by review status (true = reviewed, false = unreviewed)"
 // @Success      200  {object}  domain.BalanceResult
 // @Failure      400  {object}  middleware.ErrorResponse
 // @Failure      401  {object}  middleware.ErrorResponse
@@ -233,6 +268,12 @@ func (h *TransactionHandler) GetBalance(c echo.Context) error {
 	var filter domain.BalanceFilter
 	if err := c.Bind(&filter); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request")
+	}
+
+	if reviewed := c.QueryParam("reviewed"); reviewed != "" {
+		if parsed, parseErr := strconv.ParseBool(reviewed); parseErr == nil {
+			filter.Reviewed = &parsed
+		}
 	}
 
 	result, err := h.transactionService.GetBalance(c.Request().Context(), userID, period, filter)

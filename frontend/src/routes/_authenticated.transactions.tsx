@@ -13,6 +13,7 @@ export const transactionSearchSchema = z.object({
   categoryIds: z.array(z.number()).default([]),
   accountIds: z.array(z.number()).default([]),
   types: z.array(z.enum(['expense', 'income', 'transfer'])).default([]),
+  reviewed: z.enum(['reviewed', 'unreviewed']).optional(),
   groupBy: z.enum(['date', 'category', 'account']).default('date'),
   accumulated: z.coerce.boolean().default(false),
   hideSettlements: z.coerce.boolean().default(false),

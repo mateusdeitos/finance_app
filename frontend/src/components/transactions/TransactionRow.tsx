@@ -260,7 +260,7 @@ export function TransactionRow({
   const rowContent = (
     <div
       data-transaction-id={tx.id}
-      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
+      className={`${classes.row}${tx.reviewed_at ? ` ${classes.reviewed}` : ""}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
       onClick={selectionMode ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); } : undefined}
     >
       {/* Col 1: checkbox */}

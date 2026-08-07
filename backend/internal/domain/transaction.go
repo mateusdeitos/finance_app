@@ -101,6 +101,9 @@ type Transaction struct {
 	CreatedAt           *time.Time `json:"created_at"`
 	UpdatedAt           *time.Time `json:"updated_at"`
 	DeletedAt           *time.Time `json:"deleted_at,omitempty"`
+	// ReviewedAt marks when the user reviewed (reconciled) this transaction.
+	// nil means the transaction has not been reviewed yet.
+	ReviewedAt *time.Time `json:"reviewed_at,omitempty"`
 }
 
 func (t *Transaction) SetType(newType TransactionType) {
@@ -195,6 +198,9 @@ type TransactionFilter struct {
 	Limit             *int                         `query:"limit,omitempty"`
 	Offset            *int                         `query:"offset,omitempty"`
 	WithSettlements   bool                         `query:"with_settlements"`
+	// Reviewed filters by review status: true → only reviewed transactions,
+	// false → only unreviewed transactions, nil → no filter.
+	Reviewed *bool `query:"reviewed,omitempty"`
 }
 
 type TextSearch struct {
@@ -358,6 +364,13 @@ func (p *Period) StartDate() time.Time {
 
 func (p *Period) EndDate() time.Time {
 	return time.Date(p.Year, time.Month(p.Month)+1, 0, 23, 59, 59, 999999999, time.UTC)
+}
+
+// BulkReviewRequest marks (Reviewed=true) or unmarks (Reviewed=false) the
+// listed transactions as reviewed for the caller.
+type BulkReviewRequest struct {
+	IDs      []int `json:"ids"`
+	Reviewed bool  `json:"reviewed"`
 }
 
 type BulkUpdateTransaction struct {
