@@ -53,7 +53,7 @@ test.describe("Bulk Division", () => {
     // Two partner connections for happy-path (30/70 requires 2 rows in the drawer).
     // Partner 1 — used in both happy-path and silent-skip
     const partner1 = await setupPartnerConnection({
-      email: "e2e-bulk-division-partner@financeapp.local",
+      email: "e2e-bulk-division-partner@dividim.local",
       status: "accepted",
     });
     connectionId = partner1.connectionId;
@@ -61,7 +61,7 @@ test.describe("Bulk Division", () => {
 
     // Partner 2 — used in happy-path to enable a 2-row 30/70 split
     const partner2 = await setupPartnerConnection({
-      email: "e2e-bulk-division-partner2@financeapp.local",
+      email: "e2e-bulk-division-partner2@dividim.local",
       status: "accepted",
     });
     connectionId2 = partner2.connectionId;
@@ -219,7 +219,7 @@ test.describe("Bulk Division", () => {
   // who has no accepted connections. The primary test user now has 2 connections from
   // beforeAll, so we cannot test the disabled state with the default auth.
   test("Divisão menu item is disabled + hint visible when user has 0 connected accounts", async ({ browser }) => {
-    const soloEmail = "e2e-bulk-division-solo@financeapp.local";
+    const soloEmail = "e2e-bulk-division-solo@dividim.local";
     const soloToken = await getAuthTokenForUser(soloEmail);
     const soloPage = await openAuthedPage(browser, soloToken);
 

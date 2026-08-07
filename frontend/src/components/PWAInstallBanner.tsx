@@ -29,7 +29,7 @@ export function PWAInstallBanner() {
           <img src="/icon-192.png" width={40} height={40} alt="" className={classes.icon} />
           <div>
             <Text size="sm" fw={600} lh={1.3}>
-              Instalar FinanceApp
+              Instalar Dividim
             </Text>
             <Text size="xs" c="dimmed" mt={2}>
               Toque em{' '}
@@ -63,7 +63,7 @@ export function PWAInstallBanner() {
           <img src="/icon-192.png" width={40} height={40} alt="" className={classes.icon} />
           <div style={{ flex: 1 }}>
             <Text size="sm" fw={600} lh={1.3}>
-              Instalar FinanceApp
+              Instalar Dividim
             </Text>
             <Text size="xs" c="dimmed" mt={2}>
               Adicione à tela inicial para acesso rápido

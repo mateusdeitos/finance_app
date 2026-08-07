@@ -260,7 +260,7 @@ Each test case must create a **fresh user** with its own account and category vi
 
 ```ts
 test("my test", async ({ browser }) => {
-  const email = `e2e-mytest-${Date.now()}@financeapp.local`;
+  const email = `e2e-mytest-${Date.now()}@dividim.local`;
   const token = await getAuthTokenForUser(email);
 
   // Create test data as this user

@@ -36,7 +36,7 @@ function localMidnightISO(dateStr: string): string {
 /** Create a fresh user with account and category, return all handles. */
 async function createTestUser(suffix: string) {
   const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const email = `e2e-${suffix}-${uid}@financeapp.local`;
+  const email = `e2e-${suffix}-${uid}@dividim.local`;
   const token = await getAuthTokenForUser(email);
 
   const accountRes = await apiFetchAs(token, "/api/accounts", {

@@ -27,7 +27,7 @@ import { TransactionsTestIds } from '@/testIds'
  * Fix: frontend now sends full transaction payload with only the changed field overridden.
  */
 
-const PARTNER_EMAIL = 'e2e-bulk-update-partner@financeapp.local'
+const PARTNER_EMAIL = 'e2e-bulk-update-partner@dividim.local'
 
 test.describe('Bulk Update — data preservation', () => {
   let transactionsPage: TransactionsPage
@@ -95,7 +95,7 @@ test.describe('Bulk Update — data preservation', () => {
       }
     }
 
-    const primaryToken = await getAuthTokenForUser('e2e-test@financeapp.local')
+    const primaryToken = await getAuthTokenForUser('e2e-test@dividim.local')
     const accountsRes = await apiFetchAs(primaryToken, '/api/accounts')
     const allAccounts = await accountsRes.json()
     const connAccount = allAccounts.find(
