@@ -27,24 +27,9 @@ resource "cloudflare_pages_domain" "frontend" {
   name         = var.custom_domain
 }
 
-# CNAME do subdomínio do app para o projeto Pages.
-#
-# A Cloudflare costuma criar esse registro sozinha ao anexar o domínio
-# customizado quando a zona está na mesma conta. Se isso acontecer, o apply
-# reclama de registro já existente — nesse caso rode `terraform import` nele em
-# vez de apagar pelo dashboard, para o Terraform virar a fonte da verdade.
-#
-# Na v4 do provider este recurso se chamava cloudflare_record e o valor ficava em
-# `value`; na v5 é cloudflare_dns_record com `content`.
-resource "cloudflare_dns_record" "frontend" {
-  count = var.custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
-
-  zone_id = var.cloudflare_zone_id
-  name    = var.custom_domain
-  type    = "CNAME"
-  content = "${cloudflare_pages_project.frontend.name}.pages.dev"
-  proxied = true
-  ttl     = 1 # 1 = automático; obrigatório quando proxied
-
-  depends_on = [cloudflare_pages_domain.frontend]
-}
+# Não há um cloudflare_dns_record aqui de propósito: ao anexar o domínio
+# customizado acima, a própria Cloudflare cria e mantém o CNAME, porque a zona
+# está na mesma conta. Declarar o registro no Terraform duplicava a
+# responsabilidade e o apply falhava com 81053 ("record with that host already
+# exists"). O caso do api.dividim.app em infra/ é diferente — para o Cloud Run
+# não existe automação equivalente, então lá o registro é gerenciado aqui.
