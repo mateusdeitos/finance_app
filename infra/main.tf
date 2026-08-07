@@ -163,6 +163,15 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      # Tempo de vida do JWT. Estava definido no serviço mas não era declarado
+      # aqui, então o Terraform via a env var como órfã e queria removê-la — o
+      # que silenciosamente cairia para o default do backend (24h, ver
+      # internal/config/config.go). O default abaixo reflete o valor que já
+      # estava em produção.
+      env {
+        name  = "JWT_EXPIRATION_HOURS"
+        value = var.jwt_expiration_hours
+      }
       env {
         name = "OAUTH_SESSION_SECRET"
         value_source {

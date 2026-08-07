@@ -59,6 +59,12 @@ variable "db_sslmode" {
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+variable "jwt_expiration_hours" {
+  description = "JWT lifetime in hours. The backend falls back to 24 when unset (internal/config/config.go); the default here matches what was already running in production."
+  type        = string
+  default     = "168"
+}
+
 # ── OAuth – Google ────────────────────────────────────────────────────────────
 
 variable "google_client_id" {
