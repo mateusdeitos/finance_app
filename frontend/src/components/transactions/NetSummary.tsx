@@ -1,4 +1,4 @@
-import { Card, Group, SegmentedControl, Skeleton, Text } from "@mantine/core";
+import { Box, Card, Group, SegmentedControl, Skeleton, Stack, Text } from "@mantine/core";
 import { useMemo } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
@@ -68,19 +68,24 @@ export function NetSummary() {
 
   return (
     <Card withBorder radius="md" padding="xs">
-      <Group justify="space-between" align="center" wrap="nowrap">
-        <Group gap="md" wrap="nowrap" align="baseline">
-          {search.accumulated && (
-            <Group gap="sm" wrap="nowrap" align="baseline">
+      <Stack gap={4}>
+        {/* Top row: the "Inicial" caption (accumulated only) shares the line
+            with the Mês/Acumulado toggle, keeping the big Saldo figure below
+            free to use the full card width — otherwise the extra "Inicial"
+            column pushes the row past the mobile viewport and the card scrolls
+            horizontally. */}
+        <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
+          {search.accumulated ? (
+            <Group gap={6} wrap="nowrap" align="baseline" style={{ minWidth: 0 }}>
               <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
                 Inicial
               </Text>
               {isLoading ? (
-                <Skeleton height={18} width={80} radius="sm" />
+                <Skeleton height={14} width={70} radius="sm" />
               ) : (
                 <Text
                   fw={600}
-                  size="sm"
+                  size="xs"
                   c="dimmed"
                   style={{ fontVariantNumeric: "tabular-nums" }}
                   data-testid={TransactionsTestIds.StatOpeningBalance}
@@ -89,36 +94,38 @@ export function NetSummary() {
                 </Text>
               )}
             </Group>
+          ) : (
+            <Box />
           )}
-          <Group gap="sm" wrap="nowrap" align="baseline">
-            <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
-              {search.accumulated ? "Saldo acumulado" : "Saldo"}
-            </Text>
-            {isLoading ? (
-              <Skeleton height={22} width={120} radius="sm" />
-            ) : (
-              <Text
-                fw={700}
-                size="lg"
-                c={displayedNet < 0 ? "red" : "teal"}
-                style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" }}
-              >
-                {formatSignedCents(displayedNet)}
-              </Text>
-            )}
-          </Group>
+          <SegmentedControl
+            value={search.accumulated ? "accumulated" : "month"}
+            onChange={toggleAccumulated}
+            size="xs"
+            radius="xl"
+            data={[
+              { label: "Mês", value: "month" },
+              { label: "Acumulado", value: "accumulated" },
+            ]}
+          />
         </Group>
-        <SegmentedControl
-          value={search.accumulated ? "accumulated" : "month"}
-          onChange={toggleAccumulated}
-          size="xs"
-          radius="xl"
-          data={[
-            { label: "Mês", value: "month" },
-            { label: "Acumulado", value: "accumulated" },
-          ]}
-        />
-      </Group>
+        <Group gap="sm" wrap="nowrap" align="baseline" style={{ minWidth: 0 }}>
+          <Text size="xs" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: "0.04em" }}>
+            {search.accumulated ? "Saldo acumulado" : "Saldo"}
+          </Text>
+          {isLoading ? (
+            <Skeleton height={22} width={120} radius="sm" />
+          ) : (
+            <Text
+              fw={700}
+              size="lg"
+              c={displayedNet < 0 ? "red" : "teal"}
+              style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "-0.3px" }}
+            >
+              {formatSignedCents(displayedNet)}
+            </Text>
+          )}
+        </Group>
+      </Stack>
     </Card>
   );
 }
