@@ -24,9 +24,3 @@ variable "custom_domain" {
   type        = string
   default     = ""
 }
-
-variable "cloudflare_zone_id" {
-  description = "Cloudflare Zone ID de dividim.app (dashboard → dividim.app → Overview → Zone ID). Vazio = não cria o registro DNS por aqui."
-  type        = string
-  default     = ""
-}
