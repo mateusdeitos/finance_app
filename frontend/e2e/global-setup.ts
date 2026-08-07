@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL ?? 'http://localhost:8080'
 const STORAGE_STATE_PATH = path.join(__dirname, '.auth', 'storageState.json')
-const TEST_USER_EMAIL = 'e2e-test@financeapp.local'
+const TEST_USER_EMAIL = 'e2e-test@dividim.local'
 
 async function globalSetup() {
   // Call test-login endpoint to get a JWT cookie

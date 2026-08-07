@@ -35,8 +35,8 @@ export async function createUserAndPartner(
   prefix = "e2e-shared",
 ): Promise<UserAndPartnerResult> {
   const uid = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const userEmail = `${uid}-user@financeapp.local`;
-  const partnerEmail = `${uid}-partner@financeapp.local`;
+  const userEmail = `${uid}-user@dividim.local`;
+  const partnerEmail = `${uid}-partner@dividim.local`;
 
   // 1. Auth both users (test-login auto-creates them)
   const userToken = await getAuthTokenForUser(userEmail);

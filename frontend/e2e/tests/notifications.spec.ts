@@ -31,7 +31,7 @@ import { NotificationsPage } from '../pages/NotificationsPage'
 
 /** Generate a fresh user for the test. */
 async function freshUser(browser: import('@playwright/test').Browser) {
-  const email = `e2e-notifications-${Date.now()}@financeapp.local`
+  const email = `e2e-notifications-${Date.now()}@dividim.local`
   const token = await getAuthTokenForUser(email)
   const page = await openAuthedPage(browser, token)
   return { page, token }
@@ -268,7 +268,7 @@ test.describe('Notification toggle — default state + CTRL-01 permission gate',
       // Grant notification permission at the context level
       await context.grantPermissions(['notifications'])
 
-      const email = `e2e-notifications-granted-${Date.now()}@financeapp.local`
+      const email = `e2e-notifications-granted-${Date.now()}@dividim.local`
       const token = await getAuthTokenForUser(email)
       // Re-use the granted context rather than creating a fresh one
       const page = await context.newPage()

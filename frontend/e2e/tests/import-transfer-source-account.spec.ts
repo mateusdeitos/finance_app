@@ -22,7 +22,7 @@ const DATE_DDMMYYYY = "10/04/2026";
 const PERIOD = { month: 4, year: 2026 } as const;
 
 async function setupUser() {
-  const email = `e2e-import-transfer-src-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@financeapp.local`;
+  const email = `e2e-import-transfer-src-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@dividim.local`;
   const token = await getAuthTokenForUser(email);
 
   const accA = await apiFetchAs(token, "/api/accounts", {

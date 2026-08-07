@@ -32,7 +32,7 @@ test('home dashboard renders period summaries and account rows deep-link to the 
   browser,
 }) => {
   const stamp = Date.now()
-  const token = await getAuthTokenForUser(`e2e-home-${stamp}@financeapp.local`)
+  const token = await getAuthTokenForUser(`e2e-home-${stamp}@dividim.local`)
 
   const accountId = await createAccount(token, `Conta Home ${stamp}`)
   const foodCat = await createCategory(token, `Alimentação ${stamp}`)

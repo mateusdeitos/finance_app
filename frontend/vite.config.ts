@@ -40,8 +40,8 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       manifest: {
-        name: "FinanceApp",
-        short_name: "Finance",
+        name: "Dividim",
+        short_name: "Dividim",
         description: "Gestão financeira a dois",
         start_url: "/",
         display: "standalone",
