@@ -4,6 +4,12 @@
 # Autenticação do provider Cloudflare NÃO fica aqui: exporte
 #   export CLOUDFLARE_API_TOKEN="..."
 # antes de rodar `terraform apply` (o provider lê a env var automaticamente).
+#
+# Escopos exigidos no token (Custom Token no dashboard da Cloudflare):
+#   Account → Cloudflare Pages → Edit   (projeto Pages e domínio customizado)
+#   Zone    → DNS            → Edit     (registro DNS; Zone Resources = dividim.app)
+# O token usado pela CI só precisa do primeiro — vale manter um token separado
+# para o Terraform em vez de somar DNS:Edit ao que vive nos secrets do GitHub.
 
 cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # mesma conta de landing/terraform
 pages_project_name    = "financeapp-frontend"                # vira financeapp-frontend.pages.dev
