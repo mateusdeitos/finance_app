@@ -163,6 +163,15 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      # Tempo de vida do JWT. Estava definido no serviço mas não era declarado
+      # aqui, então o Terraform via a env var como órfã e queria removê-la — o
+      # que silenciosamente cairia para o default do backend (24h, ver
+      # internal/config/config.go). O default abaixo reflete o valor que já
+      # estava em produção.
+      env {
+        name  = "JWT_EXPIRATION_HOURS"
+        value = var.jwt_expiration_hours
+      }
       env {
         name = "OAUTH_SESSION_SECRET"
         value_source {
@@ -323,9 +332,8 @@ resource "google_cloud_run_domain_mapping" "backend_new_domain" {
 # proxied = false (nuvem cinza) é obrigatório: com o proxy da Cloudflare na
 # frente, o Google não consegue emitir/validar o certificado do domain mapping.
 #
-# NOTE: nome/schema do recurso a verificar contra a doc do provider ~> 5.0 antes
-# do apply (na v4 este recurso se chamava cloudflare_record e o valor ficava em
-# `value`, não `content`).
+# Na v4 do provider este recurso se chamava cloudflare_record e o valor ficava em
+# `value`; na v5 é cloudflare_dns_record com `content`.
 resource "cloudflare_dns_record" "api" {
   count = var.api_custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
 

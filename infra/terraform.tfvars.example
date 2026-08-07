@@ -48,7 +48,9 @@ api_custom_domain = "api.dividim.app"
 #
 # Só o DNS de api.dividim.app é gerenciado aqui — os registros da landing e do
 # app ficam em landing/terraform e frontend/terraform, junto dos projetos Pages
-# a que pertencem. Exporte CLOUDFLARE_API_TOKEN antes do apply.
+# a que pertencem. Exporte CLOUDFLARE_API_TOKEN antes do apply — o token precisa
+# do escopo Zone → DNS → Edit sobre dividim.app (o escopo de Pages, usado pela
+# CI, não dá permissão nenhuma sobre DNS).
 #
 # Com estas três vazias nenhum recurso Cloudflare é criado e o apply roda só com
 # credenciais do GCP, como antes.
