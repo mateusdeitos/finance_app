@@ -24,3 +24,9 @@ variable "custom_domain" {
   type        = string
   default     = ""
 }
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID de dividim.app (dashboard → dividim.app → Overview → Zone ID). Necessário para criar o CNAME do domínio customizado."
+  type        = string
+  default     = ""
+}

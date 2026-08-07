@@ -27,9 +27,25 @@ resource "cloudflare_pages_domain" "frontend" {
   name         = var.custom_domain
 }
 
-# Não há um cloudflare_dns_record aqui de propósito: ao anexar o domínio
-# customizado acima, a própria Cloudflare cria e mantém o CNAME, porque a zona
-# está na mesma conta. Declarar o registro no Terraform duplicava a
-# responsabilidade e o apply falhava com 81053 ("record with that host already
-# exists"). O caso do api.dividim.app em infra/ é diferente — para o Cloud Run
-# não existe automação equivalente, então lá o registro é gerenciado aqui.
+# CNAME apontando para o projeto Pages.
+#
+# A Cloudflare NÃO cria este registro sozinha: ao anexar o domínio customizado
+# ela fica em "Verifying" com um "Complete DNS setup" pendente, esperando o
+# registro existir. Por isso ele é gerenciado aqui.
+#
+# Um apply anterior falhou com 81053 ("record with that host already exists"),
+# mas o conflito não era com automação da Cloudflare — eram os registros A de
+# parking do Squarespace, herdados na importação da zona. Se o erro voltar,
+# confira o que ocupa o host antes de assumir que é duplicidade legítima.
+resource "cloudflare_dns_record" "frontend" {
+  count = var.custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.custom_domain
+  type    = "CNAME"
+  content = "${cloudflare_pages_project.frontend.name}.pages.dev"
+  proxied = true
+  ttl     = 1 # 1 = automático; obrigatório quando proxied
+
+  depends_on = [cloudflare_pages_domain.frontend]
+}
