@@ -5,16 +5,18 @@
 #   export CLOUDFLARE_API_TOKEN="..."
 # antes de rodar `terraform apply` (o provider lê a env var automaticamente).
 #
-# Escopo exigido no token: Account → Cloudflare Pages → Edit.
-# Não precisa de permissão de DNS aqui — o CNAME é criado pela Cloudflare ao
-# anexar o domínio. Só o root infra/ precisa de Zone → DNS → Edit, para o
-# registro de api.dividim.app (Cloud Run não tem automação equivalente).
+# Escopos exigidos no token (Custom Token no dashboard da Cloudflare):
+#   Account → Cloudflare Pages → Edit   (projeto Pages e domínio customizado)
+#   Zone    → DNS            → Edit     (o CNAME; Zone Resources = dividim.app)
+# O token usado pela CI só precisa do primeiro — vale manter um token separado
+# para o Terraform em vez de somar DNS:Edit ao que vive nos secrets do GitHub.
 
 cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # mesma conta de landing/terraform
 pages_project_name    = "financeapp-frontend"                # vira financeapp-frontend.pages.dev
 production_branch     = "main"
 
 # Deixe vazio no primeiro apply para validar o app na URL *.pages.dev antes de
-# apontar o domínio. Depois preencha e reaplique. O CNAME é criado pela própria
-# Cloudflare ao anexar o domínio — não é gerenciado por este root.
-custom_domain = "app.dividim.app"
+# apontar o domínio. Depois preencha os dois e reaplique — o CNAME do domínio
+# customizado é criado por este root.
+custom_domain      = "app.dividim.app"
+cloudflare_zone_id = "a8ab2dcacc91e328dfc7c1f1b9a305ab"
