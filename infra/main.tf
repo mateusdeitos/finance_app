@@ -281,6 +281,78 @@ resource "google_cloud_run_domain_mapping" "backend" {
   }
 }
 
+# Segundo domínio da API, servindo o mesmo serviço. Existe para que o app
+# (app.dividim.app) e a API compartilhem o mesmo domínio registrável: assim os
+# dois são same-site e o cookie auth_token continua funcionando com
+# SameSite=Lax, sem precisar afrouxar para None (que reabriria vetor de CSRF).
+#
+# Adicionado ao lado do mapping antigo, não no lugar dele — os dois hostnames
+# servem o mesmo serviço durante a transição, e o antigo só sai depois que o
+# corte estiver validado (PR de follow-up).
+#
+# Pré-requisito manual: o domínio precisa estar verificado no Google (Search
+# Console) para o projeto, senão o apply falha. Deixe a variável vazia até lá.
+resource "google_cloud_run_domain_mapping" "backend_new_domain" {
+  count = var.api_custom_domain != "" ? 1 : 0
+
+  name     = var.api_custom_domain
+  location = var.gcp_region
+
+  metadata {
+    namespace = var.gcp_project_id
+  }
+
+  spec {
+    route_name = google_cloud_run_v2_service.backend.name
+  }
+}
+
+# ── DNS do domínio novo (zona na Cloudflare) ──────────────────────────────────
+#
+# A zona dividim.app vive na Cloudflare, então os registros que o Cloud Run
+# exige são criados aqui e não no Cloud DNS.
+#
+# O ideal seria derivar o registro de
+# google_cloud_run_domain_mapping.backend_new_domain[0].status[0].resource_records,
+# mas esse atributo só é conhecido depois da criação, e count/for_each não
+# aceitam valor desconhecido no plan. Para subdomínio o Cloud Run sempre pede um
+# CNAME para ghs.googlehosted.com, então ele é declarado estaticamente aqui — e
+# o output `api_new_domain_required_dns_records` expõe a lista autoritativa que
+# o Google devolveu, para conferência após o apply.
+#
+# proxied = false (nuvem cinza) é obrigatório: com o proxy da Cloudflare na
+# frente, o Google não consegue emitir/validar o certificado do domain mapping.
+#
+# NOTE: nome/schema do recurso a verificar contra a doc do provider ~> 5.0 antes
+# do apply (na v4 este recurso se chamava cloudflare_record e o valor ficava em
+# `value`, não `content`).
+resource "cloudflare_dns_record" "api" {
+  count = var.api_custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.api_custom_domain
+  type    = "CNAME"
+  content = "ghs.googlehosted.com"
+  proxied = false
+  ttl     = 300
+
+  depends_on = [google_cloud_run_domain_mapping.backend_new_domain]
+}
+
+# TXT de verificação de propriedade do domínio no Google (Search Console).
+# Precisa existir e propagar ANTES de criar o domain mapping acima — na prática:
+# primeiro apply com api_custom_domain vazio e só esta variável preenchida,
+# depois o segundo apply com o domínio.
+resource "cloudflare_dns_record" "google_site_verification" {
+  count = var.google_site_verification != "" && var.cloudflare_zone_id != "" ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.dns_zone_name
+  type    = "TXT"
+  content = "google-site-verification=${var.google_site_verification}"
+  ttl     = 300
+}
+
 resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   project  = google_cloud_run_v2_service.backend.project
   location = google_cloud_run_v2_service.backend.location

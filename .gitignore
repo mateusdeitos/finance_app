@@ -14,6 +14,13 @@ landing/terraform/*.tfstate
 landing/terraform/*.tfstate.backup
 landing/terraform/terraform.tfvars
 
+# Terraform (frontend)
+frontend/terraform/.terraform/
+frontend/terraform/.terraform.lock.hcl
+frontend/terraform/*.tfstate
+frontend/terraform/*.tfstate.backup
+frontend/terraform/terraform.tfvars
+
 openspec
 .ai-jail
 

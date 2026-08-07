@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   preview:
-    name: Build & deploy preview channel
+    name: Build & deploy preview
     runs-on: ubuntu-latest
     environment: prod
 
@@ -45,24 +45,26 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
-      - name: Deploy to Firebase Hosting preview channel
+      - name: Resolve Cloudflare Pages project name
+        id: cf-project
+        run: |
+          NAME=$(printf '%s' "${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME_FRONTEND }}" | tr -d '\n\r')
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy preview to Cloudflare Pages
         id: deploy
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: cloudflare/wrangler-action@v3
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
-          channelId: pr-${{ inputs.pr_number }}
-          expires: 1d
-          entryPoint: frontend
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy frontend/dist --project-name=${{ steps.cf-project.outputs.name }} --branch=pr-${{ inputs.pr_number }}
 
       - name: Comment preview URL on PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ inputs.pr_number }}
-          URLS: ${{ steps.deploy.outputs.urls }}
+          URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
-          URL=$(echo "$URLS" | jq -r '.[0]')
           gh pr comment "$PR_NUMBER" --body "Preview frontend (apontando para o backend de prod): $URL
 
-          Channel: \`pr-$PR_NUMBER\` — expira em 1d."
+          Branch: \`pr-$PR_NUMBER\` — sem expiração automática (diferente do canal do Firebase; delete manualmente no dashboard do Cloudflare Pages se necessário)."

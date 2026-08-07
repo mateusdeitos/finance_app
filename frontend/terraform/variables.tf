@@ -3,14 +3,14 @@
 # passa por terraform.tfvars nem fica gravado no state.
 
 variable "cloudflare_account_id" {
-  description = "Cloudflare Account ID (dashboard → canto superior direito de qualquer página da conta)."
+  description = "Cloudflare Account ID (dashboard → canto superior direito de qualquer página da conta). Mesma conta usada em landing/terraform."
   type        = string
 }
 
 variable "pages_project_name" {
   description = "Nome do projeto Cloudflare Pages → vira <nome>.pages.dev."
   type        = string
-  default     = "financeapp-landing"
+  default     = "financeapp-frontend"
 }
 
 variable "production_branch" {
@@ -20,7 +20,7 @@ variable "production_branch" {
 }
 
 variable "custom_domain" {
-  description = "Domínio customizado da landing (ex.: dividim.app). Vazio = só a URL *.pages.dev."
+  description = "Domínio customizado do app (ex.: app.dividim.app). Vazio = só a URL *.pages.dev, útil para aplicar o projeto antes do corte de DNS."
   type        = string
   default     = ""
 }
