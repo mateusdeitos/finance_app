@@ -18,16 +18,13 @@ resource "cloudflare_pages_project" "frontend" {
 # origem, ele interceptaria a navegação para a landing e serviria o shell do app
 # a partir do cache.
 #
-# NOTE: verificar o nome/schema exato do recurso contra a doc do provider ~> 5.0
-# antes do apply (mesma ressalva do cloudflare_pages_project). Verificar também
-# se o registro DNS (CNAME) é criado automaticamente ao anexar o domínio, ou se
-# precisa de um cloudflare_record explícito — a zona está na mesma conta.
+# O domínio vai em `name` (na v4 do provider este argumento se chamava `domain`).
 resource "cloudflare_pages_domain" "frontend" {
   count = var.custom_domain != "" ? 1 : 0
 
   account_id   = var.cloudflare_account_id
   project_name = cloudflare_pages_project.frontend.name
-  domain       = var.custom_domain
+  name         = var.custom_domain
 }
 
 # CNAME do subdomínio do app para o projeto Pages.
@@ -37,8 +34,8 @@ resource "cloudflare_pages_domain" "frontend" {
 # reclama de registro já existente — nesse caso rode `terraform import` nele em
 # vez de apagar pelo dashboard, para o Terraform virar a fonte da verdade.
 #
-# NOTE: nome/schema a verificar contra a doc do provider ~> 5.0 (na v4 era
-# cloudflare_record, com o valor em `value` em vez de `content`).
+# Na v4 do provider este recurso se chamava cloudflare_record e o valor ficava em
+# `value`; na v5 é cloudflare_dns_record com `content`.
 resource "cloudflare_dns_record" "frontend" {
   count = var.custom_domain != "" && var.cloudflare_zone_id != "" ? 1 : 0
 
