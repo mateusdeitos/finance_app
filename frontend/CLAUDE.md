@@ -50,6 +50,20 @@ cache headers for the PWA service worker and hashed static assets are
 `public/_headers` — both are copied into `dist/` automatically by Vite's
 `public/` passthrough.
 
+Depois de cada deploy o workflow purga o cache da zona Cloudflare
+(`.github/actions/cloudflare-purge-cache`) — sem isso o edge, que fica na frente
+do Pages porque o domínio é *proxied*, segue entregando a versão anterior.
+
+Um deploy também torna 404 todo `assets/*-<hash>.{js,css}` da versão anterior:
+o Pages só serve os arquivos do deploy corrente no domínio de produção. Uma aba
+com o HTML antigo — servido do precache do service worker, que roda em modo
+`prompt` e mantém a versão velha até o usuário aceitar a atualização — pede
+esses arquivos e recebe 404, resultando em página sem estilo ou chunk lazy que
+nunca monta. `src/utils/staleAssetRecovery.ts`, instalado em `main.tsx`, escuta
+`vite:preloadError` e erros de carregamento de `<script>`/`<link rel=stylesheet>`
+e recarrega a página uma vez (com cooldown em `sessionStorage` para não virar
+loop quando a falha for outra).
+
 The app is served from `app.dividim.app`, a **different origin** from the
 marketing landing page at `dividim.app` (`landing/`). That separation is
 deliberate: the PWA service worker registers at `/sw.js` with scope `/` and its

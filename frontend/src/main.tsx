@@ -14,12 +14,17 @@ import App from './App'
 import { AppNotifications } from './components/AppNotifications'
 import { theme } from './theme'
 import { queryClient } from './queryClient'
+import { installStaleAssetRecovery } from './utils/staleAssetRecovery'
 
 // Mantine's DateInput parses user-typed input via dayjs(value, valueFormat, locale).
 // Without customParseFormat, dayjs ignores the format string and falls back to
 // native Date.parse — making "10/07/2026" mean Oct 7 instead of Jul 10.
 dayjs.extend(customParseFormat)
 dayjs.locale('pt-br')
+
+// Antes do render: um deploy novo faz os assets com hash da versão anterior
+// responderem 404, e a falha pode acontecer já no primeiro paint.
+installStaleAssetRecovery()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

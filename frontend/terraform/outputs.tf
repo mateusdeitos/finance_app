@@ -16,6 +16,6 @@ output "app_url" {
 }
 
 output "cloudflare_zone_id" {
-  description = "Cloudflare zone ID → set as GitHub variable CLOUDFLARE_ZONE_ID (usado pelo purge de cache pós-deploy)"
+  description = "Cloudflare zone ID → set as GitHub secret CLOUDFLARE_ZONE_ID (usado pelo purge de cache pós-deploy)"
   value       = var.cloudflare_zone_id
 }

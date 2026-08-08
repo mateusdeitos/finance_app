@@ -8,13 +8,15 @@ description: >-
 inputs:
   api_token:
     description: >-
-      Token da API Cloudflare com Zone → Cache Purge → Purge na zona alvo.
-      Pode ser o mesmo token usado pelo wrangler, desde que o escopo seja somado.
+      Token da API Cloudflare. É o mesmo `secrets.CLOUDFLARE_API_TOKEN` usado
+      pelo wrangler nos deploys, que precisa ganhar o escopo
+      Zone → Cache Purge → Purge além do Pages:Edit.
     required: true
   zone_id:
     description: >-
-      Zone ID de dividim.app. Vazio = purge é pulado (deploy não falha), o que
-      mantém o workflow utilizável antes da variável estar configurada.
+      Zone ID de dividim.app (`secrets.CLOUDFLARE_ZONE_ID`). Vazio = purge é
+      pulado (deploy não falha), o que mantém o workflow utilizável antes do
+      secret estar configurado.
     required: false
     default: ""
 

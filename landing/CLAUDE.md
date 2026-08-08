@@ -65,8 +65,8 @@ Landing (apex `dividim.app`) e app (`app.dividim.app`) são CNAMEs *proxied* na 
 
 Configuração no GitHub:
 
-- `vars.CLOUDFLARE_ZONE_ID` — Zone ID de `dividim.app`. Se não estiver setada o purge é pulado com warning (o deploy não falha).
-- Token: por padrão reusa `secrets.CLOUDFLARE_API_TOKEN`, que precisa ganhar o escopo **Zone → Cache Purge → Purge** além do Pages:Edit. Para manter os escopos separados, crie `secrets.CLOUDFLARE_CACHE_PURGE_TOKEN` — quando existe, tem precedência.
+- `secrets.CLOUDFLARE_ZONE_ID` — Zone ID de `dividim.app`. Se não estiver setado o purge é pulado com warning (o deploy não falha).
+- `secrets.CLOUDFLARE_API_TOKEN` — o mesmo token já usado pelo wrangler, que precisa ganhar o escopo **Zone → Cache Purge → Purge** além do Pages:Edit.
 
 O purge é `purge_everything` da zona: purge por hostname/prefixo/tag é exclusivo do plano Enterprise. Como a zona só serve dois sites estáticos e os assets com hash são `immutable`, repopular o edge custa pouco.
 
