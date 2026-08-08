@@ -12,7 +12,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
 import { bulkReviewTransactions, deleteTransaction, updateTransaction } from "@/api/transactions";
-import { deleteSettlement, updateSettlement } from "@/api/settlements";
+import { bulkReviewSettlements, deleteSettlement, updateSettlement } from "@/api/settlements";
 import { useQueryClient } from "@tanstack/react-query";
 import { QueryKeys } from "@/utils/queryKeys";
 import { renderDrawer } from "@/utils/renderDrawer";
@@ -543,17 +543,21 @@ export function TransactionsPage() {
   }
 
   // Bulk "mark as reviewed" is a lightweight metadata write (reviewed_at only),
-  // so it goes straight through in a single request instead of the per-item
-  // progress drawer used by category/date/division. It applies to the selected
-  // transactions only — settlements have no review state and are left untouched.
+  // so it goes straight through instead of the per-item progress drawer used by
+  // category/date/division. It applies to both selected transactions and
+  // selected settlements (each carries its own independent review status).
   async function handleBulkReview(reviewed: boolean) {
-    const ids = [...selectedIds];
-    if (ids.length === 0) {
+    const txIds = [...selectedIds];
+    const settlementIds = [...selectedSettlementIds];
+    if (txIds.length === 0 && settlementIds.length === 0) {
       clearSelection();
       return;
     }
     try {
-      await bulkReviewTransactions(ids, reviewed);
+      await Promise.all([
+        txIds.length > 0 ? bulkReviewTransactions(txIds, reviewed) : Promise.resolve(),
+        settlementIds.length > 0 ? bulkReviewSettlements(settlementIds, reviewed) : Promise.resolve(),
+      ]);
       await invalidateTransactions();
       // The reviewed filter feeds the (accumulated) balance query too, so refresh it.
       await queryClient.invalidateQueries({ queryKey: [QueryKeys.Balance] });

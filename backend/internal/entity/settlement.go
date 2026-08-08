@@ -18,6 +18,7 @@ type Settlement struct {
 	Date                time.Time             `gorm:"type:date;not null"`
 	CreatedAt           *time.Time
 	UpdatedAt           *time.Time
+	ReviewedAt          *time.Time
 	SourceTransaction   *Transaction `gorm:"foreignKey:SourceTransactionID;<-:false"`
 }
 
@@ -49,6 +50,7 @@ func (s *Settlement) ToDomain() *domain.Settlement {
 		Date:                s.Date,
 		CreatedAt:           s.CreatedAt,
 		UpdatedAt:           s.UpdatedAt,
+		ReviewedAt:          s.ReviewedAt,
 		SourceTransaction:   sourceTx,
 	}
 }
@@ -65,5 +67,6 @@ func SettlementFromDomain(d *domain.Settlement) *Settlement {
 		Date:                d.Date,
 		CreatedAt:           d.CreatedAt,
 		UpdatedAt:           d.UpdatedAt,
+		ReviewedAt:          d.ReviewedAt,
 	}
 }

@@ -24,6 +24,9 @@ type Settlement struct {
 	Date                time.Time      `json:"date"`
 	CreatedAt           *time.Time     `json:"created_at"`
 	UpdatedAt           *time.Time     `json:"updated_at"`
+	// ReviewedAt marks when the user reviewed (reconciled) this settlement.
+	// nil means it has not been reviewed yet.
+	ReviewedAt *time.Time `json:"reviewed_at,omitempty"`
 	// SourceTransaction is populated when the caller requests
 	// WithSourceTransaction on the filter. nil otherwise.
 	SourceTransaction *Transaction `json:"source_transaction,omitempty"`
@@ -31,6 +34,13 @@ type Settlement struct {
 
 type SettlementUpdateRequest struct {
 	Date *Date `json:"date,omitempty"`
+}
+
+// SettlementBulkReviewRequest marks (Reviewed=true) or unmarks (Reviewed=false)
+// the listed settlements as reviewed for the caller.
+type SettlementBulkReviewRequest struct {
+	IDs      []int `json:"ids"`
+	Reviewed bool  `json:"reviewed"`
 }
 
 type SettlementFilter struct {

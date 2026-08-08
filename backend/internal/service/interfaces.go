@@ -102,6 +102,9 @@ type SettlementService interface {
 	Update(ctx context.Context, settlement *domain.Settlement) error
 	UpdateDate(ctx context.Context, callerUserID, id int, date time.Time) error
 	Delete(ctx context.Context, ids []int) error
+	// BulkReview marks (or unmarks) the given settlements as reviewed for the
+	// caller. IDs the caller does not own are silently skipped.
+	BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error
 }
 
 type ChargeService interface {

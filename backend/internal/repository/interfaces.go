@@ -113,6 +113,7 @@ type SettlementRepository interface {
 	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
 	Update(ctx context.Context, settlement *domain.Settlement) error
 	Delete(ctx context.Context, ids []int) error
+	UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error
 }
 
 type ChargeRepository interface {

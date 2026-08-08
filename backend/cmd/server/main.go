@@ -311,6 +311,8 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, authMiddlewa
 	notifications.DELETE("/:id", h.notification.Delete)
 
 	// Settlements
+	// Static "/review" MUST be registered before "/:id" so "review" is not captured as :id.
+	api.PATCH("/settlements/review", handler.NewSettlementHandler(services).BulkReview)
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
 	api.DELETE("/settlements/:id", handler.NewSettlementHandler(services).Delete)
 }

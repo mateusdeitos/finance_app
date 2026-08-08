@@ -74,3 +74,16 @@ func (s *settlementService) Delete(ctx context.Context, ids []int) error {
 	}
 	return nil
 }
+
+// BulkReview marks (or unmarks) the given settlements as reviewed for the
+// caller. The repository scopes the write by user_id, so IDs the caller does
+// not own are silently skipped.
+func (s *settlementService) BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := s.settlementRepo.UpdateReviewedByIDs(ctx, userID, ids, reviewed); err != nil {
+		return pkgErrors.Internal("failed to update settlement review status", err)
+	}
+	return nil
+}

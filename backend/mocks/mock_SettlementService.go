@@ -24,6 +24,55 @@ func (_m *MockSettlementService) EXPECT() *MockSettlementService_Expecter {
 	return &MockSettlementService_Expecter{mock: &_m.Mock}
 }
 
+// BulkReview provides a mock function with given fields: ctx, userID, ids, reviewed
+func (_m *MockSettlementService) BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	ret := _m.Called(ctx, userID, ids, reviewed)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BulkReview")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int, bool) error); ok {
+		r0 = rf(ctx, userID, ids, reviewed)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSettlementService_BulkReview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BulkReview'
+type MockSettlementService_BulkReview_Call struct {
+	*mock.Call
+}
+
+// BulkReview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - ids []int
+//   - reviewed bool
+func (_e *MockSettlementService_Expecter) BulkReview(ctx interface{}, userID interface{}, ids interface{}, reviewed interface{}) *MockSettlementService_BulkReview_Call {
+	return &MockSettlementService_BulkReview_Call{Call: _e.mock.On("BulkReview", ctx, userID, ids, reviewed)}
+}
+
+func (_c *MockSettlementService_BulkReview_Call) Run(run func(ctx context.Context, userID int, ids []int, reviewed bool)) *MockSettlementService_BulkReview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].([]int), args[3].(bool))
+	})
+	return _c
+}
+
+func (_c *MockSettlementService_BulkReview_Call) Return(_a0 error) *MockSettlementService_BulkReview_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSettlementService_BulkReview_Call) RunAndReturn(run func(context.Context, int, []int, bool) error) *MockSettlementService_BulkReview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: ctx, settlement
 func (_m *MockSettlementService) Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error) {
 	ret := _m.Called(ctx, settlement)

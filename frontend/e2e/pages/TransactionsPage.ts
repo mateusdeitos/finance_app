@@ -423,11 +423,18 @@ export class TransactionsPage {
     return match ? parseInt(match[1]) : 0;
   }
 
+  // On desktop the bulk actions render as inline buttons (no dropdown), while on
+  // mobile they live behind an "Ações" dropdown. Opening the menu is therefore a
+  // no-op on desktop: the action buttons are already visible. Callers can always
+  // click the per-action testid afterwards regardless of layout.
   async openBulkActionsMenu() {
-    await this.page.getByTestId(TransactionsTestIds.BtnBulkActionsMenu).click();
+    const trigger = this.page.getByTestId(TransactionsTestIds.BtnBulkActionsMenu);
+    if ((await trigger.count()) > 0 && (await trigger.isVisible())) {
+      await trigger.click();
+    }
   }
 
-  /** Open the bulk menu and mark (or unmark) the current selection as reviewed. */
+  /** Mark (or unmark) the current selection as reviewed via the bulk action. */
   async bulkSetReviewed(reviewed: boolean) {
     await this.openBulkActionsMenu();
     const testId = reviewed

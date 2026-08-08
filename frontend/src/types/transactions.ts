@@ -80,6 +80,8 @@ export namespace Transactions {
     parent_transaction_id: number;
     /** YYYY-MM-DD; serialized as RFC3339 by the API but mirrors transaction.date semantics. */
     date?: string;
+    /** RFC3339 timestamp of when the user reviewed this settlement; absent when unreviewed. */
+    reviewed_at?: string;
     created_at?: string;
     updated_at?: string;
   }

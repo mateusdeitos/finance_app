@@ -71,7 +71,7 @@ export function SettlementRow({
   return (
     <div
       data-testid={TransactionsTestIds.SettlementRow(settlement.id)}
-      className={`${classes.row}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
+      className={`${classes.row}${settlement.reviewed_at ? ` ${classes.reviewed}` : ''}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
       onClick={handleRowClick}
     >
       <div className={classes.checkbox}>

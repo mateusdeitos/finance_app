@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
@@ -31,6 +32,27 @@ func (r *settlementRepository) Update(ctx context.Context, settlement *domain.Se
 
 func (r *settlementRepository) Delete(ctx context.Context, ids []int) error {
 	return GetTxFromContext(ctx, r.db).Delete(&entity.Settlement{}, ids).Error
+}
+
+// UpdateReviewedByIDs sets (or clears) the reviewed_at timestamp on the given
+// settlements owned by userID. When reviewed is true the column is set to the
+// current time; when false it is cleared to NULL. IDs the user does not own are
+// left untouched (the user_id guard scopes the update).
+func (r *settlementRepository) UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	var reviewedAt interface{}
+	if reviewed {
+		reviewedAt = time.Now()
+	} else {
+		reviewedAt = nil
+	}
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Settlement{}).
+		Where("id IN ?", ids).
+		Where("user_id = ?", userID).
+		Update("reviewed_at", reviewedAt).Error
 }
 
 func (r *settlementRepository) Search(ctx context.Context, filter domain.SettlementFilter) ([]*domain.Settlement, error) {

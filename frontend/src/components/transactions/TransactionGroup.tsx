@@ -204,6 +204,7 @@ export function TransactionGroup({
               source_transaction_id: sourceTxId ?? 0,
               parent_transaction_id: 0,
               date: tx.date,
+              reviewed_at: tx.reviewed_at,
               created_at: tx.created_at,
             };
             return (
