@@ -107,7 +107,22 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 		// leg is filtered by s.account_id. The combined-filter case is still
 		// handled by FindOrphanedSettlementTransactions via its
 		// `t.account_id NOT IN filter` guard.
-		query = query.Preload("SettlementsFromSource")
+		//
+		// When a review-status filter is active, the inline settlements are
+		// filtered by their own reviewed_at too (settlements carry an
+		// independent review status), keeping the displayed rows and the
+		// group total consistent with GetBalance's s.reviewed_at settlements leg.
+		if filter.Reviewed != nil {
+			reviewed := *filter.Reviewed
+			query = query.Preload("SettlementsFromSource", func(db *gorm.DB) *gorm.DB {
+				if reviewed {
+					return db.Where("reviewed_at IS NOT NULL")
+				}
+				return db.Where("reviewed_at IS NULL")
+			})
+		} else {
+			query = query.Preload("SettlementsFromSource")
+		}
 	}
 
 	if filter.UserID != nil {
@@ -173,6 +188,14 @@ func (r *transactionRepository) Search(ctx context.Context, filter domain.Transa
 
 	if len(types) > 0 {
 		query = query.Where("type IN ?", types)
+	}
+
+	if filter.Reviewed != nil {
+		if *filter.Reviewed {
+			query = query.Where("transactions.reviewed_at IS NOT NULL")
+		} else {
+			query = query.Where("transactions.reviewed_at IS NULL")
+		}
 	}
 
 	if filter.SortBy != nil {
@@ -241,6 +264,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 		TransactionRecurrenceID *int           `gorm:"column:transaction_recurrence_id"`
 		CreatedAt               *time.Time     `gorm:"column:created_at"`
 		UpdatedAt               *time.Time     `gorm:"column:updated_at"`
+		ReviewedAt              *time.Time     `gorm:"column:reviewed_at"`
 		_                       gorm.DeletedAt `gorm:"-"`
 		_                       struct{}       `gorm:"-"`
 	}
@@ -260,7 +284,8 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 			s.source_transaction_id AS source_transaction_id,
 			t.transaction_recurrence_id AS transaction_recurrence_id,
 			s.created_at AS created_at,
-			s.updated_at AS updated_at`).
+			s.updated_at AS updated_at,
+			s.reviewed_at AS reviewed_at`).
 		Joins("JOIN transactions t ON t.id = s.source_transaction_id").
 		Where("t.deleted_at IS NULL").
 		Where("s.user_id = ?", *filter.UserID).
@@ -272,6 +297,17 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 	}
 	if filter.EndDate != nil && filter.EndDate.IsValid() {
 		query = query.Where(filter.EndDate.ToSQL("s.date"))
+	}
+
+	// A settlement carries its own review status, so the orphan-settlement
+	// listing filters by s.reviewed_at — consistent with GetBalance's
+	// settlements leg (also filtered by s.reviewed_at).
+	if filter.Reviewed != nil {
+		if *filter.Reviewed {
+			query = query.Where("s.reviewed_at IS NOT NULL")
+		} else {
+			query = query.Where("s.reviewed_at IS NULL")
+		}
 	}
 
 	if err := query.Scan(&rows).Error; err != nil {
@@ -311,6 +347,7 @@ func (r *transactionRepository) FindOrphanedSettlementTransactions(ctx context.C
 			TransactionRecurrenceID: r.TransactionRecurrenceID,
 			CreatedAt:               r.CreatedAt,
 			UpdatedAt:               r.UpdatedAt,
+			ReviewedAt:              r.ReviewedAt,
 		})
 	}
 
@@ -348,6 +385,28 @@ func (r *transactionRepository) UpdateAmountByIDs(ctx context.Context, ids []int
 		Update("amount", amount).Error
 }
 
+// UpdateReviewedByIDs sets (or clears) the reviewed_at timestamp on the given
+// transactions owned by userID. When reviewed is true the column is set to the
+// current time; when false it is cleared to NULL. IDs the user does not own are
+// left untouched (the user_id guard scopes the update). Associations are not
+// touched — this is a lightweight metadata update, not a full Save.
+func (r *transactionRepository) UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	var reviewedAt interface{}
+	if reviewed {
+		reviewedAt = time.Now()
+	} else {
+		reviewedAt = nil
+	}
+	return GetTxFromContext(ctx, r.db).
+		Model(&entity.Transaction{}).
+		Where("id IN ?", ids).
+		Where("user_id = ?", userID).
+		Update("reviewed_at", reviewedAt).Error
+}
+
 func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error) {
 	endDate := filter.Period.EndDate()
 	var args []interface{}
@@ -375,6 +434,13 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 	if len(filter.TagIDs) > 0 {
 		txSQL += " AND EXISTS (SELECT 1 FROM transaction_tags WHERE transaction_id = transactions.id AND tag_id IN ?)"
 		args = append(args, filter.TagIDs)
+	}
+	if filter.Reviewed != nil {
+		if *filter.Reviewed {
+			txSQL += " AND reviewed_at IS NOT NULL"
+		} else {
+			txSQL += " AND reviewed_at IS NULL"
+		}
 	}
 
 	var combined string
@@ -433,6 +499,18 @@ func (r *transactionRepository) GetBalance(ctx context.Context, filter domain.Ba
 			// account reconciles with the real bank statement.
 			settlementSQL += " AND s.account_id IN ?"
 			args = append(args, filter.AccountIDs)
+		}
+
+		// A settlement carries its own review status, so the settlements leg
+		// filters by s.reviewed_at — consistent with the filtered listing
+		// (inline settlements and orphan-settlement rows apply the same
+		// s.reviewed_at guard).
+		if filter.Reviewed != nil {
+			if *filter.Reviewed {
+				settlementSQL += " AND s.reviewed_at IS NOT NULL"
+			} else {
+				settlementSQL += " AND s.reviewed_at IS NULL"
+			}
 		}
 
 		if filter.Accumulated {

@@ -41,6 +41,9 @@ type TransactionService interface {
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
+	// BulkReview marks (or unmarks) the given transactions as reviewed for the
+	// caller. IDs the caller does not own are silently skipped.
+	BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error
 	DeleteSettlement(ctx context.Context, userID int, settlementID int, propagation domain.TransactionPropagationSettings) error
 	GetBalance(ctx context.Context, userID int, period domain.Period, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	ParseImportCSV(ctx context.Context, userID, accountID int, typeDefinitionRule domain.ImportTypeDefinitionRule, csvData []byte) (*domain.ImportCSVResponse, error)
@@ -99,6 +102,9 @@ type SettlementService interface {
 	Update(ctx context.Context, settlement *domain.Settlement) error
 	UpdateDate(ctx context.Context, callerUserID, id int, date time.Time) error
 	Delete(ctx context.Context, ids []int) error
+	// BulkReview marks (or unmarks) the given settlements as reviewed for the
+	// caller. IDs the caller does not own are silently skipped.
+	BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error
 }
 
 type ChargeService interface {

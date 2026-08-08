@@ -90,6 +90,7 @@ type TransactionRepository interface { //nolint:interfacebloat // transaction is
 	GetGroupedByRecurrences(ctx context.Context, userID *int, recurrenceIDs []int) (map[int][]*domain.Transaction, error)
 	GetSourceTransactionIDs(ctx context.Context, linkedTransactionID int) ([]int, error)
 	UpdateAmountByIDs(ctx context.Context, ids []int, amount int64) error
+	UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error
 	GetBalance(ctx context.Context, filter domain.BalanceFilter) (*domain.BalanceResult, error)
 	NullifyCategory(ctx context.Context, categoryID int) error
 	ReassignCategory(ctx context.Context, fromID, toID int) error
@@ -112,6 +113,7 @@ type SettlementRepository interface {
 	Create(ctx context.Context, settlement *domain.Settlement) (*domain.Settlement, error)
 	Update(ctx context.Context, settlement *domain.Settlement) error
 	Delete(ctx context.Context, ids []int) error
+	UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error
 }
 
 type ChargeRepository interface {

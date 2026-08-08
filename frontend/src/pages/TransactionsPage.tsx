@@ -11,8 +11,10 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedTransactions } from "@/hooks/useGroupedTransactions";
 import { useTags } from "@/hooks/useTags";
-import { deleteTransaction, updateTransaction } from "@/api/transactions";
-import { deleteSettlement, updateSettlement } from "@/api/settlements";
+import { bulkReviewTransactions, deleteTransaction, updateTransaction } from "@/api/transactions";
+import { bulkReviewSettlements, deleteSettlement, updateSettlement } from "@/api/settlements";
+import { useQueryClient } from "@tanstack/react-query";
+import { QueryKeys } from "@/utils/queryKeys";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { CreateTransactionDrawer } from "@/components/transactions/CreateTransactionDrawer";
 import { TransactionFab } from "@/components/transactions/TransactionFab";
@@ -51,6 +53,7 @@ export function TransactionsPage() {
   const routeNavigate = useNavigate({ from: "/transactions" });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
 
   const { query: meQuery } = useMe((me) => me.id);
   const currentUserId = meQuery.data ?? 0;
@@ -539,6 +542,31 @@ export function TransactionsPage() {
     }
   }
 
+  // Bulk "mark as reviewed" is a lightweight metadata write (reviewed_at only),
+  // so it goes straight through instead of the per-item progress drawer used by
+  // category/date/division. It applies to both selected transactions and
+  // selected settlements (each carries its own independent review status).
+  async function handleBulkReview(reviewed: boolean) {
+    const txIds = [...selectedIds];
+    const settlementIds = [...selectedSettlementIds];
+    if (txIds.length === 0 && settlementIds.length === 0) {
+      clearSelection();
+      return;
+    }
+    try {
+      await Promise.all([
+        txIds.length > 0 ? bulkReviewTransactions(txIds, reviewed) : Promise.resolve(),
+        settlementIds.length > 0 ? bulkReviewSettlements(settlementIds, reviewed) : Promise.resolve(),
+      ]);
+      await invalidateTransactions();
+      // The reviewed filter feeds the (accumulated) balance query too, so refresh it.
+      await queryClient.invalidateQueries({ queryKey: [QueryKeys.Balance] });
+      successHaptic();
+    } finally {
+      clearSelection();
+    }
+  }
+
   const isSelecting = selectedIds.size > 0 || selectedSettlementIds.size > 0;
   const totalSelected = selectedIds.size + selectedSettlementIds.size;
 
@@ -656,6 +684,8 @@ export function TransactionsPage() {
                 onCategoryChange={handleCategoryChange}
                 onDateChange={handleDateChange}
                 onDivisaoChange={handleDivisionClick}
+                onMarkReviewed={() => void handleBulkReview(true)}
+                onUnmarkReviewed={() => void handleBulkReview(false)}
                 connectedAccountsCount={connectedAccountsCount}
                 onDelete={handleDeleteClick}
               />
@@ -829,6 +859,8 @@ export function TransactionsPage() {
           onCategoryChange={handleCategoryChange}
           onDateChange={handleDateChange}
           onDivisaoChange={handleDivisionClick}
+          onMarkReviewed={() => void handleBulkReview(true)}
+          onUnmarkReviewed={() => void handleBulkReview(false)}
           connectedAccountsCount={connectedAccountsCount}
           onDelete={handleDeleteClick}
         />

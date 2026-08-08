@@ -37,6 +37,31 @@ function TypeOptions({
   );
 }
 
+function ReviewedOptions({
+  reviewed,
+  toggle,
+}: {
+  reviewed: Transactions.ReviewedFilter | undefined;
+  toggle: (v: Transactions.ReviewedFilter) => void;
+}) {
+  return (
+    <>
+      <Switch
+        label="Apenas revisadas"
+        checked={reviewed === "reviewed"}
+        onChange={() => toggle("reviewed")}
+        data-testid={TransactionsTestIds.SwitchReviewed}
+      />
+      <Switch
+        label="Apenas não revisadas"
+        checked={reviewed === "unreviewed"}
+        onChange={() => toggle("unreviewed")}
+        data-testid={TransactionsTestIds.SwitchUnreviewed}
+      />
+    </>
+  );
+}
+
 export function AdvancedFilter({ inline }: AdvancedFilterProps) {
   const { search, update } = useTransactionsSearch();
   const [opened, setOpened] = useState(false);
@@ -44,6 +69,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
   const selected: Transactions.TransactionType[] = search.types ?? [];
   const hideSettlements = search.hideSettlements ?? false;
   const noCategory = search.noCategory ?? false;
+  const reviewed = search.reviewed;
 
   function toggle(value: Transactions.TransactionType) {
     const next = selected.includes(value)
@@ -60,7 +86,14 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
     update((prev) => ({ ...prev, noCategory: !noCategory }));
   }
 
-  const advancedCount = selected.length + (hideSettlements ? 1 : 0) + (noCategory ? 1 : 0);
+  // The two review switches are mutually exclusive: turning one on clears the
+  // other, and turning the active one off clears the filter entirely.
+  function toggleReviewed(value: Transactions.ReviewedFilter) {
+    update((prev) => ({ ...prev, reviewed: prev.reviewed === value ? undefined : value }));
+  }
+
+  const advancedCount =
+    selected.length + (hideSettlements ? 1 : 0) + (noCategory ? 1 : 0) + (reviewed ? 1 : 0);
 
   if (inline) {
     return (
@@ -80,6 +113,10 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
           onChange={toggleNoCategory}
           data-testid={TransactionsTestIds.SwitchNoCategory}
         />
+        <Text size="sm" fw={500} mt="xs">
+          Revisão
+        </Text>
+        <ReviewedOptions reviewed={reviewed} toggle={toggleReviewed} />
       </Stack>
     );
   }
@@ -119,6 +156,7 @@ export function AdvancedFilter({ inline }: AdvancedFilterProps) {
             onChange={toggleNoCategory}
             data-testid={TransactionsTestIds.SwitchNoCategory}
           />
+          <ReviewedOptions reviewed={reviewed} toggle={toggleReviewed} />
         </Stack>
       </Popover.Dropdown>
     </Popover>

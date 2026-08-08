@@ -3,6 +3,8 @@ export namespace Transactions {
   export type OperationType = "credit" | "debit";
   export type RecurrenceType = "monthly" | "weekly" | "daily" | "yearly";
   export type GroupBy = "date" | "category" | "account";
+  /** Advanced review-status filter: only reviewed, only unreviewed, or (undefined) both. */
+  export type ReviewedFilter = "reviewed" | "unreviewed";
 
   export interface Tag {
     id: number;
@@ -78,6 +80,8 @@ export namespace Transactions {
     parent_transaction_id: number;
     /** YYYY-MM-DD; serialized as RFC3339 by the API but mirrors transaction.date semantics. */
     date?: string;
+    /** RFC3339 timestamp of when the user reviewed this settlement; absent when unreviewed. */
+    reviewed_at?: string;
     created_at?: string;
     updated_at?: string;
   }
@@ -119,6 +123,8 @@ export namespace Transactions {
      * real source transaction so the UI can open its edit drawer.
      */
     source_transaction_id?: number;
+    /** RFC3339 timestamp of when the user reviewed this transaction; absent when unreviewed. */
+    reviewed_at?: string;
     created_at?: string;
     updated_at?: string;
   }
@@ -136,6 +142,7 @@ export namespace Transactions {
     categoryIds?: number[];
     tagIds?: number[];
     types?: TransactionType[];
+    reviewed?: ReviewedFilter;
     query?: string;
   }
 
@@ -144,6 +151,7 @@ export namespace Transactions {
     categoryIds: number[];
     tagIds: number[];
     types: TransactionType[];
+    reviewed?: ReviewedFilter;
   }
 
   export interface FetchBalanceParams {
@@ -154,6 +162,7 @@ export namespace Transactions {
     categoryIds?: number[];
     tagIds?: number[];
     hideSettlements?: boolean;
+    reviewed?: ReviewedFilter;
   }
 
   export interface BalanceResult {
