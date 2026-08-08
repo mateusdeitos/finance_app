@@ -59,6 +59,17 @@ Color tokens in `src/styles/global.css` (`@theme`) are transcribed 1:1 from `fro
 
 Only one: `PUBLIC_APP_URL` (Astro's `PUBLIC_*` convention — must keep that prefix to be exposed client-side). Every CTA links to `${PUBLIC_APP_URL}/login`. Set locally via `.env` (see `.env.example`), injected in CI via `vars.PUBLIC_APP_URL`.
 
+## Purge de cache no deploy
+
+Landing (apex `dividim.app`) e app (`app.dividim.app`) são CNAMEs *proxied* na mesma zona, então o edge da Cloudflare fica na frente do Pages e um deploy sozinho não invalida o que já está cacheado. Os dois workflows de deploy chamam `.github/actions/cloudflare-purge-cache` logo depois do `wrangler pages deploy`.
+
+Configuração no GitHub:
+
+- `vars.CLOUDFLARE_ZONE_ID` — Zone ID de `dividim.app`. Se não estiver setada o purge é pulado com warning (o deploy não falha).
+- Token: por padrão reusa `secrets.CLOUDFLARE_API_TOKEN`, que precisa ganhar o escopo **Zone → Cache Purge → Purge** além do Pages:Edit. Para manter os escopos separados, crie `secrets.CLOUDFLARE_CACHE_PURGE_TOKEN` — quando existe, tem precedência.
+
+O purge é `purge_everything` da zona: purge por hostname/prefixo/tag é exclusivo do plano Enterprise. Como a zona só serve dois sites estáticos e os assets com hash são `immutable`, repopular o edge custa pouco.
+
 ## Terraform (`terraform/`)
 
 Separate Terraform root module from the repo-root `infra/` (different provider — Cloudflare, not GCP — different state file, no shared resources). Same conventions as `infra/`: local state only (no `backend.tf`), `outputs.tf` entries document which GitHub variable/secret each value feeds. See `terraform/terraform.tfvars.example` for required variables — `CLOUDFLARE_API_TOKEN` is read from the environment, never from a `.tfvars` file.

@@ -8,9 +8,11 @@
 # Escopos exigidos no token (Custom Token no dashboard da Cloudflare):
 #   Account → Cloudflare Pages → Edit   (projeto Pages e domínio customizado)
 #   Zone    → DNS            → Edit     (o CNAME; Zone Resources = dividim.app)
-# O token usado pela CI só precisa do primeiro — vale manter um token separado
-# para o Terraform em vez de somar DNS:Edit ao que vive nos secrets do GitHub.
-
+# O token usado pela CI precisa do primeiro mais Zone → Cache Purge → Purge
+# (o purge pós-deploy em .github/actions/cloudflare-purge-cache); o Terraform
+# ainda quer o DNS:Edit — vale manter um token separado para ele
+# em vez de somar DNS:Edit ao que vive nos secrets do GitHub.
+# ORIGINAL_TAIL
 cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Dashboard → canto superior direito → Account ID
 pages_project_name    = "financeapp-landing"                # vira financeapp-landing.pages.dev
 production_branch     = "main"

@@ -110,3 +110,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy landing/dist --project-name=${{ steps.cf-project.outputs.name }} --branch=main
+
+      - name: Purge Cloudflare cache
+        uses: ./.github/actions/cloudflare-purge-cache
+        with:
+          api_token: ${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
