@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Project Overview
 
-Static marketing site for FinanceApp (a couples' finance management app), deployed to Cloudflare Pages. This is a deliberately separate, lighter tech context from `frontend/` — no Mantine, no TanStack Router/Query, no forms/validation stack. It has no backend of its own and no real user data.
+Static marketing site for Dividim (a couples' finance management app), deployed to Cloudflare Pages. This is a deliberately separate, lighter tech context from `frontend/` — no Mantine, no TanStack Router/Query, no forms/validation stack. It has no backend of its own and no real user data.
 
 ## Stack
 
