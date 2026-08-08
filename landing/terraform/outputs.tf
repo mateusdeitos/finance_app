@@ -19,3 +19,8 @@ output "landing_url" {
   description = "URL pública da landing (domínio customizado quando configurado)"
   value       = var.custom_domain != "" ? "https://${var.custom_domain}" : "https://${cloudflare_pages_project.landing.name}.pages.dev"
 }
+
+output "cloudflare_zone_id" {
+  description = "Cloudflare zone ID → set as GitHub secret CLOUDFLARE_ZONE_ID (usado pelo purge de cache pós-deploy)"
+  value       = var.cloudflare_zone_id
+}

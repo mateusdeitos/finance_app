@@ -1,0 +1,59 @@
+name: Purge Cloudflare cache
+description: >-
+  Invalida o cache de edge da zona depois de um deploy no Cloudflare Pages.
+  Os dois projetos (landing no apex, app no subdomínio) vivem na mesma zona e
+  são servidos proxied, então o Pages sozinho não basta: sem purge o edge pode
+  continuar entregando o HTML/asset antigo até o TTL expirar.
+
+inputs:
+  api_token:
+    description: >-
+      Token da API Cloudflare. É o mesmo `secrets.CLOUDFLARE_API_TOKEN` usado
+      pelo wrangler nos deploys, que precisa ganhar o escopo
+      Zone → Cache Purge → Purge além do Pages:Edit.
+    required: true
+  zone_id:
+    description: >-
+      Zone ID de dividim.app (`secrets.CLOUDFLARE_ZONE_ID`). Vazio = purge é
+      pulado (deploy não falha), o que mantém o workflow utilizável antes do
+      secret estar configurado.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Purge cache
+      shell: bash
+      env:
+        CF_API_TOKEN: ${{ inputs.api_token }}
+        CF_ZONE_ID: ${{ inputs.zone_id }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${CF_ZONE_ID}" ]; then
+          echo "::warning::CLOUDFLARE_ZONE_ID não configurado — purge de cache pulado."
+          exit 0
+        fi
+
+        # purge_everything em vez de purge por hostname: purge por host/prefixo/tag
+        # é exclusivo do plano Enterprise. Como a zona só serve dois sites
+        # estáticos, repopular o edge a partir do Pages é barato — e os assets
+        # com hash no nome são immutable, então o custo real é só o HTML.
+        RESPONSE=$(curl -sS -w '\n%{http_code}' -X POST \
+          "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+          -H "Authorization: Bearer ${CF_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          --data '{"purge_everything":true}')
+
+        STATUS=$(printf '%s' "${RESPONSE}" | tail -n1)
+        BODY=$(printf '%s' "${RESPONSE}" | sed '$d')
+
+        echo "${BODY}"
+
+        if [ "${STATUS}" != "200" ]; then
+          echo "::error::Purge de cache falhou (HTTP ${STATUS})."
+          exit 1
+        fi
+
+        echo "Cache da zona ${CF_ZONE_ID} invalidado."

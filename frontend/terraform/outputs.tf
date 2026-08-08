@@ -14,3 +14,8 @@ output "app_url" {
   description = "URL pública do app → usar como valor de frontend_url em infra/terraform.tfvars e da GitHub variable PUBLIC_APP_URL (CTAs da landing)"
   value       = var.custom_domain != "" ? "https://${var.custom_domain}" : "https://${cloudflare_pages_project.frontend.name}.pages.dev"
 }
+
+output "cloudflare_zone_id" {
+  description = "Cloudflare zone ID → set as GitHub secret CLOUDFLARE_ZONE_ID (usado pelo purge de cache pós-deploy)"
+  value       = var.cloudflare_zone_id
+}
