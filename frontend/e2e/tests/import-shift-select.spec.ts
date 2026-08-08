@@ -9,7 +9,7 @@ import { buildCsvContent } from "../helpers/csv";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 // Fresh user so the import table is clean — no shared DB interference.
-const FRESH_USER_EMAIL = `e2e-shift-select-${Date.now()}@financeapp.local`;
+const FRESH_USER_EMAIL = `e2e-shift-select-${Date.now()}@dividim.local`;
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
 

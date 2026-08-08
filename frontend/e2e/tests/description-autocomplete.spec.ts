@@ -19,7 +19,7 @@ const today = new Date().toISOString().slice(0, 10)
 test.describe('Description autocomplete — dirty-field preservation', () => {
   // ── AC1: manually-entered amount is preserved ──────────────────────────────
   test('preserves the amount typed before selecting a suggestion', async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-autocomplete-amount-${Date.now()}@financeapp.local`)
+    const token = await getAuthTokenForUser(`e2e-autocomplete-amount-${Date.now()}@dividim.local`)
     const account = await apiCreateAccount({ name: 'Conta Auto', initial_balance: 0 }, { token })
     const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
     const sourceDesc = `Fonte Amount ${Date.now()}`
@@ -55,7 +55,7 @@ test.describe('Description autocomplete — dirty-field preservation', () => {
 
   // ── AC2: manually-selected category is preserved ───────────────────────────
   test('preserves the category selected before choosing a suggestion', async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-autocomplete-category-${Date.now()}@financeapp.local`)
+    const token = await getAuthTokenForUser(`e2e-autocomplete-category-${Date.now()}@dividim.local`)
     const account = await apiCreateAccount({ name: 'Conta Auto', initial_balance: 0 }, { token })
     const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
     const userCategory = await apiCreateCategory({ name: 'Categoria Escolhida' }, { token })
@@ -92,7 +92,7 @@ test.describe('Description autocomplete — dirty-field preservation', () => {
 
   // ── AC3: untouched fields are still filled by the suggestion ───────────────
   test('fills every untouched field from the suggestion', async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-autocomplete-untouched-${Date.now()}@financeapp.local`)
+    const token = await getAuthTokenForUser(`e2e-autocomplete-untouched-${Date.now()}@dividim.local`)
     const account = await apiCreateAccount({ name: 'Conta Auto', initial_balance: 0 }, { token })
     const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
     const sourceDesc = `Fonte Untouched ${Date.now()}`
@@ -134,7 +134,7 @@ test.describe('Description autocomplete — dirty-field preservation', () => {
   // Uses the single-account list filter to pre-fill the account as a *default*
   // (not user-touched / not dirty) — the case the suggestion used to clobber.
   test('preserves the pre-filled default account before choosing a suggestion', async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-autocomplete-account-${Date.now()}@financeapp.local`)
+    const token = await getAuthTokenForUser(`e2e-autocomplete-account-${Date.now()}@dividim.local`)
     const sourceAccount = await apiCreateAccount({ name: 'Conta Fonte', initial_balance: 0 }, { token })
     const defaultAccount = await apiCreateAccount({ name: 'Conta Padrao', initial_balance: 0 }, { token })
     const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
@@ -179,7 +179,7 @@ test.describe('Description autocomplete — dirty-field preservation', () => {
 
   // ── AC4: the same rule holds while editing an existing transaction ─────────
   test('preserves a manually-edited field when editing a transaction', async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-autocomplete-edit-${Date.now()}@financeapp.local`)
+    const token = await getAuthTokenForUser(`e2e-autocomplete-edit-${Date.now()}@dividim.local`)
     const account = await apiCreateAccount({ name: 'Conta Auto', initial_balance: 0 }, { token })
     const sourceCategory = await apiCreateCategory({ name: 'Categoria Fonte' }, { token })
     const targetCategory = await apiCreateCategory({ name: 'Categoria Alvo' }, { token })

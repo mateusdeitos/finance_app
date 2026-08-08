@@ -30,8 +30,8 @@ export interface SetupPartnerConnectionOptions {
   splitPercentage?: number;
 }
 
-const DEFAULT_PARTNER_EMAIL = "e2e-bulk-division-partner@financeapp.local";
-const PRIMARY_USER_EMAIL = "e2e-test@financeapp.local";
+const DEFAULT_PARTNER_EMAIL = "e2e-bulk-division-partner@dividim.local";
+const PRIMARY_USER_EMAIL = "e2e-test@dividim.local";
 
 /**
  * Ensures an accepted (or pending) user_connection exists between the primary

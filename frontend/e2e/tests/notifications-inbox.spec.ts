@@ -236,7 +236,7 @@ async function installNotifMocks(page: Page, unreadCount = UNREAD_COUNT_2) {
 
 /** Fresh authenticated page for each test. */
 async function freshAuthedPage(browser: import('@playwright/test').Browser) {
-  const email = `e2e-notif-inbox-${Date.now()}@financeapp.local`
+  const email = `e2e-notif-inbox-${Date.now()}@dividim.local`
   const token = await getAuthTokenForUser(email)
   const page = await openAuthedPage(browser, token)
   return { page, token }

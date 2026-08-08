@@ -234,6 +234,55 @@ func (_c *MockSettlementRepository_Update_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// UpdateReviewedByIDs provides a mock function with given fields: ctx, userID, ids, reviewed
+func (_m *MockSettlementRepository) UpdateReviewedByIDs(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	ret := _m.Called(ctx, userID, ids, reviewed)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateReviewedByIDs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, []int, bool) error); ok {
+		r0 = rf(ctx, userID, ids, reviewed)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSettlementRepository_UpdateReviewedByIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateReviewedByIDs'
+type MockSettlementRepository_UpdateReviewedByIDs_Call struct {
+	*mock.Call
+}
+
+// UpdateReviewedByIDs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - ids []int
+//   - reviewed bool
+func (_e *MockSettlementRepository_Expecter) UpdateReviewedByIDs(ctx interface{}, userID interface{}, ids interface{}, reviewed interface{}) *MockSettlementRepository_UpdateReviewedByIDs_Call {
+	return &MockSettlementRepository_UpdateReviewedByIDs_Call{Call: _e.mock.On("UpdateReviewedByIDs", ctx, userID, ids, reviewed)}
+}
+
+func (_c *MockSettlementRepository_UpdateReviewedByIDs_Call) Run(run func(ctx context.Context, userID int, ids []int, reviewed bool)) *MockSettlementRepository_UpdateReviewedByIDs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].([]int), args[3].(bool))
+	})
+	return _c
+}
+
+func (_c *MockSettlementRepository_UpdateReviewedByIDs_Call) Return(_a0 error) *MockSettlementRepository_UpdateReviewedByIDs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSettlementRepository_UpdateReviewedByIDs_Call) RunAndReturn(run func(context.Context, int, []int, bool) error) *MockSettlementRepository_UpdateReviewedByIDs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockSettlementRepository creates a new instance of MockSettlementRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSettlementRepository(t interface {

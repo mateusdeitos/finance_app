@@ -52,8 +52,8 @@ test.describe("Linked Transaction Edit", () => {
 
   test.beforeAll(async () => {
     const ts = Date.now();
-    const PRIMARY_EMAIL = `e2e-linked-edit-primary-${ts}@financeapp.local`;
-    const PARTNER_EMAIL = `e2e-linked-edit-partner-${ts}@financeapp.local`;
+    const PRIMARY_EMAIL = `e2e-linked-edit-primary-${ts}@dividim.local`;
+    const PARTNER_EMAIL = `e2e-linked-edit-partner-${ts}@dividim.local`;
 
     // Fresh primary user + account + category
     primaryToken = await getAuthTokenForUser(PRIMARY_EMAIL);

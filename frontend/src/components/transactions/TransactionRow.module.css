@@ -11,6 +11,13 @@
   border-bottom: none;
 }
 
+/* Reviewed rows carry the same tint a normal row shows on hover, so a reviewed
+   transaction reads as "already handled" at rest. Declared before .selected and
+   the hover rules so an active selection (and hover) still win via source order. */
+.reviewed {
+  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
 .selectable {
   cursor: pointer;
   user-select: none;

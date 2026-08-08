@@ -1543,6 +1543,120 @@ func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_Accumulated_Conne
 	suite.Assert().Contains(err.Error(), "initial balance cannot be set on connection accounts")
 }
 
+// TestGetBalance_ReviewedFilter verifies that the reviewed filter narrows the
+// balance to reviewed (or unreviewed) transactions only, so the displayed
+// balance stays consistent with a reviewed-filtered listing.
+func (suite *TransactionBalanceWithDBTestSuite) TestGetBalance_ReviewedFilter() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	date := now()
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+
+	incomeID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeIncome,
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          10000,
+		Date:            domain.Date{Time: date},
+		Description:     "income",
+	})
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          6000,
+		Date:            domain.Date{Time: date},
+		Description:     "expense",
+	})
+	suite.Require().NoError(err)
+
+	// Mark only the income as reviewed.
+	suite.Require().NoError(suite.Services.Transaction.BulkReview(ctx, user.ID, []int{incomeID}, true))
+
+	reviewedOnly, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{
+		Reviewed: lo.ToPtr(true),
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(10000), reviewedOnly.Balance, "only the reviewed income should count")
+
+	unreviewedOnly, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{
+		Reviewed: lo.ToPtr(false),
+	})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(-6000), unreviewedOnly.Balance, "only the unreviewed expense should count")
+
+	all, err := suite.Services.Transaction.GetBalance(ctx, user.ID, period, domain.BalanceFilter{})
+	suite.Require().NoError(err)
+	suite.Assert().Equal(int64(4000), all.Balance, "no filter counts both")
+}
+
+// TestSearch_ReviewedFilter verifies the listing honors the reviewed filter and
+// that BulkReview only marks transactions the caller owns.
+func (suite *TransactionBalanceWithDBTestSuite) TestSearch_ReviewedFilter() {
+	ctx := context.Background()
+	user, err := suite.createTestUser(ctx)
+	suite.Require().NoError(err)
+
+	account, err := suite.createTestAccount(ctx, user)
+	suite.Require().NoError(err)
+
+	category, err := suite.createTestCategory(ctx, user)
+	suite.Require().NoError(err)
+
+	date := now()
+	period := domain.Period{Month: int(date.Month()), Year: date.Year()}
+
+	reviewedID, err := suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          1000,
+		Date:            domain.Date{Time: date},
+		Description:     "reviewed",
+	})
+	suite.Require().NoError(err)
+
+	_, err = suite.Services.Transaction.Create(ctx, user.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       account.ID,
+		CategoryID:      category.ID,
+		Amount:          2000,
+		Date:            domain.Date{Time: date},
+		Description:     "unreviewed",
+	})
+	suite.Require().NoError(err)
+
+	suite.Require().NoError(suite.Services.Transaction.BulkReview(ctx, user.ID, []int{reviewedID}, true))
+
+	reviewed, err := suite.Services.Transaction.Search(ctx, user.ID, period, domain.TransactionFilter{
+		UserID:   lo.ToPtr(user.ID),
+		Reviewed: lo.ToPtr(true),
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(reviewed, 1)
+	suite.Assert().Equal(reviewedID, reviewed[0].ID)
+	suite.Assert().NotNil(reviewed[0].ReviewedAt)
+
+	unreviewed, err := suite.Services.Transaction.Search(ctx, user.ID, period, domain.TransactionFilter{
+		UserID:   lo.ToPtr(user.ID),
+		Reviewed: lo.ToPtr(false),
+	})
+	suite.Require().NoError(err)
+	suite.Require().Len(unreviewed, 1)
+	suite.Assert().Equal("unreviewed", unreviewed[0].Description)
+	suite.Assert().Nil(unreviewed[0].ReviewedAt)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 func TestTransactionBalanceWithDB(t *testing.T) {

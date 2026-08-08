@@ -90,6 +90,8 @@ export const TransactionsTestIds = {
   SwitchType: (type: TransactionType) => `switch_type_${type}` as const,
   SwitchHideSettlements: 'switch_hide_settlements',
   SwitchNoCategory: 'switch_no_category',
+  SwitchReviewed: 'switch_reviewed',
+  SwitchUnreviewed: 'switch_unreviewed',
   BtnClearFilters: 'btn_clear_filters',
 
   // Balance summary (Entradas | Saídas | [Inicial] | Saldo do mês/acumulado)
@@ -127,6 +129,8 @@ export const TransactionsTestIds = {
   BtnBulkCategory: 'btn_bulk_category',
   BtnBulkDate: 'btn_bulk_date',
   BtnBulkDivision: 'btn_bulk_division',
+  BtnBulkMarkReviewed: 'btn_bulk_mark_reviewed',
+  BtnBulkUnmarkReviewed: 'btn_bulk_unmark_reviewed',
   BtnBulkDelete: 'btn_bulk_delete',
   HintBulkDivisionNoConnection: 'hint_bulk_division_no_connection',
 

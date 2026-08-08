@@ -180,7 +180,7 @@ export function OnboardingPage() {
     <Container size="sm" py="md" data-testid={OnboardingTestIds.Page}>
       <Stack gap="lg">
         <Stack gap={4}>
-          <Text fw={700} size="xl">Bem-vindo ao FinanceApp 👋</Text>
+          <Text fw={700} size="xl">Bem-vindo ao Dividim 👋</Text>
           <Text c="dimmed" size="sm">
             Vamos configurar o essencial para você começar — em três passos rápidos.
           </Text>

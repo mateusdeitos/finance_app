@@ -27,7 +27,7 @@ import { SelectField } from "../helpers/formFields";
  * The partner user is set up in beforeAll via API calls.
  */
 
-const PARTNER_EMAIL = `e2e-charges-partner-${Date.now()}@financeapp.local`;
+const PARTNER_EMAIL = `e2e-charges-partner-${Date.now()}@dividim.local`;
 const now = new Date();
 const PERIOD_MONTH = now.getMonth() + 1;
 const PERIOD_YEAR = now.getFullYear();
@@ -76,7 +76,7 @@ test.describe("Charges", () => {
 
     // 7. Find the primary user's connection account (created by connection setup)
     //    and seed income so balance > 0 (charges require balance != 0)
-    const accountsRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@financeapp.local"), "/api/accounts");
+    const accountsRes = await apiFetchAs(await getAuthTokenForUser("e2e-test@dividim.local"), "/api/accounts");
     const allAccounts = await accountsRes.json();
     const connAccount = allAccounts.find(
       (a: { user_connection?: { id: number } }) => a.user_connection?.id === connectionId,
@@ -148,7 +148,7 @@ test.describe("Charges", () => {
 
   test("show empty state when no charges exist", async ({ browser }) => {
     // Use a fresh user with no charges to guarantee empty state
-    const freshToken = await getAuthTokenForUser(`e2e-empty-charges-${Date.now()}@financeapp.local`);
+    const freshToken = await getAuthTokenForUser(`e2e-empty-charges-${Date.now()}@dividim.local`);
     const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
     const url = new URL(baseURL);
     const context = await browser.newContext({
@@ -281,8 +281,8 @@ test.describe("Charges", () => {
   test("create charge via UI with arbitrary amount + charger role on zero balance", async ({ browser }) => {
     // Isolated user pair — the fresh primary will have exactly one connection and one account,
     // so the drawer selectors are unambiguous.
-    const freshPrimaryEmail = `e2e-arb-charger-primary-${Date.now()}@financeapp.local`;
-    const freshPartnerEmail = `e2e-arb-charger-partner-${Date.now()}@financeapp.local`;
+    const freshPrimaryEmail = `e2e-arb-charger-primary-${Date.now()}@dividim.local`;
+    const freshPartnerEmail = `e2e-arb-charger-partner-${Date.now()}@dividim.local`;
     const freshPrimaryToken = await getAuthTokenForUser(freshPrimaryEmail);
     const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
 
@@ -338,8 +338,8 @@ test.describe("Charges", () => {
 
   test("payer can initiate charge via UI on zero balance", async ({ browser }) => {
     // Isolated pair — caller is the payer ("I owe you X"). Saved with caller in payer fields.
-    const freshPrimaryEmail = `e2e-arb-payer-primary-${Date.now()}@financeapp.local`;
-    const freshPartnerEmail = `e2e-arb-payer-partner-${Date.now()}@financeapp.local`;
+    const freshPrimaryEmail = `e2e-arb-payer-primary-${Date.now()}@dividim.local`;
+    const freshPartnerEmail = `e2e-arb-payer-partner-${Date.now()}@dividim.local`;
     const freshPrimaryToken = await getAuthTokenForUser(freshPrimaryEmail);
     const freshPartnerToken = await getAuthTokenForUser(freshPartnerEmail);
 
@@ -414,8 +414,8 @@ test.describe("Charges", () => {
   //      (no doubling).
   test("payer initiates a charge: counterparty accepts and both balances zero", async ({ browser }) => {
     // -- Two fresh, isolated users: the payer (owes) and the wife (is owed). --
-    const payerEmail = `e2e-payer-flow-${Date.now()}@financeapp.local`;
-    const wifeEmail = `e2e-wife-flow-${Date.now()}@financeapp.local`;
+    const payerEmail = `e2e-payer-flow-${Date.now()}@dividim.local`;
+    const wifeEmail = `e2e-wife-flow-${Date.now()}@dividim.local`;
     const payerToken = await getAuthTokenForUser(payerEmail);
     const wifeToken = await getAuthTokenForUser(wifeEmail);
 

@@ -67,6 +67,19 @@ func (s *transactionService) Search(ctx context.Context, userID int, period doma
 	return transactions, nil
 }
 
+// BulkReview marks (or unmarks) the given transactions as reviewed for the
+// caller. The repository scopes the write by user_id, so IDs the caller does
+// not own are silently skipped.
+func (s *transactionService) BulkReview(ctx context.Context, userID int, ids []int, reviewed bool) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := s.transactionRepo.UpdateReviewedByIDs(ctx, userID, ids, reviewed); err != nil {
+		return pkgErrors.Internal("failed to update review status", err)
+	}
+	return nil
+}
+
 // Suggestions searches transactions across all time periods for autocomplete purposes.
 func (s *transactionService) Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
 	filter.UserID = &userID

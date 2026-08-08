@@ -21,7 +21,8 @@ export function EmptyState() {
     filters.tagIds.length > 0 ||
     filters.types.length > 0 ||
     search.hideSettlements ||
-    search.noCategory;
+    search.noCategory ||
+    search.reviewed !== undefined;
 
   function clearFilters() {
     void navigate({
@@ -34,6 +35,7 @@ export function EmptyState() {
         types: [],
         hideSettlements: false,
         noCategory: false,
+        reviewed: undefined,
       }),
     });
   }

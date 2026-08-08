@@ -30,7 +30,8 @@ export function MobileFilterBar() {
     (search.accountIds?.length ?? 0) +
     (search.tagIds?.length ?? 0) +
     (search.hideSettlements ? 1 : 0) +
-    (search.noCategory ? 1 : 0);
+    (search.noCategory ? 1 : 0) +
+    (search.reviewed ? 1 : 0);
 
   function openCategoriesDrawer() {
     void renderDrawer(() => <CategoriesFilterDrawer />).catch(() => undefined);

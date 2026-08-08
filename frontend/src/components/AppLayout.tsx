@@ -51,9 +51,9 @@ export function AppLayout() {
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <Link to="/home" style={{ textDecoration: "none" }}>
             <Group gap="xs" wrap="nowrap">
-              <img src="/icon.svg" width={24} height={24} alt="FinanceApp" />
+              <img src="/icon.svg" width={24} height={24} alt="Dividim" />
               <Text fw={700} size="sm" c="blue.7">
-                FinanceApp
+                Dividim
               </Text>
             </Group>
           </Link>

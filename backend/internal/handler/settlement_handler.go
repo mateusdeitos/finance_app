@@ -63,6 +63,34 @@ func (h *SettlementHandler) Update(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// BulkReview godoc
+// @Summary      Bulk mark settlements as reviewed
+// @Description  Marks (reviewed=true) or unmarks (reviewed=false) the listed settlements as reviewed for the caller. IDs the caller does not own are silently skipped.
+// @Tags         settlements
+// @Accept       json
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        request  body  domain.SettlementBulkReviewRequest  true  "Settlement IDs and target review status"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Router       /api/settlements/review [patch]
+func (h *SettlementHandler) BulkReview(c echo.Context) error {
+	ctx := c.Request().Context()
+	userID := appcontext.GetUserIDFromContext(ctx)
+
+	var req domain.SettlementBulkReviewRequest
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := h.settlementService.BulkReview(ctx, userID, req.IDs, req.Reviewed); err != nil {
+		return pkgErrors.ToHTTPError(err)
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Delete godoc
 // @Summary      Delete settlement (remove a shared division)
 // @Description  Removes a settlement's division: deletes the partner's linked transaction and the settlement, keeping the author's source transaction. Only the settlement owner may do this. For a recurring split, propagation_settings controls how many installments are affected.

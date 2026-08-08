@@ -24,6 +24,7 @@ type Transaction struct {
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
 	DeletedAt               *gorm.DeletedAt
+	ReviewedAt              *time.Time
 	User                    User                   `gorm:"<-:false"`
 	Account                 Account                `gorm:"<-:false"`
 	Category                *Category              `gorm:"<-:false"`
@@ -92,9 +93,10 @@ func (t *Transaction) ToDomain() *domain.Transaction {
 		Tags: lo.Map(t.Tags, func(tag Tag, _ int) domain.Tag {
 			return *tag.ToDomain()
 		}),
-		CreatedAt: t.CreatedAt,
-		UpdatedAt: t.UpdatedAt,
-		DeletedAt: deletedAt,
+		CreatedAt:  t.CreatedAt,
+		UpdatedAt:  t.UpdatedAt,
+		DeletedAt:  deletedAt,
+		ReviewedAt: t.ReviewedAt,
 	}
 
 	return trans
@@ -126,10 +128,11 @@ func TransactionFromDomain(d *domain.Transaction) *Transaction {
 		LinkedTransactions: lo.Map(d.LinkedTransactions, func(lt domain.Transaction, _ int) Transaction {
 			return *TransactionFromDomain(&lt)
 		}),
-		ChargeID:  d.ChargeID,
-		CreatedAt: d.CreatedAt,
-		UpdatedAt: d.UpdatedAt,
-		DeletedAt: deletedAt,
+		ChargeID:   d.ChargeID,
+		CreatedAt:  d.CreatedAt,
+		UpdatedAt:  d.UpdatedAt,
+		DeletedAt:  deletedAt,
+		ReviewedAt: d.ReviewedAt,
 	}
 
 	return t

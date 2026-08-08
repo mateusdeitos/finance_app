@@ -32,6 +32,17 @@ export async function updateSettlement(
   if (!res.ok) throw res;
 }
 
+/** Bulk marks (or unmarks) the given settlements as reviewed. Returns 204 on success. */
+export async function bulkReviewSettlements(ids: number[], reviewed: boolean): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/settlements/review`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ ids, reviewed }),
+  });
+  if (!res.ok) throw res;
+}
+
 /**
  * Deletes a settlement (removes a shared division): the partner's linked
  * transaction and the settlement are removed, while the author's source
