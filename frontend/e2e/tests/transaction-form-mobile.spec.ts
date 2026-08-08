@@ -27,7 +27,7 @@ function targetDateThisMonth(): { iso: string; month: number; year: number } {
 
 test.describe("Transaction form on mobile (native inputs)", () => {
   test("creates an expense using the native date input and native selects", async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-mobile-expense-${Date.now()}@financeapp.local`);
+    const token = await getAuthTokenForUser(`e2e-mobile-expense-${Date.now()}@dividim.local`);
 
     const account = (await (
       await apiFetchAs(token, "/api/accounts", {
@@ -84,7 +84,7 @@ test.describe("Transaction form on mobile (native inputs)", () => {
   });
 
   test("creates a transfer using the native source and destination selects", async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-mobile-transfer-${Date.now()}@financeapp.local`);
+    const token = await getAuthTokenForUser(`e2e-mobile-transfer-${Date.now()}@dividim.local`);
 
     const source = (await (
       await apiFetchAs(token, "/api/accounts", {

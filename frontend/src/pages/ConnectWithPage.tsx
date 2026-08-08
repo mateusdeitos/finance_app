@@ -227,9 +227,9 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <Stack align="center" gap="xl" py="xl" px="md">
       <Group gap={10}>
-        <img src="/icon.svg" width={28} height={28} alt="FinanceApp" />
+        <img src="/icon.svg" width={28} height={28} alt="Dividim" />
         <Text fw={700} size="lg" c="blue.7">
-          FinanceApp
+          Dividim
         </Text>
       </Group>
       {children}

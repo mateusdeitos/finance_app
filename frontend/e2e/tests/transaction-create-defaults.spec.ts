@@ -23,7 +23,7 @@ test.describe("Create-transaction defaults", () => {
   // When the list is filtered to a single account, the create form defaults to
   // that account regardless of the localStorage prefill.
   test("new transaction defaults to the single filtered account", async ({ browser }) => {
-    const token = await getAuthTokenForUser(`e2e-create-filter-${Date.now()}@financeapp.local`);
+    const token = await getAuthTokenForUser(`e2e-create-filter-${Date.now()}@dividim.local`);
     const accountA = await apiCreateAccount({ name: "Conta A", initial_balance: 0 }, { token });
     await apiCreateAccount({ name: "Conta B", initial_balance: 0 }, { token });
     const category = await apiCreateCategory({ name: "Categoria Filtro" }, { token });
@@ -58,7 +58,7 @@ test.describe("Create-transaction defaults", () => {
   test("save-and-create-another keeps account/category and clears amount/description", async ({
     browser,
   }) => {
-    const token = await getAuthTokenForUser(`e2e-create-another-${Date.now()}@financeapp.local`);
+    const token = await getAuthTokenForUser(`e2e-create-another-${Date.now()}@dividim.local`);
     const account = await apiCreateAccount({ name: "Conta Lote", initial_balance: 0 }, { token });
     const category = await apiCreateCategory({ name: "Categoria Lote" }, { token });
 

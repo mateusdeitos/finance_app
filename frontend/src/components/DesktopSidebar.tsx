@@ -99,8 +99,8 @@ export function DesktopSidebar() {
   return (
     <nav className={classes.sidebar} aria-label="Navegação lateral">
       <Link to="/home" className={classes.brand} data-testid={CommonTestIds.SidebarBrand}>
-        <img src="/icon.svg" width={28} height={28} alt="FinanceApp" />
-        <span className={classes.brandText}>FinanceApp</span>
+        <img src="/icon.svg" width={28} height={28} alt="Dividim" />
+        <span className={classes.brandText}>Dividim</span>
       </Link>
 
       <ImpersonationNotice />

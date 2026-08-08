@@ -33,7 +33,7 @@ export function LoginPage() {
   const brand = (size: number) => (
     <div className={classes.brandRow}>
       <BrandLogo size={size} />
-      <span className={classes.wordmark}>FinanceApp</span>
+      <span className={classes.wordmark}>Dividim</span>
     </div>
   )
 

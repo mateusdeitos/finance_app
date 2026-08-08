@@ -33,8 +33,8 @@ test.describe("Import with split settings", () => {
     // Use unique emails per run so each test run starts with a clean user
     // that has exactly one connection — required for the auto-select to trigger.
     const ts = Date.now();
-    const PRIMARY_EMAIL = `e2e-split-primary-${ts}@financeapp.local`;
-    const PARTNER_EMAIL = `e2e-split-partner-${ts}@financeapp.local`;
+    const PRIMARY_EMAIL = `e2e-split-primary-${ts}@dividim.local`;
+    const PARTNER_EMAIL = `e2e-split-partner-${ts}@dividim.local`;
 
     // 1. Create fresh primary user and get their token
     primaryToken = await getAuthTokenForUser(PRIMARY_EMAIL);
