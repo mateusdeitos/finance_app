@@ -298,7 +298,17 @@ export function TransactionRow({
     <div
       data-transaction-id={tx.id}
       className={`${classes.row}${tx.reviewed_at ? ` ${classes.reviewed}` : ""}${selectionMode ? ` ${classes.selectable}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
-      onClick={selectionMode ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); } : undefined}
+      // Row-level fallback: the per-field handlers below live on the leaf
+      // elements and stop propagation, so anything else in the row (the gap
+      // between the two lines, the padding) still opens the editor rather
+      // than being a dead zone.
+      onClick={
+        selectionMode
+          ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); }
+          : onEdit
+            ? () => onEdit("description")
+            : undefined
+      }
       {...longPress}
     >
       {/* Desktop-only multi-select checkbox; hidden on mobile via CSS. */}
