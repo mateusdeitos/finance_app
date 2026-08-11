@@ -1,117 +1,89 @@
-import { Badge, Checkbox, Group, Text, Tooltip } from "@mantine/core";
-import { IconArrowRight, IconUsers } from "@tabler/icons-react";
+import { Checkbox, Tooltip } from "@mantine/core";
+import { IconArrowRight, IconRepeat, IconUsers } from "@tabler/icons-react";
 import { AccountAvatar } from "@/components/AccountAvatar";
 import { SwipeAction } from "@/components/SwipeAction";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useLongPress } from "@/hooks/useLongPress";
 import { Transactions } from "@/types/transactions";
 import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
 import { tapHaptic } from "@/utils/haptics";
-import { RecurrenceBadge } from "./RecurrenceBadge";
 import classes from "./TransactionRow.module.css";
 import { FocusField } from "./form/TransactionForm";
-import { MouseEventHandler } from "react";
+import { MouseEventHandler, ReactNode } from "react";
 import { TransactionsTestIds } from "@/testIds";
 
 const MAX_TAGS = 3;
 
-interface CategoryCellProps {
-  tx: Transactions.Transaction;
-  groupBy: Transactions.GroupBy;
-  category: Transactions.Category | null | undefined;
+/**
+ * Installment chip. The whole point of layout 1b is that "parcela 6/12" reads
+ * at a glance, so this is a solid-filled chip rather than the dimmed inline
+ * text it used to be. Mobile drops the "Parcela" word to save horizontal room.
+ */
+function InstallmentChip({
+  transaction: tx,
+  compact,
+}: {
+  transaction: Transactions.Transaction;
+  compact: boolean;
+}) {
+  if (!tx.transaction_recurrence_id) return null;
+
+  const hasInstallments =
+    tx.installment_number != null && tx.transaction_recurrence?.installments != null;
+
+  // Recurring-but-not-installment transactions keep the bare repeat glyph:
+  // there is no "n of m" to show, so a chip would be noise.
+  if (!hasInstallments) {
+    return (
+      <Tooltip label="Recorrente">
+        <span className={classes.recurrenceIcon}>
+          <IconRepeat size={13} />
+        </span>
+      </Tooltip>
+    );
+  }
+
+  const fraction = `${tx.installment_number}/${tx.transaction_recurrence!.installments}`;
+
+  return (
+    <Tooltip label={`Parcela ${fraction}`}>
+      <span className={classes.installmentChip} data-testid={TransactionsTestIds.InstallmentChip(tx.id)}>
+        <IconRepeat size={11} />
+        {compact ? fraction : `Parcela ${fraction}`}
+      </span>
+    </Tooltip>
+  );
 }
 
-function CategoryCell({ tx, groupBy, category }: CategoryCellProps) {
-  if (groupBy === "category") return null;
+/**
+ * Human label for how a transaction is divided. Derived from the settlements
+ * the source transaction generated: their sum is the other person's share, the
+ * remainder is ours. An even split collapses to "Dividida 50%", anything else
+ * spells out both sides ("Dividida 70/30").
+ */
+export function splitLabel(
+  tx: Transactions.Transaction,
+  currentUserId: number,
+): string | null {
   if (tx.type === "transfer") return null;
 
-  return (
-    <Group gap={6} wrap="nowrap" align="center">
-      {category?.emoji && (
-        <span style={{ fontSize: "0.9375rem", lineHeight: 1 }} aria-hidden>
-          {category.emoji}
-        </span>
-      )}
-      <Text size="sm" c="dimmed" lineClamp={1}>
-        {category?.name ?? "—"}
-      </Text>
-    </Group>
-  );
-}
-
-interface AccountCellProps {
-  tx: Transactions.Transaction;
-  groupBy: Transactions.GroupBy;
-  account: Transactions.Account | null | undefined;
-  fromAccount: Transactions.Account | null | undefined;
-  toAccount: Transactions.Account | null | undefined;
-}
-
-function AccountCell({ tx, groupBy, account, fromAccount, toAccount }: AccountCellProps) {
-  if (groupBy === "account") return null;
-
-  if (tx.type === "transfer") {
-    return (
-      <Group gap={4} wrap="nowrap" data-testid={TransactionsTestIds.TransferAvatarGroup}>
-        <Tooltip label={fromAccount?.name ?? "—"} withArrow position="top">
-          <span style={{ display: "inline-flex" }}>
-            <AccountAvatar account={fromAccount} size={28} />
-          </span>
-        </Tooltip>
-        <IconArrowRight size={12} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
-        <Tooltip label={toAccount?.name ?? "—"} withArrow position="top">
-          <span style={{ display: "inline-flex" }}>
-            <AccountAvatar account={toAccount} size={28} />
-          </span>
-        </Tooltip>
-      </Group>
-    );
+  const settlements = tx.settlements_from_source ?? [];
+  if (settlements.length > 0 && tx.amount > 0) {
+    const otherShare = settlements.reduce((sum, s) => sum + s.amount, 0);
+    const otherPct = Math.round((otherShare / tx.amount) * 100);
+    if (otherPct <= 0 || otherPct >= 100) return "Dividida";
+    const minePct = 100 - otherPct;
+    return otherPct === 50 ? "Dividida 50%" : `Dividida ${minePct}/${otherPct}`;
   }
 
-  return (
-    <Tooltip label={account?.name ?? "—"} withArrow position="top">
-      <span style={{ display: "inline-flex" }}>
-        <AccountAvatar account={account} size={28} />
-      </span>
-    </Tooltip>
-  );
-}
-
-interface LeadingAvatarCellProps {
-  tx: Transactions.Transaction;
-  account: Transactions.Account | null | undefined;
-  fromAccount: Transactions.Account | null | undefined;
-  toAccount: Transactions.Account | null | undefined;
-}
-
-// Mobile-only leading avatar slot. Transfers stack the from/to avatars with a
-// 50% overlap and a ring in the page color to read as "de → para" without
-// needing an explicit arrow at this density.
-function LeadingAvatarCell({ tx, account, fromAccount, toAccount }: LeadingAvatarCellProps) {
-  if (tx.type === "transfer") {
-    return (
-      <div className={classes.transferAvatars} data-testid={TransactionsTestIds.TransferAvatarGroup}>
-        <Tooltip label={fromAccount?.name ?? "—"} withArrow position="top">
-          <span style={{ display: "inline-flex" }}>
-            <AccountAvatar account={fromAccount} size={20} />
-          </span>
-        </Tooltip>
-        <Tooltip label={toAccount?.name ?? "—"} withArrow position="top">
-          <span style={{ display: "inline-flex" }}>
-            <AccountAvatar account={toAccount} size={20} />
-          </span>
-        </Tooltip>
-      </div>
-    );
+  // The counterpart side of someone else's split: we hold only our own share,
+  // so the ratio isn't recoverable from this row alone.
+  if ((tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId)) {
+    return "Dividida";
   }
 
-  return (
-    <Tooltip label={account?.name ?? "—"} withArrow position="top">
-      <span style={{ display: "inline-flex" }}>
-        <AccountAvatar account={account} size={26} />
-      </span>
-    </Tooltip>
-  );
+  return null;
 }
 
 interface TransactionRowProps {
@@ -217,7 +189,7 @@ export function TransactionRow({
   const visibleTags = tags.slice(0, MAX_TAGS);
   const extraTags = tags.length - MAX_TAGS;
 
-  const hasLinkedUser = (tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId);
+  const split = splitLabel(tx, currentUserId);
 
   const date = parseDate(tx.date);
   const dateLabel = date.toLocaleDateString("pt-BR", {
@@ -238,111 +210,146 @@ export function TransactionRow({
 
   const swipeEnabled = isMobile && !selectionMode && !!onDelete;
 
-  // Meta line: on mobile we collapse category + account name into the meta
-  // line below the description (their dedicated columns are hidden on mobile).
-  const metaParts: string[] = [];
-  if (groupBy !== "date") metaParts.push(dateLabel);
-  if (isMobile) {
-    if (tx.type !== "transfer" && groupBy !== "category" && category?.name) {
-      metaParts.push(category.name);
-    }
-    if (groupBy !== "account") {
-      if (tx.type === "transfer") {
-        const from = fromAccount?.name ?? "—";
-        const to = toAccount?.name ?? "—";
-        metaParts.push(`${from} → ${to}`);
-      } else if (account?.name) {
-        metaParts.push(account.name);
-      }
-    }
+  // Mobile has no checkbox — the description needs the full row width — so
+  // selection mode is entered by holding the row instead.
+  const longPress = useLongPress(
+    () => {
+      tapHaptic();
+      onSelect?.(tx.id, false);
+    },
+    { enabled: isMobile && !selectionMode && !!onSelect },
+  );
+
+  const showCategory = groupBy !== "category" && tx.type !== "transfer";
+  const showAccount = groupBy !== "account";
+
+  // Metadata line, in the order the design fixes: installment chip, category,
+  // account, split chip, hashtags. Separators are only emitted between the
+  // parts that actually rendered.
+  const metaItems: ReactNode[] = [];
+
+  if (groupBy !== "date") {
+    metaItems.push(
+      <span key="date" className={classes.metaText}>
+        {dateLabel}
+      </span>,
+    );
   }
+
+  if (showCategory) {
+    metaItems.push(
+      <span key="category" className={classes.metaItem} onClick={colClick("category_id")}>
+        {category?.emoji && (
+          <span className={classes.categoryEmoji} aria-hidden>
+            {category.emoji}
+          </span>
+        )}
+        <span className={classes.metaText}>{category?.name ?? "—"}</span>
+      </span>,
+    );
+  }
+
+  if (showAccount) {
+    metaItems.push(
+      tx.type === "transfer" ? (
+        <span
+          key="account"
+          className={classes.transferAvatars}
+          data-testid={TransactionsTestIds.TransferAvatarGroup}
+          onClick={colClick("account_id")}
+        >
+          <Tooltip label={fromAccount?.name ?? "—"} withArrow position="top">
+            <span style={{ display: "inline-flex" }}>
+              <AccountAvatar account={fromAccount} size={16} />
+            </span>
+          </Tooltip>
+          <IconArrowRight size={11} style={{ opacity: 0.5 }} data-testid={TransactionsTestIds.IconTransferArrow} />
+          <Tooltip label={toAccount?.name ?? "—"} withArrow position="top">
+            <span style={{ display: "inline-flex" }}>
+              <AccountAvatar account={toAccount} size={16} />
+            </span>
+          </Tooltip>
+        </span>
+      ) : (
+        <span key="account" className={classes.metaItem} onClick={colClick("account_id")}>
+          <Tooltip label={account?.name ?? "—"} withArrow position="top">
+            <span style={{ display: "inline-flex" }}>
+              <AccountAvatar account={account} size={16} />
+            </span>
+          </Tooltip>
+          <span className={classes.metaText}>{account?.name ?? "—"}</span>
+        </span>
+      ),
+    );
+  }
+
+  const separatedMeta = metaItems.flatMap((item, i) =>
+    i === 0
+      ? [item]
+      : [
+          <span key={`sep-${i}`} className={classes.metaSeparator} aria-hidden>
+            ·
+          </span>,
+          item,
+        ],
+  );
 
   const rowContent = (
     <div
       data-transaction-id={tx.id}
-      className={`${classes.row}${tx.reviewed_at ? ` ${classes.reviewed}` : ""}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
+      className={`${classes.row}${tx.reviewed_at ? ` ${classes.reviewed}` : ""}${selectionMode ? ` ${classes.selectable}` : ""}${isSelected ? ` ${classes.selected}` : ""}${!selectionMode && onEdit ? ` ${classes.editable}` : ""}`.trimEnd()}
       onClick={selectionMode ? (e) => { tapHaptic(); onSelect?.(tx.id, e.shiftKey); } : undefined}
+      {...longPress}
     >
-      {/* Col 1: checkbox */}
+      {/* Desktop-only multi-select checkbox; hidden on mobile via CSS. */}
       <div className={classes.checkbox}>
         <Checkbox
           checked={isSelected ?? false}
           onChange={(e) => { tapHaptic(); onSelect?.(tx.id, (e.nativeEvent as MouseEvent).shiftKey); }}
           onClick={(e) => e.stopPropagation()}
-          size="sm"
+          size="xs"
           data-testid={TransactionsTestIds.Checkbox(tx.id)}
         />
       </div>
 
-      {/* Mobile-only: leading account avatar (or stacked from/to for transfers).
-          We keep the slot div in the grid on every viewport so the grid template
-          stays the same, but only mount the avatar content on mobile — that way
-          the desktop AccountCell remains the single bearer of the
-          TransferAvatarGroup / AvatarAccount testids and avatar-related tests
-          don't get duplicate matches. */}
-      <div className={classes.leadingAvatar} onClick={colClick("account_id")}>
-        {isMobile && (
-          <LeadingAvatarCell tx={tx} account={account} fromAccount={fromAccount} toAccount={toAccount} />
-        )}
-      </div>
-
-      {/* Description + meta + tags */}
-      <div className={classes.main} onClick={colClick("description")}>
-        <Group gap={6} wrap="nowrap" align="flex-start">
-          <Text size="sm" fw={500} lineClamp={2} style={{ flex: "1 1 auto", minWidth: 0 }}>
+      <div className={classes.main}>
+        {/* Line 1 — description and value adjacent, which is the whole point
+            of the redesign: the amount is no longer a viewport away. */}
+        <div className={classes.descLine}>
+          <span className={classes.description} onClick={colClick("description")}>
             {tx.description}
-          </Text>
-          {!isMobile && <RecurrenceBadge transaction={tx} />}
-          {hasLinkedUser && (
-            <Tooltip label="Compartilhada">
-              <IconUsers size={11} style={{ flexShrink: 0, opacity: 0.6, marginTop: 2 }} />
-            </Tooltip>
+          </span>
+          <span
+            className={`${classes.amount} ${
+              tx.type === "transfer"
+                ? classes.amountNeutral
+                : tx.operation_type === "credit"
+                  ? classes.amountPositive
+                  : classes.amountNegative
+            }`}
+            onClick={colClick("amount")}
+          >
+            {formatCents(tx.amount, tx.operation_type)}
+          </span>
+        </div>
+
+        {/* Line 2 — metadata chips. */}
+        <div className={classes.metaLine}>
+          <InstallmentChip transaction={tx} compact={isMobile} />
+          {separatedMeta}
+          {split && (
+            <span className={`${classes.outlineChip}`} data-testid={TransactionsTestIds.SplitChip(tx.id)}>
+              <IconUsers size={11} />
+              {split}
+            </span>
           )}
-        </Group>
-        {(metaParts.length > 0 || visibleTags.length > 0 || (isMobile && !!tx.transaction_recurrence_id)) && (
-          <Group gap={6} mt={2} wrap="wrap" align="center">
-            {isMobile && <RecurrenceBadge transaction={tx} />}
-            {metaParts.length > 0 && (
-              <Text size="xs" c="dimmed">
-                {metaParts.join(" · ")}
-              </Text>
-            )}
-            {visibleTags.map((tag) => (
-              <Badge
-                key={tag.id}
-                size="xs"
-                variant="light"
-                color="blue"
-                radius="xl"
-                styles={{ root: { textTransform: "none", fontWeight: 500 } }}
-              >
-                #{tag.name}
-              </Badge>
-            ))}
-            {extraTags > 0 && (
-              <Text size="xs" c="dimmed">
-                +{extraTags}
-              </Text>
-            )}
-          </Group>
-        )}
-      </div>
-
-      {/* Desktop-only column: category */}
-      <div className={classes.category} onClick={colClick("category_id")}>
-        <CategoryCell tx={tx} groupBy={groupBy} category={category} />
-      </div>
-
-      {/* Desktop-only column: account (or from→to for transfers) */}
-      <div className={classes.account} onClick={colClick("account_id")}>
-        <AccountCell tx={tx} groupBy={groupBy} account={account} fromAccount={fromAccount} toAccount={toAccount} />
-      </div>
-
-      {/* Amount */}
-      <div className={classes.amount} onClick={colClick("amount")}>
-        <Text size="sm" fw={600} c={tx.type === "transfer" ? "dimmed" : (tx.operation_type === "credit" ? "teal" : "red")}>
-          {formatCents(tx.amount, tx.operation_type)}
-        </Text>
+          {visibleTags.map((tag) => (
+            <span key={tag.id} className={classes.tag}>
+              #{tag.name}
+            </span>
+          ))}
+          {extraTags > 0 && <span className={classes.metaText}>+{extraTags}</span>}
+        </div>
       </div>
     </div>
   );

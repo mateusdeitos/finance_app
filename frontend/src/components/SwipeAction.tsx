@@ -20,6 +20,18 @@ const TRIGGER_DISTANCE = 80
 const MAX_DISTANCE = 120
 const VERTICAL_TOLERANCE = 8
 
+function startsInHorizontalScroller(target: EventTarget | null, boundary: Element): boolean {
+  let node = target instanceof Element ? target : null
+  while (node && node !== boundary) {
+    if (node.scrollWidth > node.clientWidth) {
+      const overflowX = getComputedStyle(node).overflowX
+      if (overflowX === 'auto' || overflowX === 'scroll') return true
+    }
+    node = node.parentElement
+  }
+  return false
+}
+
 /**
  * Wraps a row in an iOS-style swipe-to-action gesture. Pure pointer events,
  * no third-party gesture library. Disambiguates against vertical scroll: a
@@ -49,6 +61,14 @@ export function SwipeAction({
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    // Rows can contain their own horizontally-scrollable strips (the mobile
+    // description and metadata lines overflow-scroll instead of truncating).
+    // A drag that starts inside one of those belongs to it, not to the swipe.
+    if (startsInHorizontalScroller(e.target, e.currentTarget)) {
+      startXRef.current = null
+      startYRef.current = null
+      return
+    }
     startXRef.current = e.touches[0].clientX
     startYRef.current = e.touches[0].clientY
     capturedRef.current = false

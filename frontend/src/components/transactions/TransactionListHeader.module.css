@@ -1,11 +1,13 @@
+/* Mirrors TransactionRow's grid (checkbox + content column) so the labels sit
+   over the cells they name. */
 .header {
   display: grid;
-  grid-template-columns: 1.25rem 1fr 10rem 10rem 5.5rem;
-  gap: 0.125rem 0.75rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  column-gap: 0.625rem;
   align-items: center;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid
-    light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+    light-dark(var(--mantine-color-gray-2), #2e2e2e);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -15,4 +17,17 @@
   top: 0;
   z-index: 1;
   background: var(--mantine-color-body);
+}
+
+.labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.amountLabel {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  text-align: right;
 }

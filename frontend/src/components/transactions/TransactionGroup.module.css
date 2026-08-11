@@ -1,22 +1,68 @@
 .group {
-  margin-bottom: 1rem;
-}
-
-.header {
-  padding: 0.625rem 0 0.375rem;
-  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
   margin-bottom: 0;
 }
 
+/* Day-group header: a tinted strip that separates one day from the next and
+   carries that day's subtotal on the right. */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: light-dark(var(--mantine-color-gray-0), #1a1b1e);
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), #2e2e2e);
+}
+
+.headerLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-grey-2));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerSubtotal {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.headerSubtotalLabel {
+  color: light-dark(var(--mantine-color-gray-6), var(--mantine-color-grey-5));
+  font-weight: 500;
+  margin-right: 0.25rem;
+}
+
+.subtotalPositive {
+  color: light-dark(var(--mantine-color-green-8), var(--mantine-color-green-6));
+}
+
+.subtotalNegative {
+  color: light-dark(var(--mantine-color-red-7), var(--mantine-color-red-5));
+}
+
 .rows {
-  /* Rows now share a single hairline rhythm with no card chrome around the
-     group. Each row paints its own bottom border via TransactionRow.module.css. */
+  /* Rows paint their own hairlines via TransactionRow.module.css. */
 }
 
 .balanceRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), #2e2e2e);
+}
+
+@media (max-width: 48em) {
+  .header,
+  .balanceRow {
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+  }
 }
