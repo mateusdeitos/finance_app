@@ -10,7 +10,10 @@
   align-items: baseline;
   gap: 0.75rem;
   padding: 0.5rem 1rem;
-  background: light-dark(var(--mantine-color-gray-0), #1a1b1e);
+  /* Deliberately darker than both the card and the reviewed-row tint: the day
+     header is a divider, and it used to collide with .reviewed — identical
+     gray-0 in light, only a hair apart in dark. */
+  background: light-dark(var(--mantine-color-gray-2), #141517);
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-2), #2e2e2e);
 }
 
