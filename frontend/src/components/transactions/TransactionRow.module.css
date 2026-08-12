@@ -225,10 +225,24 @@
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
+/* Width alone only changes density — it must not remove controls, because a
+   narrowed desktop window is still driven by a mouse. */
 @media (max-width: 48em) {
   .row {
-    grid-template-columns: minmax(0, 1fr);
     padding: 0.6875rem 0.875rem 0.75rem;
+  }
+
+  .amount {
+    min-width: 4.5rem;
+  }
+}
+
+/* Narrow *and* touch — a phone. Only here is it safe to drop the checkbox for
+   the gesture, and to trade truncation for a hidden-scrollbar scroller: both
+   replacements need a finger. */
+@media (max-width: 48em) and (pointer: coarse) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* Selection is entered by long-press instead, which buys the description
@@ -267,9 +281,5 @@
     overflow: visible;
     text-overflow: clip;
     max-width: none;
-  }
-
-  .amount {
-    min-width: 4.5rem;
   }
 }

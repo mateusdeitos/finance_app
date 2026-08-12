@@ -1,6 +1,6 @@
 import { Checkbox, Tooltip } from '@mantine/core'
 import { AccountAvatar } from '@/components/AccountAvatar'
-import { useIsMobile } from '@/hooks/useIsMobile'
+import { useIsTouch } from '@/hooks/useIsTouch'
 import { useLongPress } from '@/hooks/useLongPress'
 import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
@@ -40,7 +40,7 @@ export function SettlementRow({
   onSelect,
   parentDate,
 }: SettlementRowProps) {
-  const isMobile = useIsMobile()
+  const isTouch = useIsTouch()
   const account = accounts.find((a) => a.id === settlement.account_id)
   const selectionMode = isSelectionMode ?? false
 
@@ -62,13 +62,13 @@ export function SettlementRow({
       }
     : onEdit
 
-  // Mirrors TransactionRow: no checkbox on mobile, hold the row to select.
+  // Mirrors TransactionRow: no checkbox on a touch screen, hold to select.
   const longPress = useLongPress(
     () => {
       tapHaptic()
       onSelect?.(settlement.id, false)
     },
-    { enabled: isMobile && !selectionMode && !!onSelect },
+    { enabled: isTouch && !selectionMode && !!onSelect },
   )
 
   // Metadata line: the ACERTO chip leads, then the back-reference to the
