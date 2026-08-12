@@ -1,7 +1,5 @@
 import { Checkbox, Tooltip } from '@mantine/core'
 import { AccountAvatar } from '@/components/AccountAvatar'
-import { useIsTouch } from '@/hooks/useIsTouch'
-import { useLongPress } from '@/hooks/useLongPress'
 import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
 import { formatCents } from '@/utils/formatCents'
@@ -40,7 +38,6 @@ export function SettlementRow({
   onSelect,
   parentDate,
 }: SettlementRowProps) {
-  const isTouch = useIsTouch()
   const account = accounts.find((a) => a.id === settlement.account_id)
   const selectionMode = isSelectionMode ?? false
 
@@ -62,15 +59,6 @@ export function SettlementRow({
       }
     : onEdit
 
-  // Mirrors TransactionRow: no checkbox on a touch screen, hold to select.
-  const longPress = useLongPress(
-    () => {
-      tapHaptic()
-      onSelect?.(settlement.id, false)
-    },
-    { enabled: isTouch && !selectionMode && !!onSelect },
-  )
-
   // Metadata line: the ACERTO chip leads, then the back-reference to the
   // source transaction and the date as plain dimmed text.
   const metaParts: string[] = []
@@ -82,7 +70,6 @@ export function SettlementRow({
       data-testid={TransactionsTestIds.SettlementRow(settlement.id)}
       className={`${classes.row}${settlement.reviewed_at ? ` ${classes.reviewed}` : ''}${selectionMode ? ` ${classes.selectable}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
       onClick={handleRowClick}
-      {...longPress}
     >
       <div className={classes.checkbox}>
         {onSelect && (

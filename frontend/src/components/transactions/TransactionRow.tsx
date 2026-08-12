@@ -3,8 +3,6 @@ import { IconArrowRight, IconRepeat, IconUsers } from "@tabler/icons-react";
 import { AccountAvatar } from "@/components/AccountAvatar";
 import { SwipeAction } from "@/components/SwipeAction";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useIsTouch } from "@/hooks/useIsTouch";
-import { useLongPress } from "@/hooks/useLongPress";
 import { Transactions } from "@/types/transactions";
 import { formatCents } from "@/utils/formatCents";
 import { parseDate } from "@/utils/parseDate";
@@ -113,7 +111,6 @@ export function TransactionRow({
   onDelete,
 }: TransactionRowProps) {
   const isMobile = useIsMobile();
-  const isTouch = useIsTouch();
   const account = accounts.find((a) => a.id === tx.account_id);
   const linkedAccount = (() => {
     if (tx.type !== "transfer") return null;
@@ -212,18 +209,6 @@ export function TransactionRow({
 
   const swipeEnabled = isMobile && !selectionMode && !!onDelete;
 
-  // On a narrow touch screen the checkbox is hidden — the description needs
-  // the full row width — so selection mode is entered by holding the row
-  // instead. Keyed off touch, not width: a narrowed desktop window keeps its
-  // checkbox precisely because long-press would never fire under a mouse.
-  const longPress = useLongPress(
-    () => {
-      tapHaptic();
-      onSelect?.(tx.id, false);
-    },
-    { enabled: isTouch && !selectionMode && !!onSelect },
-  );
-
   const showCategory = groupBy !== "category" && tx.type !== "transfer";
   const showAccount = groupBy !== "account";
 
@@ -313,9 +298,8 @@ export function TransactionRow({
             ? () => onEdit("description")
             : undefined
       }
-      {...longPress}
     >
-      {/* Desktop-only multi-select checkbox; hidden on mobile via CSS. */}
+      {/* Multi-select checkbox, on every viewport. */}
       <div className={classes.checkbox}>
         <Checkbox
           checked={isSelected ?? false}

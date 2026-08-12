@@ -28,10 +28,6 @@
   border-bottom: 1px solid var(--tx-hairline);
 }
 
-.row:last-child {
-  border-bottom: none;
-}
-
 /* Reviewed rows carry the same tint a normal row shows on hover, so a reviewed
    transaction reads as "already handled" at rest. Declared before .selected and
    the hover rules so an active selection (and hover) still win via source order. */
@@ -225,8 +221,7 @@
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
-/* Width alone only changes density — it must not remove controls, because a
-   narrowed desktop window is still driven by a mouse. */
+/* Mobile changes density only — the checkbox stays on every viewport. */
 @media (max-width: 48em) {
   .row {
     padding: 0.6875rem 0.875rem 0.75rem;
@@ -237,20 +232,10 @@
   }
 }
 
-/* Narrow *and* touch — a phone. Only here is it safe to drop the checkbox for
-   the gesture, and to trade truncation for a hidden-scrollbar scroller: both
-   replacements need a finger. */
+/* Touch only: trade truncation for a hidden-scrollbar scroller. Scrolling a
+   barless strip needs a finger — under a mouse it would take shift+wheel, so
+   a narrowed desktop window keeps the ellipsis. */
 @media (max-width: 48em) and (pointer: coarse) {
-  .row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Selection is entered by long-press instead, which buys the description
-     the row's full width — the reason the checkbox is dropped here. */
-  .checkbox {
-    display: none;
-  }
-
   /* Long descriptions (a full Pix string, say) scroll sideways rather than
      being clipped or wrapping the row to two lines. Same for the metadata
      line, which can hold a deep category path. */

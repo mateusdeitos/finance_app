@@ -9,7 +9,11 @@
 @media (min-width: 48.0625em) {
   .list {
     background: light-dark(var(--mantine-color-white), #1f1f1f);
+    /* Rows paint their own bottom hairline, including the last one, so the
+       card takes its bottom edge from that row instead of drawing a second
+       line flush against it. */
     border: 1px solid light-dark(var(--mantine-color-gray-2), #2e2e2e);
+    border-bottom: none;
     border-radius: 0.5rem;
   }
 }
