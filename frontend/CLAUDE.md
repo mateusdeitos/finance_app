@@ -19,6 +19,17 @@ React/TypeScript frontend for a couples' finance management app.
 - **Styling**: CSS Modules (alongside Mantine)
 - **E2E**: Playwright
 
+## Setup
+
+Node 22 (see `.nvmrc` — `nvm use` picks it up). Install with plain `npm install` /
+`npm ci`: `.npmrc` pins `legacy-peer-deps=true`, which is what CI uses, because
+`@tanstack/zod-adapter` still declares a peer on zod@3 while the app is on zod@4.
+
+Because `legacy-peer-deps` skips peer installation, any package we import that a
+dependency only declares as a *peer* has to be listed explicitly in
+`package.json` — that is why `@tanstack/router-core` (a peer of
+`@tanstack/router-devtools-core`) is a direct devDependency.
+
 ## Commands
 
 ```bash
