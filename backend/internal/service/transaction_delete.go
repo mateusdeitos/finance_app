@@ -21,9 +21,10 @@ func (s *transactionService) Delete(ctx context.Context, userID int, id int, pro
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
-	transaction, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{
-		IDs: []int{id},
-	})
+	// The author is allowed to delete the linked row owned by their partner, so
+	// this lookup cannot be restricted to transaction.user_id. Authorization is
+	// checked immediately below against both the row owner and original author.
+	transaction, err := s.transactionRepo.SearchOne(ctx, domain.TransactionFilter{IDs: []int{id}})
 	if err != nil {
 		return err
 	}

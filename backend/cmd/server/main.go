@@ -12,6 +12,7 @@ import (
 
 	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/handler"
+	mcpserver "github.com/finance_app/backend/internal/mcp"
 	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/repository"
 	"github.com/finance_app/backend/internal/service"
@@ -151,6 +152,25 @@ func main() {
 
 	// API docs (Swagger UI + OpenAPI spec)
 	handler.RegisterDocsRoutes(e)
+
+	// MCP access tokens use an independent secret and are never valid for /api.
+	if cfg.MCP.JWTSecret != "" {
+		mcpServer, err := mcpserver.New(cfg, db, services)
+		if err != nil {
+			log.Fatalf("Failed to initialize MCP server: %v", err)
+		}
+		mcpHandler := echo.WrapHandler(mcpServer.Handler())
+		// OAuth/MCP discovery uses the standardized .well-known namespace so
+		// remote clients can locate this resource's authorization server.
+		e.GET("/.well-known/oauth-protected-resource/mcp", mcpHandler)
+		e.OPTIONS("/.well-known/oauth-protected-resource/mcp", mcpHandler)
+		e.GET("/.well-known/oauth-authorization-server", mcpHandler)
+		e.POST("/oauth/register", mcpHandler)
+		e.GET("/oauth/authorize", mcpHandler)
+		e.POST("/oauth/authorize/approve", mcpHandler)
+		e.POST("/oauth/token", mcpHandler)
+		e.Any("/mcp", mcpHandler)
+	}
 
 	// Auth routes (public)
 	auth := e.Group("/auth")

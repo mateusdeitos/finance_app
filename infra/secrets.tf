@@ -8,6 +8,7 @@
 # Secrets obrigatórios (adicionar valor antes do primeiro deploy):
 #   DB_PASSWORD
 #   JWT_SECRET
+#   MCP_JWT_SECRET
 #   OAUTH_SESSION_SECRET
 #   VAPID_PRIVATE_KEY   (gere com: npx web-push generate-vapid-keys)
 #
@@ -24,6 +25,13 @@ resource "google_secret_manager_secret" "db_password" {
 
 resource "google_secret_manager_secret" "jwt_secret" {
   secret_id = "JWT_SECRET"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "mcp_jwt_secret" {
+  secret_id = "MCP_JWT_SECRET"
   replication {
     auto {}
   }
@@ -63,6 +71,7 @@ locals {
   backend_secrets = toset([
     "DB_PASSWORD",
     "JWT_SECRET",
+    "MCP_JWT_SECRET",
     "OAUTH_SESSION_SECRET",
     "GOOGLE_CLIENT_SECRET",
     "ALLOWED_ORIGINS",

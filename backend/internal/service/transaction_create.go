@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"slices"
 	"strings"
 	"time"
 
@@ -432,22 +431,23 @@ func (s *transactionService) injectUserConnectionsOnSplitSettings(ctx context.Co
 	})
 
 	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
-		IDs: connIDs,
-		SortBy: &domain.SortBy{
-			Field: "id",
-			Order: domain.SortOrderAsc,
-		},
+		IDs:               connIDs,
+		ParticipantUserID: userID,
+		ConnectionStatus:  domain.UserConnectionStatusAccepted,
 	})
 	if err != nil {
 		return err
 	}
 
-	slices.SortFunc(splitSettings, func(a, b domain.SplitSettings) int {
-		return a.ConnectionID - b.ConnectionID
-	})
-
+	byID := make(map[int]*domain.UserConnection, len(conns))
+	for _, conn := range conns {
+		byID[conn.ID] = conn
+	}
 	for i := range splitSettings {
-		conn := conns[i]
+		conn := byID[splitSettings[i].ConnectionID]
+		if conn == nil {
+			return pkgErrors.ErrSplitSettingInvalidConnectionID(i)
+		}
 		conn.SwapIfNeeded(userID)
 		splitSettings[i].UserConnection = conn
 	}
@@ -660,8 +660,16 @@ func (s *transactionService) injectLinkedTransactions(
 }
 
 func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
+	// A destination account must be owned by the caller. A connection account is
+	// also owned by its local participant, so this keeps cross-user transfers
+	// within an accepted relationship instead of resolving arbitrary account IDs.
+	if _, err := s.services.Account.GetByID(ctx, userID, destinationAccountID); err != nil {
+		return nil, err
+	}
 	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
-		AccountIDs: []int{destinationAccountID},
+		AccountIDs:        []int{destinationAccountID},
+		ParticipantUserID: userID,
+		ConnectionStatus:  domain.UserConnectionStatusAccepted,
 	})
 	if err != nil {
 		// A regular (non-connection) account has no user_connection record.

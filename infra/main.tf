@@ -163,6 +163,23 @@ resource "google_cloud_run_v2_service" "backend" {
           }
         }
       }
+      env {
+        name = "MCP_JWT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.mcp_jwt_secret.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "MCP_ACCESS_TOKEN_HOURS"
+        value = "168"
+      }
+      env {
+        name  = "MCP_AUTHORIZATION_CODE_MINS"
+        value = "10"
+      }
       # Tempo de vida do JWT. Estava definido no serviço mas não era declarado
       # aqui, então o Terraform via a env var como órfã e queria removê-la — o
       # que silenciosamente cairia para o default do backend (24h, ver
@@ -368,4 +385,3 @@ resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
-
