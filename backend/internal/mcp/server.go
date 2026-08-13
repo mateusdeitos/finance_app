@@ -115,17 +115,23 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 		GrantTypes              []string `json:"grant_types"`
 		TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
 	}
-	if err := decodeJSON(r, &req); err != nil || len(req.RedirectURIs) == 0 || !validRedirectURIs(req.RedirectURIs) || (req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none") {
+	err := decodeJSON(r, &req)
+	if err != nil || len(req.RedirectURIs) == 0 || !validRedirectURIs(req.RedirectURIs) || (req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none") {
 		oauthError(w, "invalid_client_metadata", "public client metadata is invalid", http.StatusBadRequest)
 		return
 	}
-	b, _ := json.Marshal(req.RedirectURIs)
+	b, err := json.Marshal(req.RedirectURIs)
+	if err != nil {
+		oauthError(w, "server_error", "could not register client", http.StatusInternalServerError)
+		return
+	}
 	client := registeredClient{ID: "mcp_" + uuid.NewString(), Name: strings.TrimSpace(req.ClientName), RedirectURIs: string(b)}
 	if client.Name == "" {
 		client.Name = "MCP client"
 	}
-	if err := s.db.Create(&client).Error; err != nil {
-		oauthError(w, "server_error", "could not register client", 500)
+	err = s.db.Create(&client).Error
+	if err != nil {
+		oauthError(w, "server_error", "could not register client", http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"client_id": client.ID, "client_name": client.Name, "redirect_uris": req.RedirectURIs, "token_endpoint_auth_method": "none"})
@@ -135,41 +141,45 @@ type authRequest struct{ ClientID, RedirectURI, State, CodeChallenge, Scope, Res
 
 func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", 405)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	req, err := s.parseAuthorizationRequest(r)
 	if err != nil {
-		oauthError(w, "invalid_request", err.Error(), 400)
+		oauthError(w, "invalid_request", err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, err := s.appUser(r.Context(), r); err != nil {
+	_, err = s.appUser(r.Context(), r)
+	if err != nil {
 		// The existing Google login owns the session. The auth callback recognizes
 		// this backend-only redirect and returns here after setting auth_token.
 		back := r.URL.RequestURI()
 		http.Redirect(w, r, "/auth/google?redirect="+url.QueryEscape(back), http.StatusFound)
 		return
 	}
-	s.renderConsent(w, req)
+	s.renderConsent(r.Context(), w, req)
 }
 
 func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", 405)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
-		oauthError(w, "invalid_request", "invalid form", 400)
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	err := r.ParseForm()
+	if err != nil {
+		oauthError(w, "invalid_request", "invalid form", http.StatusBadRequest)
 		return
 	}
 	req := authRequest{ClientID: r.Form.Get("client_id"), RedirectURI: r.Form.Get("redirect_uri"), State: r.Form.Get("state"), CodeChallenge: r.Form.Get("code_challenge"), Scope: r.Form.Get("scope"), Resource: r.Form.Get("resource")}
-	if _, err := s.validateAuthorizationRequest(req); err != nil {
-		oauthError(w, "invalid_request", err.Error(), 400)
+	_, err = s.validateAuthorizationRequest(r.Context(), req)
+	if err != nil {
+		oauthError(w, "invalid_request", err.Error(), http.StatusBadRequest)
 		return
 	}
 	user, err := s.appUser(r.Context(), r)
 	if err != nil {
-		oauthError(w, "login_required", "login required", 401)
+		oauthError(w, "login_required", "login required", http.StatusUnauthorized)
 		return
 	}
 	if r.Form.Get("approve") != "yes" {
@@ -178,13 +188,14 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 	}
 	code, err := randomURLToken(32)
 	if err != nil {
-		oauthError(w, "server_error", "could not create code", 500)
+		oauthError(w, "server_error", "could not create code", http.StatusInternalServerError)
 		return
 	}
 	hash := sha256.Sum256([]byte(code))
 	row := authorizationCode{CodeHash: hex.EncodeToString(hash[:]), ClientID: req.ClientID, RedirectURI: req.RedirectURI, UserID: user.ID, Scopes: normalizeScopes(req.Scope), CodeChallenge: req.CodeChallenge, ExpiresAt: time.Now().Add(s.cfg.MCP.AuthorizationCodeTTL())}
-	if err := s.db.Create(&row).Error; err != nil {
-		oauthError(w, "server_error", "could not store code", 500)
+	err = s.db.Create(&row).Error
+	if err != nil {
+		oauthError(w, "server_error", "could not store code", http.StatusInternalServerError)
 		return
 	}
 	u, _ := url.Parse(req.RedirectURI)
@@ -198,12 +209,17 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", 405)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	_ = r.ParseForm()
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	err := r.ParseForm()
+	if err != nil {
+		oauthError(w, "invalid_request", "invalid form", http.StatusBadRequest)
+		return
+	}
 	if r.Form.Get("grant_type") != "authorization_code" {
-		oauthError(w, "unsupported_grant_type", "only authorization_code is supported", 400)
+		oauthError(w, "unsupported_grant_type", "only authorization_code is supported", http.StatusBadRequest)
 		return
 	}
 	code := r.Form.Get("code")
@@ -215,7 +231,8 @@ func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 	}
 	hash := sha256.Sum256([]byte(code))
 	var row authorizationCode
-	if err := s.db.Where("code_hash = ?", hex.EncodeToString(hash[:])).First(&row).Error; err != nil || row.UsedAt != nil || row.ExpiresAt.Before(time.Now()) || row.ClientID != clientID || row.RedirectURI != redirectURI || pkceChallenge(r.Form.Get("code_verifier")) != row.CodeChallenge {
+	err = s.db.Where("code_hash = ?", hex.EncodeToString(hash[:])).First(&row).Error
+	if err != nil || row.UsedAt != nil || row.ExpiresAt.Before(time.Now()) || row.ClientID != clientID || row.RedirectURI != redirectURI || pkceChallenge(r.Form.Get("code_verifier")) != row.CodeChallenge {
 		oauthError(w, "invalid_grant", "authorization code is invalid or expired", 400)
 		return
 	}
@@ -237,14 +254,14 @@ func (s *Server) parseAuthorizationRequest(r *http.Request) (authRequest, error)
 		return authRequest{}, errors.New("response_type must be code")
 	}
 	req := authRequest{ClientID: r.URL.Query().Get("client_id"), RedirectURI: r.URL.Query().Get("redirect_uri"), State: r.URL.Query().Get("state"), CodeChallenge: r.URL.Query().Get("code_challenge"), Scope: r.URL.Query().Get("scope"), Resource: r.URL.Query().Get("resource")}
-	_, err := s.validateAuthorizationRequest(req)
+	_, err := s.validateAuthorizationRequest(r.Context(), req)
 	return req, err
 }
-func (s *Server) validateAuthorizationRequest(req authRequest) (*clientMetadata, error) {
+func (s *Server) validateAuthorizationRequest(ctx context.Context, req authRequest) (*clientMetadata, error) {
 	if req.State == "" || req.CodeChallenge == "" || !validPKCE(req.CodeChallenge) || req.Resource != s.resource {
 		return nil, errors.New("state, S256 PKCE, and the MCP resource are required")
 	}
-	meta, err := s.client(req.ClientID)
+	meta, err := s.client(ctx, req.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -263,12 +280,13 @@ type clientMetadata struct {
 	RedirectURIs []string
 }
 
-func (s *Server) client(id string) (*clientMetadata, error) {
+func (s *Server) client(ctx context.Context, id string) (*clientMetadata, error) {
 	if strings.HasPrefix(id, "https://") {
-		return fetchClientMetadata(id)
+		return fetchClientMetadata(ctx, id)
 	}
 	var client registeredClient
-	if err := s.db.First(&client, "id = ?", id).Error; err != nil {
+	err := s.db.First(&client, "id = ?", id).Error
+	if err != nil {
 		return nil, errors.New("unknown client")
 	}
 	var redirects []string
@@ -303,7 +321,10 @@ func (s *Server) verifyAccessToken(_ context.Context, raw string, _ *http.Reques
 	if err != nil || !t.Valid {
 		return nil, mcpauth.ErrInvalidToken
 	}
-	claims := t.Claims.(jwt.MapClaims)
+	claims, ok := t.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, mcpauth.ErrInvalidToken
+	}
 	sub, _ := claims["sub"].(string)
 	exp, _ := claims.GetExpirationTime()
 	if sub == "" || exp == nil {
@@ -546,7 +567,8 @@ func (s *Server) updateTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 			}
 		}
 	}
-	if err = s.services.Transaction.Update(ctx, id, in.TransactionID, req); err != nil {
+	err = s.services.Transaction.Update(ctx, id, in.TransactionID, req)
+	if err != nil {
 		return nil, nil, err
 	}
 	return nil, map[string]any{"transaction_id": in.TransactionID, "updated": true}, nil
@@ -565,7 +587,8 @@ func (s *Server) deleteTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 	if !in.PropagationSettings.IsValid() {
 		return nil, nil, errors.New("valid propagation_settings is required")
 	}
-	if err = s.services.Transaction.Delete(ctx, id, in.TransactionID, in.PropagationSettings); err != nil {
+	err = s.services.Transaction.Delete(ctx, id, in.TransactionID, in.PropagationSettings)
+	if err != nil {
 		return nil, nil, err
 	}
 	return nil, map[string]any{"transaction_id": in.TransactionID, "deleted": true}, nil
@@ -588,8 +611,8 @@ func (s *Server) tags(ctx context.Context, userID int, ids []int) ([]domain.Tag,
 	return out, nil
 }
 
-func (s *Server) renderConsent(w http.ResponseWriter, req authRequest) {
-	meta, _ := s.client(req.ClientID)
+func (s *Server) renderConsent(ctx context.Context, w http.ResponseWriter, req authRequest) {
+	meta, _ := s.client(ctx, req.ClientID)
 	name := req.ClientID
 	if meta != nil && meta.Name != "" {
 		name = meta.Name
@@ -597,18 +620,22 @@ func (s *Server) renderConsent(w http.ResponseWriter, req authRequest) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = template.Must(template.New("consent").Parse(`<!doctype html><title>Autorizar agente</title><main><h1>Conectar {{.Name}}</h1><p>O cliente poderá ler suas finanças{{if .Write}} e criar, editar e excluir transações{{end}}.</p><form method="post" action="/oauth/authorize/approve">{{range .Fields}}<input type="hidden" name="{{.K}}" value="{{.V}}">{{end}}<button name="approve" value="yes">Autorizar</button><button name="approve" value="no">Cancelar</button></form></main>`)).Execute(w, map[string]any{"Name": name, "Write": contains(strings.Fields(req.Scope), writeScope), "Fields": []map[string]string{{"K": "client_id", "V": req.ClientID}, {"K": "redirect_uri", "V": req.RedirectURI}, {"K": "state", "V": req.State}, {"K": "code_challenge", "V": req.CodeChallenge}, {"K": "scope", "V": req.Scope}, {"K": "resource", "V": req.Resource}}})
 }
-func fetchClientMetadata(raw string) (*clientMetadata, error) {
+func fetchClientMetadata(ctx context.Context, raw string) (*clientMetadata, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.Hostname() == "" || isPrivateHost(u.Hostname()) {
 		return nil, errors.New("invalid client metadata URL")
 	}
 	c := safeMetadataClient()
-	resp, err := c.Get(raw)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	if err != nil {
+		return nil, errors.New("invalid client metadata URL")
+	}
+	resp, err := c.Do(req)
 	if err != nil {
 		return nil, errors.New("could not fetch client metadata")
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("client metadata unavailable")
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
@@ -660,7 +687,11 @@ func isPrivateHost(host string) bool {
 func validRedirectURIs(uris []string) bool {
 	for _, raw := range uris {
 		u, err := url.Parse(raw)
-		if err != nil || u.Fragment != "" || u.Host == "" || !(u.Scheme == "https" || (u.Scheme == "http" && isLoopbackHost(u.Hostname()))) {
+		if err != nil {
+			return false
+		}
+		validScheme := u.Scheme == "https" || u.Scheme == "http" && isLoopbackHost(u.Hostname())
+		if u.Fragment != "" || u.Host == "" || !validScheme {
 			return false
 		}
 	}
@@ -692,7 +723,8 @@ func contains[T comparable](items []T, want T) bool {
 func boolPtr(v bool) *bool { return &v }
 func randomURLToken(n int) (string, error) {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
+	_, err := rand.Read(b)
+	if err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(b), nil
@@ -704,7 +736,10 @@ func decodeJSON(r *http.Request, out any) error {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
+	if err != nil {
+		return
+	}
 }
 func oauthError(w http.ResponseWriter, code, description string, status int) {
 	writeJSON(w, status, map[string]string{"error": code, "error_description": description})

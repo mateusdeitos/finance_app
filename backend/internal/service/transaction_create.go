@@ -660,27 +660,25 @@ func (s *transactionService) injectLinkedTransactions(
 }
 
 func (s *transactionService) getConnectionFromDestinationAccountID(ctx context.Context, userID, destinationAccountID int) (*domain.UserConnection, error) {
-	// A destination account must be owned by the caller. A connection account is
-	// also owned by its local participant, so this keeps cross-user transfers
-	// within an accepted relationship instead of resolving arbitrary account IDs.
-	if _, err := s.services.Account.GetByID(ctx, userID, destinationAccountID); err != nil {
-		return nil, err
-	}
 	conn, err := s.services.UserConnection.SearchOne(ctx, domain.UserConnectionSearchOptions{
 		AccountIDs:        []int{destinationAccountID},
 		ParticipantUserID: userID,
 		ConnectionStatus:  domain.UserConnectionStatusAccepted,
 	})
 	if err != nil {
-		// A regular (non-connection) account has no user_connection record.
-		// This is the same-user transfer case — return nil so the caller
-		// falls back to the single-credit-side same-user path.
-		if pkgErrors.IsNotFound(err) {
-			return nil, nil
+		if !pkgErrors.IsNotFound(err) {
+			return nil, err
 		}
-		return nil, err
+
+		// A regular destination has no connection record. It must belong to the
+		// caller before the same-user transfer path can use it.
+		_, accountErr := s.services.Account.GetByID(ctx, userID, destinationAccountID)
+		return nil, accountErr
 	}
 
+	// Connection accounts are owned by their respective participant. The scoped
+	// accepted connection above is the authorization boundary for cross-user
+	// transfers, so the partner-owned destination is valid here.
 	conn.SwapIfNeeded(userID)
 
 	return conn, nil

@@ -21,12 +21,12 @@ func TestMCPProtectedResourceMetadataAndChallenge(t *testing.T) {
 	h := s.Handler()
 
 	metadata := httptest.NewRecorder()
-	h.ServeHTTP(metadata, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil))
+	h.ServeHTTP(metadata, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil))
 	require.Equal(t, http.StatusOK, metadata.Code)
 	require.Contains(t, metadata.Body.String(), `"resource":"https://api.example.com/mcp"`)
 
 	unauthenticated := httptest.NewRecorder()
-	h.ServeHTTP(unauthenticated, httptest.NewRequest(http.MethodPost, "/mcp", nil))
+	h.ServeHTTP(unauthenticated, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", nil))
 	require.Equal(t, http.StatusUnauthorized, unauthenticated.Code)
 	require.Contains(t, unauthenticated.Header().Get("WWW-Authenticate"), "resource_metadata=https://api.example.com/.well-known/oauth-protected-resource/mcp")
 }
