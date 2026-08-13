@@ -41,3 +41,11 @@ func TestMCPAccessTokenIsBoundToResourceAndScopes(t *testing.T) {
 	require.Equal(t, "42", info.UserID)
 	require.ElementsMatch(t, []string{readScope, writeScope}, info.Scopes)
 }
+
+func TestMCPProtocolServerBuildsAllToolSchemas(t *testing.T) {
+	s := testServer(t)
+
+	require.NotPanics(t, func() {
+		s.protocolServer()
+	})
+}
