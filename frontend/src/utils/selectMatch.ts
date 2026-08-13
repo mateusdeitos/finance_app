@@ -1,15 +1,20 @@
-import type { ComboboxItem, ComboboxItemGroup } from "@mantine/core";
+import type { ComboboxItem } from "@mantine/core";
 
 /**
  * NativeSelect only supports string group labels. Keeping the shared option
  * type equally narrow prevents a desktop-only group with a React node label
  * from reaching the native mobile control.
  */
-export type ComboboxOptions = ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[];
+export interface StringComboboxItemGroup {
+  group: string;
+  items: ComboboxItem[];
+}
+
+export type ComboboxOptions = StringComboboxItemGroup[] | ComboboxItem[];
 
 function isGroup(
-  option: ComboboxItem | ComboboxItemGroup<ComboboxItem>,
-): option is ComboboxItemGroup<ComboboxItem> {
+  option: ComboboxItem | StringComboboxItemGroup,
+): option is StringComboboxItemGroup {
   return "group" in option;
 }
 
@@ -42,7 +47,7 @@ export function matchOptionByLabel(
 /** Drops empty groups so a native `<optgroup>` never renders with no options. */
 export function dropEmptyGroups(options: ComboboxOptions): ComboboxOptions {
   if (options.length > 0 && isGroup(options[0])) {
-    return (options as ComboboxItemGroup<ComboboxItem>[]).filter(
+    return (options as StringComboboxItemGroup[]).filter(
       (group) => group.items.length > 0,
     );
   }

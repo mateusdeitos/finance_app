@@ -1,13 +1,13 @@
 import { useMemo } from "react";
-import type { ComboboxItemGroup, ComboboxItem } from "@mantine/core";
 import type { Transactions } from "@/types/transactions";
+import type { StringComboboxItemGroup } from "@/utils/selectMatch";
 
 export function useGroupedAccountOptions(
   accounts: Transactions.Account[],
-): ComboboxItemGroup<ComboboxItem>[] {
+): StringComboboxItemGroup[] {
   return useMemo(
     () =>
-      accounts.reduce<ComboboxItemGroup<ComboboxItem>[]>(
+      accounts.reduce<StringComboboxItemGroup[]>(
         (acc, a) => {
           const item = { label: a.name, value: String(a.id) };
           if (a.user_connection) {
