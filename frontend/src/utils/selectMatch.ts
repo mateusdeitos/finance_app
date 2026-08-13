@@ -5,7 +5,7 @@ import type { ComboboxItem, ComboboxItemGroup } from "@mantine/core";
  * type equally narrow prevents a desktop-only group with a React node label
  * from reaching the native mobile control.
  */
-export type ComboboxOptions = ComboboxItemGroup<ComboboxItem, string>[] | ComboboxItem[];
+export type ComboboxOptions = ComboboxItemGroup<ComboboxItem>[] | ComboboxItem[];
 
 function isGroup(
   option: ComboboxItem | ComboboxItemGroup<ComboboxItem>,
@@ -42,7 +42,7 @@ export function matchOptionByLabel(
 /** Drops empty groups so a native `<optgroup>` never renders with no options. */
 export function dropEmptyGroups(options: ComboboxOptions): ComboboxOptions {
   if (options.length > 0 && isGroup(options[0])) {
-    return (options as ComboboxItemGroup<ComboboxItem, string>[]).filter(
+    return (options as ComboboxItemGroup<ComboboxItem>[]).filter(
       (group) => group.items.length > 0,
     );
   }
