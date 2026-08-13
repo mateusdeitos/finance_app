@@ -26,6 +26,12 @@ const TYPE_LABEL: Record<TransactionType, string> = {
   transfer: "Transferência",
 };
 
+const TYPE_COLOR: Record<TransactionType, string> = {
+  expense: "red",
+  income: "teal",
+  transfer: "blue",
+};
+
 const TYPE_ICON: Record<TransactionType, ReactNode> = {
   expense: <IconTrendingDown size={14} />,
   income: <IconTrendingUp size={14} />,
@@ -78,6 +84,7 @@ export function TemplateFormFields() {
   const isTransfer = transactionType === "transfer";
   const selectedAccount = accounts.find((account) => account.id === accountId);
   const isSharedAccount = !!selectedAccount?.user_connection;
+  const typeColor = TYPE_COLOR[transactionType];
 
   const personalAccountOptions = accounts
     .filter((a) => !a.user_connection)
@@ -111,6 +118,7 @@ export function TemplateFormFields() {
         name="transaction_type"
         render={({ field }) => (
           <SegmentedControl
+            color={typeColor}
             data={(["expense", "income", "transfer"] as const)
               .filter((type) => !(type === "transfer" && isSharedAccount))
               .map((t) => ({
