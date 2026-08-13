@@ -193,6 +193,14 @@ export namespace Transactions {
     date?: string;
   }
 
+  /** Template-safe subset of a split: settlement dates belong only to a
+   * concrete transaction, never to a reusable template. */
+  export interface TemplateSplitSetting {
+    connection_id: number;
+    percentage?: number;
+    amount?: number;
+  }
+
   export interface TemplatePayload {
     type: TransactionType;
     account_id?: number | null;
@@ -200,7 +208,7 @@ export namespace Transactions {
     destination_account_id?: number | null;
     description: string;
     tag_ids?: number[];
-    split_settings?: SplitSetting[];
+    split_settings?: TemplateSplitSetting[];
   }
 
   export interface Template {

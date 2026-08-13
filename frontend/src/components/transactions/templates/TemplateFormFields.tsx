@@ -74,7 +74,10 @@ export function TemplateFormFields() {
   const tagNames = (tagsQuery.data ?? []).map((t) => t.name);
 
   const transactionType = useWatch({ control, name: "transaction_type" });
+  const accountId = useWatch({ control, name: "account_id" });
   const isTransfer = transactionType === "transfer";
+  const selectedAccount = accounts.find((account) => account.id === accountId);
+  const isSharedAccount = !!selectedAccount?.user_connection;
 
   const personalAccountOptions = accounts
     .filter((a) => !a.user_connection)
@@ -90,7 +93,13 @@ export function TemplateFormFields() {
    * (templates have no amount field). */
   function handleSuggestionSelect(suggestion: Transactions.TransactionSuggestion) {
     setValue("transaction_type", suggestion.type);
-    if (suggestion.account_id) setValue("account_id", suggestion.account_id);
+    if (suggestion.account_id) {
+      setValue("account_id", suggestion.account_id);
+      if (accounts.find((account) => account.id === suggestion.account_id)?.user_connection) {
+        setValue("split_settings", []);
+        if (suggestion.type === "transfer") setValue("transaction_type", "expense");
+      }
+    }
     if (suggestion.category_id) setValue("category_id", suggestion.category_id);
     if (suggestion.tags) setValue("tags", suggestion.tags.map((t) => t.name));
   }
@@ -102,15 +111,17 @@ export function TemplateFormFields() {
         name="transaction_type"
         render={({ field }) => (
           <SegmentedControl
-            data={(["expense", "income", "transfer"] as const).map((t) => ({
-              value: t,
-              label: (
-                <Group gap={6} wrap="nowrap" justify="center">
-                  {TYPE_ICON[t]}
-                  <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>{TYPE_LABEL[t]}</span>
-                </Group>
-              ),
-            }))}
+            data={(["expense", "income", "transfer"] as const)
+              .filter((type) => !(type === "transfer" && isSharedAccount))
+              .map((t) => ({
+                value: t,
+                label: (
+                  <Group gap={6} wrap="nowrap" justify="center">
+                    {TYPE_ICON[t]}
+                    <span data-testid={TransactionsTestIds.SegmentTransactionType(t)}>{TYPE_LABEL[t]}</span>
+                  </Group>
+                ),
+              }))}
             value={field.value}
             onChange={(val) => {
               field.onChange(val);
@@ -133,7 +144,14 @@ export function TemplateFormFields() {
               required
               data={personalAccountOptions}
               value={field.value ? String(field.value) : null}
-              onChange={(val) => field.onChange(val ? Number(val) : 0)}
+              onChange={(val) => {
+                const accountID = val ? Number(val) : 0;
+                field.onChange(accountID);
+                if (accounts.find((account) => account.id === accountID)?.user_connection) {
+                  setValue("split_settings", []);
+                  if (transactionType === "transfer") setValue("transaction_type", "expense");
+                }
+              }}
               onBlur={makeSelectBlurHandler(personalAccountOptions, (val) => field.onChange(val ?? 0))}
               error={errors.account_id?.message}
               searchable
@@ -247,7 +265,7 @@ export function TemplateFormFields() {
         )}
       />
 
-      <SplitSettingsFields templateMode />
+      {!isTransfer && !isSharedAccount && <SplitSettingsFields templateMode />}
     </Stack>
   );
 }

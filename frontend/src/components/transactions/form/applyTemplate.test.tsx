@@ -5,6 +5,24 @@ import { buildTemplateFormPatch } from "./applyTemplate";
 const accounts: Transactions.Account[] = [
   { id: 1, user_id: 1, name: "Wallet", initial_balance: 0, is_active: true, position: 0 },
   { id: 2, user_id: 1, name: "Bank", initial_balance: 0, is_active: true, position: 1 },
+  {
+    id: 3,
+    user_id: 1,
+    name: "Partner",
+    initial_balance: 0,
+    is_active: true,
+    position: 2,
+    user_connection: {
+      id: 20,
+      from_user_id: 1,
+      from_account_id: 1,
+      from_default_split_percentage: 50,
+      to_user_id: 2,
+      to_account_id: 3,
+      to_default_split_percentage: 50,
+      connection_status: "accepted",
+    },
+  },
 ];
 
 const categories: Transactions.Category[] = [
@@ -95,4 +113,19 @@ test("handles empty/omitted optional fields without throwing", () => {
   expect(patch.account_id).toBe(0);
   expect(patch.category_id).toBeNull();
   expect(patch.destination_account_id).toBeNull();
+});
+
+test("drops stale split rows when a template points to a shared source account", () => {
+  const patch = buildTemplateFormPatch(
+    {
+      type: "expense",
+      description: "Shared account template",
+      account_id: 3,
+      split_settings: [{ connection_id: 5, percentage: 50 }],
+    },
+    { accounts, categories, tags },
+  );
+
+  expect(patch.account_id).toBe(3);
+  expect(patch.split_settings).toEqual([]);
 });

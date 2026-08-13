@@ -256,7 +256,7 @@ test.describe("Transaction Templates", () => {
       type: "expense",
       account_id: setup.userAccountId,
       description: "Aluguel compartilhado",
-      split_settings: [{ connection_id: setup.connectionId, percentage: 50 }],
+      split_settings: [{ connection_id: setup.connectionId, percentage: 37 }],
     });
 
     const page = await openAuthedPage(browser, setup.userToken);
@@ -268,7 +268,7 @@ test.describe("Transaction Templates", () => {
     await templatesPage.applyChip(template.id);
     await txPage.expandExtraSection("split");
 
-    await expect(page.getByTestId(TransactionsTestIds.InputSplitPercentage)).toHaveValue("50");
+    await expect(page.getByTestId(TransactionsTestIds.InputSplitPercentage)).toHaveValue("37%");
 
     await page.close();
   });

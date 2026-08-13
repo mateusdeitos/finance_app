@@ -39,7 +39,7 @@ test("builds a payload for an expense with tags + split (no amount/date keys)", 
   const values: TransactionFormValues = {
     ...baseValues,
     tags: ["work", "personal"],
-    split_settings: [{ connection_id: 5, percentage: 50 }],
+    split_settings: [{ connection_id: 5, percentage: 50, date: "2026-07-11" }],
   };
 
   const payload = buildTemplatePayloadFromForm(values, tags);
@@ -51,10 +51,25 @@ test("builds a payload for an expense with tags + split (no amount/date keys)", 
     category_id: 10,
     destination_account_id: undefined,
     tag_ids: [100, 101],
-    split_settings: [{ connection_id: 5, percentage: 50, amount: undefined, date: undefined }],
+    split_settings: [{ connection_id: 5, percentage: 50 }],
   });
   expect(payload).not.toHaveProperty("amount");
   expect(payload).not.toHaveProperty("date");
+  expect(payload.split_settings?.[0]).not.toHaveProperty("date");
+  expect(payload.split_settings?.[0]).not.toHaveProperty("amount");
+});
+
+test("keeps a fixed split amount while stripping its settlement date", () => {
+  const payload = buildTemplatePayloadFromForm(
+    {
+      ...baseValues,
+      split_settings: [{ connection_id: 5, amount: 1250, date: "2026-07-11" }],
+    },
+    tags,
+  );
+
+  expect(payload.split_settings).toEqual([{ connection_id: 5, amount: 1250 }]);
+  expect(payload.split_settings?.[0]).not.toHaveProperty("date");
 });
 
 test("drops a tag name with no matching tag", () => {

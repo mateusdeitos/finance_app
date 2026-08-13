@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Stack, TextInput } from "@mantine/core";
+import { Alert, Button, Group, Loader, Stack, TextInput } from "@mantine/core";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm } from "react-hook-form";
 import { ResponsiveDrawer } from "@/components/ResponsiveDrawer";
@@ -44,15 +44,6 @@ export function TemplateFormDrawer({ template }: Props) {
   const categories = categoriesQuery.data ?? [];
   const tags = tagsQuery.data ?? [];
 
-  const defaultValues: TemplateFormValues = template
-    ? { ...buildTemplateFormPatch(template.payload, { accounts, categories, tags }), name: template.name }
-    : EMPTY_DEFAULTS;
-
-  const form = useForm<TemplateFormValues>({
-    resolver: zodResolver(templateFormSchema),
-    defaultValues,
-  });
-
   const { mutation: createMutation } = useCreateTransactionTemplate({
     onSuccess: async (created) => {
       await invalidate();
@@ -72,6 +63,7 @@ export function TemplateFormDrawer({ template }: Props) {
   const error = (createMutation.error ?? updateMutation.error)?.message;
 
   function onSubmit(values: TemplateFormValues) {
+    const selectedAccount = accounts.find((account) => account.id === values.account_id);
     const payload = buildTemplatePayloadFromForm(
       {
         transaction_type: values.transaction_type,
@@ -80,7 +72,10 @@ export function TemplateFormDrawer({ template }: Props) {
         category_id: values.category_id,
         destination_account_id: values.destination_account_id,
         tags: values.tags,
-        split_settings: values.split_settings,
+        // Shared accounts cannot have splits on a concrete transaction. Strip
+        // stale legacy rows on save as a final guard in addition to hiding the
+        // split editor when a shared account is selected.
+        split_settings: selectedAccount?.user_connection ? [] : values.split_settings,
         // Templates carry no amount/date/recurrence — filled with neutral
         // values so the object satisfies `TransactionFormValues`, the type
         // `buildTemplatePayloadFromForm` expects. None of these fields are
@@ -102,6 +97,8 @@ export function TemplateFormDrawer({ template }: Props) {
     }
   }
 
+  const referencesReady = accountsQuery.isSuccess && categoriesQuery.isSuccess && tagsQuery.isSuccess;
+
   return (
     <ResponsiveDrawer
       opened={opened}
@@ -109,41 +106,81 @@ export function TemplateFormDrawer({ template }: Props) {
       title={template ? "Editar modelo" : "Novo modelo"}
       data-testid={TransactionsTestIds.TemplateFormDrawer}
     >
-      <FormProvider {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
-          <Stack gap="md">
-            {error && (
-              <Alert
-                color="red"
-                title="Erro"
-                variant="light"
-                data-testid={TransactionsTestIds.TemplateFormError}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <TextInput
-              label="Nome do modelo"
-              required
-              {...form.register("name")}
-              error={form.formState.errors.name?.message}
-              data-testid={TransactionsTestIds.TemplateInputName}
-            />
-
-            {/* Type/account/category/tags/description + SplitSettingsFields
-                (rendered with templateMode, so no R$0,00 preview) live in
-                TemplateFormFields — split out to keep this file under ~200 lines. */}
-            <TemplateFormFields />
-
-            <Group justify="flex-end" mt="sm">
-              <Button type="submit" loading={isPending} data-testid={TransactionsTestIds.TemplateBtnSave}>
-                Salvar
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </FormProvider>
+      {referencesReady ? (
+        <TemplateFormContent
+          template={template}
+          accounts={accounts}
+          categories={categories}
+          tags={tags}
+          error={error}
+          isPending={isPending}
+          onSubmit={onSubmit}
+        />
+      ) : (
+        <Stack align="center" py="xl">
+          <Loader size="sm" />
+        </Stack>
+      )}
     </ResponsiveDrawer>
+  );
+}
+
+interface TemplateFormContentProps {
+  template?: Transactions.Template;
+  accounts: Transactions.Account[];
+  categories: Transactions.Category[];
+  tags: Transactions.Tag[];
+  error?: string;
+  isPending: boolean;
+  onSubmit: (values: TemplateFormValues) => void;
+}
+
+/** Mount only after reference queries resolve so edit defaults cannot be built
+ * from an empty cache and then silently overwrite category/tag/account ids. */
+function TemplateFormContent({
+  template,
+  accounts,
+  categories,
+  tags,
+  error,
+  isPending,
+  onSubmit,
+}: TemplateFormContentProps) {
+  const defaultValues: TemplateFormValues = template
+    ? { ...buildTemplateFormPatch(template.payload, { accounts, categories, tags }), name: template.name }
+    : EMPTY_DEFAULTS;
+  const form = useForm<TemplateFormValues>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues,
+  });
+
+  return (
+    <FormProvider {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        <Stack gap="md">
+          {error && (
+            <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.TemplateFormError}>
+              {error}
+            </Alert>
+          )}
+
+          <TextInput
+            label="Nome do modelo"
+            required
+            {...form.register("name")}
+            error={form.formState.errors.name?.message}
+            data-testid={TransactionsTestIds.TemplateInputName}
+          />
+
+          <TemplateFormFields />
+
+          <Group justify="flex-end" mt="sm">
+            <Button type="submit" loading={isPending} data-testid={TransactionsTestIds.TemplateBtnSave}>
+              Salvar
+            </Button>
+          </Group>
+        </Stack>
+      </form>
+    </FormProvider>
   );
 }

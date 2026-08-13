@@ -1,8 +1,8 @@
 import { afterEach, expect, test } from "vitest";
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useForm, type UseFormSetValue } from "react-hook-form";
 import { QueryKeys } from "@/utils/queryKeys";
 import { Transactions } from "@/types/transactions";
 import { TransactionsTestIds } from "@/testIds";
@@ -48,13 +48,25 @@ interface HarnessFormValues {
   split_settings: Transactions.SplitSetting[];
 }
 
-function Harness({ templateMode, amount }: { templateMode?: boolean; amount: number }) {
+function Harness({
+  templateMode,
+  amount,
+  onForm,
+  onReady,
+}: {
+  templateMode?: boolean;
+  amount: number;
+  onForm?: (getValues: () => HarnessFormValues) => void;
+  onReady?: (setValue: UseFormSetValue<HarnessFormValues>) => void;
+}) {
   const methods = useForm<HarnessFormValues>({
     defaultValues: {
       amount,
-      split_settings: [{ connection_id: 10, amount: 0 }],
+      split_settings: templateMode ? [{ connection_id: 10, percentage: 37 }] : [{ connection_id: 10, amount: 0 }],
     },
   });
+  onForm?.(methods.getValues);
+  onReady?.(methods.setValue);
   return (
     <FormProvider {...methods}>
       <SplitSettingsFields templateMode={templateMode} />
@@ -64,7 +76,12 @@ function Harness({ templateMode, amount }: { templateMode?: boolean; amount: num
 
 afterEach(cleanup);
 
-function renderHarness(props: { templateMode?: boolean; amount: number }) {
+function renderHarness(props: {
+  templateMode?: boolean;
+  amount: number;
+  onForm?: (getValues: () => HarnessFormValues) => void;
+  onReady?: (setValue: UseFormSetValue<HarnessFormValues>) => void;
+}) {
   return render(
     <QueryClientProvider client={makeClient()}>
       <MantineProvider>
@@ -95,6 +112,39 @@ test("percentage/amount toggle still switches the per-row input in template mode
 
   fireEvent.click(screen.getByTestId(TransactionsTestIds.SegmentSplitMode("percentage")));
   expect(screen.getByTestId(TransactionsTestIds.InputSplitPercentage)).toBeTruthy();
+});
+
+test("template percentage preserves its saved value without writing amount or date", async () => {
+  let getValues: (() => HarnessFormValues) | undefined;
+  renderHarness({
+    templateMode: true,
+    amount: 0,
+    onForm: (nextGetValues) => {
+      getValues = nextGetValues;
+    },
+  });
+
+  await waitFor(() => expect(getValues?.().split_settings[0]?.percentage).toBe(37));
+  expect(getValues?.().split_settings[0]).toEqual({ connection_id: 10, percentage: 37 });
+  expect(screen.queryByTestId(TransactionsTestIds.InputSplitDate(0))).toBeNull();
+  expect((screen.getByTestId(TransactionsTestIds.InputSplitPercentage) as HTMLInputElement).value).toBe("37%");
+});
+
+test("an externally applied fixed split switches the editor to R$ mode", async () => {
+  let setValue: UseFormSetValue<HarnessFormValues> | undefined;
+  renderHarness({
+    amount: 10_000,
+    onReady: (nextSetValue) => {
+      setValue = nextSetValue;
+    },
+  });
+
+  act(() => {
+    setValue?.("split_settings", [{ connection_id: 10, amount: 2500 }]);
+  });
+
+  await waitFor(() => expect(screen.getByTestId(TransactionsTestIds.InputSplitAmount)).toBeTruthy());
+  expect(screen.queryByTestId(TransactionsTestIds.InputSplitPercentage)).toBeNull();
 });
 
 // Success criterion 3: the additive templateMode prop (default false) does not

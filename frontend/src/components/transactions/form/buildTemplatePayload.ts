@@ -28,12 +28,12 @@ export function buildTemplatePayloadFromForm(
     tag_ids: tagIds.length > 0 ? tagIds : undefined,
     split_settings:
       !isTransfer && values.split_settings.length > 0
-        ? values.split_settings.map((s) => ({
-            connection_id: s.connection_id,
-            percentage: s.percentage,
-            amount: s.amount,
-            date: s.date ?? undefined,
-          }))
+        ? values.split_settings.map((s) => {
+            const split: Transactions.TemplateSplitSetting = { connection_id: s.connection_id };
+            if (s.percentage != null) split.percentage = s.percentage;
+            if (s.amount != null) split.amount = s.amount;
+            return split;
+          })
         : undefined,
   };
 }

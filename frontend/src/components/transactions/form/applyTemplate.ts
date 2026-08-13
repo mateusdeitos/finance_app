@@ -41,6 +41,9 @@ export function buildTemplateFormPatch(
     .map((id) => tags.find((t) => t.id === id)?.name)
     .filter((n): n is string => Boolean(n));
 
+  const account = accounts.find((candidate) => candidate.id === payload.account_id);
+  const canApplySplits = payload.type !== "transfer" && !account?.user_connection;
+
   return {
     transaction_type: payload.type,
     description: payload.description ?? "",
@@ -52,6 +55,9 @@ export function buildTemplateFormPatch(
       ? payload.destination_account_id
       : null,
     tags: tagNames,
-    split_settings: payload.split_settings ?? [],
+    // Legacy templates may have been saved with a shared source account. That
+    // combination cannot produce a valid transaction, so drop its stale split
+    // rows while applying the otherwise valid template fields.
+    split_settings: canApplySplits ? (payload.split_settings ?? []) : [],
   };
 }

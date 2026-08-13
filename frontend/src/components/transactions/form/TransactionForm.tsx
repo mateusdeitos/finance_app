@@ -163,6 +163,7 @@ export const TransactionForm = ({
     clearErrors,
     setFocus,
     getValues,
+    trigger,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
@@ -253,7 +254,26 @@ export const TransactionForm = ({
    * and opens the confirm-name mini drawer. Backend also enforces the
    * 3-template cap (defense in depth) — `atCap` below disables the trigger.
    */
-  function handleSaveAsTemplate() {
+  async function handleSaveAsTemplate() {
+    // A template deliberately omits transaction-only amount/date/recurrence
+    // fields, so validate only the fields that will actually be snapshotted.
+    const valid = await trigger([
+      "transaction_type",
+      "description",
+      "account_id",
+      "category_id",
+      "destination_account_id",
+      "tags",
+      "split_settings",
+    ]);
+    if (!valid) {
+      setError("_general" as keyof TransactionFormValues, {
+        type: "validation",
+        message: "Verifique os campos destacados no formulário",
+      });
+      return;
+    }
+
     const values = getValues();
     const payload = buildTemplatePayloadFromForm(values, tags);
     void renderDrawer(() => (
