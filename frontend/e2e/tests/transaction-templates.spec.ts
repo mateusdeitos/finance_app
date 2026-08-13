@@ -313,4 +313,42 @@ test.describe("Transaction Templates", () => {
 
     await page.close();
   });
+
+  test("percentage split template: set amount and submit the transaction", async ({ browser }) => {
+    const setup = await createUserAndPartner("e2e-templates-apply-submit-split");
+    const { category } = await seedAccountAndCategory(setup.userToken);
+    const template = await createTemplate(setup.userToken, "Mercado dividido", {
+      type: "expense",
+      account_id: setup.userAccountId,
+      category_id: category.id,
+      description: "Imec",
+      split_settings: [{ connection_id: setup.connectionId, percentage: 37 }],
+    });
+
+    const page = await openAuthedPage(browser, setup.userToken);
+    const txPage = new TransactionsPage(page);
+    const templatesPage = new TransactionTemplatesPage(page);
+    await txPage.goto();
+
+    await txPage.openCreateForm();
+    await templatesPage.applyChip(template.id);
+    await txPage.fillAmount(10_000);
+
+    const createRequest = page.waitForRequest(
+      (request) => new URL(request.url()).pathname === "/api/transactions" && request.method() === "POST",
+    );
+    await txPage.submitForm();
+
+    const payload = JSON.parse((await createRequest).postData() ?? "{}") as {
+      split_settings?: { connection_id: number; percentage?: number; amount?: number }[];
+    };
+    expect(payload.split_settings).toHaveLength(1);
+    expect(payload.split_settings?.[0]).toMatchObject({
+      connection_id: setup.connectionId,
+      percentage: 37,
+    });
+    expect(payload.split_settings?.[0]).not.toHaveProperty("amount");
+
+    await page.close();
+  });
 });

@@ -23,15 +23,22 @@ export function buildTransactionPayload(
     tags: resolvedTags.length > 0 ? resolvedTags : undefined,
     split_settings:
       !isTransfer && values.split_settings.length > 0
-        ? values.split_settings.map((s) => ({
-            connection_id: s.connection_id,
-            amount: s.amount,
-            // Default the settlement date to the parent transaction's date
-            // when the user didn't pick a custom one, so the backend always
-            // gets an explicit value (won't fall back to a previously
-            // customized snapshot on update).
-            date: s.date ?? values.date ?? undefined,
-          }))
+        ? values.split_settings.map((s) => {
+            const split: Transactions.SplitSetting = {
+              connection_id: s.connection_id,
+              // Default the settlement date to the parent transaction's date
+              // when the user didn't pick a custom one, so the backend always
+              // gets an explicit value (won't fall back to a previously
+              // customized snapshot on update).
+              date: s.date ?? values.date ?? undefined,
+            };
+            // Percentage rows also carry a derived amount while their editor is
+            // mounted. The API accepts exactly one split mode, so preserve the
+            // saved percentage instead of serializing that transient amount.
+            if (s.percentage != null) split.percentage = s.percentage;
+            else if (s.amount != null) split.amount = s.amount;
+            return split;
+          })
         : undefined,
     recurrence_settings: values.recurrenceEnabled
       ? {
