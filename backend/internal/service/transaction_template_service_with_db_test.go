@@ -16,18 +16,14 @@ import (
 // suite for the transaction-templates CRUD slice (Phase 27). It proves the
 // two security-critical guarantees end to end against real PostgreSQL:
 //
-//   - SAFE-01: the 3-template cap is race-safe. A concurrent double-create at
-//     count=2 must yield exactly one success and one failure tagged
-//     pkgErrors.ErrorTagTemplateLimitReached ("TEMPLATE.LIMIT_REACHED",
-//     sentinel pkgErrors.ErrTemplateLimitReached), and the final row count
-//     must be exactly 3, never 4.
-//   - SAFE-02: cross-user Get/Update/Delete return pkgErrors.IsNotFound
+//   - SAFE-02: cross-user Update/Delete/MarkUsed return pkgErrors.IsNotFound
 //     (404), never FORBIDDEN — ownership mismatches never leak existence.
 //
 // It also covers duplicate-name rejection (409, tag "TEMPLATE.DUPLICATE_NAME",
 // sentinel pkgErrors.ErrTemplateDuplicateName / ErrorTagTemplateDuplicateName),
 // D-03 field validation, created_at ASC ordering (TMPL-02), and the P26
-// isolation guarantee (templates never leak into financial queries).
+// recency ordering, and the P26 isolation guarantee (templates never leak into
+// financial queries).
 type TransactionTemplateServiceWithDBSuite struct {
 	ServiceTestWithDBSuite
 }
@@ -47,90 +43,29 @@ func validTemplatePayload() domain.TransactionTemplatePayload {
 }
 
 // ---------------------------------------------------------------------------
-// SAFE-01: race-safe 3-template cap
+// Templates are intentionally unlimited.
 // ---------------------------------------------------------------------------
 
-func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapSequential() {
+func (s *TransactionTemplateServiceWithDBSuite) TestCreate_AllowsMoreThanThreeTemplates() {
 	ctx := context.Background()
 	user, err := s.createTestUser(ctx)
 	s.Require().NoError(err)
 
-	for i := range 3 {
+	for i := range 5 {
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("seq-template-%d", i), validTemplatePayload())
 		s.Require().NoError(err)
 	}
 
-	// A 4th sequential create must fail with TEMPLATE.LIMIT_REACHED (409).
-	_, err = s.Services.TransactionTemplate.Create(ctx, user.ID, "seq-template-4th", validTemplatePayload())
-	s.Require().Error(err)
-	svcErr, ok := pkgErrors.AsServiceError(err)
-	s.Require().True(ok, "expected a *ServiceError, got %T: %v", err, err)
-	s.Equal(pkgErrors.ErrCodeAlreadyExists, svcErr.Code)
-	s.Contains(svcErr.Tags, string(pkgErrors.ErrorTagTemplateLimitReached))
-
 	templates, err := s.Services.TransactionTemplate.List(ctx, user.ID)
 	s.Require().NoError(err)
-	s.Len(templates, 3, "cap must hold at exactly 3 rows")
-}
-
-// TestCreate_CapRace_SAFE01 seeds a user with exactly 2 templates, then fires
-// two concurrent Create calls (distinct names) behind a start barrier. Exactly
-// one must succeed and one must fail with TEMPLATE.LIMIT_REACHED; the final
-// List length must be exactly 3, never 4.
-//
-// NOTE: each goroutine begins its own DBTransaction. The service acquires a
-// transaction-scoped per-user advisory lock before checking the cap, so two
-// READ COMMITTED transactions cannot both land a 4th row.
-func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapRace_SAFE01() {
-	ctx := context.Background()
-	user, err := s.createTestUser(ctx)
-	s.Require().NoError(err)
-
-	// Seed exactly 2 templates for this user.
-	for i := range 2 {
-		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("race-seed-%d", i), validTemplatePayload())
-		s.Require().NoError(err)
-	}
-
-	var wg sync.WaitGroup
-	start := make(chan struct{})
-	results := make([]error, 2)
-	wg.Add(2)
-	for i := range 2 {
-		go func(i int) {
-			defer wg.Done()
-			<-start
-			_, results[i] = s.Services.TransactionTemplate.Create(context.Background(), user.ID, fmt.Sprintf("race-%d", i), validTemplatePayload())
-		}(i)
-	}
-	close(start)
-	wg.Wait()
-
-	successCount := 0
-	limitReachedCount := 0
-	for _, err := range results {
-		if err == nil {
-			successCount++
-			continue
-		}
-		svcErr, ok := pkgErrors.AsServiceError(err)
-		s.Require().True(ok, "expected a *ServiceError, got %T: %v", err, err)
-		s.Contains(svcErr.Tags, string(pkgErrors.ErrorTagTemplateLimitReached))
-		limitReachedCount++
-	}
-	s.Equal(1, successCount, "expected exactly one concurrent create to succeed")
-	s.Equal(1, limitReachedCount, "expected exactly one concurrent create to hit TEMPLATE.LIMIT_REACHED")
-
-	templates, err := s.Services.TransactionTemplate.List(ctx, user.ID)
-	s.Require().NoError(err)
-	s.Len(templates, 3, "final count must be exactly 3, never 4 (SAFE-01)")
+	s.Len(templates, 5)
 }
 
 // ---------------------------------------------------------------------------
 // SAFE-02: IDOR — 404, never 403
 // ---------------------------------------------------------------------------
 
-func (s *TransactionTemplateServiceWithDBSuite) TestIDOR_UpdateDelete_SAFE02() {
+func (s *TransactionTemplateServiceWithDBSuite) TestIDOR_UpdateDeleteMarkUsed_SAFE02() {
 	ctx := context.Background()
 	userA, err := s.createTestUser(ctx)
 	s.Require().NoError(err)
@@ -155,6 +90,11 @@ func (s *TransactionTemplateServiceWithDBSuite) TestIDOR_UpdateDelete_SAFE02() {
 	if svcErr, ok := pkgErrors.AsServiceError(deleteErr); ok {
 		s.NotEqual(pkgErrors.ErrCodeForbidden, svcErr.Code, "IDOR must surface as 404, never 403")
 	}
+
+	// User B cannot alter the recency of user A's template either.
+	markUsedErr := s.Services.TransactionTemplate.MarkUsed(ctx, userB.ID, tmpl.ID)
+	s.Require().Error(markUsedErr)
+	s.True(pkgErrors.IsNotFound(markUsedErr), "expected NotFound (404), got: %v", markUsedErr)
 
 	// User B's List must not contain user A's template.
 	bList, err := s.Services.TransactionTemplate.List(ctx, userB.ID)
@@ -281,19 +221,24 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_Validation() {
 }
 
 // ---------------------------------------------------------------------------
-// TMPL-02: List ordering (created_at ASC)
+// TMPL-02: List ordering by most recent use
 // ---------------------------------------------------------------------------
 
-func (s *TransactionTemplateServiceWithDBSuite) TestList_OrderingCreatedAtASC() {
+func (s *TransactionTemplateServiceWithDBSuite) TestList_OrderingByLastUsedAt() {
 	ctx := context.Background()
 	user, err := s.createTestUser(ctx)
 	s.Require().NoError(err)
 
 	names := []string{"order-first", "order-second", "order-third"}
+	created := make([]*domain.TransactionTemplate, 0, len(names))
 	for _, name := range names {
-		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, name, validTemplatePayload())
+		template, err := s.Services.TransactionTemplate.Create(ctx, user.ID, name, validTemplatePayload())
 		s.Require().NoError(err)
+		created = append(created, template)
 	}
+	s.Require().NoError(s.Services.TransactionTemplate.MarkUsed(ctx, user.ID, created[0].ID))
+	time.Sleep(time.Millisecond)
+	s.Require().NoError(s.Services.TransactionTemplate.MarkUsed(ctx, user.ID, created[2].ID))
 
 	templates, err := s.Services.TransactionTemplate.List(ctx, user.ID)
 	s.Require().NoError(err)
@@ -303,13 +248,10 @@ func (s *TransactionTemplateServiceWithDBSuite) TestList_OrderingCreatedAtASC() 
 	for i, t := range templates {
 		gotNames[i] = t.Name
 	}
-	s.Equal(names, gotNames, "List must return templates created_at ASC (oldest first)")
-
-	for i := 1; i < len(templates); i++ {
-		s.Require().NotNil(templates[i-1].CreatedAt)
-		s.Require().NotNil(templates[i].CreatedAt)
-		s.False(templates[i].CreatedAt.Before(*templates[i-1].CreatedAt), "created_at must be non-decreasing (ASC order)")
-	}
+	s.Equal([]string{"order-third", "order-first", "order-second"}, gotNames)
+	s.Require().NotNil(templates[0].LastUsedAt)
+	s.Require().NotNil(templates[1].LastUsedAt)
+	s.Nil(templates[2].LastUsedAt)
 }
 
 // ---------------------------------------------------------------------------
@@ -340,8 +282,8 @@ func (s *TransactionTemplateServiceWithDBSuite) TestIsolation_P26_TemplatesDoNot
 	before, err := s.Repos.Transaction.Search(ctx, domain.TransactionFilter{UserID: &uid})
 	s.Require().NoError(err)
 
-	// Create up to the 3-template cap for this user.
-	for i := range 3 {
+	// Create several templates for this user.
+	for i := range 5 {
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, fmt.Sprintf("isolation-template-%d", i), validTemplatePayload())
 		s.Require().NoError(err)
 	}

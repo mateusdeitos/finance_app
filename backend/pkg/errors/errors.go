@@ -96,7 +96,6 @@ const (
 	ErrorTagImpersonationNotActive      ErrorTag = "IMPERSONATION.NOT_ACTIVE"
 	ErrorTagImpersonationNesting        ErrorTag = "IMPERSONATION.NESTING_NOT_ALLOWED"
 
-	ErrorTagTemplateLimitReached  ErrorTag = "TEMPLATE.LIMIT_REACHED"
 	ErrorTagTemplateDuplicateName ErrorTag = "TEMPLATE.DUPLICATE_NAME"
 	ErrorTagTemplateNameRequired  ErrorTag = "TEMPLATE.NAME_REQUIRED"
 	ErrorTagTemplateInvalidType   ErrorTag = "TEMPLATE.INVALID_TYPE"
@@ -185,7 +184,6 @@ var (
 		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, msg)
 	}
 
-	ErrTemplateLimitReached  = NewWithTag(ErrCodeAlreadyExists, []string{string(ErrorTagTemplateLimitReached)}, "you can only have up to 3 templates")
 	ErrTemplateDuplicateName = NewWithTag(ErrCodeAlreadyExists, []string{string(ErrorTagTemplateDuplicateName)}, "a template with this name already exists")
 	ErrTemplateNameRequired  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateNameRequired)}, "name is required")
 	ErrTemplateInvalidType   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateInvalidType)}, "invalid transaction type")

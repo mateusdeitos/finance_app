@@ -44,12 +44,13 @@ func (p *TransactionTemplatePayload) Scan(value interface{}) error {
 // This entity is deliberately NOT referenced by any existing financial query
 // (Search, GetBalance, FindOrphanedSettlementTransactions) — isolation is a deliverable.
 type TransactionTemplate struct {
-	ID        int                        `gorm:"primaryKey;autoIncrement"`
-	UserID    int                        `gorm:"not null;index"`
-	Name      string                     `gorm:"not null"`
-	Payload   TransactionTemplatePayload `gorm:"type:jsonb;not null"`
-	CreatedAt *time.Time
-	UpdatedAt *time.Time
+	ID         int                        `gorm:"primaryKey;autoIncrement"`
+	UserID     int                        `gorm:"not null;index"`
+	Name       string                     `gorm:"not null"`
+	Payload    TransactionTemplatePayload `gorm:"type:jsonb;not null"`
+	CreatedAt  *time.Time
+	UpdatedAt  *time.Time
+	LastUsedAt *time.Time
 }
 
 func (TransactionTemplate) BeforeCreate(tx *gorm.DB) error {
@@ -67,23 +68,25 @@ func (e *TransactionTemplate) BeforeUpdate(tx *gorm.DB) error {
 // ToDomain converts the entity to the domain model.
 func (e *TransactionTemplate) ToDomain() *domain.TransactionTemplate {
 	return &domain.TransactionTemplate{
-		ID:        e.ID,
-		UserID:    e.UserID,
-		Name:      e.Name,
-		Payload:   domain.TransactionTemplatePayload(e.Payload),
-		CreatedAt: e.CreatedAt,
-		UpdatedAt: e.UpdatedAt,
+		ID:         e.ID,
+		UserID:     e.UserID,
+		Name:       e.Name,
+		Payload:    domain.TransactionTemplatePayload(e.Payload),
+		CreatedAt:  e.CreatedAt,
+		UpdatedAt:  e.UpdatedAt,
+		LastUsedAt: e.LastUsedAt,
 	}
 }
 
 // TransactionTemplateFromDomain converts the domain model to the entity.
 func TransactionTemplateFromDomain(d *domain.TransactionTemplate) *TransactionTemplate {
 	return &TransactionTemplate{
-		ID:        d.ID,
-		UserID:    d.UserID,
-		Name:      d.Name,
-		Payload:   TransactionTemplatePayload(d.Payload),
-		CreatedAt: d.CreatedAt,
-		UpdatedAt: d.UpdatedAt,
+		ID:         d.ID,
+		UserID:     d.UserID,
+		Name:       d.Name,
+		Payload:    TransactionTemplatePayload(d.Payload),
+		CreatedAt:  d.CreatedAt,
+		UpdatedAt:  d.UpdatedAt,
+		LastUsedAt: d.LastUsedAt,
 	}
 }

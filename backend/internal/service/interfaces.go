@@ -154,6 +154,7 @@ type TransactionTemplateService interface {
 	Create(ctx context.Context, userID int, name string, payload domain.TransactionTemplatePayload) (*domain.TransactionTemplate, error)
 	Update(ctx context.Context, userID, id int, name string, payload domain.TransactionTemplatePayload) error
 	Delete(ctx context.Context, userID, id int) error
+	MarkUsed(ctx context.Context, userID, id int) error
 }
 
 // Services contains all service interfaces

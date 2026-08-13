@@ -4,14 +4,15 @@ import "time"
 
 // TransactionTemplate is the domain model for a user's saved transaction template.
 // Templates capture the form fields of a transaction (type, account, category, tags,
-// description, split) without an amount or date. They are stored per user, capped at 3.
+// description, split) without an amount or date. They are stored per user.
 type TransactionTemplate struct {
-	ID        int                        `json:"id"`
-	UserID    int                        `json:"user_id"`
-	Name      string                     `json:"name"`
-	Payload   TransactionTemplatePayload `json:"payload"`
-	CreatedAt *time.Time                 `json:"created_at,omitempty"`
-	UpdatedAt *time.Time                 `json:"updated_at,omitempty"`
+	ID         int                        `json:"id"`
+	UserID     int                        `json:"user_id"`
+	Name       string                     `json:"name"`
+	Payload    TransactionTemplatePayload `json:"payload"`
+	CreatedAt  *time.Time                 `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time                 `json:"updated_at,omitempty"`
+	LastUsedAt *time.Time                 `json:"last_used_at,omitempty"`
 }
 
 // TransactionTemplatePayload is the strict write-boundary for a template's transaction

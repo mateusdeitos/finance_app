@@ -2106,7 +2106,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the authenticated user's saved transaction templates, oldest first (max 3)",
+                "description": "Returns the authenticated user's saved transaction templates, most recently used first",
                 "produces": [
                     "application/json"
                 ],
@@ -2141,7 +2141,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a new personal transaction template for the authenticated user, capped at 3 per user",
+                "description": "Creates a new personal transaction template for the authenticated user",
                 "consumes": [
                     "application/json"
                 ],
@@ -2271,6 +2271,55 @@ const docTemplate = `{
                     "transaction-templates"
                 ],
                 "summary": "Delete a transaction template",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/middleware.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/transaction-templates/{id}/use": {
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records template use for the authenticated user so recent templates are listed first",
+                "tags": [
+                    "transaction-templates"
+                ],
+                "summary": "Mark a transaction template as used",
                 "parameters": [
                     {
                         "type": "integer",
@@ -4491,6 +4540,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "last_used_at": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"

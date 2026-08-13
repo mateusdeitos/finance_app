@@ -15,14 +15,12 @@ import (
 const maxTemplateNameLength = 100
 
 type transactionTemplateService struct {
-	dbTransaction repository.DBTransaction
-	templateRepo  repository.TransactionTemplateRepository
+	templateRepo repository.TransactionTemplateRepository
 }
 
 func NewTransactionTemplateService(repos *repository.Repositories) TransactionTemplateService {
 	return &transactionTemplateService{
-		dbTransaction: repos.DBTransaction,
-		templateRepo:  repos.TransactionTemplate,
+		templateRepo: repos.TransactionTemplate,
 	}
 }
 
@@ -55,42 +53,18 @@ func (s *transactionTemplateService) validate(name string, payload domain.Transa
 	return nil
 }
 
-// List returns the authenticated user's templates, oldest first.
+// List returns the authenticated user's templates with most recently used first.
 // SECURITY (IDOR): userID is the function argument from auth context — NEVER read from req.
 func (s *transactionTemplateService) List(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error) {
 	return s.templateRepo.ListByUserID(ctx, userID)
 }
 
-// Create validates the payload, then wraps a duplicate-name pre-check and the
-// capped insert in a single DBTransaction so they stay race-consistent
-// (D-05). The repository's cap sentinel is translated into the tagged 409
-// the frontend reads (T-27-02).
+// Create validates the payload. The database's case-insensitive unique index
+// is the concurrency-safe source of truth for duplicate names (D-05).
 // SECURITY (IDOR): userID is the function argument from auth context — NEVER read from req.
 func (s *transactionTemplateService) Create(ctx context.Context, userID int, name string, payload domain.TransactionTemplatePayload) (*domain.TransactionTemplate, error) {
 	if err := s.validate(name, payload); err != nil {
 		return nil, err
-	}
-
-	ctx, err := s.dbTransaction.Begin(ctx)
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to begin transaction", err)
-	}
-	defer s.dbTransaction.Rollback(ctx)
-
-	if err := s.templateRepo.LockUser(ctx, userID); err != nil {
-		return nil, pkgErrors.Internal("failed to lock templates", err)
-	}
-
-	// The per-user advisory lock serializes this case-insensitive check with
-	// Create. The expression index is a database backstop for every writer.
-	existing, err := s.templateRepo.ListByUserID(ctx, userID)
-	if err != nil {
-		return nil, pkgErrors.Internal("failed to check templates", err)
-	}
-	for _, e := range existing {
-		if strings.EqualFold(e.Name, name) {
-			return nil, pkgErrors.ErrTemplateDuplicateName
-		}
 	}
 
 	created, err := s.templateRepo.Create(ctx, &domain.TransactionTemplate{
@@ -99,49 +73,22 @@ func (s *transactionTemplateService) Create(ctx context.Context, userID int, nam
 		Payload: payload, // canonical struct persisted (D-02)
 	})
 	if err != nil {
-		if errors.Is(err, repository.ErrTemplateLimitReached) {
-			return nil, pkgErrors.ErrTemplateLimitReached
-		}
 		if errors.Is(err, repository.ErrTemplateDuplicateName) {
 			return nil, pkgErrors.ErrTemplateDuplicateName
 		}
 		return nil, pkgErrors.Internal("failed to create template", err)
 	}
 
-	if err := s.dbTransaction.Commit(ctx); err != nil {
-		return nil, pkgErrors.Internal("failed to commit transaction", err)
-	}
 	return created, nil
 }
 
-// Update validates the payload, enforces duplicate-name against the user's
-// OTHER templates, then performs a full replace (D-06). The repository scopes
-// the write by (id, user_id) and returns NotFound (404) on owner mismatch —
-// surfaced unchanged (SAFE-02).
+// Update validates the payload then performs a full replace (D-06). The
+// database unique index handles concurrent duplicate names. The repository
+// scopes the write by (id, user_id) and returns NotFound (404) on owner mismatch.
 // SECURITY (IDOR): userID is the function argument from auth context — NEVER read from req.
 func (s *transactionTemplateService) Update(ctx context.Context, userID, id int, name string, payload domain.TransactionTemplatePayload) error {
 	if err := s.validate(name, payload); err != nil {
 		return err
-	}
-
-	ctx, err := s.dbTransaction.Begin(ctx)
-	if err != nil {
-		return pkgErrors.Internal("failed to begin transaction", err)
-	}
-	defer s.dbTransaction.Rollback(ctx)
-
-	if err := s.templateRepo.LockUser(ctx, userID); err != nil {
-		return pkgErrors.Internal("failed to lock templates", err)
-	}
-
-	existing, err := s.templateRepo.ListByUserID(ctx, userID)
-	if err != nil {
-		return pkgErrors.Internal("failed to check templates", err)
-	}
-	for _, e := range existing {
-		if e.ID != id && strings.EqualFold(e.Name, name) {
-			return pkgErrors.ErrTemplateDuplicateName
-		}
 	}
 
 	if err := s.templateRepo.Update(ctx, userID, &domain.TransactionTemplate{ID: id, UserID: userID, Name: name, Payload: payload}); err != nil {
@@ -150,7 +97,7 @@ func (s *transactionTemplateService) Update(ctx context.Context, userID, id int,
 		}
 		return err // repo already returns pkgErrors.NotFound (404) on owner mismatch — do NOT re-wrap
 	}
-	return s.dbTransaction.Commit(ctx)
+	return nil
 }
 
 // Delete is a thin passthrough: the repository scopes the delete by
@@ -158,4 +105,10 @@ func (s *transactionTemplateService) Update(ctx context.Context, userID, id int,
 // SECURITY (IDOR): userID is the function argument from auth context — NEVER read from req.
 func (s *transactionTemplateService) Delete(ctx context.Context, userID, id int) error {
 	return s.templateRepo.Delete(ctx, userID, id)
+}
+
+// MarkUsed records that a caller applied one of their templates. The repository
+// scopes the update by (id, user_id), preserving the same IDOR protection as CRUD.
+func (s *transactionTemplateService) MarkUsed(ctx context.Context, userID, id int) error {
+	return s.templateRepo.MarkUsed(ctx, userID, id)
 }

@@ -58,8 +58,8 @@ export function TemplateFormDrawer({ template }: Props) {
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
-  // 409 tags (cap reached / duplicate name) surface here via the API client's
-  // `data.message ?? fallback` error parsing.
+  // API validation errors (including duplicate names) surface here via the
+  // client's `data.message ?? fallback` error parsing.
   const error = (createMutation.error ?? updateMutation.error)?.message;
 
   function onSubmit(values: TemplateFormValues) {

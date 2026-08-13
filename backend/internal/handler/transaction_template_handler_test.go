@@ -109,11 +109,11 @@ func TestTransactionTemplateHandler_Create_BadBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, httpErr.Code)
 }
 
-func TestTransactionTemplateHandler_Create_LimitReached(t *testing.T) {
+func TestTransactionTemplateHandler_Create_DuplicateName(t *testing.T) {
 	e, mockSvc, h := setupTemplateHandlerTest(t)
 	mockSvc.EXPECT().
 		Create(mock.Anything, 42, "Groceries", mock.AnythingOfType("domain.TransactionTemplatePayload")).
-		Return(nil, pkgErrors.ErrTemplateLimitReached).
+		Return(nil, pkgErrors.ErrTemplateDuplicateName).
 		Once()
 
 	body := `{"name":"Groceries","payload":{"type":"expense"}}`
@@ -128,7 +128,7 @@ func TestTransactionTemplateHandler_Create_LimitReached(t *testing.T) {
 	var taggedErr *pkgErrors.TaggedHTTPError
 	assert.ErrorAs(t, err, &taggedErr)
 	assert.Equal(t, http.StatusConflict, taggedErr.Code)
-	assert.Contains(t, taggedErr.Tags, string(pkgErrors.ErrorTagTemplateLimitReached))
+	assert.Contains(t, taggedErr.Tags, string(pkgErrors.ErrorTagTemplateDuplicateName))
 }
 
 func TestTransactionTemplateHandler_Update_InvalidID(t *testing.T) {
@@ -192,6 +192,38 @@ func TestTransactionTemplateHandler_Update_Success(t *testing.T) {
 	err := h.Update(c)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+func TestTransactionTemplateHandler_MarkUsed_Success(t *testing.T) {
+	e, mockSvc, h := setupTemplateHandlerTest(t)
+	mockSvc.EXPECT().MarkUsed(mock.Anything, 42, 7).Return(nil).Once()
+
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/transaction-templates/7/use", nil), 42)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("7")
+
+	err := h.MarkUsed(c)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+func TestTransactionTemplateHandler_MarkUsed_OwnerMismatch_NotFound(t *testing.T) {
+	e, mockSvc, h := setupTemplateHandlerTest(t)
+	mockSvc.EXPECT().MarkUsed(mock.Anything, 42, 7).Return(pkgErrors.NotFound("transaction template")).Once()
+
+	req := injectUserCtx(httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/transaction-templates/7/use", nil), 42)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetParamNames("id")
+	c.SetParamValues("7")
+
+	err := h.MarkUsed(c)
+	assert.Error(t, err)
+	var httpErr *echo.HTTPError
+	assert.ErrorAs(t, err, &httpErr)
+	assert.Equal(t, http.StatusNotFound, httpErr.Code)
 }
 
 func TestTransactionTemplateHandler_Delete_NotFound(t *testing.T) {

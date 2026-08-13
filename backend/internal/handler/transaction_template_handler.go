@@ -22,7 +22,7 @@ func NewTransactionTemplateHandler(services *service.Services) *TransactionTempl
 
 // List godoc
 // @Summary      List transaction templates
-// @Description  Returns the authenticated user's saved transaction templates, oldest first (max 3)
+// @Description  Returns the authenticated user's saved transaction templates, most recently used first
 // @Tags         transaction-templates
 // @Produce      json
 // @Security     CookieAuth
@@ -41,7 +41,7 @@ func (h *TransactionTemplateHandler) List(c echo.Context) error {
 
 // Create godoc
 // @Summary      Create a transaction template
-// @Description  Creates a new personal transaction template for the authenticated user, capped at 3 per user
+// @Description  Creates a new personal transaction template for the authenticated user
 // @Tags         transaction-templates
 // @Accept       json
 // @Produce      json
@@ -97,6 +97,32 @@ func (h *TransactionTemplateHandler) Update(c echo.Context) error {
 	}
 
 	if err := h.templateService.Update(c.Request().Context(), userID, id, req.Name, req.Payload); err != nil {
+		return HandleServiceError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// MarkUsed godoc
+// @Summary      Mark a transaction template as used
+// @Description  Records template use for the authenticated user so recent templates are listed first
+// @Tags         transaction-templates
+// @Security     CookieAuth
+// @Security     BearerAuth
+// @Param        id  path  int  true  "Template ID"
+// @Success      204
+// @Failure      400  {object}  middleware.ErrorResponse
+// @Failure      401  {object}  middleware.ErrorResponse
+// @Failure      404  {object}  middleware.ErrorResponse
+// @Router       /api/transaction-templates/{id}/use [patch]
+func (h *TransactionTemplateHandler) MarkUsed(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid template id")
+	}
+
+	if err := h.templateService.MarkUsed(c.Request().Context(), userID, id); err != nil {
 		return HandleServiceError(err)
 	}
 	return c.NoContent(http.StatusNoContent)

@@ -325,6 +325,7 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, authMiddlewa
 	templates := api.Group("/transaction-templates")
 	templates.GET("", h.template.List)
 	templates.POST("", h.template.Create)
+	templates.PATCH("/:id/use", h.template.MarkUsed)
 	templates.PUT("/:id", h.template.Update)
 	templates.DELETE("/:id", h.template.Delete)
 }

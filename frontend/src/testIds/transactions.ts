@@ -73,6 +73,10 @@ export const TransactionsTestIds = {
   // Template quick-apply chips at the top of the create form.
   TemplateChipsRow: 'row_template_chips',
   TemplateChip: (id: number) => `chip_template_${id}` as const,
+  TemplateSearchChip: 'chip_template_search',
+  TemplateSearchDrawer: 'drawer_template_search',
+  TemplateSearchInput: 'input_template_search',
+  TemplateSearchResult: (id: number) => `template_search_result_${id}` as const,
 
   // Template management (MNG-01): entry point + management drawer + form drawer
   MenuItemManageTemplates: 'menu_item_manage_templates',

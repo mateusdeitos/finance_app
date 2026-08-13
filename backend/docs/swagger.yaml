@@ -654,6 +654,8 @@ definitions:
         type: string
       id:
         type: integer
+      last_used_at:
+        type: string
       name:
         type: string
       payload:
@@ -2206,8 +2208,8 @@ paths:
       - tags
   /api/transaction-templates:
     get:
-      description: Returns the authenticated user's saved transaction templates, oldest
-        first (max 3)
+      description: Returns the authenticated user's saved transaction templates, most
+        recently used first
       produces:
       - application/json
       responses:
@@ -2231,7 +2233,7 @@ paths:
       consumes:
       - application/json
       description: Creates a new personal transaction template for the authenticated
-        user, capped at 3 per user
+        user
       parameters:
       - description: Template data
         in: body
@@ -2334,6 +2336,37 @@ paths:
       - CookieAuth: []
       - BearerAuth: []
       summary: Update a transaction template
+      tags:
+      - transaction-templates
+  /api/transaction-templates/{id}/use:
+    patch:
+      description: Records template use for the authenticated user so recent templates
+        are listed first
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - BearerAuth: []
+      summary: Mark a transaction template as used
       tags:
       - transaction-templates
   /api/transactions:

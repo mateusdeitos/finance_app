@@ -15,6 +15,7 @@ interface ApiTemplate {
     description: string;
     split_settings?: { connection_id: number; percentage?: number; amount?: number }[];
   };
+  last_used_at?: string;
 }
 
 /** Create a personal account + category for the given user token. */
@@ -225,13 +226,16 @@ test.describe("Transaction Templates", () => {
     await page.close();
   });
 
-  test("cap enforcement: disables 'new template' and 'save as template' at 3 templates (SAFE-01)", async ({
+  test("quick chips show the three recent templates and search reaches every template", async ({
     browser,
   }) => {
-    const token = await getAuthTokenForUser(`e2e-templates-cap-${Date.now()}@financeapp.local`);
+    const token = await getAuthTokenForUser(`e2e-templates-search-${Date.now()}@financeapp.local`);
     await createTemplate(token, "Modelo 1", { type: "expense", description: "d1" });
     await createTemplate(token, "Modelo 2", { type: "expense", description: "d2" });
     await createTemplate(token, "Modelo 3", { type: "expense", description: "d3" });
+    await createTemplate(token, "Modelo 4", { type: "expense", description: "d4" });
+    const templates = await listTemplates(token);
+    expect(templates).toHaveLength(4);
 
     const page = await openAuthedPage(browser, token);
     const txPage = new TransactionsPage(page);
@@ -239,13 +243,24 @@ test.describe("Transaction Templates", () => {
     await txPage.goto();
 
     await templatesPage.openManagementDrawer();
-    await expect(templatesPage.newTemplateButton()).toBeDisabled();
+    await expect(templatesPage.newTemplateButton()).toBeEnabled();
 
     await page.keyboard.press("Escape");
     await expect(templatesPage.managementDrawer).not.toBeVisible();
 
     await txPage.openCreateForm();
-    await expect(templatesPage.saveAsTemplateButton()).toBeDisabled();
+    await expect(templatesPage.saveAsTemplateButton()).toBeEnabled();
+    await expect(templatesPage.chip(templates[0].id)).toBeVisible();
+    await expect(templatesPage.chip(templates[1].id)).toBeVisible();
+    await expect(templatesPage.chip(templates[2].id)).toBeVisible();
+    await expect(templatesPage.chip(templates[3].id)).not.toBeVisible();
+
+    await templatesPage.openSearch();
+    await expect(templatesPage.searchDrawer.getByTestId(TransactionsTestIds.TemplateSearchResult(templates[3].id))).toBeVisible();
+    await templatesPage.applySearchResult(templates[3].id);
+    await expect(page.getByTestId(TransactionsTestIds.InputDescription)).toHaveValue("d1");
+
+    await expect.poll(async () => (await listTemplates(token))[0]?.id).toBe(templates[3].id);
 
     await page.close();
   });

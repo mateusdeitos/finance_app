@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/finance_app/backend/internal/domain"
 	"github.com/finance_app/backend/internal/entity"
@@ -11,9 +12,6 @@ import (
 )
 
 var (
-	// ErrTemplateLimitReached is returned by Create when the user already has
-	// the maximum of 3 templates. The service maps it to the tagged HTTP 409.
-	ErrTemplateLimitReached = errors.New("template limit reached")
 	// ErrTemplateDuplicateName converts the database's case-insensitive unique
 	// index into the service's public duplicate-name error.
 	ErrTemplateDuplicateName = errors.New("template duplicate name")
@@ -27,21 +25,11 @@ func NewTransactionTemplateRepository(db *gorm.DB) TransactionTemplateRepository
 	return &transactionTemplateRepository{db: db}
 }
 
-// LockUser holds a transaction-scoped PostgreSQL advisory lock keyed by the
-// owner id. Create and Update acquire it before their list/check/write sequence,
-// which makes the per-user cap and case-insensitive duplicate check serializable
-// without blocking template writes for other users.
-func (r *transactionTemplateRepository) LockUser(ctx context.Context, userID int) error {
-	return GetTxFromContext(ctx, r.db).
-		Exec("SELECT pg_advisory_xact_lock(?::bigint)", userID).
-		Error
-}
-
 func (r *transactionTemplateRepository) ListByUserID(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error) {
 	var ents []entity.TransactionTemplate
 	if err := GetTxFromContext(ctx, r.db).
 		Where("user_id = ?", userID).
-		Order("created_at ASC").
+		Order("last_used_at DESC NULLS LAST, created_at DESC, id DESC").
 		Find(&ents).Error; err != nil {
 		return nil, err
 	}
@@ -53,33 +41,15 @@ func (r *transactionTemplateRepository) ListByUserID(ctx context.Context, userID
 	return result, nil
 }
 
-// Create assumes LockUser has already been acquired in the current transaction.
-// The conditional INSERT retains an explicit cap failure at the write boundary;
-// the advisory lock serializes the surrounding list/check/insert flow.
 func (r *transactionTemplateRepository) Create(ctx context.Context, t *domain.TransactionTemplate) (*domain.TransactionTemplate, error) {
 	ent := entity.TransactionTemplateFromDomain(t)
-	payloadJSON, err := ent.Payload.Value()
-	if err != nil {
-		return nil, err
-	}
-
-	var created entity.TransactionTemplate
-	result := GetTxFromContext(ctx, r.db).Raw(`
-		INSERT INTO transaction_templates (user_id, name, payload, created_at, updated_at)
-		SELECT ?, ?, ?, NOW(), NOW()
-		WHERE (SELECT COUNT(*) FROM transaction_templates WHERE user_id = ?) < 3
-		RETURNING id, user_id, name, payload, created_at, updated_at
-	`, ent.UserID, ent.Name, payloadJSON, ent.UserID).Scan(&created)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, ErrTemplateDuplicateName
 		}
-		return nil, result.Error
+		return nil, err
 	}
-	if result.RowsAffected == 0 {
-		return nil, ErrTemplateLimitReached
-	}
-	return created.ToDomain(), nil
+	return ent.ToDomain(), nil
 }
 
 // GetByIDForUser scopes the read by (id, user_id) — SAFE-02: a row that
@@ -122,6 +92,21 @@ func (r *transactionTemplateRepository) Delete(ctx context.Context, userID, id i
 	result := GetTxFromContext(ctx, r.db).
 		Where("id = ? AND user_id = ?", id, userID).
 		Delete(&entity.TransactionTemplate{})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return pkgErrors.NotFound("transaction template")
+	}
+	return nil
+}
+
+// MarkUsed updates the caller-owned template's recency without changing its payload.
+func (r *transactionTemplateRepository) MarkUsed(ctx context.Context, userID, id int) error {
+	result := GetTxFromContext(ctx, r.db).
+		Model(&entity.TransactionTemplate{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		UpdateColumn("last_used_at", time.Now().UTC())
 	if result.Error != nil {
 		return result.Error
 	}

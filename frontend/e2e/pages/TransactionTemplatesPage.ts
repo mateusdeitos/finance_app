@@ -25,6 +25,7 @@ export class TransactionTemplatesPage {
   readonly managementDrawer: Locator;
   readonly formDrawer: Locator;
   readonly saveAsDrawer: Locator;
+  readonly searchDrawer: Locator;
   readonly createDrawer: Locator;
 
   constructor(page: Page) {
@@ -32,6 +33,7 @@ export class TransactionTemplatesPage {
     this.managementDrawer = page.getByTestId(TransactionsTestIds.TemplatesManagementDrawer);
     this.formDrawer = page.getByTestId(TransactionsTestIds.TemplateFormDrawer);
     this.saveAsDrawer = page.getByTestId(TransactionsTestIds.SaveAsTemplateDrawer);
+    this.searchDrawer = page.getByTestId(TransactionsTestIds.TemplateSearchDrawer);
     this.createDrawer = page.getByTestId(TransactionsTestIds.DrawerCreate);
   }
 
@@ -115,6 +117,18 @@ export class TransactionTemplatesPage {
     const chip = this.chip(id);
     await expect(chip).toBeVisible();
     await chip.click();
+  }
+
+  /** Opens the template search drawer from the quick-chip row. */
+  async openSearch() {
+    await this.createDrawer.getByTestId(TransactionsTestIds.TemplateSearchChip).click();
+    await expect(this.searchDrawer).toBeVisible();
+  }
+
+  /** Chooses a template from the search drawer and waits for it to close. */
+  async applySearchResult(id: number) {
+    await this.searchDrawer.getByTestId(TransactionsTestIds.TemplateSearchResult(id)).click();
+    await expect(this.searchDrawer).not.toBeVisible({ timeout: 8000 });
   }
 
   /** Locator for the "Novo" button in the management drawer (enabled/disabled assertions). */

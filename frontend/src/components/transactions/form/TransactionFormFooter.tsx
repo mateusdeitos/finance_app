@@ -1,4 +1,4 @@
-import { Box, Button, Group, Tooltip } from "@mantine/core";
+import { Box, Button, Group } from "@mantine/core";
 import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { TransactionsTestIds } from "@/testIds";
@@ -9,8 +9,6 @@ interface Props {
   onSaveAndCreateAnother?: () => void;
   /** Create-form only (MNG-02): opens the SaveAsTemplateDrawer. Absent on the edit form. */
   onSaveAsTemplate?: () => void;
-  /** Disables the "Salvar como modelo" button when the user is at the 3-template cap. */
-  saveAsTemplateDisabled?: boolean;
 }
 
 const desktopFooterStyle: React.CSSProperties = {
@@ -34,24 +32,20 @@ export function TransactionFormFooter({
   loading,
   onSaveAndCreateAnother,
   onSaveAsTemplate,
-  saveAsTemplateDisabled,
 }: Props) {
   const isMobile = useIsMobile();
 
   const saveAsTemplateButton = onSaveAsTemplate && (
-    <Tooltip label="Você já tem 3 modelos" disabled={!saveAsTemplateDisabled}>
-      <Button
-        type="button"
-        variant="subtle"
-        size={isMobile ? "sm" : undefined}
-        fullWidth={isMobile}
-        disabled={saveAsTemplateDisabled}
-        onClick={onSaveAsTemplate}
-        data-testid={TransactionsTestIds.BtnSaveAsTemplate}
-      >
-        Salvar como modelo
-      </Button>
-    </Tooltip>
+    <Button
+      type="button"
+      variant="subtle"
+      size={isMobile ? "sm" : undefined}
+      fullWidth={isMobile}
+      onClick={onSaveAsTemplate}
+      data-testid={TransactionsTestIds.BtnSaveAsTemplate}
+    >
+      Salvar como modelo
+    </Button>
   );
 
   if (isMobile) {

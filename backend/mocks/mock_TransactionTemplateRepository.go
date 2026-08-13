@@ -248,17 +248,17 @@ func (_c *MockTransactionTemplateRepository_ListByUserID_Call) RunAndReturn(run 
 	return _c
 }
 
-// LockUser provides a mock function with given fields: ctx, userID
-func (_m *MockTransactionTemplateRepository) LockUser(ctx context.Context, userID int) error {
-	ret := _m.Called(ctx, userID)
+// MarkUsed provides a mock function with given fields: ctx, userID, id
+func (_m *MockTransactionTemplateRepository) MarkUsed(ctx context.Context, userID int, id int) error {
+	ret := _m.Called(ctx, userID, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for LockUser")
+		panic("no return value specified for MarkUsed")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int) error); ok {
-		r0 = rf(ctx, userID)
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, userID, id)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -266,31 +266,32 @@ func (_m *MockTransactionTemplateRepository) LockUser(ctx context.Context, userI
 	return r0
 }
 
-// MockTransactionTemplateRepository_LockUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LockUser'
-type MockTransactionTemplateRepository_LockUser_Call struct {
+// MockTransactionTemplateRepository_MarkUsed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkUsed'
+type MockTransactionTemplateRepository_MarkUsed_Call struct {
 	*mock.Call
 }
 
-// LockUser is a helper method to define mock.On call
+// MarkUsed is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID int
-func (_e *MockTransactionTemplateRepository_Expecter) LockUser(ctx interface{}, userID interface{}) *MockTransactionTemplateRepository_LockUser_Call {
-	return &MockTransactionTemplateRepository_LockUser_Call{Call: _e.mock.On("LockUser", ctx, userID)}
+//   - id int
+func (_e *MockTransactionTemplateRepository_Expecter) MarkUsed(ctx interface{}, userID interface{}, id interface{}) *MockTransactionTemplateRepository_MarkUsed_Call {
+	return &MockTransactionTemplateRepository_MarkUsed_Call{Call: _e.mock.On("MarkUsed", ctx, userID, id)}
 }
 
-func (_c *MockTransactionTemplateRepository_LockUser_Call) Run(run func(ctx context.Context, userID int)) *MockTransactionTemplateRepository_LockUser_Call {
+func (_c *MockTransactionTemplateRepository_MarkUsed_Call) Run(run func(ctx context.Context, userID int, id int)) *MockTransactionTemplateRepository_MarkUsed_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int))
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
 	})
 	return _c
 }
 
-func (_c *MockTransactionTemplateRepository_LockUser_Call) Return(_a0 error) *MockTransactionTemplateRepository_LockUser_Call {
+func (_c *MockTransactionTemplateRepository_MarkUsed_Call) Return(_a0 error) *MockTransactionTemplateRepository_MarkUsed_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockTransactionTemplateRepository_LockUser_Call) RunAndReturn(run func(context.Context, int) error) *MockTransactionTemplateRepository_LockUser_Call {
+func (_c *MockTransactionTemplateRepository_MarkUsed_Call) RunAndReturn(run func(context.Context, int, int) error) *MockTransactionTemplateRepository_MarkUsed_Call {
 	_c.Call.Return(run)
 	return _c
 }

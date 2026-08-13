@@ -190,6 +190,54 @@ func (_c *MockTransactionTemplateService_List_Call) RunAndReturn(run func(contex
 	return _c
 }
 
+// MarkUsed provides a mock function with given fields: ctx, userID, id
+func (_m *MockTransactionTemplateService) MarkUsed(ctx context.Context, userID int, id int) error {
+	ret := _m.Called(ctx, userID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkUsed")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) error); ok {
+		r0 = rf(ctx, userID, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockTransactionTemplateService_MarkUsed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkUsed'
+type MockTransactionTemplateService_MarkUsed_Call struct {
+	*mock.Call
+}
+
+// MarkUsed is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID int
+//   - id int
+func (_e *MockTransactionTemplateService_Expecter) MarkUsed(ctx interface{}, userID interface{}, id interface{}) *MockTransactionTemplateService_MarkUsed_Call {
+	return &MockTransactionTemplateService_MarkUsed_Call{Call: _e.mock.On("MarkUsed", ctx, userID, id)}
+}
+
+func (_c *MockTransactionTemplateService_MarkUsed_Call) Run(run func(ctx context.Context, userID int, id int)) *MockTransactionTemplateService_MarkUsed_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockTransactionTemplateService_MarkUsed_Call) Return(_a0 error) *MockTransactionTemplateService_MarkUsed_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockTransactionTemplateService_MarkUsed_Call) RunAndReturn(run func(context.Context, int, int) error) *MockTransactionTemplateService_MarkUsed_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function with given fields: ctx, userID, id, name, payload
 func (_m *MockTransactionTemplateService) Update(ctx context.Context, userID int, id int, name string, payload domain.TransactionTemplatePayload) error {
 	ret := _m.Called(ctx, userID, id, name, payload)

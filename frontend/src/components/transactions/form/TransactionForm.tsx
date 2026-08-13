@@ -21,7 +21,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
 import { useTags } from "@/hooks/useTags";
-import { useTransactionTemplates } from "@/hooks/useTransactionTemplates";
+import { useMarkTransactionTemplateUsed, useTransactionTemplates } from "@/hooks/useTransactionTemplates";
 import { renderDrawer } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
@@ -35,6 +35,7 @@ import { TemplateQuickChips } from "./TemplateQuickChips";
 import { buildTemplateFormPatch } from "./applyTemplate";
 import { buildTemplatePayloadFromForm } from "./buildTemplatePayload";
 import { SaveAsTemplateDrawer } from "@/components/transactions/templates/SaveAsTemplateDrawer";
+import { TemplateSearchDrawer } from "@/components/transactions/templates/TemplateSearchDrawer";
 import { TransactionFormFooter } from "./TransactionFormFooter";
 import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
@@ -148,7 +149,10 @@ export const TransactionForm = ({
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
   const { query: tagsQuery } = useTags();
-  const { query: templatesQuery } = useTransactionTemplates();
+  const { query: templatesQuery, invalidate: invalidateTemplates } = useTransactionTemplates();
+  const { mutation: markTemplateUsed } = useMarkTransactionTemplateUsed({
+    onSuccess: () => invalidateTemplates(),
+  });
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -247,12 +251,20 @@ export const TransactionForm = ({
     setValue("split_settings", patch.split_settings);
     setValue("amount", 0);
     setFocus("amount");
+    markTemplateUsed.mutate(template.id);
+  }
+
+  function handleSearchTemplates() {
+    void renderDrawer<Transactions.Template | void>(() => <TemplateSearchDrawer templates={templates} />)
+      .then((template) => {
+        if (template) handleApplyTemplate(template);
+      })
+      .catch(() => undefined);
   }
 
   /**
    * MNG-02: snapshots the current form values, builds a `TemplatePayload`,
-   * and opens the confirm-name mini drawer. Backend also enforces the
-   * 3-template cap (defense in depth) — `atCap` below disables the trigger.
+   * and opens the confirm-name mini drawer.
    */
   async function handleSaveAsTemplate() {
     // A template deliberately omits transaction-only amount/date/recurrence
@@ -280,8 +292,6 @@ export const TransactionForm = ({
       <SaveAsTemplateDrawer payload={payload} suggestedName={values.description ?? ""} />
     ));
   }
-
-  const atCap = templates.length >= 3;
 
   // Transfer source: personal accounts only (flat list)
   const personalAccountOptions = accounts
@@ -312,7 +322,11 @@ export const TransactionForm = ({
       <Stack gap="md">
         {headerContent}
         {showTemplateChips && (
-          <TemplateQuickChips templates={templates} onApply={handleApplyTemplate} />
+          <TemplateQuickChips
+            templates={templates}
+            onApply={handleApplyTemplate}
+            onSearch={handleSearchTemplates}
+          />
         )}
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
@@ -541,7 +555,6 @@ export const TransactionForm = ({
           onSaveAndCreateAnother ? handleSubmit(onSaveAndCreateAnother, onInvalid) : undefined
         }
         onSaveAsTemplate={showTemplateChips ? handleSaveAsTemplate : undefined}
-        saveAsTemplateDisabled={showTemplateChips ? atCap : undefined}
       />
       <Suspense>
         <DevTool control={control} />

@@ -3,6 +3,7 @@ import {
   createTransactionTemplate,
   deleteTransactionTemplate,
   fetchTransactionTemplates,
+  markTransactionTemplateUsed,
   updateTransactionTemplate,
 } from '@/api/transactionTemplates'
 import { Transactions } from '@/types/transactions'
@@ -60,6 +61,18 @@ interface DeleteOptions {
 export function useDeleteTransactionTemplate({ onSuccess }: DeleteOptions = {}) {
   const mutation = useMutation({
     mutationFn: (id: number) => deleteTransactionTemplate(id),
+    onSuccess,
+  })
+  return { mutation }
+}
+
+interface MarkUsedOptions {
+  onSuccess?: () => void
+}
+
+export function useMarkTransactionTemplateUsed({ onSuccess }: MarkUsedOptions = {}) {
+  const mutation = useMutation({
+    mutationFn: (id: number) => markTransactionTemplateUsed(id),
     onSuccess,
   })
   return { mutation }

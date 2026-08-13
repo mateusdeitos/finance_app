@@ -51,3 +51,14 @@ export async function deleteTransactionTemplate(id: number): Promise<void> {
     throw new Error(data.message ?? 'Failed to delete template')
   }
 }
+
+export async function markTransactionTemplateUsed(id: number): Promise<void> {
+  const res = await fetch(`${apiUrl}/api/transaction-templates/${id}/use`, {
+    method: 'PATCH',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message ?? 'Failed to mark template as used')
+  }
+}
