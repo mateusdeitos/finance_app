@@ -167,6 +167,7 @@ export const TransactionForm = ({
     clearErrors,
     setFocus,
     getValues,
+    reset,
     trigger,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
@@ -242,15 +243,12 @@ export const TransactionForm = ({
    */
   function handleApplyTemplate(template: Transactions.Template) {
     const patch = buildTemplateFormPatch(template.payload, { accounts, categories, tags });
-    setValue("transaction_type", patch.transaction_type);
-    setValue("description", patch.description);
-    setValue("account_id", patch.account_id);
-    setValue("category_id", patch.category_id);
-    setValue("destination_account_id", patch.destination_account_id);
-    setValue("tags", patch.tags);
-    setValue("split_settings", patch.split_settings);
-    setValue("amount", 0);
-    setFocus("amount");
+    // Apply all related fields in one transition so the form never briefly
+    // combines references from the old transaction with template split rows.
+    reset({ ...getValues(), ...patch, amount: 0 });
+    // Wait for the reset render to replace the input before restoring the
+    // documented amount focus (APPLY-02).
+    requestAnimationFrame(() => setFocus("amount"));
     markTemplateUsed.mutate(template.id);
   }
 

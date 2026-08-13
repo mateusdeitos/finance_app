@@ -30,8 +30,10 @@ export function buildTemplatePayloadFromForm(
       !isTransfer && values.split_settings.length > 0
         ? values.split_settings.map((s) => {
             const split: Transactions.TemplateSplitSetting = { connection_id: s.connection_id };
+            // Percentage rows carry a derived `amount` for the transaction's
+            // live total. Templates must retain exactly one split mode.
             if (s.percentage != null) split.percentage = s.percentage;
-            if (s.amount != null) split.amount = s.amount;
+            else if (s.amount != null) split.amount = s.amount;
             return split;
           })
         : undefined,

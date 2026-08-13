@@ -226,6 +226,32 @@ test.describe("Transaction Templates", () => {
     await page.close();
   });
 
+  test("save as template: percentage split omits the derived amount", async ({ browser }) => {
+    const setup = await createUserAndPartner("e2e-templates-saveas-split");
+    const { category } = await seedAccountAndCategory(setup.userToken);
+
+    const page = await openAuthedPage(browser, setup.userToken);
+    const txPage = new TransactionsPage(page);
+    const templatesPage = new TransactionTemplatesPage(page);
+    await txPage.goto();
+
+    await txPage.openCreateForm();
+    await txPage.fillExpense(10_000, "Jantar dividido", setup.userAccountId, category.id);
+    await txPage.expandExtraSection("split");
+    await txPage.formDrawer.getByTestId(TransactionsTestIds.BtnAddSplitRow).click();
+    await expect(txPage.formDrawer.getByTestId(TransactionsTestIds.InputSplitPercentage)).toHaveValue("50%");
+
+    await templatesPage.saveCurrentFormAsTemplate("Jantar dividido");
+
+    const templates = await listTemplates(setup.userToken);
+    expect(templates).toHaveLength(1);
+    expect(templates[0].payload.split_settings).toEqual([
+      { connection_id: setup.connectionId, percentage: 50 },
+    ]);
+
+    await page.close();
+  });
+
   test("quick chips show the three recent templates and search reaches every template", async ({
     browser,
   }) => {

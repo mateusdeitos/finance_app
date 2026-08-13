@@ -72,6 +72,19 @@ test("keeps a fixed split amount while stripping its settlement date", () => {
   expect(payload.split_settings?.[0]).not.toHaveProperty("date");
 });
 
+test("prefers a percentage over the derived transaction amount", () => {
+  const payload = buildTemplatePayloadFromForm(
+    {
+      ...baseValues,
+      split_settings: [{ connection_id: 5, percentage: 50, amount: 1250, date: "2026-07-11" }],
+    },
+    tags,
+  );
+
+  expect(payload.split_settings).toEqual([{ connection_id: 5, percentage: 50 }]);
+  expect(payload.split_settings?.[0]).not.toHaveProperty("amount");
+});
+
 test("drops a tag name with no matching tag", () => {
   const values: TransactionFormValues = { ...baseValues, tags: ["work", "unknown"] };
 
