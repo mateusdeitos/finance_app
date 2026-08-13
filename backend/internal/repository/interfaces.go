@@ -171,6 +171,9 @@ type NotificationRepository interface {
 // This repository is deliberately NOT joined into Search/GetBalance/settlement
 // queries (P26 isolation guarantee).
 type TransactionTemplateRepository interface {
+	// LockUser serializes template writes for one user inside the caller's DB
+	// transaction. It is required before checking the cap or duplicate names.
+	LockUser(ctx context.Context, userID int) error
 	ListByUserID(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error)
 	Create(ctx context.Context, t *domain.TransactionTemplate) (*domain.TransactionTemplate, error)
 	GetByIDForUser(ctx context.Context, userID, id int) (*domain.TransactionTemplate, error)
@@ -194,7 +197,6 @@ type Repositories struct {
 	Charge                ChargeRepository
 	PushSubscription      PushSubscriptionRepository
 	Notification          NotificationRepository
-<<<<<<< HEAD
 	TransactionTemplate   TransactionTemplateRepository
 	Impersonation         ImpersonationRepository
 }

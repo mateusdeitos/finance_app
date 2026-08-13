@@ -77,8 +77,12 @@ func (s *transactionTemplateService) Create(ctx context.Context, userID int, nam
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
-	// Duplicate-name pre-check inside the same tx (D-05). The DB's
-	// UNIQUE(user_id, name) constraint is the backstop under a race.
+	if err := s.templateRepo.LockUser(ctx, userID); err != nil {
+		return nil, pkgErrors.Internal("failed to lock templates", err)
+	}
+
+	// The per-user advisory lock serializes this case-insensitive check with
+	// Create. The expression index is a database backstop for every writer.
 	existing, err := s.templateRepo.ListByUserID(ctx, userID)
 	if err != nil {
 		return nil, pkgErrors.Internal("failed to check templates", err)
@@ -97,6 +101,9 @@ func (s *transactionTemplateService) Create(ctx context.Context, userID int, nam
 	if err != nil {
 		if errors.Is(err, repository.ErrTemplateLimitReached) {
 			return nil, pkgErrors.ErrTemplateLimitReached
+		}
+		if errors.Is(err, repository.ErrTemplateDuplicateName) {
+			return nil, pkgErrors.ErrTemplateDuplicateName
 		}
 		return nil, pkgErrors.Internal("failed to create template", err)
 	}
@@ -123,6 +130,10 @@ func (s *transactionTemplateService) Update(ctx context.Context, userID, id int,
 	}
 	defer s.dbTransaction.Rollback(ctx)
 
+	if err := s.templateRepo.LockUser(ctx, userID); err != nil {
+		return pkgErrors.Internal("failed to lock templates", err)
+	}
+
 	existing, err := s.templateRepo.ListByUserID(ctx, userID)
 	if err != nil {
 		return pkgErrors.Internal("failed to check templates", err)
@@ -134,6 +145,9 @@ func (s *transactionTemplateService) Update(ctx context.Context, userID, id int,
 	}
 
 	if err := s.templateRepo.Update(ctx, userID, &domain.TransactionTemplate{ID: id, UserID: userID, Name: name, Payload: payload}); err != nil {
+		if errors.Is(err, repository.ErrTemplateDuplicateName) {
+			return pkgErrors.ErrTemplateDuplicateName
+		}
 		return err // repo already returns pkgErrors.NotFound (404) on owner mismatch — do NOT re-wrap
 	}
 	return s.dbTransaction.Commit(ctx)

@@ -936,8 +936,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "integer",
-                                "format": "int64"
+                                "type": "integer"
                             }
                         }
                     },
@@ -4536,7 +4535,7 @@ const docTemplate = `{
                 "split_settings": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/domain.SplitSettings"
+                        "$ref": "#/definitions/domain.TransactionTemplateSplitSetting"
                     }
                 },
                 "tag_ids": {
@@ -4547,6 +4546,20 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/domain.TransactionType"
+                }
+            }
+        },
+        "domain.TransactionTemplateSplitSetting": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "connection_id": {
+                    "type": "integer"
+                },
+                "percentage": {
+                    "type": "integer"
                 }
             }
         },

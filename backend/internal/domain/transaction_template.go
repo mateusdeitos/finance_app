@@ -19,20 +19,27 @@ type TransactionTemplate struct {
 // (dropping unknown keys, including "amount" and "date" which have no fields here — D-02)
 // then re-serializes the canonical form into the payload JSONB column.
 //
-// SplitSettings reuses domain.SplitSettings verbatim so both split modes
-// (Percentage *int and Amount *int64) round-trip faithfully through unmarshal→marshal (TMPL-05).
-//
-// NOTE: DisallowUnknownFields / strict unmarshaling is wired in the service (Phase 27).
-// Phase 26 defines the type only.
+// SplitSettings is intentionally narrower than transaction SplitSettings: a
+// template must never retain a settlement date. Both split modes still
+// round-trip faithfully through unmarshal→marshal (TMPL-05).
 type TransactionTemplatePayload struct {
-	Type                 TransactionType `json:"type"`
-	AccountID            *int            `json:"account_id,omitempty"`
-	CategoryID           *int            `json:"category_id,omitempty"`
-	DestinationAccountID *int            `json:"destination_account_id,omitempty"`
-	Description          string          `json:"description"`
-	TagIDs               []int           `json:"tag_ids,omitempty"`
-	SplitSettings        []SplitSettings `json:"split_settings,omitempty"`
+	Type                 TransactionType                   `json:"type"`
+	AccountID            *int                              `json:"account_id,omitempty"`
+	CategoryID           *int                              `json:"category_id,omitempty"`
+	DestinationAccountID *int                              `json:"destination_account_id,omitempty"`
+	Description          string                            `json:"description"`
+	TagIDs               []int                             `json:"tag_ids,omitempty"`
+	SplitSettings        []TransactionTemplateSplitSetting `json:"split_settings,omitempty"`
 	// NO Amount, NO Date (D-02) — a struct unmarshal naturally drops them.
+}
+
+// TransactionTemplateSplitSetting is the template-safe subset of a transaction
+// split. It deliberately excludes Date, which belongs to a concrete settlement
+// rather than a reusable template.
+type TransactionTemplateSplitSetting struct {
+	ConnectionID int    `json:"connection_id"`
+	Percentage   *int   `json:"percentage,omitempty"`
+	Amount       *int64 `json:"amount,omitempty"`
 }
 
 // TransactionTemplateCreateRequest is the create request body.

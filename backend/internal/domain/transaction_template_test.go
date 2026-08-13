@@ -16,7 +16,7 @@ func TestTransactionTemplatePayload_SplitModesRoundTrip(t *testing.T) {
 		"type": "expense",
 		"description": "groceries",
 		"split_settings": [
-			{"connection_id": 1, "percentage": 50},
+			{"connection_id": 1, "percentage": 50, "date": "2026-06-14"},
 			{"connection_id": 2, "amount": 2500}
 		]
 	}`
@@ -90,14 +90,15 @@ func TestTransactionTemplatePayload_AllFieldsPreserved(t *testing.T) {
 }
 
 // TestTransactionTemplatePayload_AmountAndDateDropped (Test C) proves that raw JSON
-// containing "amount" and "date" keys has those fields dropped after unmarshal into
-// the strict struct (no such fields exist on TransactionTemplatePayload — D-02).
+// containing transaction-level or nested split "amount"/"date" keys drops
+// date fields after unmarshal into the template-safe structs (D-02).
 func TestTransactionTemplatePayload_AmountAndDateDropped(t *testing.T) {
 	raw := `{
 		"type": "expense",
 		"description": "lunch",
 		"amount": 9999,
-		"date": "2026-06-14"
+		"date": "2026-06-14",
+		"split_settings": [{"connection_id": 1, "percentage": 50, "date": "2026-06-14"}]
 	}`
 
 	var payload TransactionTemplatePayload

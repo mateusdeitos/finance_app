@@ -10,10 +10,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// ErrTemplateLimitReached is returned by Create when the user already has the
-// maximum of 3 templates at the moment of insert. The service maps this to
-// pkgErrors.ErrTemplateLimitReached (HTTP 409, tag TEMPLATE.LIMIT_REACHED).
-var ErrTemplateLimitReached = errors.New("template limit reached")
+var (
+	// ErrTemplateLimitReached is returned by Create when the user already has
+	// the maximum of 3 templates. The service maps it to the tagged HTTP 409.
+	ErrTemplateLimitReached = errors.New("template limit reached")
+	// ErrTemplateDuplicateName converts the database's case-insensitive unique
+	// index into the service's public duplicate-name error.
+	ErrTemplateDuplicateName = errors.New("template duplicate name")
+)
 
 type transactionTemplateRepository struct {
 	db *gorm.DB
@@ -21,6 +25,16 @@ type transactionTemplateRepository struct {
 
 func NewTransactionTemplateRepository(db *gorm.DB) TransactionTemplateRepository {
 	return &transactionTemplateRepository{db: db}
+}
+
+// LockUser holds a transaction-scoped PostgreSQL advisory lock keyed by the
+// owner id. Create and Update acquire it before their list/check/write sequence,
+// which makes the per-user cap and case-insensitive duplicate check serializable
+// without blocking template writes for other users.
+func (r *transactionTemplateRepository) LockUser(ctx context.Context, userID int) error {
+	return GetTxFromContext(ctx, r.db).
+		Exec("SELECT pg_advisory_xact_lock(?::bigint)", userID).
+		Error
 }
 
 func (r *transactionTemplateRepository) ListByUserID(ctx context.Context, userID int) ([]*domain.TransactionTemplate, error) {
@@ -39,10 +53,9 @@ func (r *transactionTemplateRepository) ListByUserID(ctx context.Context, userID
 	return result, nil
 }
 
-// Create is a race-safe capped conditional INSERT (SECURITY T-27-02): the
-// COUNT subquery and the INSERT evaluate as a single atomic statement, so two
-// concurrent creates at count=2 cannot both land a 4th row. RowsAffected == 0
-// means the cap was already reached at insert time -> ErrTemplateLimitReached.
+// Create assumes LockUser has already been acquired in the current transaction.
+// The conditional INSERT retains an explicit cap failure at the write boundary;
+// the advisory lock serializes the surrounding list/check/insert flow.
 func (r *transactionTemplateRepository) Create(ctx context.Context, t *domain.TransactionTemplate) (*domain.TransactionTemplate, error) {
 	ent := entity.TransactionTemplateFromDomain(t)
 	payloadJSON, err := ent.Payload.Value()
@@ -58,6 +71,9 @@ func (r *transactionTemplateRepository) Create(ctx context.Context, t *domain.Tr
 		RETURNING id, user_id, name, payload, created_at, updated_at
 	`, ent.UserID, ent.Name, payloadJSON, ent.UserID).Scan(&created)
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return nil, ErrTemplateDuplicateName
+		}
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
@@ -91,6 +107,9 @@ func (r *transactionTemplateRepository) Update(ctx context.Context, userID int, 
 		Where("id = ? AND user_id = ?", t.ID, userID).
 		Updates(map[string]interface{}{"name": ent.Name, "payload": ent.Payload})
 	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
+			return ErrTemplateDuplicateName
+		}
 		return result.Error
 	}
 	if result.RowsAffected == 0 {

@@ -682,7 +682,7 @@ definitions:
         type: integer
       split_settings:
         items:
-          $ref: '#/definitions/domain.SplitSettings'
+          $ref: '#/definitions/domain.TransactionTemplateSplitSetting'
         type: array
       tag_ids:
         items:
@@ -690,6 +690,15 @@ definitions:
         type: array
       type:
         $ref: '#/definitions/domain.TransactionType'
+    type: object
+  domain.TransactionTemplateSplitSetting:
+    properties:
+      amount:
+        type: integer
+      connection_id:
+        type: integer
+      percentage:
+        type: integer
     type: object
   domain.TransactionTemplateUpdateRequest:
     properties:
@@ -1624,7 +1633,6 @@ paths:
           description: OK
           schema:
             additionalProperties:
-              format: int64
               type: integer
             type: object
         "401":

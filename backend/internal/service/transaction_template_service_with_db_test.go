@@ -74,14 +74,13 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapSequential() {
 }
 
 // TestCreate_CapRace_SAFE01 seeds a user with exactly 2 templates, then fires
-// two concurrent Create calls (distinct names) via sync.WaitGroup. Exactly
+// two concurrent Create calls (distinct names) behind a start barrier. Exactly
 // one must succeed and one must fail with TEMPLATE.LIMIT_REACHED; the final
 // List length must be exactly 3, never 4.
 //
-// NOTE: each goroutine begins its own DBTransaction. The cap is guaranteed by
-// the repository's single COUNT-gated conditional INSERT (Plan 01), so even
-// under READ COMMITTED both cannot land a 4th row. If this test is flaky, it
-// is a real bug in the cap SQL, not the test — do NOT add retries to mask it.
+// NOTE: each goroutine begins its own DBTransaction. The service acquires a
+// transaction-scoped per-user advisory lock before checking the cap, so two
+// READ COMMITTED transactions cannot both land a 4th row.
 func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapRace_SAFE01() {
 	ctx := context.Background()
 	user, err := s.createTestUser(ctx)
@@ -94,14 +93,17 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CapRace_SAFE01() {
 	}
 
 	var wg sync.WaitGroup
+	start := make(chan struct{})
 	results := make([]error, 2)
 	wg.Add(2)
 	for i := range 2 {
 		go func(i int) {
 			defer wg.Done()
+			<-start
 			_, results[i] = s.Services.TransactionTemplate.Create(context.Background(), user.ID, fmt.Sprintf("race-%d", i), validTemplatePayload())
 		}(i)
 	}
+	close(start)
 	wg.Wait()
 
 	successCount := 0
@@ -196,6 +198,46 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_DuplicateName() {
 	s.Contains(svcErr.Tags, string(pkgErrors.ErrorTagTemplateDuplicateName))
 }
 
+func (s *TransactionTemplateServiceWithDBSuite) TestCreate_CaseInsensitiveDuplicateRace() {
+	ctx := context.Background()
+	user, err := s.createTestUser(ctx)
+	s.Require().NoError(err)
+
+	names := []string{"Groceries", "groceries"}
+	results := make([]error, len(names))
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(len(names))
+	for i, name := range names {
+		go func(i int, name string) {
+			defer wg.Done()
+			<-start
+			_, results[i] = s.Services.TransactionTemplate.Create(context.Background(), user.ID, name, validTemplatePayload())
+		}(i, name)
+	}
+	close(start)
+	wg.Wait()
+
+	successes := 0
+	duplicates := 0
+	for _, result := range results {
+		if result == nil {
+			successes++
+			continue
+		}
+		svcErr, ok := pkgErrors.AsServiceError(result)
+		s.Require().True(ok, "expected a *ServiceError, got %T: %v", result, result)
+		s.Contains(svcErr.Tags, string(pkgErrors.ErrorTagTemplateDuplicateName))
+		duplicates++
+	}
+	s.Equal(1, successes)
+	s.Equal(1, duplicates)
+
+	templates, err := s.Services.TransactionTemplate.List(ctx, user.ID)
+	s.Require().NoError(err)
+	s.Len(templates, 1, "case-insensitive names must remain unique under concurrent writes")
+}
+
 // ---------------------------------------------------------------------------
 // D-03: field + split-row validation
 // ---------------------------------------------------------------------------
@@ -227,7 +269,7 @@ func (s *TransactionTemplateServiceWithDBSuite) TestCreate_Validation() {
 		payload := validTemplatePayload()
 		pct := 50
 		amt := int64(1000)
-		payload.SplitSettings = []domain.SplitSettings{
+		payload.SplitSettings = []domain.TransactionTemplateSplitSetting{
 			{ConnectionID: 1, Percentage: &pct, Amount: &amt},
 		}
 		_, err := s.Services.TransactionTemplate.Create(ctx, user.ID, "validation-split-xor", payload)

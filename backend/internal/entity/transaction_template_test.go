@@ -26,7 +26,7 @@ func TestTransactionTemplateConverterRoundTrip(t *testing.T) {
 			CategoryID:  ptr(3),
 			Description: "weekly groceries",
 			TagIDs:      []int{1, 2},
-			SplitSettings: []domain.SplitSettings{
+			SplitSettings: []domain.TransactionTemplateSplitSetting{
 				// row 0: percentage mode
 				{ConnectionID: 1, Percentage: ptr(50)},
 				// row 1: fixed-amount mode (cents)
@@ -64,7 +64,7 @@ func TestTransactionTemplateJSONBRoundTrip(t *testing.T) {
 		CategoryID:  ptr(2),
 		Description: "coffee",
 		TagIDs:      []int{3, 4},
-		SplitSettings: []domain.SplitSettings{
+		SplitSettings: []domain.TransactionTemplateSplitSetting{
 			// percentage mode
 			{ConnectionID: 1, Percentage: ptr(40)},
 			// fixed-amount mode
