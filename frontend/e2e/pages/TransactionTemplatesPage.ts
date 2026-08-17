@@ -1,12 +1,13 @@
 import { type Page, type Locator, expect } from "@playwright/test";
 import { TransactionsTestIds, type TransactionType } from "@/testIds";
-import { SegmentedField, SelectField, TagsField, TextField } from "../helpers/formFields";
+import { CurrencyField, NumberField, SegmentedField, SelectField, TagsField, TextField } from "../helpers/formFields";
 
 export interface TemplateFormFillOptions {
   name?: string;
   type?: TransactionType;
   accountId?: number;
   categoryId?: number;
+  destinationAccountId?: number;
   description?: string;
   tags?: string[];
 }
@@ -76,6 +77,11 @@ export class TransactionTemplatesPage {
         TransactionsTestIds.OptionCategory(opts.categoryId),
       );
     }
+    if (opts.destinationAccountId !== undefined) {
+      await new SelectField(this.formDrawer, TransactionsTestIds.SelectDestinationAccount).pick(
+        TransactionsTestIds.OptionDestinationAccount(opts.destinationAccountId),
+      );
+    }
     if (opts.description !== undefined) {
       await new TextField(this.formDrawer, TransactionsTestIds.InputDescription).fill(opts.description);
     }
@@ -89,6 +95,29 @@ export class TransactionTemplatesPage {
     await this.formDrawer.getByTestId(TransactionsTestIds.TemplateBtnSave).click();
     await expect(this.formDrawer.getByTestId(TransactionsTestIds.TemplateFormError)).not.toBeVisible();
     await expect(this.formDrawer).not.toBeVisible({ timeout: 8000 });
+  }
+
+  /** Add the only available connected person to the template and set its split mode/value. */
+  async addTemplateSplit({
+    mode,
+    percentage,
+    amount,
+  }: {
+    mode: "percentage" | "amount";
+    percentage?: number;
+    amount?: number;
+  }) {
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnAddSplitRow).click();
+    await new SegmentedField(this.formDrawer, TransactionsTestIds.SegmentedSplitMode).pick(
+      TransactionsTestIds.SegmentSplitMode(mode),
+    );
+
+    if (percentage !== undefined) {
+      await new NumberField(this.formDrawer, TransactionsTestIds.InputSplitPercentage).fill(percentage);
+    }
+    if (amount !== undefined) {
+      await new CurrencyField(this.formDrawer, TransactionsTestIds.InputSplitAmount).clearAndFillCents(amount);
+    }
   }
 
   /** Delete a template row (inline confirm) and wait for the row to disappear. */
