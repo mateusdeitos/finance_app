@@ -93,6 +93,7 @@ func main() {
 		PushSubscription:      repository.NewPushSubscriptionRepository(db),
 		Notification:          repository.NewNotificationRepository(db),
 		Impersonation:         repository.NewImpersonationRepository(db),
+		MCPAuthorization:      repository.NewMCPAuthorizationRepository(db),
 	}
 
 	// Initialize services
@@ -114,6 +115,7 @@ func main() {
 	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
 	services.Notification = service.NewNotificationService(repos, cfg)
 	services.Impersonation = service.NewImpersonationService(repos, cfg)
+	services.MCPAuthorization = service.NewMCPAuthorizationService(repos, cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -155,7 +157,7 @@ func main() {
 
 	// MCP access tokens use an independent secret and are never valid for /api.
 	if cfg.MCP.JWTSecret != "" {
-		mcpServer, err := mcpserver.New(cfg, db, services)
+		mcpServer, err := mcpserver.New(cfg, services)
 		if err != nil {
 			log.Fatalf("Failed to initialize MCP server: %v", err)
 		}

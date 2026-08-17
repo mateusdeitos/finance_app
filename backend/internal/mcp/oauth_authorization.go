@@ -2,16 +2,12 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/finance_app/backend/internal/domain"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 )
 
@@ -68,13 +64,11 @@ func (s *Server) client(ctx context.Context, id string) (*clientMetadata, error)
 		return fetchClientMetadata(ctx, id)
 	}
 
-	var client registeredClient
-	if err := s.db.First(&client, "id = ?", id).Error; err != nil {
+	client, err := s.services.MCPAuthorization.GetClient(ctx, id)
+	if err != nil {
 		return nil, errors.New("unknown client")
 	}
-	var redirects []string
-	_ = json.Unmarshal([]byte(client.RedirectURIs), &redirects)
-	return &clientMetadata{ID: client.ID, Name: client.Name, RedirectURIs: redirects}, nil
+	return &clientMetadata{ID: client.ID, Name: client.Name, RedirectURIs: client.RedirectURIs}, nil
 }
 
 func (s *Server) appUser(ctx context.Context, r *http.Request) (*domain.User, error) {
@@ -89,36 +83,10 @@ func (s *Server) appUser(ctx context.Context, r *http.Request) (*domain.User, er
 	return user, nil
 }
 
-func (s *Server) issueAccessToken(userID int, clientID string, scopes []string) (string, error) {
-	now := time.Now()
-	claims := jwt.MapClaims{
-		"sub": strconv.Itoa(userID), "client_id": clientID, "scope": strings.Join(scopes, " "),
-		"iss": s.issuer, "aud": s.resource, "iat": now.Unix(),
-		"exp": now.Add(s.cfg.MCP.AccessTokenTTL()).Unix(), "jti": uuid.NewString(),
-	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.MCP.JWTSecret))
-}
-
-func (s *Server) verifyAccessToken(_ context.Context, raw string, _ *http.Request) (*mcpauth.TokenInfo, error) {
-	token, err := jwt.Parse(raw, func(token *jwt.Token) (any, error) {
-		if token.Method != jwt.SigningMethodHS256 {
-			return nil, errors.New("unexpected signing method")
-		}
-		return []byte(s.cfg.MCP.JWTSecret), nil
-	}, jwt.WithAudience(s.resource), jwt.WithIssuer(s.issuer))
-	if err != nil || !token.Valid {
+func (s *Server) verifyAccessToken(ctx context.Context, raw string, _ *http.Request) (*mcpauth.TokenInfo, error) {
+	info, err := s.services.MCPAuthorization.ValidateAccessToken(ctx, raw)
+	if err != nil {
 		return nil, mcpauth.ErrInvalidToken
 	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, mcpauth.ErrInvalidToken
-	}
-	subject, _ := claims["sub"].(string)
-	expiresAt, _ := claims.GetExpirationTime()
-	if subject == "" || expiresAt == nil {
-		return nil, mcpauth.ErrInvalidToken
-	}
-	scope, _ := claims["scope"].(string)
-	return &mcpauth.TokenInfo{UserID: subject, Scopes: strings.Fields(scope), Expiration: expiresAt.Time}, nil
+	return &mcpauth.TokenInfo{UserID: strconv.Itoa(info.UserID), Scopes: info.Scopes, Expiration: info.ExpiresAt}, nil
 }

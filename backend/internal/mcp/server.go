@@ -12,7 +12,6 @@ import (
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/modelcontextprotocol/go-sdk/oauthex"
-	"gorm.io/gorm"
 )
 
 const (
@@ -21,19 +20,20 @@ const (
 )
 
 type Server struct {
-	cfg      *config.Config
-	db       *gorm.DB
 	services *service.Services
 	resource string
 	issuer   string
 }
 
-func New(cfg *config.Config, db *gorm.DB, services *service.Services) (*Server, error) {
+func New(cfg *config.Config, services *service.Services) (*Server, error) {
 	if cfg.MCP.JWTSecret == "" {
 		return nil, errors.New("MCP_JWT_SECRET is required when MCP is enabled")
 	}
+	if services == nil || services.MCPAuthorization == nil {
+		return nil, errors.New("MCP authorization service is required when MCP is enabled")
+	}
 	base := strings.TrimRight(cfg.App.URL, "/")
-	return &Server{cfg: cfg, db: db, services: services, resource: base + "/mcp", issuer: base}, nil
+	return &Server{services: services, resource: base + "/mcp", issuer: base}, nil
 }
 
 // Handler returns a standard net/http mux suitable for Echo.WrapHandler.

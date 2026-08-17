@@ -147,8 +147,6 @@ func pkceChallenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
-func normalizeScopes(value string) string { return strings.Join(strings.Fields(value), " ") }
-
 func onlyKnownScopes(scopes []string) bool {
 	for _, scope := range scopes {
 		if scope != readScope && scope != writeScope {

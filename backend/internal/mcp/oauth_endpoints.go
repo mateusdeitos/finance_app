@@ -1,15 +1,12 @@
 package mcp
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
-	"github.com/google/uuid"
+	"github.com/finance_app/backend/internal/service"
 )
 
 // authorizationServerMetadata advertises the OAuth endpoints needed by MCP
@@ -41,26 +38,14 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 		GrantTypes              []string `json:"grant_types"`
 		TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
 	}
-	if err := decodeJSON(r, &req); err != nil || len(req.RedirectURIs) == 0 || !validRedirectURIs(req.RedirectURIs) || (req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none") {
+	err := decodeJSON(r, &req)
+	if err != nil || len(req.RedirectURIs) == 0 || !validRedirectURIs(req.RedirectURIs) || (req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none") {
 		oauthError(w, "invalid_client_metadata", "public client metadata is invalid", http.StatusBadRequest)
 		return
 	}
 
-	redirectURIs, err := json.Marshal(req.RedirectURIs)
+	client, err := s.services.MCPAuthorization.RegisterClient(r.Context(), strings.TrimSpace(req.ClientName), req.RedirectURIs)
 	if err != nil {
-		oauthError(w, "server_error", "could not register client", http.StatusInternalServerError)
-		return
-	}
-
-	client := registeredClient{
-		ID:           "mcp_" + uuid.NewString(),
-		Name:         strings.TrimSpace(req.ClientName),
-		RedirectURIs: string(redirectURIs),
-	}
-	if client.Name == "" {
-		client.Name = "MCP client"
-	}
-	if err := s.db.Create(&client).Error; err != nil {
 		oauthError(w, "server_error", "could not register client", http.StatusInternalServerError)
 		return
 	}
@@ -84,7 +69,8 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, "invalid_request", err.Error(), http.StatusBadRequest)
 		return
 	}
-	if _, err := s.appUser(r.Context(), r); err != nil {
+	_, err = s.appUser(r.Context(), r)
+	if err != nil {
 		// The existing Google login owns the session. The auth callback recognizes
 		// this backend-only redirect and returns here after setting auth_token.
 		http.Redirect(w, r, "/auth/google?redirect="+url.QueryEscape(r.URL.RequestURI()), http.StatusFound)
@@ -100,7 +86,8 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	if err := r.ParseForm(); err != nil {
+	err := r.ParseForm()
+	if err != nil {
 		oauthError(w, "invalid_request", "invalid form", http.StatusBadRequest)
 		return
 	}
@@ -108,7 +95,8 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 		ClientID: r.Form.Get("client_id"), RedirectURI: r.Form.Get("redirect_uri"), State: r.Form.Get("state"),
 		CodeChallenge: r.Form.Get("code_challenge"), Scope: r.Form.Get("scope"), Resource: r.Form.Get("resource"),
 	}
-	if _, err := s.validateAuthorizationRequest(r.Context(), req); err != nil {
+	_, err = s.validateAuthorizationRequest(r.Context(), req)
+	if err != nil {
 		oauthError(w, "invalid_request", err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -123,18 +111,8 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code, err := randomURLToken(32)
+	code, err := s.services.MCPAuthorization.CreateAuthorizationCode(r.Context(), user.ID, req.ClientID, req.RedirectURI, strings.Fields(req.Scope), req.CodeChallenge)
 	if err != nil {
-		oauthError(w, "server_error", "could not create code", http.StatusInternalServerError)
-		return
-	}
-	codeHash := sha256.Sum256([]byte(code))
-	row := authorizationCode{
-		CodeHash: hex.EncodeToString(codeHash[:]), ClientID: req.ClientID, RedirectURI: req.RedirectURI,
-		UserID: user.ID, Scopes: normalizeScopes(req.Scope), CodeChallenge: req.CodeChallenge,
-		ExpiresAt: time.Now().Add(s.cfg.MCP.AuthorizationCodeTTL()),
-	}
-	if err := s.db.Create(&row).Error; err != nil {
 		oauthError(w, "server_error", "could not store code", http.StatusInternalServerError)
 		return
 	}
@@ -155,7 +133,8 @@ func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	if err := r.ParseForm(); err != nil {
+	err := r.ParseForm()
+	if err != nil {
 		oauthError(w, "invalid_request", "invalid form", http.StatusBadRequest)
 		return
 	}
@@ -173,29 +152,19 @@ func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	codeHash := sha256.Sum256([]byte(code))
-	var row authorizationCode
-	err := s.db.Where("code_hash = ?", hex.EncodeToString(codeHash[:])).First(&row).Error
-	if err != nil || row.UsedAt != nil || row.ExpiresAt.Before(time.Now()) || row.ClientID != clientID || row.RedirectURI != redirectURI || pkceChallenge(verifier) != row.CodeChallenge {
+	accessToken, err := s.services.MCPAuthorization.ExchangeAuthorizationCode(r.Context(), code, clientID, redirectURI, verifier)
+	if errors.Is(err, service.ErrMCPInvalidGrant) {
 		oauthError(w, "invalid_grant", "authorization code is invalid or expired", http.StatusBadRequest)
 		return
 	}
-
-	now := time.Now()
-	if result := s.db.Model(&authorizationCode{}).Where("id = ? AND used_at IS NULL", row.ID).Update("used_at", now); result.Error != nil || result.RowsAffected != 1 {
-		oauthError(w, "invalid_grant", "authorization code already used", http.StatusBadRequest)
-		return
-	}
-
-	accessToken, err := s.issueAccessToken(row.UserID, row.ClientID, strings.Fields(row.Scopes))
 	if err != nil {
 		oauthError(w, "server_error", "could not issue token", http.StatusInternalServerError)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"access_token": accessToken,
+		"access_token": accessToken.Value,
 		"token_type":   "Bearer",
-		"expires_in":   int(s.cfg.MCP.AccessTokenTTL().Seconds()),
-		"scope":        row.Scopes,
+		"expires_in":   accessToken.ExpiresIn,
+		"scope":        strings.Join(accessToken.Scopes, " "),
 	})
 }
