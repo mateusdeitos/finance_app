@@ -188,15 +188,15 @@ test.describe("Transaction Templates", () => {
 
     await txPage.openCreateForm();
     await txPage.fillAmount(12_345);
-    const dateInput = page.getByTestId(TransactionsTestIds.InputDate).locator("input");
-    const dateBeforeApply = await dateInput.inputValue();
+    const dateInput = page.getByTestId(TransactionsTestIds.InputDate);
+    const dateBeforeApply = await dateInput.textContent();
     await templatesPage.applyChip(template.id);
 
     await expect(page.getByTestId(TransactionsTestIds.InputDescription)).toHaveValue("Assinatura Netflix");
     await expect(page.getByTestId(TransactionsTestIds.SelectAccount)).toHaveValue(account.name);
     await expect(page.getByTestId(TransactionsTestIds.SelectCategory)).toHaveValue(category.name);
     await expect(page.getByTestId(TransactionsTestIds.InputAmount)).toHaveValue("0,00");
-    await expect(dateInput).toHaveValue(dateBeforeApply);
+    await expect(dateInput).toHaveText(dateBeforeApply ?? "");
     await expect(page.getByTestId(TransactionsTestIds.InputAmount)).toBeFocused();
 
     await page.close();
