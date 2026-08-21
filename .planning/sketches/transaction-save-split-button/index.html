@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview — Botão Salvar</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f4f7f9;
+        --surface: #ffffff;
+        --surface-raised: #ffffff;
+        --text: #1a1a1a;
+        --muted: #66727c;
+        --border: #dce3e8;
+        --field: #f8fafb;
+        --blue: #568fb3;
+        --blue-hover: #457b9d;
+        --blue-soft: #e9f7ff;
+        --shadow: 0 18px 48px rgba(38, 95, 127, 0.14);
+        --menu-shadow: 0 14px 36px rgba(20, 44, 59, 0.16);
+      }
+
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --page: #11171b;
+        --surface: #1a2228;
+        --surface-raised: #222c33;
+        --text: #f2f5f7;
+        --muted: #aab4bb;
+        --border: #344149;
+        --field: #202a30;
+        --blue: #6295b6;
+        --blue-hover: #77a3bf;
+        --blue-soft: #203946;
+        --shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        --menu-shadow: 0 16px 42px rgba(0, 0, 0, 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% 0%, rgba(86, 143, 179, 0.15), transparent 28rem),
+          var(--page);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        transition: background 180ms ease, color 180ms ease;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0 64px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 34px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #49caba, #568fb3);
+        box-shadow: 0 0 0 5px rgba(73, 202, 186, 0.12);
+      }
+
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 36px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 32px;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 0 0 10px;
+        font-size: clamp(30px, 5vw, 52px);
+        line-height: 1.02;
+        letter-spacing: -0.045em;
+      }
+
+      .hero p {
+        max-width: 680px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.6;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: var(--blue-soft);
+        color: var(--blue-hover);
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .badge::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #39b2a3;
+      }
+
+      .stage {
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: color-mix(in srgb, var(--surface) 86%, transparent);
+        box-shadow: var(--shadow);
+      }
+
+      .stage-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 14px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .drawer {
+        width: min(680px, 100%);
+        margin-left: auto;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        overflow: visible;
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 62px;
+        padding: 0 22px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+      }
+
+      .drawer-close {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 24px;
+      }
+
+      .form-preview {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        padding: 22px;
+      }
+
+      .fake-field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .fake-field.wide {
+        grid-column: 1 / -1;
+      }
+
+      .fake-label {
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .fake-input {
+        display: flex;
+        align-items: center;
+        min-height: 38px;
+        padding: 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--field);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .drawer-footer {
+        position: relative;
+        display: flex;
+        justify-content: flex-end;
+        padding: 16px 22px;
+        border-top: 1px solid var(--border);
+      }
+
+      .save-wrap {
+        position: relative;
+        display: inline-flex;
+      }
+
+      .split-button {
+        display: inline-flex;
+        align-items: stretch;
+        filter: drop-shadow(0 3px 7px rgba(38, 95, 127, 0.18));
+      }
+
+      .primary-save,
+      .save-trigger {
+        min-height: 36px;
+        border: 0;
+        background: var(--blue);
+        color: #fff;
+        cursor: pointer;
+        transition: background 120ms ease, transform 120ms ease;
+      }
+
+      .primary-save:hover,
+      .save-trigger:hover {
+        background: var(--blue-hover);
+      }
+
+      .primary-save:active,
+      .save-trigger:active {
+        transform: translateY(1px);
+      }
+
+      .primary-save {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 14px;
+        border-radius: 5px 0 0 5px;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .save-trigger {
+        display: inline-grid;
+        width: 38px;
+        place-items: center;
+        border-left: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 0 5px 5px 0;
+      }
+
+      .save-trigger svg {
+        transition: transform 140ms ease;
+      }
+
+      .save-trigger[aria-expanded="true"] svg {
+        transform: rotate(180deg);
+      }
+
+      .shortcut {
+        display: inline-flex;
+        gap: 3px;
+      }
+
+      kbd {
+        min-width: 22px;
+        padding: 2px 5px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.12);
+        color: inherit;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 650;
+        line-height: 1.2;
+        text-align: center;
+      }
+
+      .save-menu {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 9px);
+        z-index: 20;
+        width: 248px;
+        padding: 5px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--surface-raised);
+        box-shadow: var(--menu-shadow);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(6px) scale(0.98);
+        transform-origin: bottom right;
+        transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+      }
+
+      .save-menu[data-open="true"] {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+      }
+
+      .menu-item {
+        display: flex;
+        width: 100%;
+        min-height: 38px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .menu-item:hover,
+      .menu-item:focus-visible {
+        background: var(--blue-soft);
+        outline: none;
+      }
+
+      .menu-item span:first-child {
+        font-size: 13px;
+        font-weight: 560;
+      }
+
+      .menu-item .shortcut kbd {
+        border-color: var(--border);
+        background: var(--field);
+        color: var(--muted);
+      }
+
+      .menu-caret {
+        position: absolute;
+        right: 14px;
+        bottom: -5px;
+        width: 10px;
+        height: 10px;
+        border-right: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-raised);
+        transform: rotate(45deg);
+      }
+
+      .variants-title {
+        margin: 34px 0 14px;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      .variants {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .variant {
+        position: relative;
+        min-height: 190px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+
+      .variant.recommended {
+        border-color: color-mix(in srgb, var(--blue) 70%, var(--border));
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 25%, transparent);
+      }
+
+      .variant h3 {
+        margin: 0 0 5px;
+        font-size: 14px;
+      }
+
+      .variant p {
+        min-height: 38px;
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .variant-demo {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        min-height: 54px;
+      }
+
+      .pill {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        padding: 4px 7px;
+        border-radius: 999px;
+        background: var(--blue-soft);
+        color: var(--blue-hover);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .outline-trigger {
+        border: 1px solid var(--blue);
+        border-left: 0;
+        background: transparent;
+        color: var(--blue);
+      }
+
+      .outline-trigger:hover {
+        background: var(--blue-soft);
+        color: var(--blue-hover);
+      }
+
+      .single-save {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        min-height: 36px;
+        padding: 0 12px 0 14px;
+        border: 0;
+        border-radius: 5px;
+        background: var(--blue);
+        color: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .single-save .divider {
+        width: 1px;
+        height: 18px;
+        background: rgba(255, 255, 255, 0.28);
+      }
+
+      .toast {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        z-index: 100;
+        max-width: calc(100% - 44px);
+        padding: 12px 15px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface-raised);
+        box-shadow: var(--menu-shadow);
+        color: var(--text);
+        font-size: 13px;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(8px);
+        transition: 150ms ease;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .approval-note {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 20px, 680px);
+          padding-top: 20px;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .hero .badge {
+          justify-self: start;
+        }
+
+        .stage {
+          padding: 10px;
+        }
+
+        .form-preview {
+          grid-template-columns: 1fr;
+        }
+
+        .fake-field.wide {
+          grid-column: auto;
+        }
+
+        .variants {
+          grid-template-columns: 1fr;
+        }
+
+        .shortcut {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="topbar">
+        <div class="brand"><span class="brand-mark"></span> Dividim · UI preview</div>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema">
+          <span id="theme-icon">◐</span><span id="theme-label">Tema escuro</span>
+        </button>
+      </div>
+
+      <section class="hero">
+        <div>
+          <h1>Novo botão de salvar</h1>
+          <p>
+            O clique principal salva normalmente. A seta abre as ações secundárias sem competir
+            visualmente com a ação mais importante.
+          </p>
+        </div>
+        <div class="badge">Opção A implementada</div>
+      </section>
+
+      <section class="stage" aria-label="Preview principal">
+        <div class="stage-label">
+          <span>Drawer de nova despesa · desktop</span>
+          <span>Clique na seta</span>
+        </div>
+
+        <div class="drawer">
+          <div class="drawer-header">
+            <span>Nova Despesa</span>
+            <button class="drawer-close" type="button" aria-label="Fechar">×</button>
+          </div>
+          <div class="form-preview" aria-hidden="true">
+            <div class="fake-field wide">
+              <span class="fake-label">Descrição</span>
+              <span class="fake-input">Supermercado</span>
+            </div>
+            <div class="fake-field">
+              <span class="fake-label">Valor</span>
+              <span class="fake-input">R$ 185,40</span>
+            </div>
+            <div class="fake-field">
+              <span class="fake-label">Data</span>
+              <span class="fake-input">17/08/2026</span>
+            </div>
+            <div class="fake-field">
+              <span class="fake-label">Conta</span>
+              <span class="fake-input">Conta principal</span>
+            </div>
+            <div class="fake-field">
+              <span class="fake-label">Categoria</span>
+              <span class="fake-input">🛒 Mercado</span>
+            </div>
+          </div>
+          <div class="drawer-footer">
+            <div class="save-wrap">
+              <div class="split-button">
+                <button class="primary-save" type="button" data-action="Salvar">
+                  <span>Salvar</span>
+                  <span class="shortcut" aria-hidden="true"><kbd>⌘</kbd><kbd>↵</kbd></span>
+                </button>
+                <button
+                  class="save-trigger"
+                  type="button"
+                  aria-label="Mais opções de salvamento"
+                  aria-expanded="true"
+                  aria-controls="main-menu"
+                  data-menu-trigger="main-menu"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+              <div class="save-menu" id="main-menu" data-open="true" role="menu">
+                <button class="menu-item" type="button" role="menuitem" data-action="Salvar como modelo">
+                  <span>Salvar como modelo</span>
+                </button>
+                <button class="menu-item" type="button" role="menuitem" data-action="Salvar e criar outra">
+                  <span>Salvar e criar outra</span>
+                  <span class="shortcut" aria-hidden="true"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>↵</kbd></span>
+                </button>
+                <span class="menu-caret" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <h2 class="variants-title">Variações para comparação</h2>
+      <section class="variants" aria-label="Variações do botão">
+        <article class="variant recommended">
+          <span class="pill">Atual</span>
+          <h3>A · Botão dividido</h3>
+          <p>Mesmo peso visual entre Salvar e a seta. É a versão implementada no branch.</p>
+          <div class="variant-demo">
+            <div class="split-button">
+              <button class="primary-save" type="button" data-action="Salvar"><span>Salvar</span></button>
+              <button class="save-trigger" type="button" aria-label="Mais opções" aria-expanded="false" data-menu-trigger="menu-a">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            </div>
+            <div class="save-menu" id="menu-a" data-open="false" role="menu">
+              <button class="menu-item" type="button" data-action="Salvar como modelo"><span>Salvar como modelo</span></button>
+              <button class="menu-item" type="button" data-action="Salvar e criar outra"><span>Salvar e criar outra</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="variant">
+          <h3>B · Seta leve</h3>
+          <p>A ação secundária usa contorno para reduzir seu peso visual.</p>
+          <div class="variant-demo">
+            <div class="split-button">
+              <button class="primary-save" type="button" data-action="Salvar"><span>Salvar</span></button>
+              <button class="save-trigger outline-trigger" type="button" aria-label="Mais opções" aria-expanded="false" data-menu-trigger="menu-b">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+            </div>
+            <div class="save-menu" id="menu-b" data-open="false" role="menu">
+              <button class="menu-item" type="button" data-action="Salvar como modelo"><span>Salvar como modelo</span></button>
+              <button class="menu-item" type="button" data-action="Salvar e criar outra"><span>Salvar e criar outra</span></button>
+            </div>
+          </div>
+        </article>
+
+        <article class="variant">
+          <h3>C · Controle único</h3>
+          <p>Mais compacto, mas a separação entre ação principal e menu fica menos explícita.</p>
+          <div class="variant-demo">
+            <div class="save-wrap">
+              <button class="single-save" type="button" aria-expanded="false" data-menu-trigger="menu-c">
+                <span>Salvar</span><span class="divider"></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+              <div class="save-menu" id="menu-c" data-open="false" role="menu">
+                <button class="menu-item" type="button" data-action="Salvar"><span>Salvar</span></button>
+                <button class="menu-item" type="button" data-action="Salvar como modelo"><span>Salvar como modelo</span></button>
+                <button class="menu-item" type="button" data-action="Salvar e criar outra"><span>Salvar e criar outra</span></button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <p class="approval-note">O preview é isolado e não altera a aplicação. A opção A reproduz o código atual.</p>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      const root = document.documentElement;
+      const themeToggle = document.getElementById("theme-toggle");
+      const themeLabel = document.getElementById("theme-label");
+      const toast = document.getElementById("toast");
+      let toastTimer;
+
+      function closeMenus(exceptId) {
+        document.querySelectorAll(".save-menu").forEach((menu) => {
+          if (menu.id === exceptId) return;
+          menu.dataset.open = "false";
+          const trigger = document.querySelector(`[data-menu-trigger="${menu.id}"]`);
+          trigger?.setAttribute("aria-expanded", "false");
+        });
+      }
+
+      document.querySelectorAll("[data-menu-trigger]").forEach((trigger) => {
+        trigger.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const menuId = trigger.dataset.menuTrigger;
+          const menu = document.getElementById(menuId);
+          const willOpen = menu.dataset.open !== "true";
+          closeMenus(willOpen ? menuId : undefined);
+          menu.dataset.open = String(willOpen);
+          trigger.setAttribute("aria-expanded", String(willOpen));
+          if (willOpen) menu.querySelector(".menu-item")?.focus();
+        });
+      });
+
+      document.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          closeMenus();
+          clearTimeout(toastTimer);
+          toast.textContent = `Ação simulada: ${button.dataset.action}`;
+          toast.classList.add("show");
+          toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+        });
+      });
+
+      document.addEventListener("click", () => closeMenus());
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeMenus();
+      });
+
+      themeToggle.addEventListener("click", () => {
+        const dark = root.dataset.theme !== "dark";
+        root.dataset.theme = dark ? "dark" : "light";
+        themeLabel.textContent = dark ? "Tema claro" : "Tema escuro";
+      });
+    </script>
+  </body>
+</html>

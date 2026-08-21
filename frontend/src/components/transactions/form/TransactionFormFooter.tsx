@@ -1,4 +1,5 @@
-import { Box, Button, Group } from "@mantine/core";
+import { Box, Button, Group, Menu } from "@mantine/core";
+import { IconChevronDown } from "@tabler/icons-react";
 import { ShortcutHint, MOD_LABEL } from "@/components/ShortcutHint";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { TransactionsTestIds } from "@/testIds";
@@ -78,32 +79,53 @@ export function TransactionFormFooter({
 
   return (
     <Box style={desktopFooterStyle}>
-      <Group justify="space-between">
-        <Group gap="xs">
-          {onSaveAndCreateAnother ? (
-            <Button
-              type="button"
-              variant="subtle"
-              loading={loading}
-              onClick={onSaveAndCreateAnother}
-              rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
-              data-testid={TransactionsTestIds.BtnSaveAndCreateAnother}
-            >
-              Salvar e criar outra
-            </Button>
-          ) : (
-            <span />
+      <Group justify="flex-end">
+        <Button.Group>
+          <Button
+            type="submit"
+            loading={loading}
+            rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
+            data-testid={TransactionsTestIds.BtnSave}
+          >
+            Salvar
+          </Button>
+          {(onSaveAndCreateAnother || onSaveAsTemplate) && (
+            <Menu shadow="md" position="top-end">
+              <Menu.Target>
+                <Button
+                  type="button"
+                  px={8}
+                  disabled={loading}
+                  aria-label="Mais opções de salvamento"
+                  data-testid={TransactionsTestIds.BtnSaveActionsMenu}
+                >
+                  <IconChevronDown size={16} />
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {onSaveAsTemplate && (
+                  <Menu.Item
+                    onClick={onSaveAsTemplate}
+                    disabled={loading}
+                    data-testid={TransactionsTestIds.BtnSaveAsTemplate}
+                  >
+                    Salvar como modelo
+                  </Menu.Item>
+                )}
+                {onSaveAndCreateAnother && (
+                  <Menu.Item
+                    onClick={onSaveAndCreateAnother}
+                    disabled={loading}
+                    rightSection={<ShortcutHint keys={[MOD_LABEL, "⇧", "↵"]} />}
+                    data-testid={TransactionsTestIds.BtnSaveAndCreateAnother}
+                  >
+                    Salvar e criar outra
+                  </Menu.Item>
+                )}
+              </Menu.Dropdown>
+            </Menu>
           )}
-          {saveAsTemplateButton}
-        </Group>
-        <Button
-          type="submit"
-          loading={loading}
-          rightSection={<ShortcutHint keys={[MOD_LABEL, "↵"]} />}
-          data-testid={TransactionsTestIds.BtnSave}
-        >
-          Salvar
-        </Button>
+        </Button.Group>
       </Group>
     </Box>
   );
