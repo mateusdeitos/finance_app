@@ -13,6 +13,17 @@ body,
   padding: 0;
 }
 
+:root {
+  /* Keeps every app route at a comfortable notebook-sized width on large monitors. */
+  --app-max-width: 90rem;
+}
+
+#root {
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin-inline: auto;
+}
+
 /* ─── Touch behavior ────────────────────────────────────────────────────── */
 
 /* Remove browser tap highlight flash on all elements */
