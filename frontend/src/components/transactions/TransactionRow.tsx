@@ -61,10 +61,7 @@ function InstallmentChip({
  * remainder is ours. An even split collapses to "Dividida 50%", anything else
  * spells out both sides ("Dividida 70/30").
  */
-export function splitLabel(
-  tx: Transactions.Transaction,
-  currentUserId: number,
-): string | null {
+export function splitLabel(tx: Transactions.Transaction): string | null {
   if (tx.type === "transfer") return null;
 
   const settlements = tx.settlements_from_source ?? [];
@@ -74,12 +71,6 @@ export function splitLabel(
     if (otherPct <= 0 || otherPct >= 100) return "Dividida";
     const minePct = 100 - otherPct;
     return otherPct === 50 ? "Dividida 50%" : `Dividida ${minePct}/${otherPct}`;
-  }
-
-  // The counterpart side of someone else's split: we hold only our own share,
-  // so the ratio isn't recoverable from this row alone.
-  if ((tx.linked_transactions ?? []).some((l) => l.user_id !== currentUserId)) {
-    return "Dividida";
   }
 
   return null;
@@ -188,7 +179,7 @@ export function TransactionRow({
   const visibleTags = tags.slice(0, MAX_TAGS);
   const extraTags = tags.length - MAX_TAGS;
 
-  const split = splitLabel(tx, currentUserId);
+  const split = splitLabel(tx);
 
   const date = parseDate(tx.date);
   const dateLabel = date.toLocaleDateString("pt-BR", {
