@@ -49,8 +49,9 @@
   background: light-dark(var(--mantine-color-gray-0), #2e2e2e);
 }
 
-.selected {
-  background: light-dark(var(--mantine-color-blue-0), var(--mantine-color-dark-6));
+.selected,
+.selected:hover {
+  background: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-6));
 }
 
 .checkbox {
