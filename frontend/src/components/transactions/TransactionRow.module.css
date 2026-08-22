@@ -28,13 +28,6 @@
   border-bottom: 1px solid var(--tx-hairline);
 }
 
-/* Reviewed rows carry the same tint a normal row shows on hover, so a reviewed
-   transaction reads as "already handled" at rest. Declared before .selected and
-   the hover rules so an active selection (and hover) still win via source order. */
-.reviewed {
-  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
-}
-
 .selectable {
   cursor: pointer;
   user-select: none;
@@ -49,6 +42,9 @@
   background: light-dark(var(--mantine-color-gray-0), #2e2e2e);
 }
 
+/* Reviewed and selected rows share the same persistent tint in both themes. */
+.reviewed,
+.reviewed:hover,
 .selected,
 .selected:hover {
   background: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-6));
