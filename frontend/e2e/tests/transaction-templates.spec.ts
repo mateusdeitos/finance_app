@@ -307,6 +307,7 @@ test.describe("Transaction Templates", () => {
     await expect(templatesPage.managementDrawer).not.toBeVisible();
 
     await txPage.openCreateForm();
+    await templatesPage.openSaveActionsMenu();
     await expect(templatesPage.saveAsTemplateButton()).toBeEnabled();
     await expect(templatesPage.chip(templates[0].id)).toBeVisible();
     await expect(templatesPage.chip(templates[1].id)).toBeVisible();

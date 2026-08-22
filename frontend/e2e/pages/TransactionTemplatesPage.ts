@@ -165,9 +165,15 @@ export class TransactionTemplatesPage {
     return this.managementDrawer.getByTestId(TransactionsTestIds.TemplateBtnNew);
   }
 
-  /** Locator for the "Salvar como modelo" button in the create-transaction form footer. */
+  /** Opens the secondary actions menu attached to the create form's save button. */
+  async openSaveActionsMenu() {
+    await this.createDrawer.getByTestId(TransactionsTestIds.BtnSaveActionsMenu).click();
+  }
+
+  /** Locator for the "Salvar como modelo" item in the save actions menu. */
   saveAsTemplateButton(): Locator {
-    return this.createDrawer.getByTestId(TransactionsTestIds.BtnSaveAsTemplate);
+    // Mantine renders menu dropdowns in a portal, outside the drawer subtree.
+    return this.page.getByTestId(TransactionsTestIds.BtnSaveAsTemplate);
   }
 
   /**
@@ -175,6 +181,7 @@ export class TransactionTemplatesPage {
    * the suggested name, confirm, and assert the mini-drawer closes cleanly.
    */
   async saveCurrentFormAsTemplate(name?: string) {
+    await this.openSaveActionsMenu();
     await this.saveAsTemplateButton().click();
     await expect(this.saveAsDrawer).toBeVisible();
     if (name !== undefined) {
