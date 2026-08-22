@@ -46,6 +46,22 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.NoError(t, err)
 	category, err := services.Category.Create(ctx, user.ID, &domain.Category{Name: "Mercado"})
 	require.NoError(t, err)
+	_, err = services.Auth.TestLogin(ctx, "other-mcp-user@example.com")
+	require.NoError(t, err)
+	otherUser, err := repos.User.GetByEmail(ctx, "other-mcp-user@example.com")
+	require.NoError(t, err)
+	require.NotNil(t, otherUser)
+	otherAccount, err := services.Account.Create(ctx, otherUser.ID, &domain.Account{Name: "Conta privada"})
+	require.NoError(t, err)
+	otherCategory, err := services.Category.Create(ctx, otherUser.ID, &domain.Category{Name: "Categoria privada"})
+	require.NoError(t, err)
+	transactionDate, err := parseMCPDate("2026-08-17")
+	require.NoError(t, err)
+	otherTransactionID, err := services.Transaction.Create(ctx, otherUser.ID, &domain.TransactionCreateRequest{
+		TransactionType: domain.TransactionTypeExpense, AccountID: otherAccount.ID, CategoryID: otherCategory.ID,
+		Amount: 9900, Date: transactionDate, Description: "Transação de outro usuário",
+	})
+	require.NoError(t, err)
 
 	httpServer := httptest.NewUnstartedServer(nil)
 	cfg.App.URL = "http://" + httpServer.Listener.Addr().String()
@@ -56,80 +72,9 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	httpServer.Start()
 	t.Cleanup(httpServer.Close)
 
-	redirectURI := "http://127.0.0.1/oauth/callback"
-	clientID := registerIntegrationClient(t, httpServer.URL, redirectURI)
-	verifier := strings.Repeat("integration-verifier-", 3)
-	challenge := pkceChallenge(verifier)
-	scope := readScope + " " + writeScope
+	accessToken := authorizeIntegrationClient(t, httpServer.URL, appToken)
 
-	authorizeURL := httpServer.URL + "/oauth/authorize?" + url.Values{
-		"response_type":  {"code"},
-		"client_id":      {clientID},
-		"redirect_uri":   {redirectURI},
-		"state":          {"integration-state"},
-		"code_challenge": {challenge},
-		"scope":          {scope},
-		"resource":       {httpServer.URL + "/mcp"},
-	}.Encode()
-	authorizeReq, err := http.NewRequestWithContext(ctx, http.MethodGet, authorizeURL, nil)
-	require.NoError(t, err)
-	authorizeReq.AddCookie(&http.Cookie{Name: "auth_token", Value: appToken})
-	authorizeResp, err := http.DefaultClient.Do(authorizeReq)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, authorizeResp.StatusCode)
-	authorizeBody, err := io.ReadAll(authorizeResp.Body)
-	require.NoError(t, err)
-	require.NoError(t, authorizeResp.Body.Close())
-	require.Contains(t, string(authorizeBody), "Conectar Inspector de integração")
-
-	approveResp := postIntegrationForm(t, httpServer.URL+"/oauth/authorize/approve", url.Values{
-		"client_id":      {clientID},
-		"redirect_uri":   {redirectURI},
-		"state":          {"integration-state"},
-		"code_challenge": {challenge},
-		"scope":          {scope},
-		"resource":       {httpServer.URL + "/mcp"},
-		"approve":        {"yes"},
-	}, appToken, false)
-	require.Equal(t, http.StatusFound, approveResp.StatusCode)
-	location, err := url.Parse(approveResp.Header.Get("Location"))
-	require.NoError(t, err)
-	require.Equal(t, "integration-state", location.Query().Get("state"))
-	code := location.Query().Get("code")
-	require.NotEmpty(t, code)
-	require.NoError(t, approveResp.Body.Close())
-
-	tokenResp := postIntegrationForm(t, httpServer.URL+"/oauth/token", url.Values{
-		"grant_type":    {"authorization_code"},
-		"code":          {code},
-		"client_id":     {clientID},
-		"redirect_uri":  {redirectURI},
-		"code_verifier": {verifier},
-	}, "", true)
-	require.Equal(t, http.StatusOK, tokenResp.StatusCode)
-	var tokenBody struct {
-		AccessToken string `json:"access_token"`
-		Scope       string `json:"scope"`
-	}
-	require.NoError(t, json.NewDecoder(tokenResp.Body).Decode(&tokenBody))
-	require.NoError(t, tokenResp.Body.Close())
-	require.NotEmpty(t, tokenBody.AccessToken)
-	require.Equal(t, scope, tokenBody.Scope)
-
-	replayResp := postIntegrationForm(t, httpServer.URL+"/oauth/token", url.Values{
-		"grant_type":    {"authorization_code"},
-		"code":          {code},
-		"client_id":     {clientID},
-		"redirect_uri":  {redirectURI},
-		"code_verifier": {verifier},
-	}, "", true)
-	require.Equal(t, http.StatusBadRequest, replayResp.StatusCode)
-	var replayBody map[string]string
-	require.NoError(t, json.NewDecoder(replayResp.Body).Decode(&replayBody))
-	require.NoError(t, replayResp.Body.Close())
-	require.Equal(t, "invalid_grant", replayBody["error"])
-
-	mcpHTTPClient := &http.Client{Transport: &bearerTransport{token: tokenBody.AccessToken, base: http.DefaultTransport}}
+	mcpHTTPClient := &http.Client{Transport: &bearerTransport{token: accessToken, base: http.DefaultTransport}}
 	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "integration-test", Version: "1.0.0"}, nil)
 	session, err := client.Connect(ctx, &mcpsdk.StreamableClientTransport{
 		Endpoint: httpServer.URL + "/mcp", HTTPClient: mcpHTTPClient,
@@ -141,17 +86,46 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	tools, err := session.ListTools(ctx, nil)
 	require.NoError(t, err)
 	require.Contains(t, toolNames(tools.Tools), "finance_create_transaction")
+	require.Contains(t, toolNames(tools.Tools), "finance_update_transaction")
 	require.Contains(t, toolNames(tools.Tools), "finance_list_transactions")
 
 	created, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_create_transaction", Arguments: map[string]any{
 		"transaction_type": "expense", "account_id": account.ID, "category_id": category.ID,
 		"amount_cents": 2590, "date": "2026-08-17", "description": "Compra via MCP",
+		"tags": []map[string]any{{"name": "mercado"}},
 	}})
 	require.NoError(t, err)
 	require.False(t, created.IsError)
 	createdJSON, err := json.Marshal(created.StructuredContent)
 	require.NoError(t, err)
-	require.Contains(t, string(createdJSON), "transaction_id")
+	var createdBody struct {
+		TransactionID int `json:"transaction_id"`
+	}
+	require.NoError(t, json.Unmarshal(createdJSON, &createdBody))
+	require.Positive(t, createdBody.TransactionID)
+
+	updated, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_update_transaction", Arguments: map[string]any{
+		"transaction_id": createdBody.TransactionID, "amount_cents": 3000,
+		"description": "Compra ajustada via MCP", "propagation_settings": "current",
+		"tags": []map[string]any{{"name": "mercado"}},
+	}})
+	require.NoError(t, err)
+	require.False(t, updated.IsError)
+
+	userTags, err := services.Tag.Search(ctx, domain.TagSearchOptions{UserIDs: []int{user.ID}, Name: "mercado"})
+	require.NoError(t, err)
+	require.Len(t, userTags, 1, "create and update must reuse the tag by name")
+
+	forbidden, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_update_transaction", Arguments: map[string]any{
+		"transaction_id": otherTransactionID, "description": "Tentativa indevida",
+		"propagation_settings": "current",
+	}})
+	require.NoError(t, err)
+	require.True(t, forbidden.IsError)
+	otherTransactions, err := services.Transaction.Search(ctx, otherUser.ID, domain.Period{}, domain.TransactionFilter{IDs: []int{otherTransactionID}})
+	require.NoError(t, err)
+	require.Len(t, otherTransactions, 1)
+	require.Equal(t, "Transação de outro usuário", otherTransactions[0].Description)
 
 	listed, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_list_transactions", Arguments: map[string]any{
 		"month": 8, "year": 2026, "account_ids": []int{account.ID},
@@ -160,8 +134,8 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.False(t, listed.IsError)
 	listedJSON, err := json.Marshal(listed.StructuredContent)
 	require.NoError(t, err)
-	require.Contains(t, string(listedJSON), "Compra via MCP")
-	require.Contains(t, string(listedJSON), "2590")
+	require.Contains(t, string(listedJSON), "Compra ajustada via MCP")
+	require.Contains(t, string(listedJSON), "3000")
 }
 
 func integrationRepositories(db *gorm.DB) *repository.Repositories {
@@ -195,6 +169,77 @@ func integrationServices(repos *repository.Repositories, cfg *config.Config) *se
 	services.UserConnection = service.NewUserConnectionService(repos, services)
 	services.Transaction = service.NewTransactionService(repos, services)
 	return services
+}
+
+func authorizeIntegrationClient(t *testing.T, baseURL, appToken string) string {
+	t.Helper()
+	redirectURI := "http://127.0.0.1/oauth/callback"
+	clientID := registerIntegrationClient(t, baseURL, redirectURI)
+	verifier := strings.Repeat("integration-verifier-", 3)
+	challenge := pkceChallenge(verifier)
+	scope := readScope + " " + writeScope
+	authorizeURL := baseURL + "/oauth/authorize?" + url.Values{
+		"response_type":  {"code"},
+		"client_id":      {clientID},
+		"redirect_uri":   {redirectURI},
+		"state":          {"integration-state"},
+		"code_challenge": {challenge},
+		"scope":          {scope},
+		"resource":       {baseURL + "/mcp"},
+	}.Encode()
+	authorizeReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, authorizeURL, nil)
+	require.NoError(t, err)
+	authorizeReq.AddCookie(&http.Cookie{Name: "auth_token", Value: appToken})
+	authorizeResp, err := http.DefaultClient.Do(authorizeReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, authorizeResp.StatusCode)
+	authorizeBody, err := io.ReadAll(authorizeResp.Body)
+	require.NoError(t, err)
+	require.NoError(t, authorizeResp.Body.Close())
+	require.Contains(t, string(authorizeBody), "Conectar Inspector de integração")
+
+	approveResp := postIntegrationForm(t, baseURL+"/oauth/authorize/approve", url.Values{
+		"client_id":      {clientID},
+		"redirect_uri":   {redirectURI},
+		"state":          {"integration-state"},
+		"code_challenge": {challenge},
+		"scope":          {scope},
+		"resource":       {baseURL + "/mcp"},
+		"approve":        {"yes"},
+	}, appToken, false)
+	require.Equal(t, http.StatusFound, approveResp.StatusCode)
+	location, err := url.Parse(approveResp.Header.Get("Location"))
+	require.NoError(t, err)
+	require.Equal(t, "integration-state", location.Query().Get("state"))
+	code := location.Query().Get("code")
+	require.NotEmpty(t, code)
+	require.NoError(t, approveResp.Body.Close())
+
+	tokenValues := url.Values{
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"client_id":     {clientID},
+		"redirect_uri":  {redirectURI},
+		"code_verifier": {verifier},
+	}
+	tokenResp := postIntegrationForm(t, baseURL+"/oauth/token", tokenValues, "", true)
+	require.Equal(t, http.StatusOK, tokenResp.StatusCode)
+	var tokenBody struct {
+		AccessToken string `json:"access_token"`
+		Scope       string `json:"scope"`
+	}
+	require.NoError(t, json.NewDecoder(tokenResp.Body).Decode(&tokenBody))
+	require.NoError(t, tokenResp.Body.Close())
+	require.NotEmpty(t, tokenBody.AccessToken)
+	require.Equal(t, scope, tokenBody.Scope)
+
+	replayResp := postIntegrationForm(t, baseURL+"/oauth/token", tokenValues, "", true)
+	require.Equal(t, http.StatusBadRequest, replayResp.StatusCode)
+	var replayBody map[string]string
+	require.NoError(t, json.NewDecoder(replayResp.Body).Decode(&replayBody))
+	require.NoError(t, replayResp.Body.Close())
+	require.Equal(t, "invalid_grant", replayBody["error"])
+	return tokenBody.AccessToken
 }
 
 func registerIntegrationClient(t *testing.T, baseURL, redirectURI string) string {
