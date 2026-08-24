@@ -46,7 +46,18 @@ func (s *Server) createTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 	if err != nil {
 		return nil, nil, err
 	}
-	created, err := s.services.Transaction.Create(ctx, userID, &domain.TransactionCreateRequest{TransactionType: in.TransactionType, AccountID: in.AccountID, CategoryID: in.CategoryID, Amount: in.AmountCents, Date: date, Description: in.Description, DestinationAccountID: in.DestinationAccountID, Tags: domainTags(in.Tags), RecurrenceSettings: in.RecurrenceSettings, SplitSettings: splitSettings})
+	created, err := s.services.Transaction.Create(ctx, userID, &domain.TransactionCreateRequest{
+		TransactionType:      in.TransactionType,
+		AccountID:            in.AccountID,
+		CategoryID:           in.CategoryID,
+		Amount:               in.AmountCents,
+		Date:                 date,
+		Description:          in.Description,
+		DestinationAccountID: in.DestinationAccountID,
+		Tags:                 domainTags(in.Tags),
+		RecurrenceSettings:   in.RecurrenceSettings,
+		SplitSettings:        splitSettings,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,7 +92,17 @@ func (s *Server) updateTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 		}
 		date = &parsedDate
 	}
-	req := &domain.TransactionUpdateRequest{TransactionType: in.TransactionType, AccountID: in.AccountID, CategoryID: in.CategoryID, Amount: in.AmountCents, Date: date, Description: in.Description, DestinationAccountID: in.DestinationAccountID, PropagationSettings: in.PropagationSettings, RecurrenceSettings: in.RecurrenceSettings}
+	req := &domain.TransactionUpdateRequest{
+		TransactionType:      in.TransactionType,
+		AccountID:            in.AccountID,
+		CategoryID:           in.CategoryID,
+		Amount:               in.AmountCents,
+		Date:                 date,
+		Description:          in.Description,
+		DestinationAccountID: in.DestinationAccountID,
+		PropagationSettings:  in.PropagationSettings,
+		RecurrenceSettings:   in.RecurrenceSettings,
+	}
 	if in.Tags != nil {
 		req.Tags = domainTags(*in.Tags)
 	}
@@ -96,7 +117,10 @@ func (s *Server) updateTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 	if err != nil {
 		return nil, nil, err
 	}
-	return nil, map[string]any{"transaction_id": in.TransactionID, "updated": true}, nil
+	return nil, map[string]any{
+		"transaction_id": in.TransactionID,
+		"updated":        true,
+	}, nil
 }
 
 type deleteInput struct {
@@ -113,13 +137,18 @@ func (s *Server) deleteTransaction(ctx context.Context, _ *mcp.CallToolRequest, 
 	if err != nil {
 		return nil, nil, err
 	}
-	return nil, map[string]any{"transaction_id": in.TransactionID, "deleted": true}, nil
+	return nil, map[string]any{
+		"transaction_id": in.TransactionID,
+		"deleted":        true,
+	}, nil
 }
 
 func domainTags(inputs []transactionTagInput) []domain.Tag {
 	tags := make([]domain.Tag, len(inputs))
 	for i, input := range inputs {
-		tags[i] = domain.Tag{Name: input.Name}
+		tags[i] = domain.Tag{
+			Name: input.Name,
+		}
 	}
 	return tags
 }
@@ -129,7 +158,9 @@ func parseMCPDate(raw string) (domain.Date, error) {
 	if err != nil {
 		return domain.Date{}, fmt.Errorf("date must be in YYYY-MM-DD format: %w", err)
 	}
-	return domain.Date{Time: parsed}, nil
+	return domain.Date{
+		Time: parsed,
+	}, nil
 }
 
 func domainSplitSettings(inputs []transactionSplitInput) ([]domain.SplitSettings, error) {

@@ -34,14 +34,19 @@ type mcpAuthorizationService struct {
 func NewMCPAuthorizationService(repos *repository.Repositories, cfg *config.Config) MCPAuthorizationService {
 	base := strings.TrimRight(cfg.App.URL, "/")
 	return &mcpAuthorizationService{
-		repo: repos.MCPAuthorization, cfg: cfg, issuer: base, resource: base + "/mcp",
+		repo:     repos.MCPAuthorization,
+		cfg:      cfg,
+		issuer:   base,
+		resource: base + "/mcp",
 	}
 }
 
 func (s *mcpAuthorizationService) RegisterClient(ctx context.Context, name string, redirectURIs []string) (*domain.MCPRegisteredClient, error) {
 	client := &domain.MCPRegisteredClient{
-		ID: "mcp_" + uuid.NewString(), Name: strings.TrimSpace(name),
-		RedirectURIs: append([]string(nil), redirectURIs...), CreatedAt: time.Now(),
+		ID:           "mcp_" + uuid.NewString(),
+		Name:         strings.TrimSpace(name),
+		RedirectURIs: append([]string(nil), redirectURIs...),
+		CreatedAt:    time.Now(),
 	}
 	if client.Name == "" {
 		client.Name = "MCP client"
@@ -70,9 +75,14 @@ func (s *mcpAuthorizationService) CreateAuthorizationCode(ctx context.Context, u
 	}
 	hash := sha256.Sum256([]byte(code))
 	grant := &domain.MCPAuthorizationCode{
-		CodeHash: hex.EncodeToString(hash[:]), ClientID: clientID, RedirectURI: redirectURI,
-		UserID: userID, Scopes: append([]string(nil), scopes...), CodeChallenge: codeChallenge,
-		ExpiresAt: time.Now().Add(s.cfg.MCP.AuthorizationCodeTTL()), CreatedAt: time.Now(),
+		CodeHash:      hex.EncodeToString(hash[:]),
+		ClientID:      clientID,
+		RedirectURI:   redirectURI,
+		UserID:        userID,
+		Scopes:        append([]string(nil), scopes...),
+		CodeChallenge: codeChallenge,
+		ExpiresAt:     time.Now().Add(s.cfg.MCP.AuthorizationCodeTTL()),
+		CreatedAt:     time.Now(),
 	}
 	if err := s.repo.CreateAuthorizationCode(ctx, grant); err != nil {
 		return "", err
@@ -82,7 +92,14 @@ func (s *mcpAuthorizationService) CreateAuthorizationCode(ctx context.Context, u
 
 func (s *mcpAuthorizationService) ExchangeAuthorizationCode(ctx context.Context, code, clientID, redirectURI, codeVerifier string) (*domain.MCPAccessToken, error) {
 	hash := sha256.Sum256([]byte(code))
-	grant, err := s.repo.ConsumeAuthorizationCode(ctx, hex.EncodeToString(hash[:]), clientID, redirectURI, mcpPKCEChallenge(codeVerifier), time.Now())
+	grant, err := s.repo.ConsumeAuthorizationCode(
+		ctx,
+		hex.EncodeToString(hash[:]),
+		clientID,
+		redirectURI,
+		mcpPKCEChallenge(codeVerifier),
+		time.Now(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -93,14 +110,24 @@ func (s *mcpAuthorizationService) ExchangeAuthorizationCode(ctx context.Context,
 	now := time.Now()
 	expiresAt := now.Add(s.cfg.MCP.AccessTokenTTL())
 	claims := jwt.MapClaims{
-		"sub": strconv.Itoa(grant.UserID), "client_id": grant.ClientID, "scope": strings.Join(grant.Scopes, " "),
-		"iss": s.issuer, "aud": s.resource, "iat": now.Unix(), "exp": expiresAt.Unix(), "jti": uuid.NewString(),
+		"sub":       strconv.Itoa(grant.UserID),
+		"client_id": grant.ClientID,
+		"scope":     strings.Join(grant.Scopes, " "),
+		"iss":       s.issuer,
+		"aud":       s.resource,
+		"iat":       now.Unix(),
+		"exp":       expiresAt.Unix(),
+		"jti":       uuid.NewString(),
 	}
 	raw, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.MCP.JWTSecret))
 	if err != nil {
 		return nil, err
 	}
-	return &domain.MCPAccessToken{Value: raw, ExpiresIn: int(s.cfg.MCP.AccessTokenTTL().Seconds()), Scopes: grant.Scopes}, nil
+	return &domain.MCPAccessToken{
+		Value:     raw,
+		ExpiresIn: int(s.cfg.MCP.AccessTokenTTL().Seconds()),
+		Scopes:    grant.Scopes,
+	}, nil
 }
 
 func (s *mcpAuthorizationService) ValidateAccessToken(_ context.Context, raw string) (*domain.MCPAccessTokenInfo, error) {
@@ -127,7 +154,11 @@ func (s *mcpAuthorizationService) ValidateAccessToken(_ context.Context, raw str
 		return nil, ErrMCPInvalidToken
 	}
 	scope, _ := claims["scope"].(string)
-	return &domain.MCPAccessTokenInfo{UserID: userID, Scopes: strings.Fields(scope), ExpiresAt: expiresAt.Time}, nil
+	return &domain.MCPAccessTokenInfo{
+		UserID:    userID,
+		Scopes:    strings.Fields(scope),
+		ExpiresAt: expiresAt.Time,
+	}, nil
 }
 
 func mcpPKCEChallenge(verifier string) string {

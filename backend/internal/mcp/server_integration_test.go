@@ -30,8 +30,15 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := &config.Config{
-		JWT: config.JWTConfig{Secret: "app-test-secret", ExpirationHours: 1},
-		MCP: config.MCPConfig{JWTSecret: "mcp-test-secret", AccessTokenHours: 1, AuthorizationCodeMins: 10},
+		JWT: config.JWTConfig{
+			Secret:          "app-test-secret",
+			ExpirationHours: 1,
+		},
+		MCP: config.MCPConfig{
+			JWTSecret:             "mcp-test-secret",
+			AccessTokenHours:      1,
+			AuthorizationCodeMins: 10,
+		},
 	}
 	repos := integrationRepositories(database.Db)
 	services := integrationServices(repos, cfg)
@@ -42,24 +49,36 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, user)
 
-	account, err := services.Account.Create(ctx, user.ID, &domain.Account{Name: "Conta MCP"})
+	account, err := services.Account.Create(ctx, user.ID, &domain.Account{
+		Name: "Conta MCP",
+	})
 	require.NoError(t, err)
-	category, err := services.Category.Create(ctx, user.ID, &domain.Category{Name: "Mercado"})
+	category, err := services.Category.Create(ctx, user.ID, &domain.Category{
+		Name: "Mercado",
+	})
 	require.NoError(t, err)
 	_, err = services.Auth.TestLogin(ctx, "other-mcp-user@example.com")
 	require.NoError(t, err)
 	otherUser, err := repos.User.GetByEmail(ctx, "other-mcp-user@example.com")
 	require.NoError(t, err)
 	require.NotNil(t, otherUser)
-	otherAccount, err := services.Account.Create(ctx, otherUser.ID, &domain.Account{Name: "Conta privada"})
+	otherAccount, err := services.Account.Create(ctx, otherUser.ID, &domain.Account{
+		Name: "Conta privada",
+	})
 	require.NoError(t, err)
-	otherCategory, err := services.Category.Create(ctx, otherUser.ID, &domain.Category{Name: "Categoria privada"})
+	otherCategory, err := services.Category.Create(ctx, otherUser.ID, &domain.Category{
+		Name: "Categoria privada",
+	})
 	require.NoError(t, err)
 	transactionDate, err := parseMCPDate("2026-08-17")
 	require.NoError(t, err)
 	otherTransactionID, err := services.Transaction.Create(ctx, otherUser.ID, &domain.TransactionCreateRequest{
-		TransactionType: domain.TransactionTypeExpense, AccountID: otherAccount.ID, CategoryID: otherCategory.ID,
-		Amount: 9900, Date: transactionDate, Description: "Transação de outro usuário",
+		TransactionType: domain.TransactionTypeExpense,
+		AccountID:       otherAccount.ID,
+		CategoryID:      otherCategory.ID,
+		Amount:          9900,
+		Date:            transactionDate,
+		Description:     "Transação de outro usuário",
 	})
 	require.NoError(t, err)
 
@@ -74,11 +93,21 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 
 	accessToken := authorizeIntegrationClient(t, httpServer.URL, appToken)
 
-	mcpHTTPClient := &http.Client{Transport: &bearerTransport{token: accessToken, base: http.DefaultTransport}}
-	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "integration-test", Version: "1.0.0"}, nil)
+	mcpHTTPClient := &http.Client{
+		Transport: &bearerTransport{
+			token: accessToken,
+			base:  http.DefaultTransport,
+		},
+	}
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{
+		Name:    "integration-test",
+		Version: "1.0.0",
+	}, nil)
 	session, err := client.Connect(ctx, &mcpsdk.StreamableClientTransport{
-		Endpoint: httpServer.URL + "/mcp", HTTPClient: mcpHTTPClient,
-		MaxRetries: -1, DisableStandaloneSSE: true,
+		Endpoint:             httpServer.URL + "/mcp",
+		HTTPClient:           mcpHTTPClient,
+		MaxRetries:           -1,
+		DisableStandaloneSSE: true,
 	}, nil)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, session.Close()) })
@@ -89,11 +118,22 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.Contains(t, toolNames(tools.Tools), "finance_update_transaction")
 	require.Contains(t, toolNames(tools.Tools), "finance_list_transactions")
 
-	created, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_create_transaction", Arguments: map[string]any{
-		"transaction_type": "expense", "account_id": account.ID, "category_id": category.ID,
-		"amount_cents": 2590, "date": "2026-08-17", "description": "Compra via MCP",
-		"tags": []map[string]any{{"name": "mercado"}},
-	}})
+	created, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
+		Name: "finance_create_transaction",
+		Arguments: map[string]any{
+			"transaction_type": "expense",
+			"account_id":       account.ID,
+			"category_id":      category.ID,
+			"amount_cents":     2590,
+			"date":             "2026-08-17",
+			"description":      "Compra via MCP",
+			"tags": []map[string]any{
+				{
+					"name": "mercado",
+				},
+			},
+		},
+	})
 	require.NoError(t, err)
 	require.False(t, created.IsError)
 	createdJSON, err := json.Marshal(created.StructuredContent)
@@ -104,32 +144,55 @@ func TestMCPIntegrationOAuthAndTransactionTools(t *testing.T) {
 	require.NoError(t, json.Unmarshal(createdJSON, &createdBody))
 	require.Positive(t, createdBody.TransactionID)
 
-	updated, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_update_transaction", Arguments: map[string]any{
-		"transaction_id": createdBody.TransactionID, "amount_cents": 3000,
-		"description": "Compra ajustada via MCP", "propagation_settings": "current",
-		"tags": []map[string]any{{"name": "mercado"}},
-	}})
+	updated, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
+		Name: "finance_update_transaction",
+		Arguments: map[string]any{
+			"transaction_id":       createdBody.TransactionID,
+			"amount_cents":         3000,
+			"description":          "Compra ajustada via MCP",
+			"propagation_settings": "current",
+			"tags": []map[string]any{
+				{
+					"name": "mercado",
+				},
+			},
+		},
+	})
 	require.NoError(t, err)
 	require.False(t, updated.IsError)
 
-	userTags, err := services.Tag.Search(ctx, domain.TagSearchOptions{UserIDs: []int{user.ID}, Name: "mercado"})
+	userTags, err := services.Tag.Search(ctx, domain.TagSearchOptions{
+		UserIDs: []int{user.ID},
+		Name:    "mercado",
+	})
 	require.NoError(t, err)
 	require.Len(t, userTags, 1, "create and update must reuse the tag by name")
 
-	forbidden, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_update_transaction", Arguments: map[string]any{
-		"transaction_id": otherTransactionID, "description": "Tentativa indevida",
-		"propagation_settings": "current",
-	}})
+	forbidden, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
+		Name: "finance_update_transaction",
+		Arguments: map[string]any{
+			"transaction_id":       otherTransactionID,
+			"description":          "Tentativa indevida",
+			"propagation_settings": "current",
+		},
+	})
 	require.NoError(t, err)
 	require.True(t, forbidden.IsError)
-	otherTransactions, err := services.Transaction.Search(ctx, otherUser.ID, domain.Period{}, domain.TransactionFilter{IDs: []int{otherTransactionID}})
+	otherTransactions, err := services.Transaction.Search(ctx, otherUser.ID, domain.Period{}, domain.TransactionFilter{
+		IDs: []int{otherTransactionID},
+	})
 	require.NoError(t, err)
 	require.Len(t, otherTransactions, 1)
 	require.Equal(t, "Transação de outro usuário", otherTransactions[0].Description)
 
-	listed, err := session.CallTool(ctx, &mcpsdk.CallToolParams{Name: "finance_list_transactions", Arguments: map[string]any{
-		"month": 8, "year": 2026, "account_ids": []int{account.ID},
-	}})
+	listed, err := session.CallTool(ctx, &mcpsdk.CallToolParams{
+		Name: "finance_list_transactions",
+		Arguments: map[string]any{
+			"month":       8,
+			"year":        2026,
+			"account_ids": []int{account.ID},
+		},
+	})
 	require.NoError(t, err)
 	require.False(t, listed.IsError)
 	listedJSON, err := json.Marshal(listed.StructuredContent)
@@ -189,7 +252,10 @@ func authorizeIntegrationClient(t *testing.T, baseURL, appToken string) string {
 	}.Encode()
 	authorizeReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, authorizeURL, nil)
 	require.NoError(t, err)
-	authorizeReq.AddCookie(&http.Cookie{Name: "auth_token", Value: appToken})
+	authorizeReq.AddCookie(&http.Cookie{
+		Name:  "auth_token",
+		Value: appToken,
+	})
 	authorizeResp, err := http.DefaultClient.Do(authorizeReq)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, authorizeResp.StatusCode)
@@ -245,8 +311,10 @@ func authorizeIntegrationClient(t *testing.T, baseURL, appToken string) string {
 func registerIntegrationClient(t *testing.T, baseURL, redirectURI string) string {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{
-		"client_name": "Inspector de integração", "redirect_uris": []string{redirectURI},
-		"grant_types": []string{"authorization_code"}, "token_endpoint_auth_method": "none",
+		"client_name":                "Inspector de integração",
+		"redirect_uris":              []string{redirectURI},
+		"grant_types":                []string{"authorization_code"},
+		"token_endpoint_auth_method": "none",
 	})
 	require.NoError(t, err)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, baseURL+"/oauth/register", bytes.NewReader(body))
@@ -270,7 +338,10 @@ func postIntegrationForm(t *testing.T, endpoint string, values url.Values, appTo
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if appToken != "" {
-		req.AddCookie(&http.Cookie{Name: "auth_token", Value: appToken})
+		req.AddCookie(&http.Cookie{
+			Name:  "auth_token",
+			Value: appToken,
+		})
 	}
 	client := &http.Client{}
 	if !followRedirect {

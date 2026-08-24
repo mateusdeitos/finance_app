@@ -35,10 +35,27 @@ func (s *stubMCPAuthorizationService) ValidateAccessToken(context.Context, strin
 
 func testServer(t *testing.T) *Server {
 	t.Helper()
-	services := &service.Services{MCPAuthorization: &stubMCPAuthorizationService{tokenInfo: &domain.MCPAccessTokenInfo{
-		UserID: 42, Scopes: []string{readScope, writeScope}, ExpiresAt: time.Now().Add(time.Hour),
-	}}}
-	s, err := New(&config.Config{App: config.AppConfig{URL: "https://api.example.com"}, MCP: config.MCPConfig{JWTSecret: "test-secret", AccessTokenHours: 168, AuthorizationCodeMins: 10}}, services)
+	authorization := &stubMCPAuthorizationService{
+		tokenInfo: &domain.MCPAccessTokenInfo{
+			UserID:    42,
+			Scopes:    []string{readScope, writeScope},
+			ExpiresAt: time.Now().Add(time.Hour),
+		},
+	}
+	services := &service.Services{
+		MCPAuthorization: authorization,
+	}
+	cfg := &config.Config{
+		App: config.AppConfig{
+			URL: "https://api.example.com",
+		},
+		MCP: config.MCPConfig{
+			JWTSecret:             "test-secret",
+			AccessTokenHours:      168,
+			AuthorizationCodeMins: 10,
+		},
+	}
+	s, err := New(cfg, services)
 	require.NoError(t, err)
 	return s
 }
@@ -48,14 +65,30 @@ func TestMCPProtectedResourceMetadataAndChallenge(t *testing.T) {
 	h := s.Handler()
 
 	metadata := httptest.NewRecorder()
-	h.ServeHTTP(metadata, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/.well-known/oauth-protected-resource/mcp", nil))
+	metadataRequest := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/.well-known/oauth-protected-resource/mcp",
+		nil,
+	)
+	h.ServeHTTP(metadata, metadataRequest)
 	require.Equal(t, http.StatusOK, metadata.Code)
 	require.Contains(t, metadata.Body.String(), `"resource":"https://api.example.com/mcp"`)
 
 	unauthenticated := httptest.NewRecorder()
-	h.ServeHTTP(unauthenticated, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", nil))
+	unauthenticatedRequest := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"/mcp",
+		nil,
+	)
+	h.ServeHTTP(unauthenticated, unauthenticatedRequest)
 	require.Equal(t, http.StatusUnauthorized, unauthenticated.Code)
-	require.Contains(t, unauthenticated.Header().Get("WWW-Authenticate"), "resource_metadata=https://api.example.com/.well-known/oauth-protected-resource/mcp")
+	require.Contains(
+		t,
+		unauthenticated.Header().Get("WWW-Authenticate"),
+		"resource_metadata=https://api.example.com/.well-known/oauth-protected-resource/mcp",
+	)
 }
 
 func TestMCPAccessTokenIsBoundToResourceAndScopes(t *testing.T) {

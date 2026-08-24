@@ -18,7 +18,9 @@ type mcpAuthorizationRepository struct {
 }
 
 func NewMCPAuthorizationRepository(db *gorm.DB) MCPAuthorizationRepository {
-	return &mcpAuthorizationRepository{db: db}
+	return &mcpAuthorizationRepository{
+		db: db,
+	}
 }
 
 func (r *mcpAuthorizationRepository) CreateClient(ctx context.Context, client *domain.MCPRegisteredClient) error {
@@ -52,15 +54,24 @@ func (r *mcpAuthorizationRepository) GetClient(ctx context.Context, id string) (
 		return nil, err
 	}
 	return &domain.MCPRegisteredClient{
-		ID: ent.ID, Name: ent.Name, RedirectURIs: redirectURIs, CreatedAt: ent.CreatedAt,
+		ID:           ent.ID,
+		Name:         ent.Name,
+		RedirectURIs: redirectURIs,
+		CreatedAt:    ent.CreatedAt,
 	}, nil
 }
 
 func (r *mcpAuthorizationRepository) CreateAuthorizationCode(ctx context.Context, code *domain.MCPAuthorizationCode) error {
 	ent := &entity.MCPAuthorizationCode{
-		CodeHash: code.CodeHash, ClientID: code.ClientID, RedirectURI: code.RedirectURI,
-		UserID: code.UserID, Scopes: strings.Join(code.Scopes, " "), CodeChallenge: code.CodeChallenge,
-		ExpiresAt: code.ExpiresAt, UsedAt: code.UsedAt, CreatedAt: code.CreatedAt,
+		CodeHash:      code.CodeHash,
+		ClientID:      code.ClientID,
+		RedirectURI:   code.RedirectURI,
+		UserID:        code.UserID,
+		Scopes:        strings.Join(code.Scopes, " "),
+		CodeChallenge: code.CodeChallenge,
+		ExpiresAt:     code.ExpiresAt,
+		UsedAt:        code.UsedAt,
+		CreatedAt:     code.CreatedAt,
 	}
 	if err := GetTxFromContext(ctx, r.db).Create(ent).Error; err != nil {
 		return err
@@ -75,7 +86,14 @@ func (r *mcpAuthorizationRepository) ConsumeAuthorizationCode(ctx context.Contex
 	result := GetTxFromContext(ctx, r.db).
 		Model(&ent).
 		Clauses(clause.Returning{}).
-		Where("code_hash = ? AND client_id = ? AND redirect_uri = ? AND code_challenge = ? AND used_at IS NULL AND expires_at > ?", codeHash, clientID, redirectURI, codeChallenge, now).
+		Where(
+			"code_hash = ? AND client_id = ? AND redirect_uri = ? AND code_challenge = ? AND used_at IS NULL AND expires_at > ?",
+			codeHash,
+			clientID,
+			redirectURI,
+			codeChallenge,
+			now,
+		).
 		Update("used_at", now)
 	if result.Error != nil {
 		return nil, result.Error
@@ -84,8 +102,15 @@ func (r *mcpAuthorizationRepository) ConsumeAuthorizationCode(ctx context.Contex
 		return nil, nil
 	}
 	return &domain.MCPAuthorizationCode{
-		ID: ent.ID, CodeHash: ent.CodeHash, ClientID: ent.ClientID, RedirectURI: ent.RedirectURI,
-		UserID: ent.UserID, Scopes: strings.Fields(ent.Scopes), CodeChallenge: ent.CodeChallenge,
-		ExpiresAt: ent.ExpiresAt, UsedAt: ent.UsedAt, CreatedAt: ent.CreatedAt,
+		ID:            ent.ID,
+		CodeHash:      ent.CodeHash,
+		ClientID:      ent.ClientID,
+		RedirectURI:   ent.RedirectURI,
+		UserID:        ent.UserID,
+		Scopes:        strings.Fields(ent.Scopes),
+		CodeChallenge: ent.CodeChallenge,
+		ExpiresAt:     ent.ExpiresAt,
+		UsedAt:        ent.UsedAt,
+		CreatedAt:     ent.CreatedAt,
 	}, nil
 }

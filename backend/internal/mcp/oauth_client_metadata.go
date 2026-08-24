@@ -15,6 +15,18 @@ import (
 	"time"
 )
 
+const consentPageTemplate = `<!doctype html>` +
+	`<title>Autorizar agente</title>` +
+	`<main>` +
+	`<h1>Conectar {{.Name}}</h1>` +
+	`<p>O cliente poderá ler suas finanças{{if .Write}} e criar, editar e excluir transações{{end}}.</p>` +
+	`<form method="post" action="/oauth/authorize/approve">` +
+	`{{range .Fields}}<input type="hidden" name="{{.K}}" value="{{.V}}">{{end}}` +
+	`<button name="approve" value="yes">Autorizar</button>` +
+	`<button name="approve" value="no">Cancelar</button>` +
+	`</form>` +
+	`</main>`
+
 func (s *Server) renderConsent(ctx context.Context, w http.ResponseWriter, req authRequest) {
 	metadata, _ := s.client(ctx, req.ClientID)
 	name := req.ClientID
@@ -23,16 +35,35 @@ func (s *Server) renderConsent(ctx context.Context, w http.ResponseWriter, req a
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_ = template.Must(template.New("consent").Parse(`<!doctype html><title>Autorizar agente</title><main><h1>Conectar {{.Name}}</h1><p>O cliente poderá ler suas finanças{{if .Write}} e criar, editar e excluir transações{{end}}.</p><form method="post" action="/oauth/authorize/approve">{{range .Fields}}<input type="hidden" name="{{.K}}" value="{{.V}}">{{end}}<button name="approve" value="yes">Autorizar</button><button name="approve" value="no">Cancelar</button></form></main>`)).Execute(w, map[string]any{
+	consentTemplate := template.Must(template.New("consent").Parse(consentPageTemplate))
+	_ = consentTemplate.Execute(w, map[string]any{
 		"Name":  name,
 		"Write": contains(strings.Fields(req.Scope), writeScope),
 		"Fields": []map[string]string{
-			{"K": "client_id", "V": req.ClientID},
-			{"K": "redirect_uri", "V": req.RedirectURI},
-			{"K": "state", "V": req.State},
-			{"K": "code_challenge", "V": req.CodeChallenge},
-			{"K": "scope", "V": req.Scope},
-			{"K": "resource", "V": req.Resource},
+			{
+				"K": "client_id",
+				"V": req.ClientID,
+			},
+			{
+				"K": "redirect_uri",
+				"V": req.RedirectURI,
+			},
+			{
+				"K": "state",
+				"V": req.State,
+			},
+			{
+				"K": "code_challenge",
+				"V": req.CodeChallenge,
+			},
+			{
+				"K": "scope",
+				"V": req.Scope,
+			},
+			{
+				"K": "resource",
+				"V": req.Resource,
+			},
 		},
 	})
 }
@@ -79,11 +110,17 @@ func fetchClientMetadata(ctx context.Context, raw string) (*clientMetadata, erro
 	if json.Unmarshal(body, &document) != nil || document.ClientID != raw || !validRedirectURIs(document.RedirectURIs) {
 		return nil, errors.New("invalid client metadata")
 	}
-	return &clientMetadata{ID: document.ClientID, Name: document.ClientName, RedirectURIs: document.RedirectURIs}, nil
+	return &clientMetadata{
+		ID:           document.ClientID,
+		Name:         document.ClientName,
+		RedirectURIs: document.RedirectURIs,
+	}, nil
 }
 
 func safeMetadataClient() *http.Client {
-	dialer := &net.Dialer{Timeout: 2 * time.Second}
+	dialer := &net.Dialer{
+		Timeout: 2 * time.Second,
+	}
 	transport := &http.Transport{
 		Proxy: nil,
 		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {

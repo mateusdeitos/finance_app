@@ -32,5 +32,8 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func oauthError(w http.ResponseWriter, code, description string, status int) {
-	writeJSON(w, status, map[string]string{"error": code, "error_description": description})
+	writeJSON(w, status, map[string]string{
+		"error":             code,
+		"error_description": description,
+	})
 }

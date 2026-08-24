@@ -39,12 +39,21 @@ func (s *Server) registerClient(w http.ResponseWriter, r *http.Request) {
 		TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
 	}
 	err := decodeJSON(r, &req)
-	if err != nil || len(req.RedirectURIs) == 0 || !validRedirectURIs(req.RedirectURIs) || (req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none") {
+	invalidTokenAuthMethod := req.TokenEndpointAuthMethod != "" && req.TokenEndpointAuthMethod != "none"
+	invalidClientMetadata := err != nil ||
+		len(req.RedirectURIs) == 0 ||
+		!validRedirectURIs(req.RedirectURIs) ||
+		invalidTokenAuthMethod
+	if invalidClientMetadata {
 		oauthError(w, "invalid_client_metadata", "public client metadata is invalid", http.StatusBadRequest)
 		return
 	}
 
-	client, err := s.services.MCPAuthorization.RegisterClient(r.Context(), strings.TrimSpace(req.ClientName), req.RedirectURIs)
+	client, err := s.services.MCPAuthorization.RegisterClient(
+		r.Context(),
+		strings.TrimSpace(req.ClientName),
+		req.RedirectURIs,
+	)
 	if err != nil {
 		oauthError(w, "server_error", "could not register client", http.StatusInternalServerError)
 		return
@@ -92,8 +101,12 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req := authRequest{
-		ClientID: r.Form.Get("client_id"), RedirectURI: r.Form.Get("redirect_uri"), State: r.Form.Get("state"),
-		CodeChallenge: r.Form.Get("code_challenge"), Scope: r.Form.Get("scope"), Resource: r.Form.Get("resource"),
+		ClientID:      r.Form.Get("client_id"),
+		RedirectURI:   r.Form.Get("redirect_uri"),
+		State:         r.Form.Get("state"),
+		CodeChallenge: r.Form.Get("code_challenge"),
+		Scope:         r.Form.Get("scope"),
+		Resource:      r.Form.Get("resource"),
 	}
 	_, err = s.validateAuthorizationRequest(r.Context(), req)
 	if err != nil {
@@ -111,7 +124,14 @@ func (s *Server) approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code, err := s.services.MCPAuthorization.CreateAuthorizationCode(r.Context(), user.ID, req.ClientID, req.RedirectURI, strings.Fields(req.Scope), req.CodeChallenge)
+	code, err := s.services.MCPAuthorization.CreateAuthorizationCode(
+		r.Context(),
+		user.ID,
+		req.ClientID,
+		req.RedirectURI,
+		strings.Fields(req.Scope),
+		req.CodeChallenge,
+	)
 	if err != nil {
 		oauthError(w, "server_error", "could not store code", http.StatusInternalServerError)
 		return
@@ -152,7 +172,13 @@ func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.services.MCPAuthorization.ExchangeAuthorizationCode(r.Context(), code, clientID, redirectURI, verifier)
+	accessToken, err := s.services.MCPAuthorization.ExchangeAuthorizationCode(
+		r.Context(),
+		code,
+		clientID,
+		redirectURI,
+		verifier,
+	)
 	if errors.Is(err, service.ErrMCPInvalidGrant) {
 		oauthError(w, "invalid_grant", "authorization code is invalid or expired", http.StatusBadRequest)
 		return

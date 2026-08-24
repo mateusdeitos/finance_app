@@ -14,23 +14,37 @@ func (s *Server) getContext(ctx context.Context, _ *mcp.CallToolRequest, _ empty
 	if err != nil {
 		return nil, nil, err
 	}
-	accounts, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{UserIDs: []int{id}})
+	accounts, err := s.services.Account.Search(ctx, domain.AccountSearchOptions{
+		UserIDs: []int{id},
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	categories, err := s.services.Category.GetTree(ctx, domain.CategorySearchOptions{UserIDs: []int{id}})
+	categories, err := s.services.Category.GetTree(ctx, domain.CategorySearchOptions{
+		UserIDs: []int{id},
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	tags, err := s.services.Tag.Search(ctx, domain.TagSearchOptions{UserIDs: []int{id}})
+	tags, err := s.services.Tag.Search(ctx, domain.TagSearchOptions{
+		UserIDs: []int{id},
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{ParticipantUserID: id, ConnectionStatus: domain.UserConnectionStatusAccepted})
+	conns, err := s.services.UserConnection.Search(ctx, domain.UserConnectionSearchOptions{
+		ParticipantUserID: id,
+		ConnectionStatus:  domain.UserConnectionStatusAccepted,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	return nil, map[string]any{"accounts": accounts, "categories": categories, "tags": tags, "connections": conns}, nil
+	return nil, map[string]any{
+		"accounts":    accounts,
+		"categories":  categories,
+		"tags":        tags,
+		"connections": conns,
+	}, nil
 }
 
 type listInput struct {
@@ -57,11 +71,25 @@ func (s *Server) listTransactions(ctx context.Context, _ *mcp.CallToolRequest, i
 	if in.Limit > 100 {
 		in.Limit = 100
 	}
-	f := domain.TransactionFilter{AccountIDs: in.AccountIDs, CategoryIDs: in.CategoryIDs, TagIDs: in.TagIDs, Types: in.Types, Limit: &in.Limit, Offset: &in.Offset, WithSettlements: true, Reviewed: in.Reviewed}
-	if in.Description != "" {
-		f.Description = &domain.TextSearch{Query: in.Description}
+	f := domain.TransactionFilter{
+		AccountIDs:      in.AccountIDs,
+		CategoryIDs:     in.CategoryIDs,
+		TagIDs:          in.TagIDs,
+		Types:           in.Types,
+		Limit:           &in.Limit,
+		Offset:          &in.Offset,
+		WithSettlements: true,
+		Reviewed:        in.Reviewed,
 	}
-	txs, err := s.services.Transaction.Search(ctx, id, domain.Period{Month: in.Month, Year: in.Year}, f)
+	if in.Description != "" {
+		f.Description = &domain.TextSearch{
+			Query: in.Description,
+		}
+	}
+	txs, err := s.services.Transaction.Search(ctx, id, domain.Period{
+		Month: in.Month,
+		Year:  in.Year,
+	}, f)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,7 +105,10 @@ func (s *Server) getTransaction(ctx context.Context, _ *mcp.CallToolRequest, in 
 	if err != nil {
 		return nil, nil, err
 	}
-	txs, err := s.services.Transaction.Search(ctx, id, domain.Period{}, domain.TransactionFilter{IDs: []int{in.TransactionID}, WithSettlements: true})
+	txs, err := s.services.Transaction.Search(ctx, id, domain.Period{}, domain.TransactionFilter{
+		IDs:             []int{in.TransactionID},
+		WithSettlements: true,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,7 +134,17 @@ func (s *Server) getBalance(ctx context.Context, _ *mcp.CallToolRequest, in bala
 	if err != nil {
 		return nil, nil, err
 	}
-	result, err := s.services.Transaction.GetBalance(ctx, id, domain.Period{Month: in.Month, Year: in.Year}, domain.BalanceFilter{AccountIDs: in.AccountIDs, CategoryIDs: in.CategoryIDs, TagIDs: in.TagIDs, Accumulated: in.Accumulated, HideSettlements: in.HideSettlements, Reviewed: in.Reviewed})
+	result, err := s.services.Transaction.GetBalance(ctx, id, domain.Period{
+		Month: in.Month,
+		Year:  in.Year,
+	}, domain.BalanceFilter{
+		AccountIDs:      in.AccountIDs,
+		CategoryIDs:     in.CategoryIDs,
+		TagIDs:          in.TagIDs,
+		Accumulated:     in.Accumulated,
+		HideSettlements: in.HideSettlements,
+		Reviewed:        in.Reviewed,
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,7 +170,12 @@ func (s *Server) suggestTransactions(ctx context.Context, _ *mcp.CallToolRequest
 	if in.Limit > 50 {
 		in.Limit = 50
 	}
-	transactions, err := s.services.Transaction.Suggestions(ctx, id, domain.TransactionFilter{Description: &domain.TextSearch{Query: in.Query}, Limit: &in.Limit})
+	transactions, err := s.services.Transaction.Suggestions(ctx, id, domain.TransactionFilter{
+		Description: &domain.TextSearch{
+			Query: in.Query,
+		},
+		Limit: &in.Limit,
+	})
 	if err != nil {
 		return nil, nil, err
 	}

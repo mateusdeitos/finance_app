@@ -27,9 +27,12 @@ func (s *Server) parseAuthorizationRequest(r *http.Request) (authRequest, error)
 		return authRequest{}, errors.New("response_type must be code")
 	}
 	req := authRequest{
-		ClientID: r.URL.Query().Get("client_id"), RedirectURI: r.URL.Query().Get("redirect_uri"),
-		State: r.URL.Query().Get("state"), CodeChallenge: r.URL.Query().Get("code_challenge"),
-		Scope: r.URL.Query().Get("scope"), Resource: r.URL.Query().Get("resource"),
+		ClientID:      r.URL.Query().Get("client_id"),
+		RedirectURI:   r.URL.Query().Get("redirect_uri"),
+		State:         r.URL.Query().Get("state"),
+		CodeChallenge: r.URL.Query().Get("code_challenge"),
+		Scope:         r.URL.Query().Get("scope"),
+		Resource:      r.URL.Query().Get("resource"),
 	}
 	_, err := s.validateAuthorizationRequest(r.Context(), req)
 	return req, err
@@ -68,7 +71,11 @@ func (s *Server) client(ctx context.Context, id string) (*clientMetadata, error)
 	if err != nil {
 		return nil, errors.New("unknown client")
 	}
-	return &clientMetadata{ID: client.ID, Name: client.Name, RedirectURIs: client.RedirectURIs}, nil
+	return &clientMetadata{
+		ID:           client.ID,
+		Name:         client.Name,
+		RedirectURIs: client.RedirectURIs,
+	}, nil
 }
 
 func (s *Server) appUser(ctx context.Context, r *http.Request) (*domain.User, error) {
@@ -88,5 +95,9 @@ func (s *Server) verifyAccessToken(ctx context.Context, raw string, _ *http.Requ
 	if err != nil {
 		return nil, mcpauth.ErrInvalidToken
 	}
-	return &mcpauth.TokenInfo{UserID: strconv.Itoa(info.UserID), Scopes: info.Scopes, Expiration: info.ExpiresAt}, nil
+	return &mcpauth.TokenInfo{
+		UserID:     strconv.Itoa(info.UserID),
+		Scopes:     info.Scopes,
+		Expiration: info.ExpiresAt,
+	}, nil
 }
