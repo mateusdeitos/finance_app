@@ -532,9 +532,9 @@ func (_c *MockTransactionService_Suggestions_Call) RunAndReturn(run func(context
 	return _c
 }
 
-// Update provides a mock function with given fields: ctx, userID, id, transaction
-func (_m *MockTransactionService) Update(ctx context.Context, userID int, id int, transaction *domain.TransactionUpdateRequest) error {
-	ret := _m.Called(ctx, userID, id, transaction)
+// Update provides a mock function with given fields: ctx, transactionID, userID, transaction
+func (_m *MockTransactionService) Update(ctx context.Context, transactionID int, userID int, transaction *domain.TransactionUpdateRequest) error {
+	ret := _m.Called(ctx, transactionID, userID, transaction)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
@@ -542,7 +542,7 @@ func (_m *MockTransactionService) Update(ctx context.Context, userID int, id int
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int, int, *domain.TransactionUpdateRequest) error); ok {
-		r0 = rf(ctx, userID, id, transaction)
+		r0 = rf(ctx, transactionID, userID, transaction)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -557,14 +557,14 @@ type MockTransactionService_Update_Call struct {
 
 // Update is a helper method to define mock.On call
 //   - ctx context.Context
+//   - transactionID int
 //   - userID int
-//   - id int
 //   - transaction *domain.TransactionUpdateRequest
-func (_e *MockTransactionService_Expecter) Update(ctx interface{}, userID interface{}, id interface{}, transaction interface{}) *MockTransactionService_Update_Call {
-	return &MockTransactionService_Update_Call{Call: _e.mock.On("Update", ctx, userID, id, transaction)}
+func (_e *MockTransactionService_Expecter) Update(ctx interface{}, transactionID interface{}, userID interface{}, transaction interface{}) *MockTransactionService_Update_Call {
+	return &MockTransactionService_Update_Call{Call: _e.mock.On("Update", ctx, transactionID, userID, transaction)}
 }
 
-func (_c *MockTransactionService_Update_Call) Run(run func(ctx context.Context, userID int, id int, transaction *domain.TransactionUpdateRequest)) *MockTransactionService_Update_Call {
+func (_c *MockTransactionService_Update_Call) Run(run func(ctx context.Context, transactionID int, userID int, transaction *domain.TransactionUpdateRequest)) *MockTransactionService_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(int), args[2].(int), args[3].(*domain.TransactionUpdateRequest))
 	})

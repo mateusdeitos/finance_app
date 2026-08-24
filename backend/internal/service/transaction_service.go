@@ -31,6 +31,9 @@ func NewTransactionService(repos *repository.Repositories, services *Services) T
 }
 
 func (s *transactionService) Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error) {
+	// TransactionService is a caller-scoped API. Enforce the scope here rather
+	// than relying on every handler/adapter to remember it.
+	filter.UserID = &userID
 
 	// When fetching by specific IDs, period filtering is not required.
 	if len(filter.IDs) == 0 {

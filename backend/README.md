@@ -194,6 +194,26 @@ goose -dir migrations postgres "connection_string" down
 
 A aplicação está configurada para rodar no Google Cloud Run. Veja `docker/Dockerfile` para detalhes.
 
+## MCP remoto
+
+O backend expõe um servidor MCP Streamable HTTP em `POST /mcp`. Ele usa OAuth
+2.1 com PKCE e reutiliza o login Google apenas para identificar o usuário; o
+token do agente é separado do `auth_token` normal, possui escopos e vence em
+sete dias.
+
+Defina `MCP_JWT_SECRET` como um segredo novo, diferente de `JWT_SECRET`.
+Clientes descobrem automaticamente os metadados OAuth em
+`/.well-known/oauth-protected-resource/mcp` e
+`/.well-known/oauth-authorization-server`.
+
+```bash
+codex mcp add dividim --url https://api.example.com/mcp
+codex mcp login dividim --scopes finance:read,finance:transactions:write
+```
+
+Claude Desktop pode usar a mesma URL como conector remoto. O servidor aceita
+Dynamic Client Registration e Client ID Metadata Documents.
+
 ## Licença
 
 MIT

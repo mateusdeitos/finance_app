@@ -35,9 +35,19 @@ type ImpersonationService interface {
 	SearchUsers(ctx context.Context, query string, limit int) ([]*domain.User, error)
 }
 
+// MCPAuthorizationService owns OAuth grants and access tokens for the MCP
+// resource. HTTP handlers do not access persistence directly.
+type MCPAuthorizationService interface {
+	RegisterClient(ctx context.Context, name string, redirectURIs []string) (*domain.MCPRegisteredClient, error)
+	GetClient(ctx context.Context, id string) (*domain.MCPRegisteredClient, error)
+	CreateAuthorizationCode(ctx context.Context, userID int, clientID, redirectURI string, scopes []string, codeChallenge string) (string, error)
+	ExchangeAuthorizationCode(ctx context.Context, code, clientID, redirectURI, codeVerifier string) (*domain.MCPAccessToken, error)
+	ValidateAccessToken(ctx context.Context, raw string) (*domain.MCPAccessTokenInfo, error)
+}
+
 type TransactionService interface {
 	Create(ctx context.Context, userID int, transaction *domain.TransactionCreateRequest) (int, error)
-	Update(ctx context.Context, userID, id int, transaction *domain.TransactionUpdateRequest) error
+	Update(ctx context.Context, transactionID, userID int, transaction *domain.TransactionUpdateRequest) error
 	Search(ctx context.Context, userID int, period domain.Period, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Suggestions(ctx context.Context, userID int, filter domain.TransactionFilter) ([]*domain.Transaction, error)
 	Delete(ctx context.Context, userID int, id int, propagationSettings domain.TransactionPropagationSettings) error
@@ -159,4 +169,5 @@ type Services struct {
 	PushSubscription PushSubscriptionService
 	Notification     NotificationService
 	Impersonation    ImpersonationService
+	MCPAuthorization MCPAuthorizationService
 }

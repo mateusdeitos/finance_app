@@ -17,6 +17,7 @@ type Config struct {
 	OAuth         OAuthConfig
 	App           AppConfig
 	VAPID         VAPIDConfig
+	MCP           MCPConfig
 	Impersonation ImpersonationConfig
 }
 
@@ -72,6 +73,21 @@ type VAPIDConfig struct {
 	PublicKey  string // VAPID_PUBLIC_KEY  — base64url-encoded uncompressed EC P-256 point
 	PrivateKey string // VAPID_PRIVATE_KEY — corresponding private scalar
 	Subject    string // VAPID_SUBJECT     — "mailto:..." per RFC 8292
+}
+
+// MCPConfig is intentionally independent from JWTConfig: a token granted to a
+// desktop agent must never authenticate a normal browser/API request.
+type MCPConfig struct {
+	JWTSecret             string
+	AccessTokenHours      int
+	AuthorizationCodeMins int
+}
+
+func (m MCPConfig) AccessTokenTTL() time.Duration {
+	return time.Duration(m.AccessTokenHours) * time.Hour
+}
+func (m MCPConfig) AuthorizationCodeTTL() time.Duration {
+	return time.Duration(m.AuthorizationCodeMins) * time.Minute
 }
 
 // ImpersonationConfig controls the admin user-impersonation feature.
@@ -131,6 +147,11 @@ func Load(files ...string) (*Config, error) {
 			PublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 			PrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 			Subject:    getEnv("VAPID_SUBJECT", ""),
+		},
+		MCP: MCPConfig{
+			JWTSecret:             getEnv("MCP_JWT_SECRET", ""),
+			AccessTokenHours:      getEnvAsInt("MCP_ACCESS_TOKEN_HOURS", 168),
+			AuthorizationCodeMins: getEnvAsInt("MCP_AUTHORIZATION_CODE_MINS", 10),
 		},
 		Impersonation: ImpersonationConfig{
 			TokenTTLMinutes: getEnvAsInt("IMPERSONATION_TOKEN_TTL_MINUTES", 30),

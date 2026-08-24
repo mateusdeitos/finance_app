@@ -48,14 +48,17 @@ func (c *UserConnection) SwapIfNeeded(currentUserID int) {
 }
 
 type UserConnectionSearchOptions struct {
-	Limit            int                      `json:"limit"`
-	Offset           int                      `json:"offset"`
-	IDs              []int                    `json:"ids"`
-	FromUserIDs      []int                    `json:"from_user_ids"`
-	ToUserIDs        []int                    `json:"to_user_ids"`
-	AccountIDs       []int                    `json:"account_ids"`
-	FromAccountIDs   []int                    `json:"from_account_ids"`
-	ToAccountIDs     []int                    `json:"to_account_ids"`
-	ConnectionStatus UserConnectionStatusEnum `json:"connection_status"`
-	SortBy           *SortBy                  `json:"sort_by"`
+	Limit          int   `json:"limit"`
+	Offset         int   `json:"offset"`
+	IDs            []int `json:"ids"`
+	FromUserIDs    []int `json:"from_user_ids"`
+	ToUserIDs      []int `json:"to_user_ids"`
+	AccountIDs     []int `json:"account_ids"`
+	FromAccountIDs []int `json:"from_account_ids"`
+	ToAccountIDs   []int `json:"to_account_ids"`
+	// ParticipantUserID restricts results to connections in which this user is
+	// one of the two participants. Public request paths must always set it.
+	ParticipantUserID int                      `json:"-"`
+	ConnectionStatus  UserConnectionStatusEnum `json:"connection_status"`
+	SortBy            *SortBy                  `json:"sort_by"`
 }
