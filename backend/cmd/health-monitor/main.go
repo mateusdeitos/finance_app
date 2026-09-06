@@ -68,9 +68,10 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	log.Printf("health monitor listening on %s", server.Addr)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+	log.Print("health monitor listening")
+	serveErr := server.ListenAndServe()
+	if serveErr != nil && serveErr != http.ErrServerClosed {
+		log.Fatal(serveErr)
 	}
 }
 
@@ -79,7 +80,8 @@ func (m *monitor) run(w http.ResponseWriter, r *http.Request) {
 	healthy, detail := m.probe(r.Context())
 	latency := m.now().Sub(started)
 
-	if err := m.notifyDiscord(r.Context(), healthy, detail, latency, started); err != nil {
+	err := m.notifyDiscord(r.Context(), healthy, detail, latency, started)
+	if err != nil {
 		log.Printf("discord notification failed: %v", err)
 		http.Error(w, "discord notification failed", http.StatusBadGateway)
 		return
@@ -100,7 +102,7 @@ func (m *monitor) probe(ctx context.Context) (bool, string) {
 	if err != nil {
 		return false, err.Error()
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Sprintf("HTTP %d", resp.StatusCode)
@@ -109,7 +111,8 @@ func (m *monitor) probe(ctx context.Context) (bool, string) {
 	var body struct {
 		Status string `json:"status"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	decodeErr := json.NewDecoder(resp.Body).Decode(&body)
+	if decodeErr != nil {
 		return false, "resposta inválida do health check"
 	}
 	if body.Status != "ok" {
@@ -167,7 +170,7 @@ func (m *monitor) notifyDiscord(ctx context.Context, healthy bool, detail string
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("discord returned HTTP %d", resp.StatusCode)
 	}

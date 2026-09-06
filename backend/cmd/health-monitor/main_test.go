@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,7 @@ func TestMonitorReportsSuccessfulCheckToDiscord(t *testing.T) {
 
 	m := newTestMonitor(health.URL, discord.URL)
 	recorder := httptest.NewRecorder()
-	m.run(recorder, httptest.NewRequest(http.MethodPost, "/run", nil))
+	m.run(recorder, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/run", nil))
 
 	request := <-captured
 	require.NoError(t, request.err)
@@ -65,7 +66,7 @@ func TestMonitorReportsFailedCheckToDiscord(t *testing.T) {
 
 	m := newTestMonitor(health.URL, discord.URL)
 	recorder := httptest.NewRecorder()
-	m.run(recorder, httptest.NewRequest(http.MethodPost, "/run", nil))
+	m.run(recorder, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/run", nil))
 
 	got := <-captured
 	assert.Equal(t, http.StatusOK, recorder.Code, "the probe ran and the failure was delivered")
@@ -87,7 +88,7 @@ func TestMonitorReturnsErrorSoSchedulerRetriesWhenDiscordFails(t *testing.T) {
 
 	m := newTestMonitor(health.URL, discord.URL)
 	recorder := httptest.NewRecorder()
-	m.run(recorder, httptest.NewRequest(http.MethodPost, "/run", nil))
+	m.run(recorder, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/run", nil))
 
 	assert.Equal(t, http.StatusBadGateway, recorder.Code)
 }
