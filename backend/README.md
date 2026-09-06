@@ -194,6 +194,10 @@ goose -dir migrations postgres "connection_string" down
 
 A aplicação está configurada para rodar no Google Cloud Run. Veja `docker/Dockerfile` para detalhes.
 
+O endpoint `/health` valida a API e o banco executando `SELECT 1`; retorna `503`
+quando o PostgreSQL está indisponível. O Terraform em `infra/uptime.tf` cria um
+Cloud Monitoring Uptime Check que chama esse endpoint a cada 15 minutos.
+
 ## Licença
 
 MIT
