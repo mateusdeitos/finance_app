@@ -29,7 +29,7 @@ func TestHealthHandlerCheck(t *testing.T) {
 	h := NewHealthHandler(db)
 	e := echo.New()
 	recorder := httptest.NewRecorder()
-	c := e.NewContext(httptest.NewRequest(http.MethodGet, "/health", nil), recorder)
+	c := e.NewContext(httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/health", nil), recorder)
 
 	err := h.Check(c)
 
@@ -44,7 +44,7 @@ func TestHealthHandlerCheckWhenDatabaseIsUnavailable(t *testing.T) {
 	h := NewHealthHandler(db)
 	e := echo.New()
 	recorder := httptest.NewRecorder()
-	c := e.NewContext(httptest.NewRequest(http.MethodGet, "/health", nil), recorder)
+	c := e.NewContext(httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/health", nil), recorder)
 
 	err := h.Check(c)
 
