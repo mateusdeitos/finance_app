@@ -38,9 +38,9 @@ primeiro `apply`; não aplique contra um bucket vazio.
 
 No environment `prod`, configure:
 
-- Secret `TERRAFORM_GOOGLE_CREDENTIALS`: JSON de uma service account autorizada
-  a gerenciar os recursos declarados em `infra/`. Ela é separada da identidade
-  limitada usada apenas pelo deploy da aplicação.
+- Secret `GOOGLE_CREDENTIALS`: JSON da service account já usada pelos workflows
+  de deploy. Ela também precisa estar autorizada a gerenciar os recursos
+  declarados em `infra/` e acessar o bucket de state.
 - Secret `TERRAFORM_TFVARS`: conteúdo do `terraform.tfvars` de produção. Use
   `terraform.tfvars.example` como referência. O workflow materializa o arquivo
   com permissão restrita e o remove ao final.
