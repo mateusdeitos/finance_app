@@ -1,0 +1,98 @@
+name: Terraform Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Terraform operation"
+        type: choice
+        options:
+          - plan
+          - apply
+        default: plan
+        required: true
+
+permissions:
+  contents: read
+
+# The GCS backend also locks state, while this prevents two production runs
+# from reaching init/plan at the same time.
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
+jobs:
+  terraform:
+    name: Terraform ${{ inputs.operation }}
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: infra
+
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify workflow configuration
+        env:
+          TF_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
+          TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS }}
+        run: |
+          if [ -z "$TF_STATE_BUCKET" ]; then
+            echo "Missing GitHub variable TERRAFORM_STATE_BUCKET" >&2
+            exit 1
+          fi
+          if [ -z "$TFVARS_CONTENT" ]; then
+            echo "Missing GitHub secret TERRAFORM_TFVARS" >&2
+            exit 1
+          fi
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.TERRAFORM_GOOGLE_CREDENTIALS }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.6
+
+      - name: Initialize remote state
+        env:
+          TF_STATE_BUCKET: ${{ vars.TERRAFORM_STATE_BUCKET }}
+        run: |
+          terraform init \
+            -lockfile=readonly \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
+            -backend-config="prefix=finance-app/prod"
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Create ephemeral tfvars
+        env:
+          TFVARS_CONTENT: ${{ secrets.TERRAFORM_TFVARS }}
+        run: |
+          umask 077
+          printf '%s' "$TFVARS_CONTENT" > terraform.tfvars
+
+      - name: Plan
+        run: terraform plan -lock-timeout=5m -out=tfplan
+
+      - name: Apply
+        if: inputs.operation == 'apply'
+        run: terraform apply -auto-approve -lock-timeout=5m tfplan
+
+      - name: Remove ephemeral files
+        if: always()
+        run: rm -f terraform.tfvars tfplan
