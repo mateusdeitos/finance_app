@@ -198,6 +198,28 @@ O endpoint `/health` valida a API e o banco executando `SELECT 1`; retorna `503`
 quando o PostgreSQL está indisponível. O Terraform em `infra/uptime.tf` cria um
 Cloud Monitoring Uptime Check que chama esse endpoint a cada 15 minutos.
 
+Como o Uptime Check não notifica cada resultado saudável, `infra/health_monitor.tf`
+também oferece uma sonda única via Cloud Scheduler. Quando
+`discord_health_notifications = true`, ela chama `/health` a cada 15 minutos e
+envia ao Discord uma mensagem de sucesso ou falha com horário e latência. O
+webhook fica no secret `DISCORD_WEBHOOK_URL`, nunca no Terraform ou no código:
+
+```bash
+printf %s "$DISCORD_WEBHOOK_URL" \
+  | gcloud secrets versions add DISCORD_WEBHOOK_URL --data-file=-
+```
+
+Defina `DISCORD_WEBHOOK_URL` apenas no ambiente do terminal, sem colocá-lo no
+arquivo `.tfvars`. Crie primeiro o container do secret com `terraform apply`
+usando a flag `false`, publique a imagem desta versão, adicione o secret acima e
+então ative a flag e reaplique. Para testar imediatamente sem aguardar o próximo
+quarto de hora:
+
+```bash
+gcloud scheduler jobs run health-monitor-every-15-minutes \
+  --location=us-central1
+```
+
 ## Licença
 
 MIT

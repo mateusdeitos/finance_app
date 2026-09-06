@@ -13,6 +13,11 @@ gar_repository = "backend"              # Docker repo name in Artifact Registry
 cloud_run_service_name = "backend"      # Cloud Run service name
                                         # → used as CLOUD_RUN_SERVICE_NAME GitHub variable
 
+# Envie ao Discord um resultado (sucesso ou falha) a cada 15 minutos.
+# Primeiro faça apply com false e publique a imagem desta versão. Depois adicione
+# DISCORD_WEBHOOK_URL ao Secret Manager, altere para true e reaplique.
+discord_health_notifications = false
+
 # ── Database (non-sensitive) ──────────────────────────────────────────────────
 db_host    = "10.0.0.2"                # Cloud SQL private IP or Cloud SQL Proxy address
 db_port    = "5432"
@@ -78,6 +83,7 @@ vapid_subject    = "mailto:matdeitos@gmail.com"            # contato (mailto: ou
 #   echo -n "VALUE" | gcloud secrets versions add JWT_SECRET           --data-file=-
 #   echo -n "VALUE" | gcloud secrets versions add OAUTH_SESSION_SECRET --data-file=-
 #   echo -n "VALUE" | gcloud secrets versions add VAPID_PRIVATE_KEY    --data-file=-
+#   printf %s "$DISCORD_WEBHOOK_URL" | gcloud secrets versions add DISCORD_WEBHOOK_URL --data-file=-
 #
 # OAuth (adicionar string vazia se o provider não for usado):
 #   echo -n "VALUE" | gcloud secrets versions add GOOGLE_CLIENT_SECRET    --data-file=-

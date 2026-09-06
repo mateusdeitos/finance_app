@@ -27,6 +27,12 @@ variable "cloud_run_service_name" {
   default     = "backend"
 }
 
+variable "discord_health_notifications" {
+  description = "Create the 15-minute health monitor and send every result to Discord. Add a DISCORD_WEBHOOK_URL secret version before enabling."
+  type        = bool
+  default     = false
+}
+
 # ── Database (Cloud Run env vars) ─────────────────────────────────────────────
 
 variable "db_host" {

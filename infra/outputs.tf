@@ -30,6 +30,11 @@ output "backend_uptime_check_id" {
   value       = google_monitoring_uptime_check_config.backend.uptime_check_id
 }
 
+output "health_monitor_url" {
+  description = "Private Cloud Run health monitor URL (empty when Discord notifications are disabled)"
+  value       = var.discord_health_notifications ? google_cloud_run_v2_service.health_monitor[0].uri : ""
+}
+
 output "api_custom_domain" {
   description = "Custom domain mapped to Cloud Run"
   value       = "https://${google_cloud_run_domain_mapping.backend.name}"

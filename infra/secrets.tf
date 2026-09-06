@@ -14,6 +14,7 @@
 # Secrets opcionais (adicionar valor vazio "" se o provider não for usado):
 #   backend-google-client-secret
 #   backend-microsoft-client-secret
+#   DISCORD_WEBHOOK_URL (obrigatório apenas quando discord_health_notifications = true)
 
 resource "google_secret_manager_secret" "db_password" {
   secret_id = "DB_PASSWORD"
@@ -52,6 +53,13 @@ resource "google_secret_manager_secret" "allowed_origins" {
 
 resource "google_secret_manager_secret" "vapid_private_key" {
   secret_id = "VAPID_PRIVATE_KEY"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "discord_webhook_url" {
+  secret_id = "DISCORD_WEBHOOK_URL"
   replication {
     auto {}
   }
