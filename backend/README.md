@@ -200,7 +200,7 @@ Cloud Monitoring Uptime Check que chama esse endpoint a cada 15 minutos.
 
 Como o Uptime Check não notifica cada resultado saudável, `infra/health_monitor.tf`
 também oferece uma sonda única via Cloud Scheduler. Quando
-`discord_health_notifications = true`, ela chama `/health` a cada 15 minutos e
+`discord_health_notifications = true`, ela chama `/health` a cada hora e
 envia ao Discord uma mensagem de sucesso ou falha com horário e latência. O
 webhook fica no secret `DISCORD_WEBHOOK_URL`, nunca no Terraform ou no código:
 
@@ -212,11 +212,11 @@ printf %s "$DISCORD_WEBHOOK_URL" \
 Defina `DISCORD_WEBHOOK_URL` apenas no ambiente do terminal, sem colocá-lo no
 arquivo `.tfvars`. Crie primeiro o container do secret com `terraform apply`
 usando a flag `false`, publique a imagem desta versão, adicione o secret acima e
-então ative a flag e reaplique. Para testar imediatamente sem aguardar o próximo
-quarto de hora:
+então ative a flag e reaplique. Para testar imediatamente sem aguardar a próxima
+execução:
 
 ```bash
-gcloud scheduler jobs run health-monitor-every-15-minutes \
+gcloud scheduler jobs run health-monitor-hourly \
   --location=us-central1
 ```
 

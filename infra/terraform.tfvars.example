@@ -13,7 +13,7 @@ gar_repository = "backend"              # Docker repo name in Artifact Registry
 cloud_run_service_name = "backend"      # Cloud Run service name
                                         # → used as CLOUD_RUN_SERVICE_NAME GitHub variable
 
-# Envie ao Discord um resultado (sucesso ou falha) a cada 15 minutos.
+# Envie ao Discord um resultado (sucesso ou falha) a cada hora.
 # Primeiro faça apply com false e publique a imagem desta versão. Depois adicione
 # DISCORD_WEBHOOK_URL ao Secret Manager, altere para true e reaplique.
 discord_health_notifications = false
