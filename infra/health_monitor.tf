@@ -100,9 +100,9 @@ resource "google_cloud_run_v2_service_iam_member" "health_monitor_scheduler" {
 resource "google_cloud_scheduler_job" "health_monitor" {
   count = var.discord_health_notifications ? 1 : 0
 
-  name             = "health-monitor-every-15-minutes"
+  name             = "health-monitor-hourly"
   description      = "Checks API and Supabase, then reports every result to Discord"
-  schedule         = "*/15 * * * *"
+  schedule         = "0 * * * *"
   time_zone        = "America/Sao_Paulo"
   attempt_deadline = "60s"
 
