@@ -18,4 +18,5 @@ export const QueryKeys = {
   NotificationChargesById: 'notification-charges-by-id',
   NotificationTransactionsById: 'notification-transactions-by-id',
   AdminUsers: 'admin-users',
+  TransactionTemplates: 'transaction-templates',
 } as const

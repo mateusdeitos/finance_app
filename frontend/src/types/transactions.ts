@@ -12,6 +12,7 @@ export namespace Transactions {
     name: string;
     created_at?: string;
     updated_at?: string;
+    last_used_at?: string;
   }
 
   export interface UserConnection {
@@ -191,6 +192,33 @@ export namespace Transactions {
     amount?: number;
     /** YYYY-MM-DD or RFC3339; overrides the settlement.date created from this split. */
     date?: string;
+  }
+
+  /** Template-safe subset of a split: settlement dates belong only to a
+   * concrete transaction, never to a reusable template. */
+  export interface TemplateSplitSetting {
+    connection_id: number;
+    percentage?: number;
+    amount?: number;
+  }
+
+  export interface TemplatePayload {
+    type: TransactionType;
+    account_id?: number | null;
+    category_id?: number | null;
+    destination_account_id?: number | null;
+    description: string;
+    tag_ids?: number[];
+    split_settings?: TemplateSplitSetting[];
+  }
+
+  export interface Template {
+    id: number;
+    user_id: number;
+    name: string;
+    payload: TemplatePayload;
+    created_at?: string;
+    updated_at?: string;
   }
 
   export interface CreateTransactionPayload {

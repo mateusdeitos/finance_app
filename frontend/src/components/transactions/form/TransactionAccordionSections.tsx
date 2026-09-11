@@ -246,7 +246,7 @@ export function TransactionAccordionSections({
             </Group>
           </Accordion.Control>
           <Accordion.Panel>
-            <SplitSettingsFields />
+            <SplitSettingsFields splitSettings={splitSettings ?? []} />
           </Accordion.Panel>
         </Accordion.Item>
       )}
