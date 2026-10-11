@@ -32,6 +32,11 @@ func TestParseAmountSigned(t *testing.T) {
 		{"ptbr decimal only", "150,00", 15000, false},
 		{"ptbr thousand and decimal", "1.234,56", 123456, false},
 		{"ptbr negative", "-50,00", -5000, false},
+		{"nubank IOF refund", "- 3,61", -361, false},
+		{"nubank larger IOF refund", "- 18,46", -1846, false},
+		{"space after positive sign", "+ 0,98", 98, false},
+		{"nonbreaking space after sign", "-\u00a03,61", -361, false},
+		{"space inside digits", "3 61", 0, true},
 		{"ptbr millions", "1.234.567,89", 123456789, false},
 		// US / float with dot
 		{"float dot", "150.00", 15000, false},
