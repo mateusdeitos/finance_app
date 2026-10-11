@@ -13,6 +13,10 @@ export const TransactionsTestIds = {
   Checkbox: (txId: number | string) => `checkbox_${txId}` as const,
   CheckboxSettlement: (settlementId: number | string) => `checkbox_settlement_${settlementId}` as const,
   SettlementRow: (settlementId: number | string) => `row_settlement_${settlementId}` as const,
+  /** Installment ("Parcela 6/12") chip on a transaction row. */
+  InstallmentChip: (txId: number | string) => `chip_installment_${txId}` as const,
+  /** Split-ratio ("Dividida 50%") chip on a transaction row. */
+  SplitChip: (txId: number | string) => `chip_split_${txId}` as const,
   /** Group header for a TransactionGroup; key matches group.key (label string). */
   GroupHeader: (key: string) => `group_header_${key}` as const,
   InputSplitDate: (rowIndex: number | string) => `input_split_date_${rowIndex}` as const,

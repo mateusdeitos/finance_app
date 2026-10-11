@@ -100,7 +100,13 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p={0} visibleFrom="sm">
+      <AppShell.Navbar
+        p={0}
+        visibleFrom="sm"
+        style={{
+          insetInlineStart: "max(0px, calc((100vw - var(--app-max-width)) / 2))",
+        }}
+      >
         <DesktopSidebar />
       </AppShell.Navbar>
 

@@ -1,6 +1,10 @@
 terraform {
   required_version = ">= 1.5"
 
+  # The bucket is supplied by local init and by .github/workflows/terraform.yml.
+  # Keeping state remote is required because GitHub runners are ephemeral.
+  backend "gcs" {}
+
   required_providers {
     google = {
       source  = "hashicorp/google"

@@ -70,6 +70,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("Failed to access database connection pool: %v", err)
+	}
 
 	globalLogger := initLogger(cfg)
 
@@ -129,6 +133,7 @@ func main() {
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
 	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
+	healthHandler := handler.NewHealthHandler(sqlDB)
 
 	// Setup Echo
 	e := echo.New()
@@ -147,10 +152,8 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Health check
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
+	// Health check (includes database connectivity)
+	e.GET("/health", healthHandler.Check)
 
 	// API docs (Swagger UI + OpenAPI spec)
 	handler.RegisterDocsRoutes(e)
