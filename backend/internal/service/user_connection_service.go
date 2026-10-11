@@ -269,6 +269,16 @@ func (s *userConnectionService) UpdateSettings(ctx context.Context, userID, id i
 }
 
 func (s *userConnectionService) Delete(ctx context.Context, userID, id int) error {
+	connections, err := s.userConnectionRepo.Search(ctx, domain.UserConnectionSearchOptions{
+		IDs:               []int{id},
+		ParticipantUserID: userID,
+	})
+	if err != nil {
+		return apperrors.Internal("failed to search user connection", err)
+	}
+	if len(connections) == 0 {
+		return apperrors.NotFound("user connection")
+	}
 	return s.userConnectionRepo.Delete(ctx, id)
 }
 
