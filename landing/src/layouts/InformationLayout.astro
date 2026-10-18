@@ -1,0 +1,21 @@
+---
+import BaseLayout from './BaseLayout.astro'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+interface Props { title: string; description: string }
+const { title, description } = Astro.props
+---
+<BaseLayout title={`${title} — Dividim`} description={description}>
+  <Header />
+  <main class="mx-auto max-w-3xl px-6 pb-16 pt-28">
+    <h1 class="mb-4 text-3xl font-semibold">{title}</h1>
+    <p class="mb-10 text-sm text-neutral-500">Atualizado em 13 de outubro de 2026 · Mateus Campos Deitos</p>
+    <article class="space-y-6 leading-relaxed [&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_a]:text-brand [&_a]:underline [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-2">
+      <slot />
+    </article>
+    <nav class="mt-12 flex flex-wrap gap-5 text-sm" aria-label="Informações do Dividim">
+      <a href="/chatgpt">Plugin no ChatGPT</a><a href="/suporte">Suporte</a><a href="/privacidade">Privacidade</a><a href="/termos">Termos</a>
+    </nav>
+  </main>
+  <Footer />
+</BaseLayout>

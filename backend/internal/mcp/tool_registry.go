@@ -16,8 +16,9 @@ func (s *Server) protocolServer() *mcp.Server {
 		Version: "1.0.0",
 	}, nil)
 	read := &mcp.ToolAnnotations{
-		ReadOnlyHint:  true,
-		OpenWorldHint: boolPtr(false),
+		ReadOnlyHint:    true,
+		DestructiveHint: boolPtr(false),
+		OpenWorldHint:   boolPtr(false),
 	}
 	write := &mcp.ToolAnnotations{
 		ReadOnlyHint:    false,
@@ -63,7 +64,7 @@ func (s *Server) protocolServer() *mcp.Server {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "finance_update_transaction",
 		Description: "Atualiza uma transação. propagation_settings é obrigatório.",
-		Annotations: write,
+		Annotations: destructive,
 	}, s.updateTransaction)
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "finance_delete_transaction",
