@@ -169,18 +169,19 @@ type TransactionTemplateService interface {
 
 // Services contains all service interfaces
 type Services struct {
-	Auth             AuthService
-	User             UserService
-	Account          AccountService
-	Category         CategoryService
-	Tag              TagService
-	Transaction      TransactionService
-	UserConnection   UserConnectionService
-	Settlement       SettlementService
-	Charge           ChargeService
-	Onboarding       OnboardingService
-	PushSubscription PushSubscriptionService
-	Notification     NotificationService
-	Impersonation    ImpersonationService
-	MCPAuthorization MCPAuthorizationService
+	Auth                AuthService
+	User                UserService
+	Account             AccountService
+	Category            CategoryService
+	Tag                 TagService
+	Transaction         TransactionService
+	UserConnection      UserConnectionService
+	Settlement          SettlementService
+	Charge              ChargeService
+	Onboarding          OnboardingService
+	PushSubscription    PushSubscriptionService
+	Notification        NotificationService
+	TransactionTemplate TransactionTemplateService
+	Impersonation       ImpersonationService
+	MCPAuthorization    MCPAuthorizationService
 }
