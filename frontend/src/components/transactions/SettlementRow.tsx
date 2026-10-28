@@ -1,6 +1,5 @@
-import { Badge, Checkbox, Group, Text, Tooltip } from '@mantine/core'
+import { Checkbox, Tooltip } from '@mantine/core'
 import { AccountAvatar } from '@/components/AccountAvatar'
-import { useIsMobile } from '@/hooks/useIsMobile'
 import { Transactions } from '@/types/transactions'
 import { TransactionsTestIds } from '@/testIds'
 import { formatCents } from '@/utils/formatCents'
@@ -39,7 +38,6 @@ export function SettlementRow({
   onSelect,
   parentDate,
 }: SettlementRowProps) {
-  const isMobile = useIsMobile()
   const account = accounts.find((a) => a.id === settlement.account_id)
   const selectionMode = isSelectionMode ?? false
 
@@ -61,17 +59,16 @@ export function SettlementRow({
       }
     : onEdit
 
-  // Meta line composition: ACERTO chip is always present; the rest of the
-  // meta is a single dimmed Text so spacing stays uniform with TransactionRow.
+  // Metadata line: the ACERTO chip leads, then the back-reference to the
+  // source transaction and the date as plain dimmed text.
   const metaParts: string[] = []
   if (parentRef) metaParts.push(`de ${parentRef}`)
   if (groupBy !== 'date' && dateLabel) metaParts.push(dateLabel)
-  if (isMobile && groupBy !== 'account' && account?.name) metaParts.push(account.name)
 
   return (
     <div
       data-testid={TransactionsTestIds.SettlementRow(settlement.id)}
-      className={`${classes.row}${settlement.reviewed_at ? ` ${classes.reviewed}` : ''}${selectionMode ? ` ${classes.selectable} ${classes.selectionMode}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
+      className={`${classes.row}${settlement.reviewed_at ? ` ${classes.reviewed}` : ''}${selectionMode ? ` ${classes.selectable}` : ''}${isSelected ? ` ${classes.selected}` : ''}${!selectionMode && onEdit ? ` ${classes.editable}` : ''}`.trimEnd()}
       onClick={handleRowClick}
     >
       <div className={classes.checkbox}>
@@ -83,60 +80,38 @@ export function SettlementRow({
               onSelect(settlement.id, (e.nativeEvent as MouseEvent).shiftKey)
             }}
             onClick={(e) => e.stopPropagation()}
-            size="sm"
+            size="xs"
             data-testid={TransactionsTestIds.CheckboxSettlement(settlement.id)}
           />
         )}
       </div>
 
-      <div className={classes.leadingAvatar}>
-        {isMobile && (
-          <Tooltip label={account?.name ?? '—'} withArrow position="top">
-            <span style={{ display: 'inline-flex' }}>
-              <AccountAvatar account={account} size={26} />
-            </span>
-          </Tooltip>
-        )}
-      </div>
-
       <div className={classes.main}>
-        <Text size="sm" fw={500} lineClamp={2}>
-          {description ?? 'Acerto'}
-        </Text>
-        <Group gap={6} mt={2} wrap="wrap" align="center">
-          <Badge
-            size="xs"
-            variant="light"
-            color="violet"
-            radius="sm"
-            styles={{ root: { letterSpacing: 0.5, fontWeight: 700 } }}
+        <div className={classes.descLine}>
+          <span className={classes.description}>{description ?? 'Acerto'}</span>
+          <span
+            className={`${classes.amount} ${
+              settlement.type === 'credit' ? classes.amountPositive : classes.amountNegative
+            }`}
           >
-            ACERTO
-          </Badge>
-          {metaParts.length > 0 && (
-            <Text size="xs" c="dimmed">
-              {metaParts.join(' · ')}
-            </Text>
-          )}
-        </Group>
-      </div>
+            {formatCents(settlement.amount, settlement.type)}
+          </span>
+        </div>
 
-      <div className={classes.category} />
-
-      <div className={classes.account}>
-        {groupBy !== 'account' && (
-          <Tooltip label={account?.name ?? '—'} withArrow position="top">
-            <span style={{ display: 'inline-flex' }}>
-              <AccountAvatar account={account} size={28} />
+        <div className={classes.metaLine}>
+          <span className={`${classes.outlineChip} ${classes.statusChip}`}>Acerto</span>
+          {metaParts.length > 0 && <span className={classes.metaText}>{metaParts.join(' · ')}</span>}
+          {groupBy !== 'account' && (
+            <span className={classes.metaItem}>
+              <Tooltip label={account?.name ?? '—'} withArrow position="top">
+                <span style={{ display: 'inline-flex' }}>
+                  <AccountAvatar account={account} size={16} />
+                </span>
+              </Tooltip>
+              <span className={classes.metaText}>{account?.name ?? '—'}</span>
             </span>
-          </Tooltip>
-        )}
-      </div>
-
-      <div className={classes.amount}>
-        <Text size="sm" fw={600} c={settlement.type === 'credit' ? 'teal' : 'red'}>
-          {formatCents(settlement.amount, settlement.type)}
-        </Text>
+          )}
+        </div>
       </div>
     </div>
   )

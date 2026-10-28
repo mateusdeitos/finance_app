@@ -1,4 +1,4 @@
-import { Box, Group, Text } from "@mantine/core";
+import { Box } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { Fragment } from "react";
 import { fetchTransaction } from "@/api/transactions";
@@ -162,27 +162,22 @@ export function TransactionGroup({
 
   return (
     <Box className={classes.group}>
-      <Group
-        justify="space-between"
-        align="baseline"
+      <div
         className={classes.header}
-        wrap="nowrap"
         data-testid={TransactionsTestIds.GroupHeader(group.key)}
       >
-        <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: "0.06em" }}>
-          {group.label}
-        </Text>
+        <span className={classes.headerLabel}>{group.label}</span>
         {groupTotal !== undefined && (
-          <Text
-            size="xs"
-            fw={600}
-            c={groupTotal >= 0 ? "teal" : "red"}
-            style={{ fontVariantNumeric: "tabular-nums" }}
+          <span
+            className={`${classes.headerSubtotal} ${
+              groupTotal >= 0 ? classes.subtotalPositive : classes.subtotalNegative
+            }`}
           >
-            subtotal {formatSignedCents(groupTotal)}
-          </Text>
+            <span className={classes.headerSubtotalLabel}>subtotal</span>
+            {formatSignedCents(groupTotal)}
+          </span>
         )}
-      </Group>
+      </div>
       <div className={classes.rows}>
         {group.transactions.map((tx) => {
           const isSynthetic = tx.origin_settlement_id !== undefined;

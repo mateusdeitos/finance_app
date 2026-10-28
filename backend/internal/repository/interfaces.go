@@ -34,6 +34,17 @@ type ImpersonationRepository interface {
 	Revoke(ctx context.Context, id string, at time.Time) error
 }
 
+// MCPAuthorizationRepository persists OAuth client registrations and
+// one-time authorization codes for the MCP resource.
+type MCPAuthorizationRepository interface {
+	CreateClient(ctx context.Context, client *domain.MCPRegisteredClient) error
+	GetClient(ctx context.Context, id string) (*domain.MCPRegisteredClient, error)
+	CreateAuthorizationCode(ctx context.Context, code *domain.MCPAuthorizationCode) error
+	// ConsumeAuthorizationCode atomically marks a matching, unexpired code as
+	// used. It returns nil when the grant is invalid or has already been used.
+	ConsumeAuthorizationCode(ctx context.Context, codeHash, clientID, redirectURI, codeChallenge string, now time.Time) (*domain.MCPAuthorizationCode, error)
+}
+
 type UserSocialRepository interface {
 	Create(ctx context.Context, userSocial *domain.UserSocial) error
 	GetByProviderID(ctx context.Context, provider domain.ProviderType, providerID string) (*domain.UserSocial, error)
@@ -196,4 +207,5 @@ type Repositories struct {
 	Notification          NotificationRepository
 	TransactionTemplate   TransactionTemplateRepository
 	Impersonation         ImpersonationRepository
+	MCPAuthorization      MCPAuthorizationRepository
 }

@@ -157,10 +157,12 @@ func (h *UserConnectionHandler) Delete(c echo.Context) error {
 // @Failure      401  {object}  middleware.ErrorResponse
 // @Router       /api/user-connections [get]
 func (h *UserConnectionHandler) Search(c echo.Context) error {
+	userID := appcontext.GetUserIDFromContext(c.Request().Context())
 	var options domain.UserConnectionSearchOptions
 	if err := c.Bind(&options); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
+	options.ParticipantUserID = userID
 
 	userConnections, err := h.userConnectionService.Search(c.Request().Context(), options)
 	if err != nil {

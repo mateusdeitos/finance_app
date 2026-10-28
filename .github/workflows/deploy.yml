@@ -185,6 +185,15 @@ jobs:
           region: ${{ vars.GCP_REGION }}
           image: ${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend:${{ steps.tag.outputs.value }}
 
+      - name: Update health monitor image when enabled
+        run: |
+          if gcloud run services describe health-monitor --region "${{ vars.GCP_REGION }}" >/dev/null 2>&1; then
+            IMAGE="${{ vars.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/backend:${{ steps.tag.outputs.value }}"
+            gcloud run services update health-monitor --region "${{ vars.GCP_REGION }}" --image "$IMAGE" --quiet
+          else
+            echo "Discord health monitor is disabled; skipping"
+          fi
+
   frontend-deploy:
     name: Frontend → Cloudflare Pages
     runs-on: ubuntu-latest

@@ -54,6 +54,9 @@ func (r *userConnectionRepository) Search(ctx context.Context, options domain.Us
 	if len(options.ToUserIDs) > 0 {
 		query = query.Where("to_user_id IN ?", options.ToUserIDs)
 	}
+	if options.ParticipantUserID > 0 {
+		query = query.Where("(from_user_id = ? OR to_user_id = ?)", options.ParticipantUserID, options.ParticipantUserID)
+	}
 	if len(options.AccountIDs) > 0 {
 		query = query.Where("(from_account_id IN ? OR to_account_id IN ?)", options.AccountIDs, options.AccountIDs)
 	} else {

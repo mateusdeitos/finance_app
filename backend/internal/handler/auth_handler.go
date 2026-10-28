@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/finance_app/backend/internal/config"
@@ -156,7 +157,14 @@ func (h *AuthHandler) OAuthCallback(c echo.Context) error {
 
 	callbackURL := frontendURL + "/auth/callback"
 	if oauthRedirect, err := c.Cookie("oauth_redirect"); err == nil && oauthRedirect.Value != "" {
-		callbackURL += "?redirect=" + url.QueryEscape(oauthRedirect.Value)
+		// The OAuth authorization server needs to resume on the backend after
+		// Google signs the user in. Restrict this special case to its own path;
+		// all regular app redirects retain the existing frontend callback flow.
+		if strings.HasPrefix(oauthRedirect.Value, "/oauth/authorize?") {
+			callbackURL = h.cfg.App.URL + oauthRedirect.Value
+		} else {
+			callbackURL += "?redirect=" + url.QueryEscape(oauthRedirect.Value)
+		}
 		c.SetCookie(&http.Cookie{
 			Name:     "oauth_redirect",
 			Value:    "",

@@ -1,4 +1,3 @@
-import { Stack } from "@mantine/core";
 import { useSearch } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useActiveFilters } from "@/hooks/useActiveFilters";
@@ -9,6 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { TransactionGroup } from "./TransactionGroup";
 import { TransactionListHeader } from "./TransactionListHeader";
 import { TransactionListSkeleton } from "./TransactionListSkeleton";
+import classes from "./TransactionList.module.css";
 
 interface TransactionListProps {
   currentUserId: number;
@@ -75,8 +75,8 @@ export function TransactionList({
   }
 
   return (
-    <Stack gap="sm">
-      {!isMobile && <TransactionListHeader groupBy={search.groupBy} />}
+    <div className={classes.list}>
+      {!isMobile && <TransactionListHeader />}
       {groups.map((group, i) => (
         <TransactionGroup
           key={group.key}
@@ -95,6 +95,6 @@ export function TransactionList({
           hideSettlements={search.hideSettlements}
         />
       ))}
-    </Stack>
+    </div>
   );
 }

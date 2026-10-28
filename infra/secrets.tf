@@ -8,12 +8,14 @@
 # Secrets obrigatórios (adicionar valor antes do primeiro deploy):
 #   DB_PASSWORD
 #   JWT_SECRET
+#   MCP_JWT_SECRET
 #   OAUTH_SESSION_SECRET
 #   VAPID_PRIVATE_KEY   (gere com: npx web-push generate-vapid-keys)
 #
 # Secrets opcionais (adicionar valor vazio "" se o provider não for usado):
 #   backend-google-client-secret
 #   backend-microsoft-client-secret
+#   DISCORD_WEBHOOK_URL (obrigatório apenas quando discord_health_notifications = true)
 
 resource "google_secret_manager_secret" "db_password" {
   secret_id = "DB_PASSWORD"
@@ -24,6 +26,13 @@ resource "google_secret_manager_secret" "db_password" {
 
 resource "google_secret_manager_secret" "jwt_secret" {
   secret_id = "JWT_SECRET"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "mcp_jwt_secret" {
+  secret_id = "MCP_JWT_SECRET"
   replication {
     auto {}
   }
@@ -57,12 +66,20 @@ resource "google_secret_manager_secret" "vapid_private_key" {
   }
 }
 
+resource "google_secret_manager_secret" "discord_webhook_url" {
+  secret_id = "DISCORD_WEBHOOK_URL"
+  replication {
+    auto {}
+  }
+}
+
 # ── IAM: Cloud Run SA pode ler todos os secrets ───────────────────────────────
 
 locals {
   backend_secrets = toset([
     "DB_PASSWORD",
     "JWT_SECRET",
+    "MCP_JWT_SECRET",
     "OAUTH_SESSION_SECRET",
     "GOOGLE_CLIENT_SECRET",
     "ALLOWED_ORIGINS",

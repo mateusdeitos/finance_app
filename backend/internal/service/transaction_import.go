@@ -306,6 +306,10 @@ func parseAmountSigned(s string) (int64, error) {
 	if s == "" {
 		return 0, errors.New("empty amount")
 	}
+	// Nubank exports refunds with whitespace between the sign and the amount.
+	if s[0] == '-' || s[0] == '+' {
+		s = s[:1] + strings.TrimSpace(s[1:])
+	}
 
 	lastDot := strings.LastIndex(s, ".")
 	lastComma := strings.LastIndex(s, ",")

@@ -28,9 +28,9 @@ resource "google_firebase_hosting_site" "frontend" {
 
 # Domínio customizado para o frontend
 resource "google_firebase_hosting_custom_domain" "frontend" {
-  provider        = google-beta
-  project         = var.gcp_project_id
-  site_id         = google_firebase_hosting_site.frontend.site_id
-  custom_domain   = "finance-app.mateusdeitos.dev"
-  wait_dns_verification = false  # não bloqueia o apply aguardando DNS propagar
+  provider              = google-beta
+  project               = var.gcp_project_id
+  site_id               = google_firebase_hosting_site.frontend.site_id
+  custom_domain         = "finance-app.mateusdeitos.dev"
+  wait_dns_verification = false # não bloqueia o apply aguardando DNS propagar
 }

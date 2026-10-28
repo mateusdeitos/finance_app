@@ -194,6 +194,54 @@ goose -dir migrations postgres "connection_string" down
 
 A aplicação está configurada para rodar no Google Cloud Run. Veja `docker/Dockerfile` para detalhes.
 
+## MCP remoto
+
+O backend expõe um servidor MCP Streamable HTTP em `POST /mcp`. Ele usa OAuth
+2.1 com PKCE e reutiliza o login Google apenas para identificar o usuário; o
+token do agente é separado do `auth_token` normal, possui escopos e vence em
+sete dias.
+
+Defina `MCP_JWT_SECRET` como um segredo novo, diferente de `JWT_SECRET`.
+Clientes descobrem automaticamente os metadados OAuth em
+`/.well-known/oauth-protected-resource/mcp` e
+`/.well-known/oauth-authorization-server`.
+
+```bash
+codex mcp add dividim --url https://api.example.com/mcp
+codex mcp login dividim --scopes finance:read,finance:transactions:write
+```
+
+Claude Desktop pode usar a mesma URL como conector remoto. O servidor aceita
+Dynamic Client Registration e Client ID Metadata Documents.
+
+## Monitoramento de saúde
+
+O endpoint `/health` valida a API e o banco executando `SELECT 1`; retorna `503`
+quando o PostgreSQL está indisponível. O Terraform em `infra/uptime.tf` cria um
+Cloud Monitoring Uptime Check que chama esse endpoint a cada 15 minutos.
+
+Como o Uptime Check não notifica cada resultado saudável, `infra/health_monitor.tf`
+também oferece uma sonda única via Cloud Scheduler. Quando
+`discord_health_notifications = true`, ela chama `/health` a cada hora e
+envia ao Discord uma mensagem de sucesso ou falha com horário e latência. O
+webhook fica no secret `DISCORD_WEBHOOK_URL`, nunca no Terraform ou no código:
+
+```bash
+printf %s "$DISCORD_WEBHOOK_URL" \
+  | gcloud secrets versions add DISCORD_WEBHOOK_URL --data-file=-
+```
+
+Defina `DISCORD_WEBHOOK_URL` apenas no ambiente do terminal, sem colocá-lo no
+arquivo `.tfvars`. Crie primeiro o container do secret com `terraform apply`
+usando a flag `false`, publique a imagem desta versão, adicione o secret acima e
+então ative a flag e reaplique. Para testar imediatamente sem aguardar a próxima
+execução:
+
+```bash
+gcloud scheduler jobs run health-monitor-hourly \
+  --location=us-central1
+```
+
 ## Licença
 
 MIT

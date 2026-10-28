@@ -12,6 +12,7 @@ import (
 
 	"github.com/finance_app/backend/internal/config"
 	"github.com/finance_app/backend/internal/handler"
+	mcpserver "github.com/finance_app/backend/internal/mcp"
 	"github.com/finance_app/backend/internal/middleware"
 	"github.com/finance_app/backend/internal/repository"
 	"github.com/finance_app/backend/internal/service"
@@ -69,6 +70,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("Failed to access database connection pool: %v", err)
+	}
 
 	globalLogger := initLogger(cfg)
 
@@ -93,6 +98,7 @@ func main() {
 		Notification:          repository.NewNotificationRepository(db),
 		TransactionTemplate:   repository.NewTransactionTemplateRepository(db),
 		Impersonation:         repository.NewImpersonationRepository(db),
+		MCPAuthorization:      repository.NewMCPAuthorizationRepository(db),
 	}
 
 	// Initialize services
@@ -115,6 +121,7 @@ func main() {
 	services.Notification = service.NewNotificationService(repos, cfg)
 	services.TransactionTemplate = service.NewTransactionTemplateService(repos)
 	services.Impersonation = service.NewImpersonationService(repos, cfg)
+	services.MCPAuthorization = service.NewMCPAuthorizationService(repos, cfg)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(services, cfg)
@@ -129,6 +136,7 @@ func main() {
 	notifHandler := handler.NewNotificationHandler(services)
 	templateHandler := handler.NewTransactionTemplateHandler(services)
 	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
+	healthHandler := handler.NewHealthHandler(sqlDB)
 
 	// Setup Echo
 	e := echo.New()
@@ -147,13 +155,30 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Health check
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
+	// Health check (includes database connectivity)
+	e.GET("/health", healthHandler.Check)
 
 	// API docs (Swagger UI + OpenAPI spec)
 	handler.RegisterDocsRoutes(e)
+
+	// MCP access tokens use an independent secret and are never valid for /api.
+	if cfg.MCP.JWTSecret != "" {
+		mcpServer, err := mcpserver.New(cfg, services)
+		if err != nil {
+			log.Fatalf("Failed to initialize MCP server: %v", err)
+		}
+		mcpHandler := echo.WrapHandler(mcpServer.Handler())
+		// OAuth/MCP discovery uses the standardized .well-known namespace so
+		// remote clients can locate this resource's authorization server.
+		e.GET("/.well-known/oauth-protected-resource/mcp", mcpHandler)
+		e.OPTIONS("/.well-known/oauth-protected-resource/mcp", mcpHandler)
+		e.GET("/.well-known/oauth-authorization-server", mcpHandler)
+		e.POST("/oauth/register", mcpHandler)
+		e.GET("/oauth/authorize", mcpHandler)
+		e.POST("/oauth/authorize/approve", mcpHandler)
+		e.POST("/oauth/token", mcpHandler)
+		e.Any("/mcp", mcpHandler)
+	}
 
 	// Auth routes (public)
 	auth := e.Group("/auth")
