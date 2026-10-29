@@ -21,7 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
 
@@ -52,7 +53,7 @@ func check() ([]string, error) {
 		return nil, errors.New("DB_DSN environment variable is required")
 	}
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := openDatabase(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
@@ -80,4 +81,27 @@ func check() ([]string, error) {
 		}
 	}
 	return pending, nil
+}
+
+// openDatabase disables server-side prepared statements because DB_DSN can
+// point at a transaction-pooling proxy. Reused backend connections retain
+// those statements and cause pgx's statement cache to collide before goose
+// can inspect migration status.
+func openDatabase(dsn string) (*sql.DB, error) {
+	config, err := databaseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return stdlib.OpenDB(*config), nil
+}
+
+func databaseConfig(dsn string) (*pgx.ConnConfig, error) {
+	config, err := pgx.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	return config, nil
 }
