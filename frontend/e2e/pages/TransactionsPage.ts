@@ -227,7 +227,8 @@ export class TransactionsPage {
    * recurrence) for the next transaction.
    */
   async saveAndCreateAnother() {
-    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSaveAndCreateAnother).click();
+    await this.formDrawer.getByTestId(TransactionsTestIds.BtnSaveActionsMenu).click();
+    await this.page.getByTestId(TransactionsTestIds.BtnSaveAndCreateAnother).click();
     await this.assertNoFormErrors();
     await expect(this.formDrawer).toBeVisible();
   }

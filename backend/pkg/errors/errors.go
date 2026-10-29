@@ -95,6 +95,10 @@ const (
 	ErrorTagImpersonationTargetNotFound ErrorTag = "IMPERSONATION.TARGET_NOT_FOUND"
 	ErrorTagImpersonationNotActive      ErrorTag = "IMPERSONATION.NOT_ACTIVE"
 	ErrorTagImpersonationNesting        ErrorTag = "IMPERSONATION.NESTING_NOT_ALLOWED"
+
+	ErrorTagTemplateDuplicateName ErrorTag = "TEMPLATE.DUPLICATE_NAME"
+	ErrorTagTemplateNameRequired  ErrorTag = "TEMPLATE.NAME_REQUIRED"
+	ErrorTagTemplateInvalidType   ErrorTag = "TEMPLATE.INVALID_TYPE"
 )
 
 var (
@@ -179,6 +183,10 @@ var (
 		}
 		return NewWithTag(ErrCodeInternal, []string{string(ErrorTagPushDeliveryFailed)}, msg)
 	}
+
+	ErrTemplateDuplicateName = NewWithTag(ErrCodeAlreadyExists, []string{string(ErrorTagTemplateDuplicateName)}, "a template with this name already exists")
+	ErrTemplateNameRequired  = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateNameRequired)}, "name is required")
+	ErrTemplateInvalidType   = NewWithTag(ErrCodeBadRequest, []string{string(ErrorTagTemplateInvalidType)}, "invalid transaction type")
 )
 
 // ServiceError represents a service-level error with a code and message

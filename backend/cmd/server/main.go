@@ -96,6 +96,7 @@ func main() {
 		UserSettings:          repository.NewUserSettingsRepository(db),
 		PushSubscription:      repository.NewPushSubscriptionRepository(db),
 		Notification:          repository.NewNotificationRepository(db),
+		TransactionTemplate:   repository.NewTransactionTemplateRepository(db),
 		Impersonation:         repository.NewImpersonationRepository(db),
 		MCPAuthorization:      repository.NewMCPAuthorizationRepository(db),
 	}
@@ -118,6 +119,7 @@ func main() {
 	services.Onboarding = service.NewOnboardingService(repos)
 	services.PushSubscription = service.NewPushSubscriptionService(repos, cfg)
 	services.Notification = service.NewNotificationService(repos, cfg)
+	services.TransactionTemplate = service.NewTransactionTemplateService(repos)
 	services.Impersonation = service.NewImpersonationService(repos, cfg)
 	services.MCPAuthorization = service.NewMCPAuthorizationService(repos, cfg)
 
@@ -132,6 +134,7 @@ func main() {
 	onboardingHandler := handler.NewOnboardingHandler(services)
 	pushSubHandler := handler.NewPushSubscriptionHandler(services, cfg.VAPID.PublicKey)
 	notifHandler := handler.NewNotificationHandler(services)
+	templateHandler := handler.NewTransactionTemplateHandler(services)
 	impersonationHandler := handler.NewImpersonationHandler(services, cfg)
 	healthHandler := handler.NewHealthHandler(sqlDB)
 
@@ -201,6 +204,7 @@ func main() {
 		onboarding:     onboardingHandler,
 		pushSub:        pushSubHandler,
 		notification:   notifHandler,
+		template:       templateHandler,
 		impersonation:  impersonationHandler,
 	})
 
@@ -244,6 +248,7 @@ type apiHandlers struct {
 	onboarding     *handler.OnboardingHandler
 	pushSub        *handler.PushSubscriptionHandler
 	notification   *handler.NotificationHandler
+	template       *handler.TransactionTemplateHandler
 	impersonation  *handler.ImpersonationHandler
 }
 
@@ -340,6 +345,14 @@ func registerAPIRoutes(api *echo.Group, services *service.Services, authMiddlewa
 	api.PATCH("/settlements/review", handler.NewSettlementHandler(services).BulkReview)
 	api.PATCH("/settlements/:id", handler.NewSettlementHandler(services).Update)
 	api.DELETE("/settlements/:id", handler.NewSettlementHandler(services).Delete)
+
+	// Transaction templates
+	templates := api.Group("/transaction-templates")
+	templates.GET("", h.template.List)
+	templates.POST("", h.template.Create)
+	templates.PATCH("/:id/use", h.template.MarkUsed)
+	templates.PUT("/:id", h.template.Update)
+	templates.DELETE("/:id", h.template.Delete)
 }
 
 func registerTransactionRoutes(api *echo.Group, h *handler.TransactionHandler) {

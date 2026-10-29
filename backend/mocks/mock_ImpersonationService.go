@@ -22,6 +22,66 @@ func (_m *MockImpersonationService) EXPECT() *MockImpersonationService_Expecter 
 	return &MockImpersonationService_Expecter{mock: &_m.Mock}
 }
 
+// SearchUsers provides a mock function with given fields: ctx, query, limit
+func (_m *MockImpersonationService) SearchUsers(ctx context.Context, query string, limit int) ([]*domain.User, error) {
+	ret := _m.Called(ctx, query, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SearchUsers")
+	}
+
+	var r0 []*domain.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]*domain.User, error)); ok {
+		return rf(ctx, query, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*domain.User); ok {
+		r0 = rf(ctx, query, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, query, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockImpersonationService_SearchUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchUsers'
+type MockImpersonationService_SearchUsers_Call struct {
+	*mock.Call
+}
+
+// SearchUsers is a helper method to define mock.On call
+//   - ctx context.Context
+//   - query string
+//   - limit int
+func (_e *MockImpersonationService_Expecter) SearchUsers(ctx interface{}, query interface{}, limit interface{}) *MockImpersonationService_SearchUsers_Call {
+	return &MockImpersonationService_SearchUsers_Call{Call: _e.mock.On("SearchUsers", ctx, query, limit)}
+}
+
+func (_c *MockImpersonationService_SearchUsers_Call) Run(run func(ctx context.Context, query string, limit int)) *MockImpersonationService_SearchUsers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockImpersonationService_SearchUsers_Call) Return(_a0 []*domain.User, _a1 error) *MockImpersonationService_SearchUsers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockImpersonationService_SearchUsers_Call) RunAndReturn(run func(context.Context, string, int) ([]*domain.User, error)) *MockImpersonationService_SearchUsers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Start provides a mock function with given fields: ctx, adminUserID, targetUserID, reason, ipAddress, userAgent
 func (_m *MockImpersonationService) Start(ctx context.Context, adminUserID int, targetUserID int, reason string, ipAddress string, userAgent string) (*domain.StartImpersonationResult, error) {
 	ret := _m.Called(ctx, adminUserID, targetUserID, reason, ipAddress, userAgent)
@@ -129,66 +189,6 @@ func (_c *MockImpersonationService_Stop_Call) Return(_a0 error) *MockImpersonati
 }
 
 func (_c *MockImpersonationService_Stop_Call) RunAndReturn(run func(context.Context, string, int) error) *MockImpersonationService_Stop_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// SearchUsers provides a mock function with given fields: ctx, query, limit
-func (_m *MockImpersonationService) SearchUsers(ctx context.Context, query string, limit int) ([]*domain.User, error) {
-	ret := _m.Called(ctx, query, limit)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SearchUsers")
-	}
-
-	var r0 []*domain.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]*domain.User, error)); ok {
-		return rf(ctx, query, limit)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, int) []*domain.User); ok {
-		r0 = rf(ctx, query, limit)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.User)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
-		r1 = rf(ctx, query, limit)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockImpersonationService_SearchUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SearchUsers'
-type MockImpersonationService_SearchUsers_Call struct {
-	*mock.Call
-}
-
-// SearchUsers is a helper method to define mock.On call
-//   - ctx context.Context
-//   - query string
-//   - limit int
-func (_e *MockImpersonationService_Expecter) SearchUsers(ctx interface{}, query interface{}, limit interface{}) *MockImpersonationService_SearchUsers_Call {
-	return &MockImpersonationService_SearchUsers_Call{Call: _e.mock.On("SearchUsers", ctx, query, limit)}
-}
-
-func (_c *MockImpersonationService_SearchUsers_Call) Run(run func(ctx context.Context, query string, limit int)) *MockImpersonationService_SearchUsers_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int))
-	})
-	return _c
-}
-
-func (_c *MockImpersonationService_SearchUsers_Call) Return(_a0 []*domain.User, _a1 error) *MockImpersonationService_SearchUsers_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockImpersonationService_SearchUsers_Call) RunAndReturn(run func(context.Context, string, int) ([]*domain.User, error)) *MockImpersonationService_SearchUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }

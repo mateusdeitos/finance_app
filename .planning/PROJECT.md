@@ -62,39 +62,47 @@ Partners can accurately track shared finances, including in-progress installment
 - ✓ `categoryOptions`/`accountOptions` derived inside TanStack Query `select` callbacks — v1.5
 - ✓ `useDuplicateTransactionCheck` debounced and gated by `enabled` per row — v1.5
 - ✓ Import e2e suite green after perf rework (keystroke 761ms→3.5ms / 929ms→5.6ms) — v1.5
+- ✓ Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
+- ✓ Notify the charge recipient when the partner creates a new charge — v1.6
+- ✓ Notify the charge creator when the partner accepts their charge — v1.6
+- ✓ Notify the partner when a new split transaction is created on their side — v1.6
+- ✓ Notify the partner when a split transaction is updated in a way that affects their side — v1.6
+- ✓ Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
+- ✓ In-app notification inbox with read/unread state and open-entity navigation — v1.6
+- ✓ Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
 
 ### Active
 
-- [ ] Web Push subscription lifecycle: register, store, remove, and report status of a per-device push subscription — v1.6
-- [ ] Notify the charge recipient when the partner creates a new charge — v1.6
-- [ ] Notify the charge creator when the partner accepts their charge — v1.6
-- [ ] Notify the partner when a new split transaction is created on their side — v1.6
-- [ ] Notify the partner when a split transaction is updated in a way that affects their side — v1.6
-- [ ] Persist each notification with a deep-link to its related entity (charge/transaction) — v1.6
-- [ ] In-app notification inbox with read/unread state and open-entity navigation — v1.6
-- [ ] Minimal user control: browser permission prompt + enable/disable on the current device — v1.6
+- [ ] Personal transaction templates stored in a dedicated table mirroring the transaction shape (type, account, category, tags, description, split) — no amount, no date — v1.7
+- [ ] CRUD API for templates (create, list, update, delete), per-user IDOR-scoped — v1.7
+- [ ] Enforce a maximum of 3 templates per user — v1.7
+- [ ] "Save as template" action from the transaction form — v1.7
+- [ ] Dedicated template management UI (create / edit / delete) — v1.7
+- [ ] Quick-chip row in TransactionForm that applies a template via reset(), leaving the amount blank and focused — v1.7
 
 ### Deferred (from v1.3)
 
 - [ ] Frontend edit form: disabled non-editable fields, hidden type/recurrence/split sections — v1.3 backlog
 - [ ] Propagation drawer when editing recurring linked transactions — v1.3 backlog
 
-## Current Milestone: v1.6 Push Notifications
+## Current Milestone: v1.7 Transaction Templates
 
-**Goal:** Notify a partner about finance events relevant to them — new/accepted charges and new split transactions — via Web Push, with each notification persisted and deep-linked so they can open the underlying entity.
-
-**Progress:** Phase 22 (Backend Subscription Foundation) complete — `push_subscriptions`/`notifications` tables, VAPID config + fail-fast startup, and POST/DELETE/GET `/api/push-subscriptions` with endpoint-only upsert and admin prune capability (SUB-03, SUB-04). Phase 24 UI design contract (UI-SPEC) approved. Next: Phase 23 (notification events + inbox API).
+**Goal:** Let users save personal, reusable transaction templates (type, account, category, tags, split, description prefilled — never an amount) and apply them via quick chips in the transaction form, so repetitive entries only require typing the amount.
 
 **Target features:**
-- Web Push delivery via VAPID + service worker (PWA); push subscription stored per device, with subscribe/unsubscribe lifecycle
-- Four event triggers (issue #174 + transaction updates): new charge received (notify recipient), charge accepted (notify creator), new split transaction created by the partner, and split transaction updated by the partner in a way that affects the user's side (notify partner)
-- Persisted, context-aware notifications: each saved server-side with a deep-link to its entity (charge/transaction)
-- In-app notification inbox with read/unread state and "open entity" navigation to the related charge/transaction
-- Synchronous best-effort dispatch: push is sent after the DB commit (goroutine, no queue/retry); a failed send is tolerated, not retried
-- Minimal user control: browser permission prompt + enable/disable notifications on the current device (no per-type toggles)
+- Dedicated `transaction_templates` table — relational `id`/`user_id`/`name` plus an opaque JSONB `payload` holding the template's form fields (type, account, category, destination, tags, description, split) — without amount or date — keeping templates isolated from balance/listing/charges/settlements queries
+- JSONB payload model: on write the backend unmarshals into a strict `TransactionTemplatePayload` struct (shape-validated, amount/date stripped) and stores the canonical JSON; existence/stale validation happens on apply (frontend), silently dropping invalid fields
+- CRUD API for personal templates, IDOR-scoped per user, capped at 3 templates per user
+- Dedicated management UI (drawer/screen) to create / edit / delete templates, plus a "Save as template" action from the transaction form
+- Quick-chip row at the top of `TransactionForm` (same visual pattern as `DateQuickChips`): clicking a chip `reset()`s the form to the template values, leaving the amount field blank and focused
 
 ### Out of Scope
 
+- Shared / connection-wide templates — v1.7 templates are personal (per user) only
+- Storing an amount or date on a template — amount is always blank on apply; date defaults to today at apply time
+- Unlimited templates — capped at 3 per user for v1.7
+- Recurrence/installment settings on templates — templates seed a single transaction's base fields, not a recurring series
+- Applying a template to bulk-create many transactions at once — apply prefills one form
 - Backdating or creating past installments — user only needs future tracking
 - Migrating existing transaction data to the new format — old records stay as-is
 - Open-ended recurrences (subscriptions with no end) — not part of current scope
@@ -147,6 +155,12 @@ Partners can accurately track shared finances, including in-progress installment
 | Synchronous best-effort push dispatch (goroutine after commit)         | No async/job infra exists; Cloud Run is stateless; avoids Cloud Tasks IAM setup for v1.6        | TBD |
 | Persist notifications with entity deep-link                            | User wants to navigate from a notification to the charge/transaction it refers to               | TBD |
 | Fire push only after DB commit succeeds                                | Guarantees the referenced entity exists before notifying; avoids notifying on rolled-back txns  | TBD |
+| Dedicated `transaction_templates` table (not an `is_template` column)  | Isolates templates from balance/listing/charges/settlements queries; no risk of leaking into financial reads | TBD |
+| Store template fields in a JSONB `payload` with a strict Go struct on write | Dynamic storage (one column) + typed write boundary: create/update unmarshals into `TransactionTemplatePayload`, re-serializes canonical form | TBD |
+| Only `id`, `user_id`, `name` (`UNIQUE(user_id,name)`) + `payload` are relational | `name`/`user_id` needed for the chip label, IDOR scope, cap, and uniqueness; everything else rides the payload | TBD |
+| Shape validated on write; existence/stale validation deferred to apply   | Strict struct checks shape only; deleted account/category/tag ids are filtered against live data on apply (silent drop) | TBD |
+| No `CategoryService.Delete`/`TagService.Delete` hooks for templates     | Opaque payload has no FK columns to cascade — apply-time silent-drop replaces it; removes existing-code touches | TBD |
+| Templates are personal (per user), never amount/date, capped at 3, hard-deleted | Matches user's fast-repeat-entry workflow; cap + hard delete keep the chip row and counting simple            | TBD |
 
 ## Constraints
 
@@ -160,4 +174,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-05-30 — v1.6 in progress: Phase 22 (Backend Subscription Foundation) complete, Phase 24 UI-SPEC approved_
+_Last updated: 2026-06-14 — v1.7 Phase 26 (Backend Foundation) complete: transaction_templates migration + domain/entity types live (JSONB payload, typed write boundary), isolated from all financial query paths. Next: Phase 27 (Backend CRUD API)._

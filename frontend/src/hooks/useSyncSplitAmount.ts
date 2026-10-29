@@ -13,15 +13,18 @@ export function useSyncSplitAmount<T extends FieldValues>(
   mode: 'percentage' | 'amount',
   calculatedAmount: number,
   percentage: number,
+  syncAmount = true,
 ) {
   useEffect(() => {
     if (mode !== 'percentage') return
     // Casts: setValue is generic over FieldPath<T>, but field values at dynamic
     // paths can't be narrowed from inside a reusable hook without duplicating
     // T's structure. The caller guarantees these fields accept number | undefined.
-    setValue(amountFieldName, calculatedAmount as unknown as T[FieldPath<T>])
+    if (syncAmount) {
+      setValue(amountFieldName, calculatedAmount as unknown as T[FieldPath<T>])
+    }
     setValue(percentageFieldName, percentage as unknown as T[FieldPath<T>])
-  }, [calculatedAmount, mode, amountFieldName, setValue, percentageFieldName, percentage])
+  }, [calculatedAmount, mode, amountFieldName, setValue, percentageFieldName, percentage, syncAmount])
 
   useEffect(() => {
     if (mode !== 'amount') return

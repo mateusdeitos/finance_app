@@ -20,6 +20,9 @@ import { IconTrendingDown, IconTrendingUp, IconArrowRight } from "@tabler/icons-
 import { useAccounts } from "@/hooks/useAccounts";
 import { useGroupedAccountOptions } from "@/hooks/useGroupedAccountOptions";
 import { useFlattenCategories } from "@/hooks/useCategories";
+import { useTags } from "@/hooks/useTags";
+import { useMarkTransactionTemplateUsed, useTransactionTemplates } from "@/hooks/useTransactionTemplates";
+import { renderDrawer } from "@/utils/renderDrawer";
 import { Transactions } from "@/types/transactions";
 import { CurrencyInput } from "./CurrencyInput";
 import { DescriptionAutocomplete } from "./DescriptionAutocomplete";
@@ -28,6 +31,11 @@ import { DateQuickChips } from "./DateQuickChips";
 import { ResponsiveDateInput } from "@/components/ResponsiveDateInput";
 import { AccountSelectField } from "./AccountSelectField";
 import { CategorySelectField } from "./CategorySelectField";
+import { TemplateQuickChips } from "./TemplateQuickChips";
+import { buildTemplateFormPatch } from "./applyTemplate";
+import { buildTemplatePayloadFromForm } from "./buildTemplatePayload";
+import { SaveAsTemplateDrawer } from "@/components/transactions/templates/SaveAsTemplateDrawer";
+import { TemplateSearchDrawer } from "@/components/transactions/templates/TemplateSearchDrawer";
 import { TransactionFormFooter } from "./TransactionFormFooter";
 import { ReadOnlyAccountField } from "./ReadOnlyAccountField";
 import { TransactionFormValues } from "./transactionFormSchema";
@@ -110,6 +118,8 @@ interface Props {
   lockTransactionType?: boolean;
   /** Hides the recurrence section entirely (e.g. charge-generated transfers). */
   hideRecurrence?: boolean;
+  /** Show the template quick-apply chip row (create mode only). */
+  showTemplateChips?: boolean;
 }
 
 export interface LockedAccountInfo {
@@ -132,14 +142,22 @@ export const TransactionForm = ({
   lockedDestinationAccount,
   lockTransactionType = false,
   hideRecurrence = false,
+  showTemplateChips = false,
 }: Props) => {
   const fallbackId = useId();
   const resolvedFormId = formId ?? fallbackId;
   const { query: accountsQuery } = useAccounts();
   const { query: categoriesQuery } = useFlattenCategories();
+  const { query: tagsQuery } = useTags();
+  const { query: templatesQuery, invalidate: invalidateTemplates } = useTransactionTemplates();
+  const { mutation: markTemplateUsed } = useMarkTransactionTemplateUsed({
+    onSuccess: () => invalidateTemplates(),
+  });
 
   const accounts = accountsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+  const tags = tagsQuery.data ?? [];
+  const templates = templatesQuery.data ?? [];
 
   const {
     control,
@@ -148,6 +166,9 @@ export const TransactionForm = ({
     setError,
     clearErrors,
     setFocus,
+    getValues,
+    reset,
+    trigger,
     formState: { errors, isSubmitting, dirtyFields },
   } = useFormContext<TransactionFormValues>();
 
@@ -213,6 +234,63 @@ export const TransactionForm = ({
     setValue("split_settings", []);
   }
 
+  /**
+   * Applies a saved template to the form (APPLY-02): overwrites the current
+   * input with the template's fields, leaves the amount blank, and moves
+   * focus there so the next keystroke enters the amount. Stale references
+   * (deleted account/category/tag) are cleared by buildTemplateFormPatch
+   * (APPLY-04); split_settings are prefilled and remain editable (APPLY-03).
+   */
+  function handleApplyTemplate(template: Transactions.Template) {
+    const patch = buildTemplateFormPatch(template.payload, { accounts, categories, tags });
+    // Apply all related fields in one transition so the form never briefly
+    // combines references from the old transaction with template split rows.
+    reset({ ...getValues(), ...patch, amount: 0 });
+    // Wait for the reset render to replace the input before restoring the
+    // documented amount focus (APPLY-02).
+    requestAnimationFrame(() => setFocus("amount"));
+    markTemplateUsed.mutate(template.id);
+  }
+
+  function handleSearchTemplates() {
+    void renderDrawer<Transactions.Template | void>(() => <TemplateSearchDrawer templates={templates} />)
+      .then((template) => {
+        if (template) handleApplyTemplate(template);
+      })
+      .catch(() => undefined);
+  }
+
+  /**
+   * MNG-02: snapshots the current form values, builds a `TemplatePayload`,
+   * and opens the confirm-name mini drawer.
+   */
+  async function handleSaveAsTemplate() {
+    // A template deliberately omits transaction-only amount/date/recurrence
+    // fields, so validate only the fields that will actually be snapshotted.
+    const valid = await trigger([
+      "transaction_type",
+      "description",
+      "account_id",
+      "category_id",
+      "destination_account_id",
+      "tags",
+      "split_settings",
+    ]);
+    if (!valid) {
+      setError("_general" as keyof TransactionFormValues, {
+        type: "validation",
+        message: "Verifique os campos destacados no formulário",
+      });
+      return;
+    }
+
+    const values = getValues();
+    const payload = buildTemplatePayloadFromForm(values, tags);
+    void renderDrawer(() => (
+      <SaveAsTemplateDrawer payload={payload} suggestedName={values.description ?? ""} />
+    ));
+  }
+
   // Transfer source: personal accounts only (flat list)
   const personalAccountOptions = accounts
     .filter((a) => !a.user_connection)
@@ -241,6 +319,13 @@ export const TransactionForm = ({
     <form id={resolvedFormId} onSubmit={submit} onKeyDown={handleFormKeyDown} noValidate>
       <Stack gap="md">
         {headerContent}
+        {showTemplateChips && (
+          <TemplateQuickChips
+            templates={templates}
+            onApply={handleApplyTemplate}
+            onSearch={handleSearchTemplates}
+          />
+        )}
         {generalError && (
           <Alert color="red" title="Erro" variant="light" data-testid={TransactionsTestIds.AlertFormError}>
             {generalError}
@@ -467,6 +552,7 @@ export const TransactionForm = ({
         onSaveAndCreateAnother={
           onSaveAndCreateAnother ? handleSubmit(onSaveAndCreateAnother, onInvalid) : undefined
         }
+        onSaveAsTemplate={showTemplateChips ? handleSaveAsTemplate : undefined}
       />
       <Suspense>
         <DevTool control={control} />

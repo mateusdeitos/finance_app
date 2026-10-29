@@ -113,6 +113,8 @@ func main() {
 		UserSettings:          repository.NewUserSettingsRepository(db),
 		UserConnection:        repository.NewUserConnectionRepository(db),
 		Settlement:            repository.NewSettlementRepository(db),
+		PushSubscription:      repository.NewPushSubscriptionRepository(db),
+		Notification:          repository.NewNotificationRepository(db),
 	}
 
 	svcs := &service.Services{
@@ -123,6 +125,7 @@ func main() {
 	svcs.Account = service.NewAccountService(repos, svcs)
 	svcs.UserConnection = service.NewUserConnectionService(repos, svcs)
 	svcs.Transaction = service.NewTransactionService(repos, svcs)
+	svcs.Notification = service.NewNotificationService(repos, cfg)
 
 	ctx := context.Background()
 
